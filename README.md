@@ -17,125 +17,58 @@ During major disasters (floods, earthquakes, cyclones), traditional emergency re
 
 The system is structured as two interconnected sub-systems: **Project 1 (React Native Mobile App for Citizens & Volunteers)** and **Project 2 (Web Platform, Microservices & Cloud Backend)**.
 
-### 📐 System Architecture & Data Flow Diagram
-![AapdaSetu System Architecture & Data Flow Diagram](diagram.svg)
+### 📐 Interactive System Architecture & Data Flow Diagram
 
-```
-+---------------------------------------------------------------------------------------------------+
-|                                       AAPDASETU ARCHITECTURE                                      |
-+---------------------------------------------------------------------------------------------------+
+```mermaid
+flowchart LR
+    subgraph P1["Project 1: React Native P2P App"]
+        User["Citizen"] -- "Voice / Text Input" --> AppUI["App Interface"]
+        AppUI --> EdgeGPS{"GPS Acquired?"}
+        EdgeGPS -- "No" --> ManualLand["Prompt for Landmark Text"]
+        EdgeGPS -- "Yes" --> GenID["Generate Unique SOS UUID"]
+        ManualLand --> GenID
+        GenID --> Foreground["Start Foreground Service Notification"]
+        Foreground --> LocalDB[("Save to RxDB Local DB")]
+        LocalDB --> CheckNet{"Internet Available?"}
+        CheckNet -- "YES" --> APIPost["Send POST /api/sos"]
+        CheckNet -- "NO - Total Offline" --> MeshNet["P2P Bluetooth Mesh Search"]
+        MeshNet -. "Pass UUID + Packet" .-> PeerPhone(("Nearby Peer Device"))
+        PeerPhone -- "Peer has Internet" --> APIPost
+    end
 
- [CITIZEN MOBILE EDGE]              [OFFLINE P2P MESH NETWORK]               [CLOUD BACKEND & AI]
- +-------------------+              +-------------------------+              +---------------------+
- | Voice / Text SOS  |              |  Nearby Peer Devices    |              | Node.js API Gateway |
- | (Whisper / STT)   |              |  (Bluetooth/Wi-Fi Dir)  |              +----------+----------+
- +---------+---------+              +------------+------------+                         |
-           |                                     ^                                      v
-           v                                     |                              +-------+-------+
- +---------+---------+    Offline Sync     +-----+-----+                        |  Redis Queue  |
- |  GPS / Landmark   +-------------------->+ RxDB Local|                        +-------+-------+
- |  + SOS UUID Gen   |    No Internet      | Storage   |                                |
- +---------+---------+                     +-----+-----+                                v
-           |                                     |                              +-------+-------+
-           | Internet Available                  | Peer reaches                 | Ingestion &   |
-           +-----------------+                   | Internet                     | De-duplication|
-                             |                   v                              +-------+-------+
-                             +-------------------+---------------+                      |
-                                                 | HTTPS POST    |                      v
-                                                 v               |              +-------+-------+
-                                        +--------+--------+      |              | PostgreSQL    |
-                                        | Node.js Gateway |<-----+              | + PostGIS DB  |
-                                        +--------+--------+                     +-------+-------+
-                                                                                        |
-                                                                                        v
-                                                                                +-------+-------+
-                                                                                | Python FastAPI|
-                                                                                | AI Triage Engine|
-                                                                                +-------+-------+
-                                                                                        |
-                                                                                        v
-                                                                                +-------+-------+
-                                                                                | Incident Command|
-                                                                                | Admin Dashboard|
-                                                                                +-------+-------+
-                                                                                        |
-                                                                                        v
-                                                                                +-------+-------+
-                                                                                | Skill-Matching|
-                                                                                | Rescuer Dispatch|
-                                                                                +-----------------+
-```
+    APIPost ==>|"HTTPS Payload"| APIGateway
 
----
+    subgraph P2["Project 2: Web Platform & Backend"]
+        APIGateway["Node.js API Gateway"] --> RedisQueue[("Redis Message Queue")]
+        RedisQueue --> Processor["Node.js Processor"]
+        Processor --> Dedup{"UUID Exists in DB?"}
+        Dedup -- "YES" --> Drop["Drop Duplicate silently"]
+        Dedup -- "NO" --> SaveDB["Save to PostgreSQL"]
+        SaveDB --> AITriage["Python FastAPI: AI Triage"]
+        AITriage --> Database[("PostgreSQL + PostGIS")]
+        Database --> AdminDash["Admin Control Dashboard - React.js"]
+        AdminDash --> SkillMatch["Skill-Matching Engine"]
+        SkillMatch --> VolunteerPortal["Volunteer Web Portal - PWA"]
+        VolunteerPortal --> Heartbeat{"Volunteer Accepts & Pings?"}
+        Heartbeat -- "No response in 5 mins" --> Reassign["Auto-Reassign to Next Volunteer"]
+        Reassign --> SkillMatch
+        Heartbeat -- "Yes" --> RescueOps["Execute Rescue via OSRM Safe Route"]
+        RescueOps -.-> APIGateway
+    end
 
-## 🔄 Technical Flowchart (Data Lifecycle)
+    classDef p1 fill:#fff3e0,stroke:#e65100,stroke-width:2px;
+    classDef p2 fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
+    classDef api fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef edge fill:#ffebee,stroke:#c62828,stroke-width:2px;
+    classDef db fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px;
+    classDef ai fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
 
-```
-[Citizen Input: Voice/Text]
-         │
-         ▼
-[GPS Check] ──► (No GPS?) ──► [Prompt for Text Landmark]
-         │
-         ▼
-[Generate Cryptographic Unique SOS UUID]
-         │
-         ▼
-[Launch Persistent Foreground Service & Save to RxDB Local Database]
-         │
- ┌───────┴────────────────────────┐
- │ Network Availability Check     │
- └───────┬────────────────────────┘
-         ├─────────────────────────────────────────┐
-  (Internet Available)                      (Total Offline)
-         │                                         │
-         ▼                                         ▼
-[HTTPS POST /api/sos]               [P2P Bluetooth / Wi-Fi Mesh Search]
-         │                                         │
-         │                                         ▼
-         │                          [Relay Encrypted Packet to Nearby Peer]
-         │                                         │
-         │                                  (Peer gets Net)
-         │                                         │
-         └──────────────────┬──────────────────────┘
-                            │
-                            ▼
-               [Node.js API Gateway Ingestion]
-                            │
-                            ▼
-                [Redis High-Throughput Queue]
-                            │
-                            ▼
-              [Background Worker Processing]
-                            │
-               ┌────────────┴────────────┐
-               │  UUID Duplicate Check   │
-               └────────────┬────────────┘
-        ┌───────────────────┴───────────────────┐
-      (Yes)                                   (No)
-        │                                       │
-        ▼                                       ▼
-[Silently Drop Duplicate]           [Persist Record to PostgreSQL]
-                                                │
-                                                ▼
-                                    [FastAPI AI Urgency Triage]
-                                  (Keyword + Profile Vulnerability)
-                                                │
-                                                ▼
-                                  [PostgreSQL + PostGIS Update]
-                                                │
-                                                ▼
-                                 [React Command Center Map View]
-                                                │
-                                                ▼
-                                 [Algorithmic Skill-Match Dispatch]
-                                                │
-                                                ▼
-                                    [Volunteer Accepts Task?]
-                                ┌───────────────┴───────────────┐
-                              (Yes)                           (No)
-                                │                               │
-                                ▼                               ▼
-                     [Execute OSRM Safe Route]     [Auto-Reassign after 5 Min]
+    class AppUI,GenID,MeshNet,PeerPhone,APIPost p1;
+    class EdgeGPS,ManualLand,Foreground,CheckNet,RedisQueue,Dedup,Drop edge;
+    class LocalDB,SaveDB,Database db;
+    class APIGateway,Processor api;
+    class AITriage ai;
+    class AdminDash,VolunteerPortal,RescueOps p2;
 ```
 
 ---
