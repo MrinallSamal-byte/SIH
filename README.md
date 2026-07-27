@@ -20,10 +20,47 @@ During major disasters (floods, earthquakes, cyclones), traditional emergency re
 
 ## 🏗️ Interactive Architectural Overview & Subsystem Flowcharts
 
-Click on any of the interactive subsystem diagrams below to expand and inspect the real-time data lifecycles.
+### 1. High-Level System Architecture
+
+*Shows how Project 1 (Mobile P2P App), Project 2 (Web Platform & Backend), and External Integrations connect.*
+
+```mermaid
+graph LR
+    classDef mobile fill:#fff3e0,stroke:#e65100,stroke-width:2px;
+    classDef backend fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef web fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
+    classDef external fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px;
+
+    subgraph P1 ["Project 1: P2P SOS App"]
+        AppA[Mobile App - Online]:::mobile
+        AppB[Mobile App - Offline]:::mobile
+        AppB -.->|Bluetooth Mesh| AppA
+    end
+
+    subgraph P2 ["Project 2: Web Platform & Backend"]
+        API[API Gateway & Redis Queue]:::backend
+        AI[Python AI Triage]:::backend
+        DB[(PostgreSQL + PostGIS)]:::backend
+        Web[React.js Web Dashboard]:::web
+    end
+
+    subgraph Ext ["External Integrations"]
+        Maps[OSRM Routing]:::external
+        Twilio[Twilio / WhatsApp API]:::external
+    end
+
+    AppA ==> |HTTPS POST /api/sos| API
+    API <--> AI
+    API <--> DB
+    API <--> Maps
+    API <--> Twilio
+    DB <--> Web
+```
+
+---
 
 <details open>
-<summary><b>📐 1. End-to-End System Architecture (Click to Collapse/Expand)</b></summary>
+<summary><b>📐 2. Detailed End-to-End System Architecture & Data Flow (Click to Collapse/Expand)</b></summary>
 <br/>
 
 ```mermaid
