@@ -162,8 +162,57 @@ graph TD
 
 ---
 
+### 5. Database Entity Relationship Diagram (ERD)
+
+*This is crucial for your backend developers. It shows the core tables required for PostgreSQL/PostGIS.*
+
+```mermaid
+erDiagram
+    USERS ||--o{ SOS_REQUESTS : "creates"
+    USERS ||--o{ TASKS : "assigned_to"
+    SOS_REQUESTS ||--o{ TASKS : "generates"
+    SHELTERS ||--o{ USERS : "checks_into"
+    
+    USERS {
+        uuid user_id PK
+        string phone_number
+        string role "citizen, volunteer, admin"
+        string skills "doctor, swimmer"
+        point last_known_gps
+    }
+
+    SOS_REQUESTS {
+        uuid sos_id PK
+        uuid user_id FK
+        string sos_uuid "For P2P Deduplication"
+        text transcription
+        point gps_location
+        string landmark_text
+        int priority_score "1-100"
+        string status "pending, dispatched, rescued"
+    }
+
+    TASKS {
+        uuid task_id PK
+        uuid sos_id FK
+        uuid volunteer_id FK
+        string status "assigned, en_route, completed"
+        timestamp assigned_at
+    }
+
+    SHELTERS {
+        uuid shelter_id PK
+        string name
+        int capacity
+        int current_occupancy
+        point gps_location
+    }
+```
+
+---
+
 <details open>
-<summary><b>📐 5. Detailed End-to-End System Architecture & Data Flow (Click to Collapse/Expand)</b></summary>
+<summary><b>📐 6. Detailed End-to-End System Architecture & Data Flow (Click to Collapse/Expand)</b></summary>
 <br/>
 
 ```mermaid
