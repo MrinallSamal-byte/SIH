@@ -3,6 +3,11 @@
 > **A Next-Generation, Software-Only Disaster Response & Humanitarian Relief Platform**  
 > *Enabling Peer-to-Peer Bluetooth Mesh SOS Syncing, Explainable AI Triage, Disaster-Aware Safe Routing, Low-Bandwidth Telemedicine, and Multi-Agency Incident Command.*
 
+[![Disaster Response](https://img.shields.io/badge/Initiative-SIH%20Disaster%20Management-orange.svg)](https://github.com/MrinallSamal-byte/SIH)
+[![Offline First](https://img.shields.io/badge/Architecture-Offline--First%20P2P%20Mesh-blue.svg)](https://github.com/MrinallSamal-byte/SIH)
+[![AI Powered](https://img.shields.io/badge/AI-Explainable%20Triage-green.svg)](https://github.com/MrinallSamal-byte/SIH)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 ---
 
 ## 📌 Executive Summary
@@ -13,46 +18,48 @@ During major disasters (floods, earthquakes, cyclones), traditional emergency re
 
 ---
 
-## 🏗️ Architectural Overview & System Flow
+## 🏗️ Interactive Architectural Overview & Subsystem Flowcharts
 
-The system is structured as two interconnected sub-systems: **Project 1 (React Native Mobile App for Citizens & Volunteers)** and **Project 2 (Web Platform, Microservices & Cloud Backend)**.
+Click on any of the interactive subsystem diagrams below to expand and inspect the real-time data lifecycles.
 
-### 📐 Interactive System Architecture & Data Flow Diagram
+<details open>
+<summary><b>📐 1. End-to-End System Architecture (Click to Collapse/Expand)</b></summary>
+<br/>
 
 ```mermaid
 flowchart LR
-    subgraph P1["Project 1: React Native P2P App"]
-        User["Citizen"] -- "Voice / Text Input" --> AppUI["App Interface"]
-        AppUI --> EdgeGPS{"GPS Acquired?"}
-        EdgeGPS -- "No" --> ManualLand["Prompt for Landmark Text"]
-        EdgeGPS -- "Yes" --> GenID["Generate Unique SOS UUID"]
+    subgraph P1["Project 1: React Native P2P Mobile App (Edge Client)"]
+        User["🆘 Citizen"] -- "Voice / Text Input" --> AppUI["📱 App Interface"]
+        AppUI --> EdgeGPS{"📡 GPS Acquired?"}
+        EdgeGPS -- "No" --> ManualLand["📝 Prompt for Landmark Text"]
+        EdgeGPS -- "Yes" --> GenID["🔑 Generate Unique SOS UUID"]
         ManualLand --> GenID
-        GenID --> Foreground["Start Foreground Service Notification"]
-        Foreground --> LocalDB[("Save to RxDB Local DB")]
-        LocalDB --> CheckNet{"Internet Available?"}
-        CheckNet -- "YES" --> APIPost["Send POST /api/sos"]
-        CheckNet -- "NO - Total Offline" --> MeshNet["P2P Bluetooth Mesh Search"]
-        MeshNet -. "Pass UUID + Packet" .-> PeerPhone(("Nearby Peer Device"))
+        GenID --> Foreground["⚙️ Start Foreground Service"]
+        Foreground --> LocalDB[("💾 Save to RxDB Local DB")]
+        LocalDB --> CheckNet{"🌐 Internet Available?"}
+        CheckNet -- "YES" --> APIPost["🚀 Send POST /api/sos"]
+        CheckNet -- "NO - Total Offline" --> MeshNet["📡 P2P Bluetooth Mesh Search"]
+        MeshNet -. "Pass UUID + Packet" .-> PeerPhone(("📱 Nearby Peer Device"))
         PeerPhone -- "Peer has Internet" --> APIPost
     end
 
-    APIPost ==>|"HTTPS Payload"| APIGateway
+    APIPost ==>|"🔒 Encrypted HTTPS Payload"| APIGateway
 
-    subgraph P2["Project 2: Web Platform & Backend"]
-        APIGateway["Node.js API Gateway"] --> RedisQueue[("Redis Message Queue")]
-        RedisQueue --> Processor["Node.js Processor"]
-        Processor --> Dedup{"UUID Exists in DB?"}
-        Dedup -- "YES" --> Drop["Drop Duplicate silently"]
-        Dedup -- "NO" --> SaveDB["Save to PostgreSQL"]
-        SaveDB --> AITriage["Python FastAPI: AI Triage"]
-        AITriage --> Database[("PostgreSQL + PostGIS")]
-        Database --> AdminDash["Admin Control Dashboard - React.js"]
-        AdminDash --> SkillMatch["Skill-Matching Engine"]
-        SkillMatch --> VolunteerPortal["Volunteer Web Portal - PWA"]
-        VolunteerPortal --> Heartbeat{"Volunteer Accepts & Pings?"}
-        Heartbeat -- "No response in 5 mins" --> Reassign["Auto-Reassign to Next Volunteer"]
+    subgraph P2["Project 2: Web Platform, AI Microservices & Cloud Backend"]
+        APIGateway["🌐 Node.js API Gateway"] --> RedisQueue[("⚡ Redis Message Queue")]
+        RedisQueue --> Processor["⚙️ Node.js Processor"]
+        Processor --> Dedup{"🔍 UUID Exists in DB?"}
+        Dedup -- "YES" --> Drop["🗑️ Drop Duplicate silently"]
+        Dedup -- "NO" --> SaveDB["💾 Save to PostgreSQL"]
+        SaveDB --> AITriage["🧠 Python FastAPI: AI Triage"]
+        AITriage --> Database[("🗄️ PostgreSQL + PostGIS")]
+        Database --> AdminDash["🚨 Admin Command Center - React.js"]
+        AdminDash --> SkillMatch["🎯 Skill-Matching Engine"]
+        SkillMatch --> VolunteerPortal["🧑‍🚒 Volunteer Portal - PWA"]
+        VolunteerPortal --> Heartbeat{"⏱️ Volunteer Accepts & Pings?"}
+        Heartbeat -- "No response in 5 mins" --> Reassign["🔄 Auto-Reassign to Next Volunteer"]
         Reassign --> SkillMatch
-        Heartbeat -- "Yes" --> RescueOps["Execute Rescue via OSRM Safe Route"]
+        Heartbeat -- "Yes" --> RescueOps["🚑 Execute Rescue via OSRM Safe Route"]
         RescueOps -.-> APIGateway
     end
 
@@ -70,10 +77,111 @@ flowchart LR
     class AITriage ai;
     class AdminDash,VolunteerPortal,RescueOps p2;
 ```
+</details>
+
+<details open>
+<summary><b>📡 2. Interactive Sequence Diagram: Offline P2P Mesh SOS Relaying</b></summary>
+<br/>
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Victim as 🆘 Trapped Victim (Offline)
+    participant RxDB as 📱 Local RxDB Storage
+    actor Volunteer as 🚶 Volunteer Phone (Mesh Relay)
+    participant Gateway as 🌐 Node.js API Gateway
+    participant Redis as ⚡ Redis Message Queue
+    participant DB as 🗄️ PostgreSQL + PostGIS DB
+    actor Admin as 🚨 Control Room Dashboard
+
+    Victim->>RxDB: 1. Input SOS (Voice/Text + Dynamic UUID)
+    Victim--xGateway: 2. Check cellular network (Failed - 0 Bars)
+    Victim->>Volunteer: 3. Bluetooth / Nearby Connections Discovery
+    RxDB->>Volunteer: 4. Relay Encrypted SOS Packet
+    Note over Volunteer: Volunteer moves towards functional cell tower...
+    Volunteer->>Gateway: 5. Auto-sync HTTPS POST /api/sos
+    Gateway->>Redis: 6. Push payload to high-throughput queue
+    Redis->>DB: 7. De-duplicate UUID & persist record
+    DB->>Admin: 8. Render real-time priority alert on Leaflet Map
+```
+</details>
+
+<details open>
+<summary><b>🧠 3. Interactive Flowchart: Explainable AI Urgency Triage & Priority Scoring</b></summary>
+<br/>
+
+```mermaid
+flowchart TD
+    A["📥 Ingest Raw SOS Payload"] --> B["🗣️ Speech-to-Text Transcription\n(OpenAI Whisper / Bhashini API)"]
+    B --> C["🔍 NLP Intent & Urgency Keyword Extraction\n(Rasa / LangChain)"]
+    C --> D["⚖️ Demographic Vulnerability Scoring\n(Age, Medical Conditions, Pregnancy, Group Size)"]
+    D --> E["📊 Weighted Priority Score Calculation (1 - 100)"]
+    E --> F{"Urgency Rank Classification"}
+    F -- "Score ≥ 80" --> G["🔴 CRITICAL RED ALERT\n(Immediate Boat / Helicopter Rescue Dispatch)"]
+    F -- "50 ≤ Score < 80" --> H["🟡 HIGH YELLOW ALERT\n(Medical Consultation & Shelter Priority)"]
+    F -- "Score < 50" --> I["🟢 NORMAL GREEN ALERT\n(Relief Material & Food Distribution Queue)"]
+
+    classDef red fill:#ffebee,stroke:#c62828,stroke-width:2px;
+    classDef yellow fill:#fffde7,stroke:#fbc02d,stroke-width:2px;
+    classDef green fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    class G red;
+    class H yellow;
+    class I green;
+```
+</details>
+
+<details open>
+<summary><b>🎯 4. Interactive Sequence Diagram: Rescuer Skill-Match & 5-Minute Heartbeat Loop</b></summary>
+<br/>
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Engine as ⚙️ Skill-Match Engine
+    participant PostGIS as 🗺️ PostGIS Spatial Index
+    actor Rescuer1 as 🧑‍⚕️ Rescuer 1 (Dr. Sharma - 300m)
+    actor Rescuer2 as 🏊 Rescuer 2 (Swimmer Vijay - 500m)
+
+    Engine->>PostGIS: Query top 3 nearest skill-matched volunteers
+    PostGIS-->>Engine: Return Rescuer 1, Rescuer 2, Rescuer 3
+    Engine->>Rescuer1: Push Emergency Dispatch Notification
+    Note over Rescuer1: ⏱️ 5-Minute Heartbeat SLA Timer Starts
+
+    alt Rescuer 1 Accepts within 5 Mins
+        Rescuer1-->>Engine: Accept Dispatch
+        Engine->>Rescuer1: Provide OSRM Safe Navigation Path
+    else Heartbeat Timeout (No Response in 5 Mins)
+        Note over Engine: ⚠️ 5-Minute SLA Expired!
+        Engine->>Rescuer2: Auto-reassign to Rescuer 2
+        Rescuer2-->>Engine: Accept Dispatch
+        Engine->>Rescuer2: Provide OSRM Safe Navigation Path
+    end
+```
+</details>
+
+<details open>
+<summary><b>🗺️ 5. Interactive Flowchart: Disaster-Aware Dynamic OSRM Safe Pathfinding</b></summary>
+<br/>
+
+```mermaid
+flowchart LR
+    A["🚩 Start Location\n(Rescuer GPS)"] --> B["📍 Target Destination\n(SOS Victim Coordinates)"]
+    B --> C["🛰️ Fetch Active Hazard Polygons\n(Flooded Underpasses, Bridge Collapses)"]
+    C --> D["🗺️ Inject Avoidance Polygons\ninto OSRM Routing Engine"]
+    D --> E["⚡ Recalculate Dynamic Hazard-Avoidance Path"]
+    E --> F["🚗 Render Safe Evacuation Route\non Leaflet.js / Mapbox Map"]
+
+    classDef route fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
+    class F route;
+```
+</details>
 
 ---
 
 ## 🌟 Comprehensive 20-Feature Deep-Dive
+
+> [!IMPORTANT]
+> All 20 features are designed as a unified platform with a **Core Spine** (Phase 1) and **Modular Plugins** (Phases 2-4).
 
 ### 🚀 Core Platform Features (Phase 1–3 Execution)
 
@@ -254,8 +362,8 @@ AapdaSetu/
 ### 1. Database & Infrastructure Setup
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/AapdaSetu.git
-cd AapdaSetu
+git clone https://github.com/MrinallSamal-byte/SIH.git
+cd SIH
 
 # Spin up PostgreSQL + PostGIS & Redis via Docker
 docker-compose up -d postgres redis
