@@ -126,8 +126,44 @@ graph TD
 
 ---
 
+### 4. Volunteer Skill-Matching & Dispatch Flow
+
+*This diagram explains Feature 10 (Algorithmic Skill-Matching) and the "Ghost Volunteer" edge-case handling.*
+
+```mermaid
+graph TD
+    classDef admin fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
+    classDef backend fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef edge fill:#ffebee,stroke:#c62828,stroke-width:2px;
+
+    AdminDash[Admin clicks 'Dispatch Task']:::admin
+    AdminDash --> |"Task: Need Doctor at Shelter B"| QueryEngine[Skill-Matching Algorithm]:::backend
+    
+    QueryEngine --> QueryDB["Query DB: Role='Doctor' AND Status='Available'"]:::backend
+    QueryDB --> Haversine[Calculate Haversine Distance]:::backend
+    
+    Haversine --> Rank[Rank Top 3 Nearest Volunteers]:::backend
+    Rank --> Push[Send Push Notification / WebSocket]:::backend
+    
+    Push --> V1[Volunteer 1]:::admin
+    Push --> V2[Volunteer 2]:::admin
+    Push --> V3[Volunteer 3]:::admin
+    
+    V1 --> Timer{Accepts in 5 mins?}:::edge
+    V2 --> Timer
+    V3 --> Timer
+    
+    Timer -->|Yes| Lock[Lock Task to Volunteer]:::backend
+    Timer -->|No - Timeout| Ghost[Ghost Volunteer Detected]:::edge
+    
+    Ghost -.->|Auto-Reassign| QueryEngine
+    Lock --> Status[Status: 'Rescue In Progress']:::backend
+```
+
+---
+
 <details open>
-<summary><b>📐 4. Detailed End-to-End System Architecture & Data Flow (Click to Collapse/Expand)</b></summary>
+<summary><b>📐 5. Detailed End-to-End System Architecture & Data Flow (Click to Collapse/Expand)</b></summary>
 <br/>
 
 ```mermaid
