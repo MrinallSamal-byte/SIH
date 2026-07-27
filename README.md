@@ -216,7 +216,7 @@ erDiagram
 <br/>
 
 ```mermaid
-flowchart LR
+flowchart TD
     subgraph P1["Project 1: React Native P2P Mobile App (Edge Client)"]
         User["🆘 Citizen"] -- "Voice / Text Input" --> AppUI["📱 App Interface"]
         AppUI --> EdgeGPS{"📡 GPS Acquired?"}
@@ -353,7 +353,7 @@ sequenceDiagram
 <br/>
 
 ```mermaid
-flowchart LR
+flowchart TD
     A["🚩 Start Location\n(Rescuer GPS)"] --> B["📍 Target Destination\n(SOS Victim Coordinates)"]
     B --> C["🛰️ Fetch Active Hazard Polygons\n(Flooded Underpasses, Bridge Collapses)"]
     C --> D["🗺️ Inject Avoidance Polygons\ninto OSRM Routing Engine"]
