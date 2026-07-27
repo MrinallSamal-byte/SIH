@@ -26,10 +26,10 @@ During major disasters (floods, earthquakes, cyclones), traditional emergency re
 
 ```mermaid
 graph LR
-    classDef mobile fill:#fff3e0,stroke:#e65100,stroke-width:2px;
-    classDef backend fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
-    classDef web fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
-    classDef external fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px;
+    classDef mobile fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000000;
+    classDef backend fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000000;
+    classDef web fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000000;
+    classDef external fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,color:#000000;
 
     subgraph P1 ["Project 1: P2P SOS App"]
         AppA[Mobile App - Online]:::mobile
@@ -101,9 +101,9 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    classDef input fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
-    classDef ai fill:#ffebee,stroke:#c62828,stroke-width:2px;
-    classDef db fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef input fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000000;
+    classDef ai fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#000000;
+    classDef db fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000000;
 
     SOS[SOS Payload Received]:::input --> DB[(Save Raw to DB)]:::db
     DB --> Extract[Extract Text & User Profile]:::ai
@@ -132,9 +132,9 @@ graph TD
 
 ```mermaid
 graph TD
-    classDef admin fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
-    classDef backend fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
-    classDef edge fill:#ffebee,stroke:#c62828,stroke-width:2px;
+    classDef admin fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000000;
+    classDef backend fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000000;
+    classDef edge fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#000000;
 
     AdminDash[Admin clicks 'Dispatch Task']:::admin
     AdminDash --> |"Task: Need Doctor at Shelter B"| QueryEngine[Skill-Matching Algorithm]:::backend
@@ -252,12 +252,12 @@ flowchart LR
         RescueOps -.-> APIGateway
     end
 
-    classDef p1 fill:#fff3e0,stroke:#e65100,stroke-width:2px;
-    classDef p2 fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
-    classDef api fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
-    classDef edge fill:#ffebee,stroke:#c62828,stroke-width:2px;
-    classDef db fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px;
-    classDef ai fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
+    classDef p1 fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000000;
+    classDef p2 fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000000;
+    classDef api fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000000;
+    classDef edge fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#000000;
+    classDef db fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,color:#000000;
+    classDef ai fill:#fff9c4,stroke:#fbc02d,stroke-width:2px,color:#000000;
 
     class AppUI,GenID,MeshNet,PeerPhone,APIPost p1;
     class EdgeGPS,ManualLand,Foreground,CheckNet,RedisQueue,Dedup,Drop edge;
@@ -310,9 +310,9 @@ flowchart TD
     F -- "50 ≤ Score < 80" --> H["🟡 HIGH YELLOW ALERT\n(Medical Consultation & Shelter Priority)"]
     F -- "Score < 50" --> I["🟢 NORMAL GREEN ALERT\n(Relief Material & Food Distribution Queue)"]
 
-    classDef red fill:#ffebee,stroke:#c62828,stroke-width:2px;
-    classDef yellow fill:#fffde7,stroke:#fbc02d,stroke-width:2px;
-    classDef green fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef red fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#000000;
+    classDef yellow fill:#fffde7,stroke:#fbc02d,stroke-width:2px,color:#000000;
+    classDef green fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000000;
     class G red;
     class H yellow;
     class I green;
@@ -360,7 +360,7 @@ flowchart LR
     D --> E["⚡ Recalculate Dynamic Hazard-Avoidance Path"]
     E --> F["🚗 Render Safe Evacuation Route\non Leaflet.js / Mapbox Map"]
 
-    classDef route fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
+    classDef route fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000000;
     class F route;
 ```
 </details>
