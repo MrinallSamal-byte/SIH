@@ -59,8 +59,44 @@ graph LR
 
 ---
 
+### 2. Sequence Diagram: The "Offline-to-Online" SOS Lifecycle
+
+*This diagram shows the exact chronological steps of an SOS request, proving to reviewers how the offline P2P handoff and duplicate prevention work.*
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Victim
+    participant App as Mobile App (Offline)
+    participant Peer as Peer Phone (Online)
+    participant API as Backend API
+    participant Queue as Redis Queue
+    participant AI as Python Triage
+    participant Admin as Web Dashboard
+
+    Victim->>App: Triggers SOS (Voice/Text)
+    App->>App: Generate UUID & Save to Local RxDB
+    App->>App: Check Internet (Failed)
+    App->>Peer: Pass encrypted packet via Bluetooth
+    
+    Note over Peer: Peer phone has internet
+    Peer->>API: POST /api/sos (Payload + UUID)
+    API->>Queue: Push to Redis Queue (Prevent Server Overload)
+    Queue->>API: Process at safe pace
+    API->>API: Check UUID in Database (Duplicate? No)
+    API->>API: Save Raw SOS to PostgreSQL
+    API->>AI: Send Text/Audio for Triage
+    AI-->>API: Return Priority Score (85/100)
+    API->>API: Update DB with Score
+    
+    API->>Admin: WebSocket Push (New High-Priority SOS)
+    Admin->>Admin: Admin Dispatches Task
+```
+
+---
+
 <details open>
-<summary><b>📐 2. Detailed End-to-End System Architecture & Data Flow (Click to Collapse/Expand)</b></summary>
+<summary><b>📐 3. Detailed End-to-End System Architecture & Data Flow (Click to Collapse/Expand)</b></summary>
 <br/>
 
 ```mermaid
