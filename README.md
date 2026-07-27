@@ -95,8 +95,39 @@ sequenceDiagram
 
 ---
 
+### 3. AI Triage & Priority Engine Pipeline
+
+*Use this to explain how the system prevents control room overload by automatically sorting 10,000+ requests.*
+
+```mermaid
+graph TD
+    classDef input fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
+    classDef ai fill:#ffebee,stroke:#c62828,stroke-width:2px;
+    classDef db fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+
+    SOS[SOS Payload Received]:::input --> DB[(Save Raw to DB)]:::db
+    DB --> Extract[Extract Text & User Profile]:::ai
+    
+    Extract --> NLP{NLP Keyword Analysis}:::ai
+    NLP -->|"Keywords: 'drowning', 'trapped', 'pregnant'"| HighScore[Assign Base Score: 80-100]:::ai
+    NLP -->|"Keywords: 'dry clothes', 'food'"| LowScore[Assign Base Score: 10-30]:::ai
+    
+    HighScore --> ProfileCheck{Check Medical Profile}:::ai
+    ProfileCheck -->|Elderly / Disabled / Infant| BoostScore[+20 Priority Boost]:::ai
+    ProfileCheck -->|Healthy Adult| NoBoost[+0 Boost]:::ai
+    
+    LowScore --> FinalCalc
+    BoostScore --> FinalCalc[Calculate Final Score 1-100]:::ai
+    NoBoost --> FinalCalc
+    
+    FinalCalc --> UpdateDB[(Update DB: Color-Code Red/Yellow/Green)]:::db
+    UpdateDB --> Dashboard[Push to Admin Dashboard Map]:::input
+```
+
+---
+
 <details open>
-<summary><b>📐 3. Detailed End-to-End System Architecture & Data Flow (Click to Collapse/Expand)</b></summary>
+<summary><b>📐 4. Detailed End-to-End System Architecture & Data Flow (Click to Collapse/Expand)</b></summary>
 <br/>
 
 ```mermaid
