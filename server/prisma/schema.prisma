@@ -1,0 +1,137 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+enum HELPTYPE {
+  FOOD
+  WATER
+  MEDICAL
+  RESCUE
+  SHELTER
+  OTHER
+}
+
+enum URGENCY {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+
+enum STATUS {
+  PENDING
+  ACKNOWLEDGED
+  ASSIGNED
+  RESOLVED
+  CANCELLED
+}
+
+enum ROLE {
+  CITIZEN
+  VOLUNTEER
+  ADMIN
+}
+
+enum GENDER {
+  MALE
+  FEMALE
+  OTHER
+}
+
+model user {
+  id                  String      @id @default(uuid())
+  name                String
+  age                 Int
+  phoneNumber         String      @unique
+  role                ROLE        @default(CITIZEN)
+  skills              String?    //only activate in times of Volunteer / admin
+  lastKnownGPS        Float[]     @default([])
+  createdRequests     sos[]       @relation("ReportedSOS") 
+  assignedRequests    sos[]       @relation("AssignedSOS") 
+  missingReports      MissingPerson[]
+  shelterResidents    ShelterResident[] @relation("VolunteerShelterResidents")
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+}
+
+
+model sos {
+  id                  String      @id @default(uuid())
+  reporterId          String
+  reporter            user        @relation("ReportedSOS", fields: [reporterId], references: [id], onDelete: Cascade)
+  assignedToId        String?
+  assignedTo          user?       @relation("AssignedSOS", fields: [assignedToId], references: [id], onDelete: SetNull)
+  lastKnownGPS        Float[]
+  helpType            HELPTYPE //can be replaced by video and audio ML model
+  urgency             URGENCY  //can be replaced by PriorityScore
+  peopleCount         Int
+  hasChildren         Boolean     @default(false)
+  hasElderly          Boolean     @default(false)
+  hasDisabled         Boolean     @default(false)
+  medicalNeed         Boolean     @default(false)
+  desc                String?
+  videoUrl            String
+  audioUrl            String
+  // isMeshRelayed       Boolean     @default(false)
+  // relayedByDeviceId   String?
+  status              STATUS      @default(PENDING)
+  priorityScore       Float       @default(0)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  @@index([reporterId])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([priorityScore])
+}
+
+
+model MissingPerson {
+  id          String @id @default(uuid())
+  reporterId  String
+  reporter    user   @relation(fields: [reporterId],references: [id], onDelete: Cascade)
+
+  //about the person gone missing
+  personName  String
+  age         Int?
+  gender      GENDER?
+  photoUrl    String
+
+  //about the reporter
+  contactName   String
+  contactPhone  String
+
+  status        STATUS      @default(PENDING)
+  shelter       String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([reporterId])
+  @@index([status])
+}
+
+model ShelterResident {
+  id                String   @id @default(uuid())
+  volunteerId       String
+  volunteer         user     @relation("VolunteerShelterResidents", fields: [volunteerId], references: [id], onDelete: Cascade)
+  residentName      String
+  age               Int?
+  gender            GENDER?
+  contactPhone      String?
+  shelterName       String
+  notes             String?
+  isMatchConfirmed  Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([volunteerId])
+  @@index([residentName])
+  @@index([shelterName])
+}
