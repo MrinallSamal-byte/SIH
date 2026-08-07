@@ -13,12 +13,12 @@ import SignUp from "./pages/Auth/SignUp.jsx";
 import CitizenDashboard from "./layouts/CitizenDashboard.jsx";
 import EmergencySOS from "./layouts/EmergencySOS.jsx";
 import SafetyDashboard from "./layouts/SafetyDashboard.jsx";
-import DisasterAlertsDashboard from "./DisasterAlertsDashboard.jsx"; // This was correct
+import DisasterAlertsDashboard from "./DisasterAlertsDashboard.jsx";
 import SafeRoutesDashboard from "./layouts/SafeRoutesDashboard.jsx";
-import MedicalAssistanceDashboard from "./pages/Citizen/MedicalAssistanceDashboard.jsx"; // Assuming this file exists at this path
-import ReportDamageDashboard from "./pages/Citizen/ReportDamageDashboard.jsx"; // Assuming this file exists at this path
-import MissingPersonsDashboard from "./pages/Citizen/MissingPersonsDashboard.jsx"; // Assuming this file exists at this path
-import EmergencyContactsDashboard from "./pages/Citizen/EmergencyContactsDashboard.jsx"; // Assuming this file exists at this path
+import MedicalAssistanceDashboard from "./pages/Citizen/MedicalAssistanceDashboard.jsx";
+import ReportDamageDashboard from "./pages/Citizen/ReportDamageDashboard.jsx";
+import MissingPersonsDashboard from "./pages/Citizen/MissingPersonsDashboard.jsx";
+import EmergencyContactsDashboard from "./pages/Citizen/EmergencyContactsDashboard.jsx";
 
 function App() {
   return (
