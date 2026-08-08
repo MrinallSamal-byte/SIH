@@ -32,6 +32,20 @@ Post-disaster building damage classifier for the **AapdaSetu** platform. Given a
 
 Part of the **AapdaSetu** project (Smart India Hackathon).
 
+## Run the Interactive Demo
+
+```bash
+cd ai-service
+pip install -r requirements.txt
+
+# Download the checkpoint (~270 MB) from Hugging Face
+hf download Divyanshu-Kumar19/aapdasetu-damage-assessment best.pt --local-dir ./checkpoints
+
+python run.py
+```
+
+Then open **http://localhost:8000** — the demo app (`demo/index.html`) lets you upload a disaster photo and see the damage grade, compensation amount, EXIF fraud checks and duplicate detection live. Raw API docs are at `http://localhost:8000/docs`.
+
 ## Model Details
 
 | | |

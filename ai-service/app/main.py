@@ -10,11 +10,13 @@ from __future__ import annotations
 
 import traceback
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 import httpx
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from .damage_classifier import DamageClassifier, calculate_compensation
@@ -79,6 +81,13 @@ class AssessmentResponse(BaseModel):
 
     # Meta
     fraud_flags: list[str]
+
+
+@app.get("/", include_in_schema=False)
+def demo_page():
+    """Serve the interactive demo UI."""
+    return FileResponse(Path(__file__).resolve().parent.parent / "demo" / "index.html")
+
 
 @app.get("/health")
 def health():
