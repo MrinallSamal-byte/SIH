@@ -8,6 +8,9 @@
 [![AI Powered](https://img.shields.io/badge/AI-Explainable%20Triage-green.svg)](https://github.com/MrinallSamal-byte/SIH)
 [![Prototype Stage](https://img.shields.io/badge/Stage-Hackathon%20Prototype-red.svg)](https://github.com/MrinallSamal-byte/SIH)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Damage Model on Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Damage%20Model-aapdasetu--damage--assessment-FFD21E.svg)](https://huggingface.co/Divyanshu-Kumar19/aapdasetu-damage-assessment)
+
+> **🤗 AI Damage-Assessment Model:** the trained ResNet50 checkpoint (`best.pt`) and all evaluation artifacts are hosted on Hugging Face — [Divyanshu-Kumar19/aapdasetu-damage-assessment](https://huggingface.co/Divyanshu-Kumar19/aapdasetu-damage-assessment). The service code that loads it lives in [`ai-service/`](ai-service/README.md).
 
 ---
 

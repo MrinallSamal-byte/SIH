@@ -1,0 +1,20 @@
+{
+  "MINOR": {
+    "raw": 846,
+    "train": 634,
+    "val": 126,
+    "test": 86
+  },
+  "MAJOR": {
+    "raw": 525,
+    "train": 393,
+    "val": 78,
+    "test": 54
+  },
+  "DESTROYED": {
+    "raw": 1029,
+    "train": 771,
+    "val": 154,
+    "test": 104
+  }
+}

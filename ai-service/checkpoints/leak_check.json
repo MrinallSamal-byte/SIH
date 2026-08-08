@@ -1,0 +1,118 @@
+{
+  "leakage_scan": {
+    "test_images": 244,
+    "train_val_images": 2156,
+    "pairs_compared": 526064,
+    "matches_at_8": 0,
+    "matches_at_10": 15,
+    "matches_at_12": 29,
+    "suspects_at_12": [
+      {
+        "test": "dataset\\test\\DESTROYED\\fire_image0510.jpg",
+        "train_or_val": "dataset\\train\\DESTROYED\\fire_image0505.jpg",
+        "hamming": 10
+      },
+      {
+        "test": "dataset\\test\\MINOR\\normal_image0136.jpg",
+        "train_or_val": "dataset\\train\\MINOR\\normal_image0134.jpg",
+        "hamming": 10
+      },
+      {
+        "test": "dataset\\test\\MINOR\\normal_image0136.jpg",
+        "train_or_val": "dataset\\val\\MINOR\\normal_image0137.jpg",
+        "hamming": 10
+      },
+      {
+        "test": "dataset\\test\\MINOR\\normal_image0225.jpg",
+        "train_or_val": "dataset\\train\\MINOR\\normal_image0222.jpg",
+        "hamming": 10
+      },
+      {
+        "test": "dataset\\test\\MINOR\\normal_image0270.jpg",
+        "train_or_val": "dataset\\train\\MINOR\\normal_image0264.jpg",
+        "hamming": 10
+      },
+      {
+        "test": "dataset\\test\\MINOR\\normal_image0270.jpg",
+        "train_or_val": "dataset\\train\\MINOR\\normal_image0266.jpg",
+        "hamming": 10
+      },
+      {
+        "test": "dataset\\test\\MINOR\\normal_image0403.jpg",
+        "train_or_val": "dataset\\train\\MINOR\\normal_image0232.jpg",
+        "hamming": 10
+      },
+      {
+        "test": "dataset\\test\\MINOR\\normal_image0658.jpg",
+        "train_or_val": "dataset\\train\\MINOR\\normal_image0654.jpg",
+        "hamming": 10
+      },
+      {
+        "test": "dataset\\test\\MINOR\\normal_image0658.jpg",
+        "train_or_val": "dataset\\train\\MINOR\\normal_image0655.jpg",
+        "hamming": 10
+      },
+      {
+        "test": "dataset\\test\\MINOR\\normal_image0746.jpg",
+        "train_or_val": "dataset\\train\\MINOR\\normal_image0745.jpg",
+        "hamming": 10
+      },
+      {
+        "test": "dataset\\test\\MINOR\\normal_image0807.jpg",
+        "train_or_val": "dataset\\train\\MINOR\\normal_image0805.jpg",
+        "hamming": 10
+      },
+      {
+        "test": "dataset\\test\\MINOR\\normal_image0807.jpg",
+        "train_or_val": "dataset\\train\\MINOR\\normal_image0806.jpg",
+        "hamming": 10
+      },
+      {
+        "test": "dataset\\test\\MINOR\\normal_image0889.jpg",
+        "train_or_val": "dataset\\train\\MINOR\\normal_image0893.jpg",
+        "hamming": 10
+      },
+      {
+        "test": "dataset\\test\\MINOR\\normal_image0890.jpg",
+        "train_or_val": "dataset\\train\\MINOR\\normal_image0886.jpg",
+        "hamming": 10
+      },
+      {
+        "test": "dataset\\test\\MINOR\\normal_image0945.jpg",
+        "train_or_val": "dataset\\train\\MINOR\\normal_image0941.jpg",
+        "hamming": 10
+      },
+      {
+        "test": "dataset\\test\\DESTROYED\\fire_image0470.jpg",
+        "train_or_val": "dataset\\train\\DESTROYED\\fire_image0468.jpg",
+        "hamming": 12
+      },
+      {
+        "test": "dataset\\test\\MINOR\\normal_image0029.jpg",
+        "train_or_val": "dataset\\train\\MINOR\\normal_image0005.jpg",
+        "hamming": 12
+      },
+      {
+        "test": "dataset\\test\\MINOR\\normal_image0108.jpg",
+        "train_or_val": "dataset\\train\\MINOR\\normal_image0107.jpg",
+        "hamming": 12
+      },
+      {
+        "test": "dataset\\test\\MINOR\\normal_image0259.jpg",
+        "train_or_val": "dataset\\train\\MINOR\\normal_image0269.jpg",
+        "hamming": 12
+      },
+      {
+        "test": "dataset\\test\\MINOR\\normal_image0265.jpg",
+        "train_or_val": "dataset\\train\\MINOR\\normal_image0267.jpg",
+        "hamming": 12
+      }
+    ]
+  },
+  "true_accuracy": {
+    "true_train_acc": 1.0,
+    "val_acc": 0.9916,
+    "test_acc": 0.9836,
+    "true_gap_train_minus_test": 0.0164
+  }
+}

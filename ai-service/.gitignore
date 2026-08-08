@@ -1,0 +1,21 @@
+# Environment / secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Large artifacts — hosted on Hugging Face instead
+# Model repo: https://huggingface.co/Divyanshu-Kumar19/aapdasetu-damage-assessment
+checkpoints/*.pt
+checkpoints/*.pth
+
+# Raw dataset images — hosted on Hugging Face (dataset repo)
+dataset/raw/
+
+# Misc
+.DS_Store
+Thumbs.db
