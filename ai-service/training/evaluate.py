@@ -1,23 +1,4 @@
-"""
-evaluate.py
-===========
-Runs the saved best.pt checkpoint on the held-out TEST set and produces:
-
-  1. Overall accuracy
-  2. Per-class Precision / Recall / F1 / Support
-  3. Confusion matrix  (saved as PNG  → checkpoints/confusion_matrix.png)
-  4. ROC curves        (saved as PNG  → checkpoints/roc_curves.png)
-  5. Training curves   (saved as PNG  → checkpoints/training_curves.png)
-  6. Misclassified grid (top-20)      → checkpoints/misclassified.png
-  7. Full report       (saved as JSON → checkpoints/eval_report.json)
-
-All plots are PPT-ready (high DPI, clean style, labelled axes).
-
-Usage
-─────
-  python training/evaluate.py
-  python training/evaluate.py --checkpoint checkpoints/best.pt --data_dir dataset
-"""
+"""Evaluate best.pt on the test set; saves report JSON and plots."""
 
 from __future__ import annotations
 
@@ -26,8 +7,7 @@ import json
 import sys
 from pathlib import Path
 
-# Windows consoles default to cp1252, which cannot render the →/✓/─ symbols
-# used below. Force UTF-8 output so log lines never crash the evaluation run.
+# Force UTF-8 output on Windows consoles
 try:
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
@@ -35,7 +15,7 @@ except Exception:
     pass
 
 import matplotlib
-matplotlib.use("Agg")   # non-interactive backend — works without a display
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import numpy as np
@@ -54,15 +34,10 @@ from torch.utils.data import DataLoader
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from training.augmentations import test_transform
 
-# IMPORTANT: must match ImageFolder's alphabetical index order used at training
-# time (DESTROYED=0, MAJOR=1, MINOR=2). The model emits logits in this order, so
-# labels and colours are aligned by index. Do NOT reorder without retraining.
+# Must match ImageFolder alphabetical order (DESTROYED=0, MAJOR=1, MINOR=2)
 CLASSES      = ["DESTROYED", "MAJOR", "MINOR"]
-CLASS_COLORS = ["#e74c3c", "#e67e22", "#2ecc71"]   # red / orange / green
+CLASS_COLORS = ["#e74c3c", "#e67e22", "#2ecc71"]
 PPT_DPI     = 150
-
-
-# ── Model loader ──────────────────────────────────────────────────────────────
 
 def load_model(checkpoint_path: Path, device: torch.device) -> nn.Module:
     model = models.resnet50(weights=None)
@@ -79,17 +54,8 @@ def load_model(checkpoint_path: Path, device: torch.device) -> nn.Module:
     print(f"  Best val accuracy  : {ckpt.get('val_acc', '?'):.3f}\n")
     return model
 
-
-# ── Inference ─────────────────────────────────────────────────────────────────
-
 def run_inference(model, loader, device):
-    """
-    Returns:
-      all_labels  : (N,)  true integer labels
-      all_preds   : (N,)  predicted integer labels
-      all_probs   : (N,3) softmax probabilities for all classes
-      all_paths   : (N,)  file paths (for misclassified grid)
-    """
+    """Return (labels, preds, probs, paths) for the whole loader."""
     all_labels, all_preds, all_probs, all_paths = [], [], [], []
 
     with torch.no_grad():
@@ -103,7 +69,6 @@ def run_inference(model, loader, device):
             all_preds.extend(preds)
             all_probs.extend(probs)
 
-    # Collect paths from dataset (DataLoader doesn't expose them directly)
     for path, _ in loader.dataset.samples:
         all_paths.append(path)
 
@@ -113,9 +78,6 @@ def run_inference(model, loader, device):
         np.array(all_probs),
         all_paths,
     )
-
-
-# ── Plot helpers ──────────────────────────────────────────────────────────────
 
 def plot_confusion_matrix(cm: np.ndarray, out_path: Path) -> None:
     fig, ax = plt.subplots(figsize=(7, 6))
@@ -134,7 +96,6 @@ def plot_confusion_matrix(cm: np.ndarray, out_path: Path) -> None:
     plt.setp(ax.get_xticklabels(), rotation=30, ha="right", fontsize=11)
     plt.setp(ax.get_yticklabels(), fontsize=11)
 
-    # Annotate each cell
     thresh = cm.max() / 2.0
     for i in range(len(CLASSES)):
         for j in range(len(CLASSES)):
@@ -149,7 +110,6 @@ def plot_confusion_matrix(cm: np.ndarray, out_path: Path) -> None:
     fig.savefig(out_path, dpi=PPT_DPI, bbox_inches="tight")
     plt.close(fig)
     print(f"  Confusion matrix   → {out_path}")
-
 
 def plot_roc_curves(labels: np.ndarray, probs: np.ndarray, out_path: Path) -> None:
     fig, ax = plt.subplots(figsize=(7, 6))
@@ -177,7 +137,6 @@ def plot_roc_curves(labels: np.ndarray, probs: np.ndarray, out_path: Path) -> No
     fig.savefig(out_path, dpi=PPT_DPI, bbox_inches="tight")
     plt.close(fig)
     print(f"  ROC curves         → {out_path}")
-
 
 def plot_training_curves(history_path: Path, out_path: Path) -> None:
     if not history_path.exists():
@@ -221,7 +180,6 @@ def plot_training_curves(history_path: Path, out_path: Path) -> None:
     fig.savefig(out_path, dpi=PPT_DPI, bbox_inches="tight")
     plt.close(fig)
     print(f"  Training curves    → {out_path}")
-
 
 def plot_misclassified(
     labels: np.ndarray,
@@ -270,13 +228,11 @@ def plot_misclassified(
     plt.close(fig)
     print(f"  Misclassified grid → {out_path}")
 
-
 def plot_class_confidence(probs: np.ndarray, labels: np.ndarray, out_path: Path) -> None:
     """Box-plot of softmax confidence per class — shows calibration quality."""
     fig, axes = plt.subplots(1, len(CLASSES), figsize=(12, 5), sharey=True)
 
     for i, (cls, color, ax) in enumerate(zip(CLASSES, CLASS_COLORS, axes)):
-        # Separate correct vs incorrect predictions for this class
         mask_correct   = (labels == i) & (probs.argmax(1) == i)
         mask_incorrect = (labels == i) & (probs.argmax(1) != i)
 
@@ -304,9 +260,6 @@ def plot_class_confidence(probs: np.ndarray, labels: np.ndarray, out_path: Path)
     plt.close(fig)
     print(f"  Confidence plot    → {out_path}")
 
-
-# ── Main ──────────────────────────────────────────────────────────────────────
-
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--checkpoint", default="checkpoints/best.pt")
@@ -315,7 +268,6 @@ def parse_args():
     p.add_argument("--num_workers",type=int, default=0)
     p.add_argument("--out_dir",    default="checkpoints")
     return p.parse_args()
-
 
 def main():
     args     = parse_args()
@@ -332,10 +284,8 @@ def main():
     print(f"  Test data  : {data_dir / 'test'}")
     print(f"{'='*58}\n")
 
-    # ── Load model ────────────────────────────────────────────────────────────
     model = load_model(ckpt, device)
 
-    # ── Test dataset ──────────────────────────────────────────────────────────
     test_ds = datasets.ImageFolder(str(data_dir / "test"), transform=test_transform)
     test_loader = DataLoader(
         test_ds,
@@ -346,20 +296,16 @@ def main():
     print(f"  Test images : {len(test_ds)}")
     print(f"  Classes     : {test_ds.class_to_idx}\n")
 
-    # Safety check — the label order used for every plot/report below must match
-    # the integer indices the model actually outputs (ImageFolder order). Without
-    # this, MINOR and DESTROYED would silently be swapped in the report.
+    # Label order must match the model's output indices (ImageFolder order)
     actual_order = [k for k, _ in sorted(test_ds.class_to_idx.items(), key=lambda kv: kv[1])]
     assert actual_order == CLASSES, (
         f"Dataset class order {actual_order} != evaluate.py CLASSES {CLASSES}. "
         "Update CLASSES to match ImageFolder's alphabetical order."
     )
 
-    # ── Inference ─────────────────────────────────────────────────────────────
     print("  Running inference on test set...")
     labels, preds, probs, paths = run_inference(model, test_loader, device)
 
-    # ── Text report ───────────────────────────────────────────────────────────
     overall_acc = (labels == preds).mean()
     report_str  = classification_report(
         labels, preds, target_names=CLASSES, digits=4
@@ -367,7 +313,6 @@ def main():
     print(f"\n  Overall test accuracy : {overall_acc:.4f}  ({overall_acc*100:.2f}%)")
     print(f"\n{report_str}")
 
-    # ── Save JSON report ──────────────────────────────────────────────────────
     report_dict = classification_report(
         labels, preds, target_names=CLASSES, output_dict=True
     )
@@ -378,7 +323,6 @@ def main():
         json.dump(report_dict, f, indent=2)
     print(f"\n  Full report saved  → {eval_path}")
 
-    # ── Plots ─────────────────────────────────────────────────────────────────
     cm = confusion_matrix(labels, preds)
     plot_confusion_matrix(cm,  out_dir / "confusion_matrix.png")
     plot_roc_curves(labels, probs, out_dir / "roc_curves.png")
@@ -398,7 +342,6 @@ def main():
               f"n={int(m.get('support',0))}")
     print(f"  {'Overall':<12}  Acc={overall_acc:.3f}")
     print()
-
 
 if __name__ == "__main__":
     main()

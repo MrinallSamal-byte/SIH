@@ -1,13 +1,5 @@
-"""
-prepare_dataset.py — with pHash deduplication
-==============================================
-Before splitting, compute perceptual hash (pHash) for every image.
-Images with pHash distance <= 8 are considered near-duplicates.
-Keep only ONE image per near-duplicate group.
-Then do a stratified split on the deduplicated set.
-
-This prevents data leakage where the same disaster scene appears
-in both train and val/test with slightly different crops.
+"""Deduplicate raw images via pHash, then split into train/val/test.
+Raw images on Hugging Face: https://huggingface.co/datasets/Divyanshu-Kumar19/aapdasetu-damage-dataset
 """
 
 from __future__ import annotations
@@ -20,8 +12,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-# Windows consoles default to cp1252, which cannot render the →/✓/█ symbols
-# used below. Force UTF-8 output so the pretty log lines never crash the run.
+# Force UTF-8 output on Windows consoles
 try:
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
@@ -38,24 +29,18 @@ except ImportError:
 
 CLASSES   = ["MINOR", "MAJOR", "DESTROYED"]
 SPLIT     = (0.75, 0.15, 0.10)   # train / val / test
-PHASH_THRESHOLD = 8               # hamming distance — images within 8 bits are near-dupes
-
+PHASH_THRESHOLD = 8               # hamming distance threshold for near-duplicates
 
 def compute_phash(path: Path) -> str | None:
     if not HAS_PHASH:
-        return path.stem   # fall back to filename as unique key
+        return path.stem
     try:
         return str(imagehash.phash(Image.open(path).convert("RGB")))
     except Exception:
         return None
 
-
 def deduplicate(files: list[Path], threshold: int = PHASH_THRESHOLD) -> list[Path]:
-    """
-    Remove near-duplicate images using pHash.
-    Two images with Hamming distance <= threshold are near-duplicates.
-    Keep one representative per group (the first one alphabetically).
-    """
+    """Keep one image per near-duplicate group (pHash distance <= threshold)."""
     if not HAS_PHASH:
         return files
 
@@ -83,17 +68,15 @@ def deduplicate(files: list[Path], threshold: int = PHASH_THRESHOLD) -> list[Pat
         print(f"    Removed {removed} near-duplicate images (pHash distance <= {threshold})")
     return kept
 
-
 def split_files(files: list[Path], seed: int = 42) -> tuple[list, list, list]:
-    """Stratified random split — same seed every run for reproducibility."""
+    """Stratified random split; fixed seed for reproducibility."""
     r = random.Random(seed)
-    files = sorted(files)    # sort first for reproducibility
+    files = sorted(files)
     r.shuffle(files)
     n      = len(files)
     n_tr   = int(n * SPLIT[0])
     n_va   = int(n * SPLIT[1])
     return files[:n_tr], files[n_tr:n_tr+n_va], files[n_tr+n_va:]
-
 
 def main():
     p = argparse.ArgumentParser()
@@ -181,7 +164,6 @@ def main():
         json.dump(manifest, f, indent=2)
     print(f"  Split manifest → {manifest_path}")
     print(f"  ✓ Dataset ready. Next: python training/train.py\n")
-
 
 if __name__ == "__main__":
     main()

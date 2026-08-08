@@ -14,6 +14,7 @@ checkpoints/*.pt
 checkpoints/*.pth
 
 # Raw dataset images — hosted on Hugging Face (dataset repo)
+# Dataset repo: https://huggingface.co/datasets/Divyanshu-Kumar19/aapdasetu-damage-dataset
 dataset/raw/
 
 # Misc

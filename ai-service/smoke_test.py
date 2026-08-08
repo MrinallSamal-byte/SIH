@@ -1,12 +1,4 @@
-"""
-smoke_test.py — end-to-end check of the FastAPI service.
-
-Sends one real test-set image per class to POST /api/assess-damage and
-verifies the returned damage_grade matches the folder the image lives in.
-Also exercises /health and /api/check-duplicate.
-
-Requires the service running on http://localhost:8000  (python run.py)
-"""
+"""End-to-end API check. Requires the service on http://localhost:8000 (python run.py)."""
 from __future__ import annotations
 
 import sys
@@ -21,13 +13,11 @@ except Exception:
     pass
 
 BASE = "http://localhost:8000"
-TEST_DIR = Path("dataset/raw")   # raw source folders (MINOR/MAJOR/DESTROYED)
-
+TEST_DIR = Path("dataset/raw")
 
 def pick_one(cls: str) -> Path:
     files = sorted((TEST_DIR / cls).iterdir())
-    return files[len(files) // 2]   # a middle file, deterministic
-
+    return files[len(files) // 2]
 
 def main():
     ok = True
@@ -37,7 +27,7 @@ def main():
     print(f"GET  /health            -> {r.status_code} {r.json()}")
     ok &= r.status_code == 200
 
-    # 2. check-duplicate (pure pHash, no ML)
+    # 2. check-duplicate
     r = httpx.post(f"{BASE}/api/check-duplicate", timeout=10, json={
         "new_hash": "abcdef1234567890",
         "existing_hashes": ["abcdef1234567890", "0000000000000000"],
@@ -46,7 +36,7 @@ def main():
     print(f"POST /api/check-duplicate -> {r.status_code} {body}")
     ok &= r.status_code == 200 and body["is_duplicate"] is True
 
-    # 3. assess-damage with one image per class (first request loads the model)
+    # 3. assess-damage with one image per class
     for cls in ("DESTROYED", "MAJOR", "MINOR"):
         img = pick_one(cls)
         with open(img, "rb") as fh:
@@ -75,7 +65,6 @@ def main():
 
     print("\nRESULT:", "ALL PASSED" if ok else "SOME CHECKS FAILED")
     sys.exit(0 if ok else 1)
-
 
 if __name__ == "__main__":
     main()

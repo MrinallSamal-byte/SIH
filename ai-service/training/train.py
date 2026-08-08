@@ -1,51 +1,8 @@
 """
-train.py
-========
-Fine-tunes ResNet50 on the 3-class AapdaSetu building damage dataset.
+Fine-tunes ResNet50 on the 3-class damage dataset (two-phase, early stopping).
 
-Anti-overfitting techniques (complete list)
-────────────────────────────────────────────
-1.  Transfer learning       — ImageNet weights. Conv layers already know
-                              edges/textures; we only teach damage patterns.
-2.  Two-phase training      — Phase 1: backbone frozen, train head only (6 ep).
-                              Phase 2: unfreeze layer3+layer4+head with 10x
-                              smaller LR so we nudge, not destroy, pretrained
-                              features.
-3.  BatchNorm freeze        — BN running stats are frozen during phase 2.
-                              Prevents train/val distribution shift that causes
-                              val loss to spike while train loss keeps dropping.
-4.  Dropout(0.3)            — 30% of head neurons dropped each forward pass.
-5.  Label smoothing(0.1)    — Soft targets [0.033, 0.033, 0.933] instead of
-                              hard [0,0,1]. Stops the model from becoming
-                              overconfident on training examples.
-6.  Weight decay(1e-4)      — L2 regularisation penalises large weights.
-7.  Mixup(alpha=0.1)        — Interpolates two training samples and their
-                              labels. The model never sees a "pure" example,
-                              so it cannot memorise exact pixel patterns.
-8.  LR warmup (2 epochs)    — Ramps LR from 0 → target in phase 2 so the
-                              unfrozen layers don't blow up on the first batch.
-9.  CosineAnnealingLR       — Smoothly decays LR to near-zero. Avoids the
-                              sharp drops that cause overfitting late in training.
-10. Early stopping          — Stops when val loss doesn't improve for
-                              `patience` epochs. Checkpoint is always the
-                              best generalising model, never the most overfit.
-11. WeightedRandomSampler   — Balances class frequencies per epoch without
-                              duplicating data.
-12. Gradient clipping(1.0)  — Prevents exploding gradients.
-13. AMP (mixed precision)   — Faster on GPU, no accuracy loss.
-
-Anti-underfitting / generalisation techniques
-──────────────────────────────────────────────
-- Heavy augmentation in augmentations.py (see file for full list)
-- Validation tracked separately from training — early stopping on val loss
-- Overfitting gap alert: if train_acc − val_acc > 15%, a warning is printed
-- Underfitting alert: if val_acc < 60% after phase 1, a warning is printed
-- Training curve (loss + accuracy) saved as PNG automatically
-
-Usage
-─────
+Usage:
   python training/train.py
-  python training/train.py --epochs 60 --batch_size 16
   python training/train.py --resume checkpoints/last.pt
 """
 
@@ -58,8 +15,7 @@ import sys
 import time
 from pathlib import Path
 
-# Windows consoles default to cp1252, which cannot render the ✓/⚠/─ symbols
-# used below. Force UTF-8 output so log lines never crash a training run.
+# Force UTF-8 output on Windows consoles
 try:
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
@@ -71,42 +27,36 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from torchvision import datasets, models
 
-# AMP import — works on both old and new PyTorch
+# AMP import — supports both old and new PyTorch
 try:
     from torch.amp import GradScaler, autocast
-    _AMP_DEVICE_ARG = True      # new API: autocast("cuda")
+    _AMP_DEVICE_ARG = True
 except ImportError:
     from torch.cuda.amp import GradScaler, autocast
-    _AMP_DEVICE_ARG = False     # old API: autocast()
+    _AMP_DEVICE_ARG = False
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from training.augmentations import train_transform, val_transform
 
-# ── Hyper-parameters ──────────────────────────────────────────────────────────
 DEFAULTS = dict(
     data_dir      = "dataset",
     out_dir       = "checkpoints",
     epochs        = 40,
     batch_size    = 32,
-    lr_head       = 3e-4,       # phase 1: head only
-    lr_finetune   = 3e-5,       # phase 2: unfrozen layers (10x smaller)
-    weight_decay  = 1e-4,       # L2 regularisation
-    patience      = 10,         # early stopping
-    phase1_epochs = 6,          # epochs to train head only
-    warmup_epochs = 2,          # phase 2 LR warmup
+    lr_head       = 3e-4,
+    lr_finetune   = 3e-5,
+    weight_decay  = 1e-4,
+    patience      = 10,
+    phase1_epochs = 6,
+    warmup_epochs = 2,
     num_workers   = 0,
     resume        = "",
     seed          = 42,
-    mixup_alpha   = 0.1,        # light mixup — keeps training signal clear
+    mixup_alpha   = 0.1,
 )
 
-# Expected dataset folder names. The authoritative index order comes from
-# ImageFolder's class_to_idx (alphabetical: DESTROYED=0, MAJOR=1, MINOR=2)
-# and is saved into every checkpoint for inference.
+# Folder names; index order comes from ImageFolder (DESTROYED=0, MAJOR=1, MINOR=2)
 CLASSES = ["MINOR", "MAJOR", "DESTROYED"]
-
-
-# ── Reproducibility ───────────────────────────────────────────────────────────
 
 def set_seed(seed: int) -> None:
     import random, numpy as np
@@ -118,18 +68,8 @@ def set_seed(seed: int) -> None:
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark     = False
 
-
-# ── Model ─────────────────────────────────────────────────────────────────────
-
 def build_model(num_classes: int = 3) -> nn.Module:
-    """
-    ResNet50 + custom head:
-      avgpool → Dropout(0.3) → Linear(2048, num_classes)
-
-    Why Dropout here and not inside the backbone?
-      The backbone is pretrained — adding dropout there would destroy learned
-      features. Putting it before the final FC only regularises the new head.
-    """
+    """ResNet50 with Dropout(0.3) + linear head."""
     model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V2)
     in_features = model.fc.in_features
     model.fc = nn.Sequential(
@@ -138,49 +78,30 @@ def build_model(num_classes: int = 3) -> nn.Module:
     )
     return model
 
-
 def freeze_backbone(model: nn.Module) -> None:
     """Phase 1: freeze all layers except the FC head."""
     for name, param in model.named_parameters():
         if "fc" not in name:
             param.requires_grad = False
 
-
 def unfreeze_last_blocks(model: nn.Module) -> None:
-    """
-    Phase 2: unfreeze layer3, layer4, fc.
-    layer1 + layer2 stay frozen — they are generic edge/texture detectors
-    that transfer perfectly to any visual domain.
-    BatchNorm layers are kept in eval mode (stats frozen) to prevent
-    train/val distribution shift.
-    """
+    """Phase 2: unfreeze layer3, layer4 and fc only."""
     for param in model.parameters():
         param.requires_grad = False
     for name, param in model.named_parameters():
         if any(blk in name for blk in ["layer3", "layer4", "fc"]):
             param.requires_grad = True
 
-
 def freeze_bn(model: nn.Module) -> None:
-    """
-    Keep all BatchNorm layers in eval mode during phase 2.
-    This prevents the running mean/var from shifting when we unfreeze
-    the backbone with a small batch — a common cause of val loss spikes.
-    """
+    """Keep BatchNorm layers in eval mode to avoid val loss spikes."""
     for m in model.modules():
         if isinstance(m, (nn.BatchNorm2d, nn.BatchNorm1d)):
             m.eval()
             for p in m.parameters():
                 p.requires_grad = False
 
-
-# ── Data ──────────────────────────────────────────────────────────────────────
-
 def make_weighted_sampler(dataset: datasets.ImageFolder) -> WeightedRandomSampler:
-    """
-    Each epoch sees an approximately balanced class distribution.
-    This handles the 2:1 DESTROYED:MAJOR imbalance without throwing away data.
-    """
+    """Balance class frequencies per epoch without duplicating data."""
     class_counts = [0] * len(dataset.classes)
     for _, label in dataset.samples:
         class_counts[label] += 1
@@ -188,12 +109,10 @@ def make_weighted_sampler(dataset: datasets.ImageFolder) -> WeightedRandomSample
     sample_weights = [class_weights[label] for _, label in dataset.samples]
     return WeightedRandomSampler(sample_weights, len(sample_weights), replacement=True)
 
-
 def load_data(data_dir: Path, batch_size: int, num_workers: int):
     train_ds = datasets.ImageFolder(str(data_dir / "train"), transform=train_transform)
     val_ds   = datasets.ImageFolder(str(data_dir / "val"),   transform=val_transform)
 
-    # Sanity check — folder names must match CLASSES
     actual = sorted(train_ds.class_to_idx.keys())
     expected = sorted(CLASSES)
     assert actual == expected, (
@@ -219,16 +138,8 @@ def load_data(data_dir: Path, batch_size: int, num_workers: int):
     )
     return train_loader, val_loader, train_ds.class_to_idx
 
-
-# ── Mixup ─────────────────────────────────────────────────────────────────────
-
 def mixup_batch(imgs: torch.Tensor, labels: torch.Tensor, alpha: float):
-    """
-    Linearly interpolates two training samples.
-    The model never sees a "pure" label-1 example — it always sees a blend.
-    This prevents memorisation of training set patterns (data mimicry).
-    alpha=0.1 → lambda is typically between 0.8–1.0 (very light blend).
-    """
+    """Blend two samples and their labels to prevent memorisation."""
     if alpha <= 0:
         return imgs, labels, labels, 1.0
     lam = float(torch.distributions.Beta(
@@ -238,12 +149,8 @@ def mixup_batch(imgs: torch.Tensor, labels: torch.Tensor, alpha: float):
     mixed = lam * imgs + (1 - lam) * imgs[idx]
     return mixed, labels, labels[idx], lam
 
-
 def mixup_criterion(criterion, logits, y_a, y_b, lam):
     return lam * criterion(logits, y_a) + (1 - lam) * criterion(logits, y_b)
-
-
-# ── Training loop ─────────────────────────────────────────────────────────────
 
 def run_epoch(
     model, loader, criterion, optimizer, scaler,
@@ -251,17 +158,11 @@ def run_epoch(
     mixup_alpha: float = 0.0,
     freeze_batchnorm: bool = False,
 ) -> tuple[float, float]:
-    """
-    One full pass over the dataset.
-    Returns (avg_loss, accuracy).
-
-    freeze_batchnorm=True: keeps BN in eval mode during phase 2 fine-tuning.
-    This is the single most important fix to prevent train_acc >> val_acc gap.
-    """
+    """One pass over the dataset; returns (avg loss, accuracy)."""
     if is_train:
         model.train()
         if freeze_batchnorm:
-            freeze_bn(model)   # override BN back to eval after model.train()
+            freeze_bn(model)
     else:
         model.eval()
 
@@ -278,7 +179,6 @@ def run_epoch(
             else:
                 labels_a, labels_b, lam = labels, labels, 1.0
 
-            # AMP forward pass
             if scaler is not None:
                 if _AMP_DEVICE_ARG:
                     ctx = autocast("cuda")
@@ -314,14 +214,10 @@ def run_epoch(
 
     return total_loss / max(total, 1), correct / max(total, 1)
 
-
 class _null_context:
     """No-op context manager for CPU inference path."""
     def __enter__(self): return self
     def __exit__(self, *a): pass
-
-
-# ── Checkpointing ─────────────────────────────────────────────────────────────
 
 def save_checkpoint(model, optimizer, epoch, val_loss, val_acc, path: Path, class_to_idx):
     torch.save({
@@ -334,28 +230,17 @@ def save_checkpoint(model, optimizer, epoch, val_loss, val_acc, path: Path, clas
         "classes":      CLASSES,
     }, path)
 
-
-# ── Training curve plot ───────────────────────────────────────────────────────
-
 def plot_history(history: dict, out_dir: Path) -> None:
-    """
-    Saves loss + accuracy curves as PNG.
-    A well-trained model shows:
-      - train_loss and val_loss both decreasing and converging
-      - small gap between train_acc and val_acc (< 10%)
-    Overfitting: val_loss starts rising while train_loss keeps falling.
-    Underfitting: both losses stay high / accuracy stays low.
-    """
+    """Save loss + accuracy curves as PNG."""
     try:
         import matplotlib
-        matplotlib.use("Agg")    # non-interactive backend — safe on any machine
+        matplotlib.use("Agg")
         import matplotlib.pyplot as plt
 
         epochs = range(1, len(history["train_loss"]) + 1)
         fig, axes = plt.subplots(1, 2, figsize=(14, 5))
         fig.suptitle("AapdaSetu — Training Curves", fontsize=14)
 
-        # Loss
         ax = axes[0]
         ax.plot(epochs, history["train_loss"], "b-o", markersize=3, label="Train Loss")
         ax.plot(epochs, history["val_loss"],   "r-o", markersize=3, label="Val Loss")
@@ -363,7 +248,6 @@ def plot_history(history: dict, out_dir: Path) -> None:
         ax.set_title("Loss (lower = better, curves should converge)")
         ax.legend(); ax.grid(alpha=0.3)
 
-        # Accuracy
         ax = axes[1]
         ax.plot(epochs, history["train_acc"], "b-o", markersize=3, label="Train Acc")
         ax.plot(epochs, history["val_acc"],   "r-o", markersize=3, label="Val Acc")
@@ -379,9 +263,6 @@ def plot_history(history: dict, out_dir: Path) -> None:
     except ImportError:
         print("  [INFO] matplotlib not installed — skipping training curve plot")
 
-
-# ── CLI ───────────────────────────────────────────────────────────────────────
-
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Train ResNet50 damage classifier")
     for key, val in DEFAULTS.items():
@@ -392,9 +273,6 @@ def parse_args() -> argparse.Namespace:
         else:
             p.add_argument(f"--{key}", type=type(val), default=val)
     return p.parse_args()
-
-
-# ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
     args   = parse_args()
@@ -450,11 +328,6 @@ def main():
 
     criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # PHASE 1 — Head only
-    # Backbone is frozen. Only the new FC head trains.
-    # No mixup here — the head needs clean signal first to stabilise.
-    # ══════════════════════════════════════════════════════════════════════════
     print("── Phase 1: Training head only (backbone frozen) ────────────")
     freeze_backbone(model)
     optimizer = torch.optim.Adam(
@@ -470,7 +343,7 @@ def main():
         t0 = time.time()
         tr_loss, tr_acc = run_epoch(
             model, train_loader, criterion, optimizer, scaler, device,
-            is_train=True, mixup_alpha=0.0,   # NO mixup in phase 1
+            is_train=True, mixup_alpha=0.0,
         )
         vl_loss, vl_acc = run_epoch(
             model, val_loader, criterion, None, None, device,
@@ -506,19 +379,13 @@ def main():
         print("     This may indicate underfitting or a data/label problem.")
         print("     Check that dataset/train/ has the correct folder names.\n")
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # PHASE 2 — Fine-tune layer3 + layer4 + head
-    # BN stats frozen to prevent train/val divergence.
-    # LR warmup for first `warmup_epochs` to avoid instability.
-    # Mixup enabled to prevent memorisation of training patterns.
-    # ══════════════════════════════════════════════════════════════════════════
     print("\n── Phase 2: Fine-tuning layer3 + layer4 + head (BN frozen) ──")
     unfreeze_last_blocks(model)
-    freeze_bn(model)    # freeze BN stats — critical for preventing overfit gap
+    freeze_bn(model)
 
     optimizer = torch.optim.AdamW(
         filter(lambda p: p.requires_grad, model.parameters()),
-        lr=args.lr_finetune * 0.1,   # start at 10% of target (warmup)
+        lr=args.lr_finetune * 0.1,
         weight_decay=args.weight_decay,
     )
     target_lr  = args.lr_finetune
@@ -529,7 +396,7 @@ def main():
     patience_count = 0
 
     for epoch in range(args.phase1_epochs, args.epochs):
-        # LR warmup — linearly ramp from 10% to 100% of target_lr
+        # LR warmup
         ep_in_phase2 = epoch - args.phase1_epochs
         if ep_in_phase2 < args.warmup_epochs:
             warmup_factor = (ep_in_phase2 + 1) / args.warmup_epochs
@@ -549,7 +416,7 @@ def main():
             model, train_loader, criterion, optimizer, scaler, device,
             is_train=True,
             mixup_alpha=args.mixup_alpha,
-            freeze_batchnorm=True,   # BN stays in eval mode throughout phase 2
+            freeze_batchnorm=True,
         )
         vl_loss, vl_acc = run_epoch(
             model, val_loader, criterion, None, None, device,
@@ -598,7 +465,6 @@ def main():
                 print(f"\n  Early stopping — no val improvement for {args.patience} epochs")
                 break
 
-    # ── Save history + plot ───────────────────────────────────────────────────
     hist_path = out_dir / "history.json"
     with open(hist_path, "w") as f:
         json.dump(history, f, indent=2)
@@ -606,7 +472,6 @@ def main():
 
     plot_history(history, out_dir)
 
-    # ── Final summary ─────────────────────────────────────────────────────────
     final_gap = history["train_acc"][-1] - history["val_acc"][-1]
     print(f"\n{'='*62}")
     print(f"  TRAINING COMPLETE")
@@ -624,7 +489,6 @@ def main():
     print(f"  Checkpoint    → {out_dir / 'best.pt'}")
     print(f"  Next step     : python training/evaluate.py")
     print(f"{'='*62}\n")
-
 
 if __name__ == "__main__":
     main()

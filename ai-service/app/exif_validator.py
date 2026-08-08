@@ -1,12 +1,4 @@
-"""
-EXIF Validator
---------------
-Extracts GPS coordinates, capture timestamp, and camera make/model from a
-JPEG/HEIC/PNG image and verifies them against:
-  1. A user-supplied claimed GPS location (within MAX_GPS_DISTANCE_KM).
-  2. A user-supplied disaster_cutoff — the earliest datetime a legitimate
-     post-disaster photo could have been taken.
-"""
+"""Extracts and verifies GPS + timestamp EXIF metadata from claim photos."""
 
 from __future__ import annotations
 
@@ -19,11 +11,7 @@ from typing import Optional
 import piexif
 from PIL import Image
 
-
-# ── Tunable thresholds ──────────────────────────────────────────────────────
-MAX_GPS_DISTANCE_KM = 0.5   # photo must be within 500 m of the claimed site
-# ────────────────────────────────────────────────────────────────────────────
-
+MAX_GPS_DISTANCE_KM = 0.5
 
 @dataclass
 class ExifResult:
@@ -32,11 +20,8 @@ class ExifResult:
     timestamp: Optional[datetime]
     camera_make: Optional[str]
     camera_model: Optional[str]
-    gps_verified: bool       # EXIF GPS within threshold of claimed location
-    timestamp_verified: bool # photo taken after disaster_cutoff
-
-
-# ── Helpers ─────────────────────────────────────────────────────────────────
+    gps_verified: bool
+    timestamp_verified: bool
 
 def _dms_to_decimal(dms_tuple, ref: bytes) -> Optional[float]:
     """Convert EXIF DMS rational tuple → signed decimal degrees."""
@@ -51,7 +36,6 @@ def _dms_to_decimal(dms_tuple, ref: bytes) -> Optional[float]:
     except (IndexError, ZeroDivisionError, TypeError):
         return None
 
-
 def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     """Great-circle distance in kilometres."""
     R = 6371.0
@@ -61,7 +45,6 @@ def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     a = math.sin(Δφ / 2) ** 2 + math.cos(φ1) * math.cos(φ2) * math.sin(Δλ / 2) ** 2
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-
 def _parse_exif_datetime(raw: bytes) -> Optional[datetime]:
     """Parse EXIF datetime string b'YYYY:MM:DD HH:MM:SS'."""
     try:
@@ -69,30 +52,13 @@ def _parse_exif_datetime(raw: bytes) -> Optional[datetime]:
     except (ValueError, AttributeError):
         return None
 
-
-# ── Public API ───────────────────────────────────────────────────────────────
-
 def extract_and_verify(
     image_bytes: bytes,
     claimed_lat: float,
     claimed_lng: float,
     disaster_cutoff: datetime,
 ) -> ExifResult:
-    """
-    Parse EXIF from *image_bytes* and verify GPS + timestamp.
-
-    Parameters
-    ----------
-    image_bytes     : raw image bytes (JPEG/PNG/HEIC)
-    claimed_lat     : latitude the user says the property is at
-    claimed_lng     : longitude the user says the property is at
-    disaster_cutoff : earliest datetime a valid post-disaster photo can have
-                      (set to the disaster event datetime)
-
-    Returns
-    -------
-    ExifResult dataclass — all fields are None when data is absent.
-    """
+    """Parse EXIF from *image_bytes* and verify GPS + timestamp."""
     gps_lat: Optional[float] = None
     gps_lng: Optional[float] = None
     timestamp: Optional[datetime] = None
@@ -100,10 +66,8 @@ def extract_and_verify(
     camera_model: Optional[str] = None
 
     try:
-        # piexif needs a seekable buffer
         exif_dict = piexif.load(image_bytes)
 
-        # ── GPS ──────────────────────────────────────────────────────────────
         gps_data = exif_dict.get("GPS", {})
         if gps_data:
             lat_dms = gps_data.get(piexif.GPSIFD.GPSLatitude)
@@ -114,7 +78,6 @@ def extract_and_verify(
                 gps_lat = _dms_to_decimal(lat_dms, lat_ref)
                 gps_lng = _dms_to_decimal(lng_dms, lng_ref)
 
-        # ── Timestamp ────────────────────────────────────────────────────────
         zeroth = exif_dict.get("0th", {})
         exif_ifd = exif_dict.get("Exif", {})
         raw_dt = (
@@ -124,17 +87,14 @@ def extract_and_verify(
         if raw_dt:
             timestamp = _parse_exif_datetime(raw_dt)
 
-        # ── Camera info ───────────────────────────────────────────────────────
         make_raw  = zeroth.get(piexif.ImageIFD.Make)
         model_raw = zeroth.get(piexif.ImageIFD.Model)
         camera_make  = make_raw.decode("utf-8",  errors="replace").strip("\x00") if make_raw  else None
         camera_model = model_raw.decode("utf-8", errors="replace").strip("\x00") if model_raw else None
 
     except Exception:
-        # piexif raises on images with no EXIF — treat as missing
         pass
 
-    # ── Verification ─────────────────────────────────────────────────────────
     gps_verified = False
     if gps_lat is not None and gps_lng is not None:
         dist = _haversine_km(gps_lat, gps_lng, claimed_lat, claimed_lng)
