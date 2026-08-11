@@ -1,0 +1,12 @@
+{
+  "name": "aapda-setu-mobile-p2p",
+  "version": "1.0.0",
+  "description": "AapdaSetu BitChat P2P BLE Mesh SOS Mobile Client",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "crypto": "^1.0.1"
+  }
+}

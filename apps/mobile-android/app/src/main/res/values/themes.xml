@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Minimal pre-Compose theme. Its only job is to paint the correct black
+         background before the first Compose frame draws, so there's no white/light
+         flash on launch. Everything else (type, color, shape) lives in
+         ui/theme/Theme.kt and is applied inside setContent {}. -->
+    <style name="Theme.AapdaSetu" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/kinetic_background</item>
+        <item name="android:statusBarColor">@color/kinetic_background</item>
+        <item name="android:navigationBarColor">@color/kinetic_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
