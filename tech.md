@@ -1,103 +1,180 @@
-# AapdaSetu Technical Architecture and Technology Stack Documentation
+# 🛠️ AapdaSetu Technical Architecture and Stack Documentation
 
-## 1. Executive Summary
+## 1. Executive Technical Summary
 
-AapdaSetu is architected as an offline-first, event-driven multi-tier disaster management platform. The technology stack spans client-side mobile/PWA applications utilizing peer-to-peer (P2P) Bluetooth Low Energy (BLE) communication, a high-throughput Node.js API Gateway with an integrated Redis queue, a Python FastAPI artificial intelligence engine, an Open Source Routing Machine (OSRM) pathfinding service, and a Leaflet.js WebSocket-enabled Incident Command System (ICS) dashboard.
+**AapdaSetu** is architected as a hybrid, multi-stack disaster management platform designed for resilience, real-time event synchronization, and zero-friction citizen accessibility.
+
+The ecosystem integrates three major technological layers:
+1. **Next.js & Supabase Engine (`SOS-project with bolt/project`)**: Production Command Center built on Next.js 13 App Router, TypeScript, Tailwind CSS, shadcn/ui, and Supabase PostgreSQL with WebSocket subscriptions.
+2. **React Web Client (`frontend-AapdaSetu`)**: Vite-powered Single Page Application (SPA) leveraging React 19, Leaflet.js interactive GIS mapping, and Framer Motion micro-animations.
+3. **Python AI Engine (`apps/ai-engine`)**: FastAPI microservice providing explainable SOS triage scoring, anti-fraud photo damage assessment, SAR satellite flood polygon mapping, and PFA chatbot grounding.
 
 ---
 
 ## 2. Technology Stack Overview
 
-### 2.1 Core Programming Languages and Runtimes
+### 2.1 Command Center & Platform Stack (`SOS-project with bolt/project`)
+- **Framework:** [Next.js 13](https://nextjs.org/) (App Router, Server & Client Components)
+- **Language:** [TypeScript](https://www.typescriptlang.org/) (Strict Mode)
+- **Styling:** [Tailwind CSS 3.4](https://tailwindcss.com/) with custom design tokens, dark mode theme variables, and CSS animations.
+- **UI Component Library:** [shadcn/ui](https://ui.shadcn.com/) built on top of [Radix UI](https://www.radix-ui.com/) primitives (Dialog, Dropdown, Tabs, Toast, Select, Switch).
+- **Icons:** [Lucide React](https://lucide.dev/)
+- **Database & Realtime:** [Supabase](https://supabase.com/) (PostgreSQL 15, Row Level Security, Realtime WebSockets `postgres_changes`, RPC Security Definer functions).
+- **Data Visualization:** [Recharts](https://recharts.org/) (AreaChart, BarChart, PieChart, ResponsiveContainer).
+- **Internationalization (i18n):** Custom React Context (`lib/i18n/context.tsx`) with dictionaries for English (`en`), Hindi (`hi`), and Odia (`or`).
 
-- JavaScript (Node.js v18+ / ES6+): Core language for client-side offline storage, P2P BLE mesh protocol, API Gateway microservice routing, WebRTC telemedicine signaling, OSRM pathfinding, and frontend dashboard logic.
-- Python 3.10+: Runtime for the AI microservice engine, powering SOS triage evaluation, computer vision damage assessment simulation, psychological first aid conversational engines, satellite flood polygon generation, and shelter QR registry validation.
-- HTML5 / CSS3: Standard markup and custom CSS token design system (glassmorphism, CSS custom properties) for the real-time Incident Command System dashboard.
+### 2.2 React Web Client Stack (`frontend-AapdaSetu`)
+- **Client Framework:** React 19 & Vite 8 SPA.
+- **GIS Mapping:** Leaflet.js 1.9 & CARTO / OpenStreetMap tile layers.
+- **Animations:** Framer Motion 11.
+- **Client Routing:** React Router v6 nested routes (`/dashboard`, `/emergency-sos`, `/disaster-alerts`, `/safe-routes`, `/medical-assistance`, `/report-damage`, `/missing-persons`, `/admin/dashboard`, `/volunteer/dashboard`).
+- **Validation:** Zod 3.23 schema validation.
 
----
-
-## 3. Detailed Component Architecture
-
-### 3.1 Client-Side (On-Device) Tech Stack
-
-| Module Name | File Path | Primary Library / Technology | Functionality |
-|---|---|---|---|
-| Offline Database Storage | `apps/mobile-app/src/database/RxDBOfflineStorage.js` | JavaScript Map / RxDB pattern, `crypto.randomUUID()` | Buffers SOS records locally when internet connectivity is lost; tracks synchronization status (`OFFLINE_BUFFERED` to `SYNCED_TO_CLOUD`). |
-| P2P BLE Mesh Protocol Engine | `apps/mobile-app/src/mesh/BitChatMeshEngine.js` | Node.js `crypto`, AES-256-CBC Noise Protocol, Buffer API | Encrypts SOS packets with a shared secret key (`AAPDASETU_BITCHAT_NOISE_KEY_2026`), manages discovered peer device tables, increments hop counts, and relays store-and-forward packets. |
-| On-Device Face Matching | `apps/mobile-app/src/services/OnDeviceFaceMatching.js` | Standard JavaScript Math Library, 128-d Vector Math | Computes 128-dimensional facial vector embeddings and evaluates Cosine Similarity offline to match missing persons. |
-| Voice NLP Engine | `apps/mobile-app/src/services/VoiceNLPService.js` | JavaScript Regex & String Parser | Transcribes native voice input and extracts emergency intent parameters (group size, water level, urgency). |
-| Sign Language Engine | `apps/mobile-app/src/services/SignLanguageEngine.js` | JavaScript String Classifier | Translates emergency alert text into Indian Sign Language (ISL) animation gesture tokens for accessibility overlay. |
-| SOS Packet Builder | `apps/mobile-app/src/services/SOSBuilder.js` | JavaScript Object Assembler | Constructs standardized JSON SOS packet payloads incorporating device GPS, user profiles, and transcripts. |
-
-### 3.2 Server-Side Tech Stack
-
-#### 3.2.1 API Gateway and Ingestion Pipeline
-- Runtime: Node.js (v18+)
-- Framework: Express.js
-- Dependencies: `express`, `cors`, `http`, `ws`, `crypto`
-- Entry Point: `apps/api-gateway/src/server.js` (Port 5000)
-- Ingest Queue & Rate Limiter: In-Memory Redis Message Queue (`redisQueue = []`) handling payload buffering, IP-based rate limiting (1 SOS per IP window), and UUID deduplication.
-- Real-time Broadcast: WebSocket Server (`ws.Server`) streaming live state updates to connected command center clients on `ws://localhost:5000`.
-
-#### 3.2.2 Server-Side Microservices (`apps/api-gateway/src/services/`)
-
-| Service File | Tech Stack | Responsibilities |
-|---|---|---|
-| `dbtPipeline.js` | JavaScript, Date API | Direct Benefit Transfer mock Aadhaar e-KYC validation, SDRF/NDRF monetary compensation calculation, and audit trail generation. |
-| `cryptographicLedger.js` | Node.js `crypto` (SHA-256) | Implements an immutable cryptographic hash-chain ledger tracking donor funds down to vendor supply purchases and shelter QR check-ins. |
-| `ewsAlertService.js` | JavaScript Array / Spatial Filter | Geofenced early warning alert generator targeting citizens inside risk polygons across multi-channel delivery networks. |
-| `telemedicineService.js` | WebRTC Signal Manager, Socket.io Pattern | Configures low-bandwidth WebRTC audio/video sessions connecting remote doctors with victims in isolated zones. |
-| `grievanceEscalation.js` | JavaScript Map, SLA Timers | Logs corruption or relief material complaints, assigns severity tiers, and manages SLA escalation routines. |
-| `forensicDBMRegistry.js` | JavaScript Map, SHA-256 Hash | Secure digital Dead Body Management registry for tracking unidentified bodies via physical markers and matching missing person records. |
-| `livestockRescueService.js` | JavaScript Spatial Aggregator | Tracks trapped livestock GPS coordinates and aggregates animal hotspots for veterinary rescue operations. |
-| `epidemicSurveillance.js` | Statistical Threshold Math | Ingests shelter health symptom reports, tracks disease thresholds, and triggers automated Red Alert epidemic warnings. |
-
-#### 3.2.3 AI Microservice Engine (`apps/ai-engine/app/`)
-- Runtime: Python 3.10+
-- Framework: FastAPI / Uvicorn Server (Port 8000)
-- Modules:
-  - `main.py`: Entry point and HTTP request router for all AI endpoints.
-  - `triage.py`: SOS weighted keyword triage and demographic urgency classification engine.
-  - `damage_assessment.py`: EXIF metadata verification, pHash SHA-256 anti-fraud duplicate detection, and ResNet50 damage grading simulation.
-  - `pfa_chatbot.py`: Psychological First Aid conversational engine providing breathing and grounding routines.
-  - `satellite_flood_mapping.py`: Sentinel-1 SAR synthetic aperture radar GeoJSON inundation polygon generator.
-  - `shelter_qr_checkin.py`: Shelter digital registry manager processing family QR check-ins and capacity redirect logic.
-
-#### 3.2.4 OSRM Disaster Routing Engine (`apps/routing-service/src/osrmRouting.js`)
-- Runtime: Node.js
-- Engine: OSRM (Open Source Routing Machine) wrapper with spatial geometry algorithms.
-- Logic: Maintains active hazard polygons, calculates Haversine spatial distances, and executes ray-casting polygon intersection tests to generate safe bypass routes around flooded or collapsed areas.
-
-#### 3.2.5 Incident Command System Dashboard (`apps/web-dashboard/index.html`)
-- UI Stack: Single-page Web Application using HTML5, Vanilla CSS, and modern Inter typography.
-- Mapping Library: Leaflet.js (v1.9.4) with CARTO Dark All map tiles.
-- Data Link: Native browser WebSocket connecting to `ws://localhost:5000` for real-time SOS queue updates, shelter occupancy bars, volunteer dispatch controls, and cryptographic aid ledger visualization.
+### 2.3 Python AI Engine Tech Stack (`apps/ai-engine/app/`)
+- **Runtime:** Python 3.10+ & FastAPI microservice framework.
+- **Triage Engine (`triage.py`):** Weighted keyword scanner and demographic vulnerability scoring algorithm.
+- **Damage Assessment (`damage_assessment.py`):** EXIF geotag verification, perceptual hashing (pHash SHA-256) duplicate detection, and SDRF compensation calculation.
+- **PFA Chatbot (`pfa_chatbot.py`):** Conversational AI engine for guided 4-second box breathing and 5-4-3-2-1 sensory grounding.
+- **Satellite SAR Mapping (`satellite_flood_mapping.py`):** Sentinel-1 radar backscatter thresholding generating GeoJSON flood extent polygons.
 
 ---
 
-## 4. On-Device vs. Server-Side Technical Specification Matrix
+## 3. Database Architecture & Schema Specification
 
-| Architecture Attribute | On-Device (Client-Side Component) | Server-Side Component |
-|---|---|---|
-| Operating Runtimes | Mobile JS Engine, Web Browser JS Engine | Node.js v18+ Runtime, Python 3.10 Engine |
-| Network Requirements | Offline capable (Zero Internet via BLE Mesh) | Required HTTP / WebSocket network access |
-| Data Persistence | Local IndexedDB / Map (`RxDBOfflineStorage`) | API Gateway In-Memory State (`Map`), Database |
-| Cryptographic Operations | AES-256-CBC Noise Protocol payload encryption | SHA-256 Hash-Chain ledger mining (`cryptographicLedger.js`) |
-| Face Matching Computation | 128-d Vector Cosine Similarity calculation | Central DBM matching & Missing Persons Database query |
-| Routing Logic | Client location reporting & map rendering | Spatial ray-casting hazard avoidance pathfinding (`osrmRouting.js`) |
-| AI Inference | Voice transcript & intent parsing (`VoiceNLPService.js`) | Urgency triage (`triage.py`), Damage grading (`damage_assessment.py`) |
+The database runs on Supabase PostgreSQL with 8 core tables:
+
+### 3.1 `reports` Table
+- `id` (uuid, PK)
+- `type` (text: fire, flood, medical, missing_person, earthquake, accident, other)
+- `status` (text: pending, in_progress, resolved)
+- `priority_score` (integer: 1 to 100)
+- `priority_label` (text: RED, YELLOW, GREEN)
+- `latitude` / `longitude` (float8)
+- `landmark` / `description` (text)
+- `reporter_name` / `reporter_phone` (text)
+- `missing_person_name` / `missing_person_age` / `missing_person_desc` (text/integer)
+- `medical_condition` / `blood_type` (text)
+- `media_data` (text: base64 payload) / `media_type` (text: video, audio, none)
+- `triage_factors` (jsonb: breakdown array of scoring factors)
+- `assigned_volunteer_id` (uuid, FK -> volunteers.id)
+- `assigned_agency_id` (uuid, FK -> agencies.id)
+- `resolution_notes` (text)
+- `created_at` / `updated_at` (timestamptz)
+
+### 3.2 `volunteers` Table
+- `id` (uuid, PK)
+- `name` / `phone` (text)
+- `skills` (text_array: medical, search_rescue, driving, logistics)
+- `latitude` / `longitude` (float8)
+- `status` (text: available, on_duty, offline)
+- `assigned_report_id` (uuid, FK -> reports.id)
+
+### 3.3 `shelters` Table
+- `id` (uuid, PK)
+- `name` / `address` (text)
+- `latitude` / `longitude` (float8)
+- `capacity` / `occupancy` (integer)
+- `facilities` (text_array: food, water, medical_station, power_generator)
+- `contact_phone` / `status` (text: open, full, closed)
+
+### 3.4 `agencies` Table
+- `id` (uuid, PK)
+- `name` / `type` (text: fire_department, police, ndrf, hospital, ngo)
+- `contact_phone` / `contact_email` / `jurisdiction` (text)
+- `latitude` / `longitude` (float8)
+
+### 3.5 `resources` Table
+- `id` (uuid, PK)
+- `name` / `category` (text: food, water, medical, clothing, fuel)
+- `quantity` (integer) / `unit` (text)
+- `shelter_id` (uuid, FK -> shelters.id)
+
+### 3.6 `alerts` Table
+- `id` (uuid, PK)
+- `title` / `message` (text)
+- `severity` (text: info, warning, critical)
+- `channel` (text: sms, whatsapp, public, all)
+- `target_area` / `created_by` (text)
+
+### 3.7 `audit_logs` Table
+- `id` (uuid, PK)
+- `admin_email` / `action` / `entity_type` / `entity_id` (text)
+- `details` (jsonb)
+- `created_at` (timestamptz)
+
+### 3.8 `safety_checkins` Table
+- `id` (uuid, PK)
+- `full_name` / `phone` / `location_name` / `notes` (text)
+- `status` (text: safe, need_assistance)
+- `latitude` / `longitude` (float8)
+- `created_at` (timestamptz)
 
 ---
 
-## 5. Network Communication Protocols
+## 4. Automated AI Triage Scoring Algorithm
 
-1. Offline P2P BLE Protocol:
-   - Shared secret symmetric key: `AAPDASETU_BITCHAT_NOISE_KEY_2026`.
-   - Algorithm: AES-256-CBC cipher with 32-byte scrypt key derivation.
-   - Routing: Multi-hop store-and-forward with hop-count tracking and UUID deduplication.
+The triage calculation engine computes priority scores ranging from **1 to 100**:
 
-2. REST HTTP API Protocol:
-   - JSON payload format over standard HTTP endpoints on Port 5000 (API Gateway) and Port 8000 (FastAPI AI Hub).
+```typescript
+// Core Triage Logic (lib/triage.ts)
+export function computeTriage(input: ReportInput): TriageResult {
+  let score = 30; // Base Score
+  
+  // 1. Emergency Type Weighting
+  score += TYPE_BASE_SCORES[input.type] || 5;
+  
+  // 2. Multi-Keyword NLP Match
+  for (const [keyword, points] of Object.entries(KEYWORD_SCORES)) {
+    if (textParts.includes(keyword)) score += points;
+  }
+  
+  // 3. Demographics & Vulnerability Boost
+  if (input.missing_person_age <= 12) score += 25;
+  else if (input.missing_person_age >= 65) score += 20;
+  
+  // 4. Medical Condition Boosts
+  if (condition.includes('pregnant')) score += 30;
+  if (condition.includes('bleed')) score += 25;
+  if (condition.includes('heart') || condition.includes('cardiac')) score += 20;
+  
+  // Clamp Score & Tag Label
+  score = Math.max(1, Math.min(100, score));
+  const label = score >= 80 ? 'RED' : score >= 50 ? 'YELLOW' : 'GREEN';
+  
+  return { score, label, factors };
+}
+```
 
-3. Real-Time Streaming Protocol:
-   - WebSocket protocol (`ws://localhost:5000`) for low-latency bidirectional event broadcasting to command dashboard instances.
+---
+
+## 5. Zero User-Side Authentication & RPC Security Definer
+
+- **Public Access:** Citizens access emergency forms, tracking, shelter locators, and PFA chatbots without any login tokens.
+- **Admin RPC Auth:** Admin Command Center authentication invokes a custom Supabase PostgreSQL RPC function:
+  ```sql
+  CREATE OR REPLACE FUNCTION verify_admin_login(p_email text, p_password text)
+  RETURNS TABLE (id uuid, email text, name text)
+  SECURITY DEFINER
+  ...
+  ```
+- **Session Handling:** Admin sessions are persisted locally in `localStorage` under key `'aapdasetu_admin_session'`.
+
+---
+
+## 6. Execution Commands
+
+```bash
+# 1. Run Command Center Platform (SOS-project with bolt)
+cd "SOS-project with bolt/project"
+npm install
+npm run dev
+
+# 2. Run React Web Application (SIH-DM/frontend-AapdaSetu)
+cd SIH-DM/frontend-AapdaSetu
+npm install
+npm run dev
+
+# 3. Run Python AI Microservice Engine (SIH-DM/apps/ai-engine)
+cd SIH-DM/apps/ai-engine
+python app/main.py
+```

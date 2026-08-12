@@ -3,13 +3,12 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 // Layouts
 import MainLayout from "./layouts/MainLayout.jsx";
 import CitizenLayout from "./layouts/CitizenLayout.jsx";
-import AuthMapLayout from "./layouts/AuthMapLayout.jsx";
+import AdminLayout from "./layouts/AdminLayout.jsx";
+import VolunteerLayout from "./layouts/VolunteerLayout.jsx";
 
 // Page Components
 import Home from "./pages/Landing/Home.jsx";
 import About from "./pages/Landing/About.jsx";
-import Login from "./pages/Auth/Login.jsx";
-import SignUp from "./pages/Auth/SignUp.jsx";
 import CitizenDashboard from "./layouts/CitizenDashboard.jsx";
 import EmergencySOS from "./layouts/EmergencySOS.jsx";
 import SafetyDashboard from "./layouts/SafetyDashboard.jsx";
@@ -19,6 +18,8 @@ import MedicalAssistanceDashboard from "./pages/Citizen/MedicalAssistanceDashboa
 import ReportDamageDashboard from "./pages/Citizen/ReportDamageDashboard.jsx";
 import MissingPersonsDashboard from "./pages/Citizen/MissingPersonsDashboard.jsx";
 import EmergencyContactsDashboard from "./pages/Citizen/EmergencyContactsDashboard.jsx";
+import AdminDashboard from "./pages/Admin/Dashboard.jsx";
+import VolunteerDashboard from "./pages/Volunteer/Dashboard.jsx";
 
 function App() {
   return (
@@ -28,12 +29,6 @@ function App() {
         <Route element={<MainLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
-        </Route>
-
-        {/* Auth routes with Map background */}
-        <Route element={<AuthMapLayout />}>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<SignUp />} />
         </Route>
 
         {/* Citizen-facing dashboard routes */}
@@ -59,6 +54,16 @@ function App() {
             path="/emergency-contacts"
             element={<EmergencyContactsDashboard />}
           />
+        </Route>
+
+        {/* Admin Command Center route */}
+        <Route element={<AdminLayout />}>
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        </Route>
+
+        {/* Volunteer Dispatch Portal route */}
+        <Route element={<VolunteerLayout />}>
+          <Route path="/volunteer/dashboard" element={<VolunteerDashboard />} />
         </Route>
       </Routes>
     </Router>

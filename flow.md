@@ -1,255 +1,233 @@
-# AapdaSetu System Flow and Architecture Diagrams
+# 🔄 AapdaSetu System Flow and Architecture Diagrams
 
-This document details the operational flows, microservice interactions, data pipelines, and network routing mechanisms of the AapdaSetu platform. All diagrams use standard Mermaid notation and explicitly demarcate On-Device (Client-Side) execution versus Server-Side execution.
+This document details the operational flows, client navigation routes, AI microservice pipelines, real-time WebSocket synchronization mechanics, and command center workflows across the AapdaSetu platform.
 
 ---
 
-## 1. Global End-to-End System Workflow
-
-The diagram below illustrates the end-to-end operational flow from an offline victim submitting an SOS packet to central command center dispatch.
+## 1. Global End-to-End Multi-Stack System Workflow
 
 ```mermaid
 flowchart TD
-    subgraph OnDevice["ON-DEVICE (Client-Side / Offline Node)"]
-        A1["Victim Spoken / Text SOS"] --> A2["Voice NLP & Intent Extractor"]
-        A2 --> A3["RxDB Offline Local Storage"]
-        A3 --> A4["Noise Protocol AES-256-CBC Encryption"]
-        A4 --> A5["BitChat BLE Mesh Peer Discovery"]
-        A5 --> A6["Store-and-Forward Relay Hop"]
+    subgraph CitizenClient["CITIZEN WEB CLIENTS (React / Next.js)"]
+        A1["Citizen Accesses Web Portal"] --> A2{"Select Action"}
+        A2 -->|"1-Tap SOS"| A3["Trigger Instant SOS Alert"]
+        A2 -->|"Incident Report"| A4["Submit Detailed Incident Form"]
+        A2 -->|"Safety Check-In"| A5["Register Status: Safe / Need Assistance"]
+        A2 -->|"Shelter Finder"| A6["Locate Nearby Shelters via Haversine"]
+        A2 -->|"PFA Chatbot"| A7["Interact with PFA Bot (/safety)"]
+        A2 -->|"Safe Navigation"| A8["Calculate Safe Route (/safe-routes)"]
+        A2 -->|"Report Damage"| A9["Upload Damage Photo (/report-damage)"]
     end
 
-    subgraph InternetBridge["P2P INTERNET GATEWAY NODE"]
-        A6 --> B1["Peer Node with Internet Connectivity"]
-        B1 --> B2["HTTP POST /api/sos Packet Ingestion"]
+    subgraph LogicLayer["LOGIC & TRIAGE ENGINES"]
+        A3 & A4 --> B1["Automated AI Triage Engine\n(computeTriage in lib/triage.ts)"]
+        A5 --> B2["Write to safety_checkins Table"]
+        A6 --> B3["Compute Proximity in KM via Haversine"]
+        A7 --> B4["PFA Chatbot Engine (pfa_chatbot.py)\n4-Sec Breathing & 5-4-3-2-1 Grounding"]
+        A8 --> B5["Leaflet GIS Avoidance Geometry"]
+        A9 --> B6["Anti-Fraud Damage Engine (damage_assessment.py)\nEXIF GPS & pHash Verification"]
     end
 
-    subgraph ServerSide["SERVER-SIDE (Node.js Gateway & Microservices)"]
-        B2 --> C1["Client IP Rate Limiter"]
-        C1 --> C2["UUID De-Duplication Engine"]
-        C2 --> C3["Redis Ingestion Message Queue"]
-        C3 --> C4["FastAPI AI Engine Hub Port 8000"]
-        C4 --> C5["AI Triage Urgency Scoring Engine"]
-        C5 --> C6["Database Persistence Engine"]
-        C6 --> C7["WebSocket Real-Time Broadcast Port 5000"]
+    subgraph SupabaseTier["SUPABASE BACKEND & REALTIME"]
+        B1 --> C1["INSERT into 'reports' Table (Priority: RED / YELLOW / GREEN)"]
+        C1 --> C2["Fire postgres_changes Realtime Event"]
     end
 
-    subgraph CommandCenter["INCIDENT COMMAND DASHBOARD"]
-        C7 --> D1["Leaflet.js GIS Command Dashboard"]
-        D1 --> D2["Skill-Matched Rescuer Dispatch"]
+    subgraph CommandCenter["INCIDENT COMMAND DASHBOARD (#admin)"]
+        C2 --> D1["Push Alert to Live SOS Stream + Play Audio Alarm on RED"]
+        D1 --> D2["Open Incident Dispatch Modal & Assign Responder"]
+        D2 --> D3["Update Status: pending -> in_progress -> resolved"]
+        D3 --> D4["Write Compliance Audit Log to audit_logs Table"]
+        B6 --> D5["Auto-Calculate eligible SDRF Compensation"]
     end
 ```
 
 ---
 
-## 2. One SOS Per IP Rate Limiting and Ingestion via Redis Queue
-
-To prevent server overload and Denial of Service (DoS) floods during widespread panic, the API Gateway implements IP-based rate limiting, UUID de-duplication, and an asynchronous Redis message queue pipeline.
+## 2. Citizen User Flow & Multi-Modal Routing
 
 ```mermaid
 flowchart TD
-    subgraph ClientLayer["ON-DEVICE / CLIENT NODE"]
-        REQ["Incoming HTTP POST /api/sos Request"]
+    Start([User Opens Web App]) --> Router{Hash Router Check}
+    
+    Router -->|Hash = '#admin'| AdminAuthGate[Admin Login Form]
+    Router -->|Default Route '/'| CitizenApp[Citizen Public Interface]
+
+    subgraph CitizenFeatures["Citizen Interactive Modules"]
+        CitizenApp --> SOS["1-Tap SOS Emergency"]
+        CitizenApp --> Report["Full Incident Report Form"]
+        CitizenApp --> Checkin["Safety Status Check-In"]
+        CitizenApp --> Shelter["Nearby Shelter Finder"]
+        CitizenApp --> Warning["Live Public Warnings"]
     end
 
-    subgraph ServerGateway["SERVER-SIDE API GATEWAY (server.js)"]
-        REQ --> IP_CHECK{"Extract Client IP Address<br/>Is IP Rate Limit Exceeded?"}
-        
-        IP_CHECK -- "Yes (>1 SOS per IP Window)" --> DROP_IP["HTTP 429 Too Many Requests<br/>Reject Packet"]
-        IP_CHECK -- "No (Valid Rate)" --> DUP_CHECK{"Check Database Map<br/>Is SOS UUID Already Ingested?"}
-        
-        DUP_CHECK -- "Yes (Duplicate)" --> DROP_DUP["HTTP 200 DUPLICATE_DROPPED<br/>Silently Drop Duplicate"]
-        DUP_CHECK -- "No (New SOS)" --> REDIS_PUSH["Push SOS Payload to Redis Ingestion Queue<br/>redisQueue.push(sosData)"]
-        
-        REDIS_PUSH --> REDIS_POP["Pop Item from Redis Queue<br/>const rawItem = redisQueue.shift()"]
-        REDIS_POP --> TRIAGE_CALL["Execute AI Triage Evaluation<br/>calculateAITriageScore(rawItem)"]
-        
-        TRIAGE_CALL --> SAVE_DB["Persist Record in In-Memory DB Map<br/>database.set(sos_uuid, finalRecord)"]
-        SAVE_DB --> WS_BCAST["Broadcast to WS Clients<br/>broadcastToClients('NEW_SOS_ALERT')"]
-        WS_BCAST --> RESP["HTTP 201 INGESTED_AND_TRIAGED Response"]
+    SOS -->|Navigator Geolocation| CaptureGPS[Auto-Fetch GPS Coordinates]
+    CaptureGPS --> FastTriage[Execute Fast Triage Engine]
+    FastTriage -->|Score & Label RED/YELLOW/GREEN| PushSOS[(PostgreSQL 'reports' Table)]
+    PushSOS --> SuccessSOS[Instant Alert Dispatched + Tracking ID]
+
+    Report --> FormCollect[Collect Emergency Type, Medical, Media, Landmark]
+    FormCollect --> MediaProc{Media Upload?}
+    MediaProc -->|Audio/Video Data URL| AttachMedia[Attach Base64 Media Payload]
+    MediaProc -->|No Media| FullTriage
+    AttachMedia --> FullTriage[Execute Full Triage Matrix Engine]
+    FullTriage --> PushReport[(PostgreSQL 'reports' Table)]
+    PushReport --> SuccessReport[Report Registered + Tracking ID]
+
+    Checkin --> PushCheckin[(PostgreSQL 'safety_checkins' Table)]
+    PushCheckin --> ConfirmCheckin[Safety Status Recorded]
+
+    Shelter --> HaversineCalc[Calculate Haversine Distance to Shelters]
+    HaversineCalc --> RenderShelters[Render Shelter Cards Sorted by Distance]
+
+    Warning --> AlertStream[Listen to Supabase 'alerts' Channel]
+    AlertStream --> RenderAlerts[Display Emergency Banners & Severity Badges]
+```
+
+---
+
+## 3. Admin Command Center Architecture & Modular Subsystems
+
+```mermaid
+flowchart TD
+    subgraph AuthGate["Authentication & Session Management"]
+        AdminLogin["LoginForm (Email & Password)"] --> RPCVerify["Call Supabase RPC: verify_admin_login()"]
+        RPCVerify -->|Valid Credentials| SaveSession["Store Session Token ('aapdasetu_admin_session')"]
+        RPCVerify -->|Invalid Credentials| AuthError["Display Error Toast"]
+        SaveSession --> MountShell["Mount Admin Shell Component"]
+    end
+
+    subgraph ShellHeader["Command Center Header Controls"]
+        MountShell --> Meter["Realtime Crisis Severity Gauge (0-100 Score)"]
+        MountShell --> AudioToggle["Realtime Audio Alarm Switch"]
+        MountShell --> ProfileMenu["Admin Profile & Sign Out"]
+    end
+
+    subgraph ModuleRouter["11 Specialized Command Center Subsystems"]
+        MountShell --> View1["1. Overview & Key Performance Gauge"]
+        MountShell --> View2["2. Live SOS Stream (Audio Alert on RED)"]
+        MountShell --> View3["3. Incident Reports Management & Triage Filter"]
+        MountShell --> View4["4. Missing Persons Registry & Case Tracking"]
+        MountShell --> View5["5. Volunteer Roster & Skill Dispatch"]
+        MountShell --> View6["6. Relief Shelters & Capacity Management"]
+        MountShell --> View7["7. Multi-Agency Response Roster"]
+        MountShell --> View8["8. Multi-Channel Alert Broadcaster"]
+        MountShell --> View9["9. Crisis Analytics & Recharts Visualizer"]
+        MountShell --> View10["10. Compliance & Security Audit Logs"]
+        MountShell --> View11["11. System Settings & API Integrations"]
+    end
+
+    subgraph InteractiveDispatch["Responding & Triage Modal"]
+        View2 & View3 --> OpenModal["Open Report Detail Modal"]
+        OpenModal --> AssignVol["Assign Field Volunteer"]
+        OpenModal --> AssignAgency["Assign Emergency Response Agency"]
+        OpenModal --> UpdateStatus["Update Status: pending -> in_progress -> resolved"]
+        UpdateStatus --> WriteAudit["Insert Audit Log Entry into audit_logs"]
+        WriteAudit --> DBCommit[("PostgreSQL Database Update")]
     end
 ```
 
 ---
 
-## 3. FastAPI AI Microservice Router and Endpoints
+## 4. AI Triage & Priority Scoring Flow (`triage.ts` & `triage.py`)
 
-All artificial intelligence engines operate inside a single Python FastAPI hub on port 8000. Requests are routed based on endpoint paths:
+```mermaid
+flowchart TD
+    A["Ingest SOS Payload (Type, Description, Medical, Missing Desc, Age, Landmark)"] --> B["Start Base Score = 30 Points"]
+    B --> C["Stage 1: Add Base Weight by Emergency Type (Fire +20, Earthquake +25, Flood +15, Accident +12)"]
+    C --> D["Stage 2: Scan Text for Priority Keywords (drowning +30, trapped +30, roof +25, 5ft water +20, bleeding +25, pregnant +30)"]
+    D --> E{"Stage 3: Demographic & Medical Check"}
+    E -->|"Age <= 12 or <= 5"| BoostChild["+20 to +25 Priority Boost"]
+    E -->|"Age >= 60 or >= 65"| BoostElder["+20 Priority Boost"]
+    E -->|"Medical Condition (Cardiac, Pregnancy, Bleeding)"| BoostMed["+15 to +30 Priority Boost"]
+    BoostChild & BoostElder & BoostMed & E --> FinalCalc["Normalize & Clamp Score between 1 and 100"]
+    
+    FinalCalc --> Rank{"Classify Urgency Tier"}
+    Rank -- "Score >= 80" --> RED["🔴 CRITICAL RED ALERT\n(Triggers Sound Alarm & Top Dispatch Queue)"]
+    Rank -- "50 <= Score < 80" --> YELLOW["🟡 HIGH YELLOW ALERT\n(Medical Queue & Shelter Priority)"]
+    Rank -- "Score < 50" --> GREEN["🟢 NORMAL GREEN ALERT\n(Relief Food & Supply Queue)"]
+```
+
+---
+
+## 5. Supabase Real-Time Event Synchronization & Responding Sequence
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Citizen as 📱 Citizen (In Distress)
+    participant App as 💻 Client Frontend (Next.js)
+    participant Triage as 🧠 Triage Engine (lib/triage.ts)
+    participant Supabase as ⚡ Supabase Client (HTTP/REST)
+    participant Postgres as 🗄️ PostgreSQL Database
+    participant Realtime as 📡 Supabase Realtime (WebSockets)
+    actor Admin as 🎛️ Admin Dispatcher (Command Center)
+    actor Volunteer as 👷 Field Volunteer / Agency Unit
+
+    Citizen->>App: 1. Click 1-Tap SOS / Submit Report Form
+    App->>App: 2. Capture Geolocation (Lat/Lng) via Navigator API
+    App->>Triage: 3. Compute Urgency Score & Priority Tag
+    Triage-->>App: 4. Returns { score: 85, label: 'RED', factors: [...] }
+    App->>Supabase: 5. INSERT into 'reports' table
+    Supabase->>Postgres: 6. Execute RLS Check & Save Row
+    Postgres-->>Realtime: 7. Fire 'postgres_changes' INSERT Event
+    Realtime-->>Admin: 8. Push Realtime WebSocket Event to Admin Dashboard
+    Admin->>Admin: 9. Play Loud Audio Alarm & Highlight RED SOS Feed
+    Admin->>App: 10. Open Report Detail & Assign Volunteer/Agency Unit
+    App->>Supabase: 11. UPDATE 'reports' (status='in_progress', assigned_volunteer_id=...)
+    Supabase->>Postgres: 12. Commit Transaction & Trigger update_updated_at()
+    Postgres-->>Realtime: 13. Broadcast UPDATE Event
+    Realtime-->>Admin: 14. Update UI Status to 'In Progress'
+    Admin->>Volunteer: 15. Dispatch Field Unit to Incident Coordinates
+    Volunteer->>Admin: 16. Report Incident Resolved
+    Admin->>App: 17. Update Status to 'Resolved' + Add Resolution Notes
+    App->>Supabase: 18. INSERT into 'audit_logs' (Action: 'RESOLVE_REPORT')
+    Supabase->>Postgres: 19. Persist Audit Record
+```
+
+---
+
+## 6. Zero User-Side Authentication Access Flow
 
 ```mermaid
 flowchart LR
-    subgraph ServerGateway["API GATEWAY / CLIENT"]
-        G1["HTTP POST Request to Port 8000"]
-    end
-
-    subgraph FastAPIRouter["FASTAPI AI HUB ROUTER (apps/ai-engine/app/main.py)"]
-        G1 --> ROUTE{"Match Endpoint Path"}
-        
-        ROUTE -- "/ai/triage" --> E1["triage.py<br/>evaluate_sos_urgency()"]
-        ROUTE -- "/ai/damage" --> E2["damage_assessment.py<br/>process_damage_photo()"]
-        ROUTE -- "/ai/pfa" --> E3["pfa_chatbot.py<br/>PFAChatbotEngine.get_pfa_response()"]
-        ROUTE -- "/ai/flood-map" --> E4["satellite_flood_mapping.py<br/>generate_satellite_flood_polygons()"]
-        ROUTE -- "/ai/shelter/qr" --> E5["shelter_qr_checkin.py<br/>ShelterQRService.generate_family_qr_payload()"]
-        ROUTE -- "/ai/shelter/checkin" --> E6["shelter_qr_checkin.py<br/>ShelterQRService.check_in_family()"]
-        ROUTE -- "/ai/shelter/status" --> E7["shelter_qr_checkin.py<br/>ShelterQRService.get_shelter_status()"]
-    end
-
-    subgraph OutputJSON["STRUCTURED JSON RESPONSES"]
-        E1 --> O1["Priority Score (1-100) & Urgency Level"]
-        E2 --> O2["Anti-Fraud Status & SDRF Compensation"]
-        E3 --> O3["Grounding Reply & Breathing Exercise"]
-        E4 --> O4["GeoJSON Inundation Polygons"]
-        E5 --> O5["Deterministic Family QR Payload"]
-        E6 --> O6["Check-In Confirmation / Capacity Redirect"]
-        E7 --> O7["Live Shelter Occupancy Percentage"]
-    end
+    User["Victim / Citizen"] --> App["AapdaSetu Web App"]
+    App --> DirectAccess["Immediate Access (Zero Login / Sign-Up)"]
+    DirectAccess --> SOS["1-Tap SOS & Emergency Report"]
+    DirectAccess --> Tracking["Incident Tracking ID Lookup"]
+    DirectAccess --> Checkin["Safety Check-In"]
+    DirectAccess --> Shelter["Shelter Finder (Haversine)"]
+    DirectAccess --> PFA["PFA Chatbot Grounding"]
+    DirectAccess --> Navigation["Safe Navigation Routes"]
+    DirectAccess --> Damage["Damage Report Intake"]
 ```
 
 ---
 
-## 4. AI Crowdsourced Damage Assessment and Direct Benefit Transfer (DBT) Flow
-
-This workflow verifies damaged building photo claims, enforces anti-fraud checks, grades structural damage using AI vision logic, and routes valid claims to the automated monetary payout pipeline.
+## 7. Python AI Engine Microservice Workflows (`apps/ai-engine`)
 
 ```mermaid
 flowchart TD
-    subgraph OnDevice["ON-DEVICE (Mobile Client)"]
-        D1["Citizen Captures Damage Photo"] --> D2["Extract Embedded EXIF Metadata (GPS & Timestamp)"]
-        D2 --> D3["Submit Photo + Metadata + Claimed GPS"]
+    subgraph DamageAssessment["1. Anti-Fraud Damage Assessment (damage_assessment.py)"]
+        PhotoInput["Photo Payload + Reported GPS"] --> EXIFCheck["Extract EXIF Geotag Metadata"]
+        EXIFCheck --> DistanceCalc["Compute Distance Delta vs Reported Location"]
+        PhotoInput --> pHashCalc["Compute Perceptual Hash (pHash SHA-256)"]
+        pHashCalc --> DuplicateCheck{"pHash Match in Claim DB?"}
+        DuplicateCheck -- "Yes" --> FlagDuplicate["Flag as Duplicate Fraud Claim"]
+        DuplicateCheck -- "No" --> GradeDamage["Grade Damage (FULLY_DESTROYED, MAJOR, MINOR)"]
+        GradeDamage --> Compensation["Auto-Calculate SDRF Compensation Amount"]
     end
 
-    subgraph ServerSideAI["SERVER-SIDE (FastAPI AI Engine - /ai/damage)"]
-        D3 --> S1["Ingest Metadata and Claimed GPS"]
-        S1 --> S2{"Calculate GPS Delta<br/>(lat_diff < 0.01 & lng_diff < 0.01)"}
-        
-        S2 -- "Failed GPS Match" --> FLAG_FRAUD["Set Status: FLAGGED_FRAUD_RISK"]
-        S2 -- "GPS Verified" --> S3["Compute pHash SHA-256 Photo Hash"]
-        
-        S3 --> S4{"Check Existing Hash Database<br/>Is Duplicate Photo?"}
-        S4 -- "Yes (Duplicate)" --> FLAG_FRAUD
-        S4 -- "No (Unique)" --> S5["ResNet50 Vision Damage Classifier"]
-        
-        S5 --> S6{"Classify Damage Grade"}
-        S6 -- "Collapsed / Destroyed" --> G1["FULLY_DESTROYED<br/>Eligible: Rs 4,00,000"]
-        S6 -- "Crack / Flood" --> G2["MAJOR_STRUCTURAL_DAMAGE<br/>Eligible: Rs 1,30,000"]
-        S6 -- "Minor Damage" --> G3["MINOR_DAMAGE<br/>Eligible: Rs 25,000"]
-        
-        G1 --> RET_VAL["Return Anti-Fraud Status: VERIFIED_VALID"]
-        G2 --> RET_VAL
-        G3 --> RET_VAL
-        FLAG_FRAUD --> RET_VAL
+    subgraph PFAEngine["2. Psychological First Aid Bot (pfa_chatbot.py)"]
+        UserMsg["User Distress Message"] --> IntentCheck{"Identify Intent"}
+        IntentCheck -- "Panic / Hyperventilation" --> Breathing["Guide 4-Second Box Breathing Protocol"]
+        IntentCheck -- "Disorientation" --> Grounding["Guide 5-4-3-2-1 Sensory Grounding Technique"]
+        IntentCheck -- "General Distress" --> Empathetic["Provide Empathetic Reassurance & Helpline Info"]
     end
 
-    subgraph ServerSideDBT["SERVER-SIDE (API Gateway - /api/dbt/payout)"]
-        RET_VAL --> DBT1["Ingest Damage Result + Aadhaar Number"]
-        DBT1 --> DBT2{"Mock Aadhaar e-KYC Verification<br/>(Length == 12 Digits)"}
-        
-        DBT2 -- "Verified" --> P1["Status: APPROVED_ONE_CLICK_PAYOUT<br/>Generate Transaction ID"]
-        DBT2 -- "Failed" --> P2["Status: HOLD_PENDING_DOCS<br/>Flag for Manual Review"]
-        
-        P1 --> AUDIT["Generate Digital Audit Trail"]
-        P2 --> AUDIT
-    end
-```
-
----
-
-## 5. On-Device Missing Persons Facial Matching Flow
-
-Facial recognition is executed entirely on-device to allow family matching in offline rescue shelters without cloud dependency.
-
-```mermaid
-flowchart TD
-    subgraph OnDeviceFace["ON-DEVICE (Mobile Client / Offline Shelter App)"]
-        F1["Rescuer Takes Photo of Found Person"] --> F2["Generate 128-d Vector Embedding<br/>OnDeviceFaceMatching.generateFaceEmbedding()"]
-        F2 --> F3["Load Local Offline Missing Persons DB"]
-        F3 --> F4["Iterate DB Profiles & Compute Cosine Similarity<br/>calculateCosineSimilarity(vecA, vecB)"]
-        
-        F4 --> F5{"Find Highest Similarity Score<br/>Is Highest Score >= 0.85?"}
-        
-        F5 -- "Yes (Match Found)" --> M1["Display Match Alert!<br/>Person Name & Parent Contact Info"]
-        F5 -- "No (No Match)" --> M2["Store Photo Vector in Local Offline DB"]
-    end
-```
-
----
-
-## 6. Peer-to-Peer BLE Mesh Routing and Store-and-Forward Relay
-
-When internet infrastructure fails, SOS packets travel hop-by-hop across nearby smartphones until an online peer is reached.
-
-```mermaid
-flowchart TD
-    subgraph NodeA["OFFLINE VICTIM DEVICE A (No Cellular/Internet)"]
-        N1["User Triggers SOS"] --> N2["Save to RxDB Local Storage<br/>sync_status: OFFLINE_BUFFERED"]
-        N2 --> N3["Encrypt Payload via AES-256-CBC Noise Protocol"]
-        N3 --> N4["Scan BLE Nearby Peers & Broadcast Packet"]
-    end
-
-    subgraph NodeB["OFFLINE VOLUNTEER DEVICE B (No Internet)"]
-        N4 --> B1["Receive Encrypted BLE Packet"]
-        B1 --> B2{"Check Local Mesh Routing Table<br/>Is Packet UUID Duplicate?"}
-        B2 -- "Yes" --> B3["Ignore Duplicate Packet"]
-        B2 -- "No" --> B4["Decrypt Packet & Increment Hop Count"]
-        B4 --> B5{"Does Device B Have Internet?"}
-        B5 -- "No Internet" --> B6["Store in Routing Table & Relay to Peers"]
-    end
-
-    subgraph NodeC["ONLINE PEER DEVICE C (Has Internet Connectivity)"]
-        B6 --> C1["Device C Receives BLE Relay Packet"]
-        C1 --> C2{"Does Device C Have Internet?"}
-        C2 -- "Yes (Internet Active)" --> C3["Execute Gateway Relay Sync<br/>HTTP POST /api/sos Payload"]
-        C3 --> C4["Mark RxDB Record: SYNCED_TO_CLOUD"]
-    end
-```
-
----
-
-## 7. Disaster-Aware Dynamic Routing Flow (OSRM Polygon Avoidance)
-
-The routing engine dynamically recalculates safe navigation routes around active flood zones or collapsed bridges.
-
-```mermaid
-flowchart TD
-    subgraph ServerRouting["SERVER-SIDE ROUTING ENGINE (osrmRouting.js)"]
-        R1["Ingest Active Hazard Polygons<br/>(e.g., Sector V Flooded Underpass)"] --> R2["Receive Route Request (Start, Target)"]
-        R2 --> R3{"Execute Polygon Ray-Casting Test<br/>Does Direct Path Intersect Hazard Polygon?"}
-        
-        R3 -- "Yes (Path Intersects Hazard)" --> R4["Bypass Blocked Hazard Region<br/>Generate Waypoints via Outer Ring Road"]
-        R3 -- "No (Path Clear)" --> R5["Generate Direct Waypoints Path"]
-        
-        R4 --> R6["Return Status: SAFE_ROUTE_GENERATED<br/>Include Bypass Waypoints & Avoided Hazards"]
-        R5 --> R7["Return Status: DIRECT_ROUTE_CLEAR"]
-    end
-```
-
----
-
-## 8. Dynamic QR Code Shelter Check-In and Capacity Management Flow
-
-This process manages family shelter registrations and occupancy tracking using offline-generated QR codes.
-
-```mermaid
-flowchart TD
-    subgraph ClientQR["ON-DEVICE (Citizen App)"]
-        Q1["Input Family Head Name, Aadhaar Last4, Member Count, Medical Flags"] --> Q2["Generate Deterministic QR Payload & Hash<br/>ShelterQRService.generate_family_qr_payload()"]
-        Q2 --> Q3["Display Dynamic QR Code on Client Screen"]
-    end
-
-    subgraph ShelterScanner["SHELTER ADMIN TABLET / APP"]
-        Q3 --> S1["Scan Family QR Code at Shelter Entrance"]
-        S1 --> S2["Submit HTTP POST /ai/shelter/checkin Request"]
-    end
-
-    subgraph ServerShelter["SERVER-SIDE (FastAPI / Gateway)"]
-        S2 --> C1{"Check Target Shelter Capacity<br/>Is (Occupancy + Family Members) <= Capacity?"}
-        
-        C1 -- "Shelter Full" --> R1["Return Status: SHELTER_FULL<br/>Provide Alternative Shelter Redirect"]
-        C1 -- "Capacity Available" --> C2{"Check Checked-In Registry<br/>Is QR Code ID Already Checked In?"}
-        
-        C2 -- "Already Checked In" --> R2["Return Status: ALREADY_CHECKED_IN"]
-        C2 -- "New Check-In" --> C3["Increment Shelter Occupancy Count<br/>Add Family Record to Registry"]
-        
-        C3 --> R3["Return Status: CHECK_IN_SUCCESS<br/>Updated Occupancy Percentage"]
-        R3 --> WS_BROADCAST["Broadcast Live Occupancy Update to ICS Dashboard"]
+    subgraph SARFloodMapping["3. SAR Satellite Flood Mapping (satellite_flood_mapping.py)"]
+        SARMetadata["Sentinel-1 SAR Radar Metadata"] --> Thresholding["Apply Backscatter Thresholding"]
+        Thresholding --> PolygonGen["Generate Water Extent GeoJSON Polygons"]
+        PolygonGen --> PushGIS["Export GeoJSON to Leaflet Map Layer"]
     end
 ```

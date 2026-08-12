@@ -16,7 +16,6 @@ from triage import evaluate_sos_urgency
 from damage_assessment import process_damage_photo
 from pfa_chatbot import PFAChatbotEngine
 from satellite_flood_mapping import generate_satellite_flood_polygons
-from shelter_qr_checkin import ShelterQRService
 
 
 def handle_request(endpoint, payload):
@@ -36,19 +35,6 @@ def handle_request(endpoint, payload):
         )
     elif endpoint == "/ai/flood-map":
         return generate_satellite_flood_polygons(payload.get("district", "North 24 Parganas"))
-    elif endpoint == "/ai/shelter/qr":
-        return ShelterQRService.generate_family_qr_payload(
-            payload.get("family_head", "Unknown"),
-            payload.get("aadhaar_last4", "0000"),
-            payload.get("member_count", 1),
-            payload.get("medical_flags", [])
-        )
-    elif endpoint == "/ai/shelter/checkin":
-        qr_payload = payload.get("qr_payload", {})
-        shelter_id = payload.get("shelter_id", "SHELTER_SOL01")
-        return ShelterQRService.check_in_family(qr_payload, shelter_id)
-    elif endpoint == "/ai/shelter/status":
-        return ShelterQRService.get_shelter_status()
     else:
         return {"error": f"Unknown endpoint: {endpoint}"}
 
@@ -82,23 +68,6 @@ if __name__ == "__main__":
     r4 = handle_request("/ai/flood-map", {"district": "North 24 Parganas"})
     print("\n[/ai/flood-map]", json.dumps(r4, indent=2, ensure_ascii=False))
 
-    # 5. Shelter QR Generation
-    r5 = handle_request("/ai/shelter/qr", {
-        "family_head": "Bimal Das",
-        "aadhaar_last4": "4567",
-        "member_count": 3,
-        "medical_flags": ["Pregnant"]
-    })
-    print("\n[/ai/shelter/qr]", json.dumps(r5, indent=2, ensure_ascii=False))
-
-    # 6. Shelter Check-In
-    r6 = handle_request("/ai/shelter/checkin", {"qr_payload": r5, "shelter_id": "SHELTER_SOL01"})
-    print("\n[/ai/shelter/checkin]", json.dumps(r6, indent=2, ensure_ascii=False))
-
-    # 7. Shelter Status
-    r7 = handle_request("/ai/shelter/status", {})
-    print("\n[/ai/shelter/status]", json.dumps(r7, indent=2, ensure_ascii=False))
-
     print("\n==========================================================================")
-    print("[FASTAPI AI HUB] All 7 AI endpoints verified successfully!")
+    print("[FASTAPI AI HUB] All active AI endpoints verified successfully!")
     print("==========================================================================")

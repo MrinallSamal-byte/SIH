@@ -32,20 +32,7 @@ const Navbar = () => {
         ))}
       </nav>
 
-      <div className="flex items-center gap-4">
-        <RouterLink
-          to="/login"
-          className="hidden rounded-md border border-zinc-600 bg-zinc-800/50 px-4 py-2 text-sm font-bold text-white no-underline transition-colors hover:bg-zinc-700/50 sm:block"
-        >
-          Login
-        </RouterLink>
-        <RouterLink
-          to="/register"
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-bold text-white no-underline transition-transform hover:scale-105"
-        >
-          Sign Up
-        </RouterLink>
-      </div>
+      <div className="flex items-center gap-4" />
     </motion.header>
   );
 };
