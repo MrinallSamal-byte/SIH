@@ -133,6 +133,54 @@ final class ChatOutgoingCoordinator {
 
 private extension ChatOutgoingCoordinator {
     func sendMeshPublicMessage(originalContent: String, trimmed: String, mentions: [String]) {
+        if let currentChannel = ChannelManager.shared.currentChannelId {
+            if ChannelManager.shared.hasChannelKey(currentChannel),
+               let encryptedData = ChannelManager.shared.encryptChannelMessage(content: trimmed, channel: currentChannel) {
+                let message = BitchatMessage(
+                    sender: context.nickname,
+                    content: trimmed,
+                    timestamp: Date(),
+                    isRelay: false,
+                    senderPeerID: context.myPeerID,
+                    mentions: mentions.isEmpty ? nil : mentions,
+                    channel: currentChannel,
+                    encryptedContent: encryptedData,
+                    isEncrypted: true
+                )
+                ChannelManager.shared.addChannelMessage(currentChannel, message: message)
+                appendLocalEcho(message, to: .mesh)
+                context.recordPublicActivity(forChannelKey: currentChannel)
+                if let payload = message.toBinaryPayload() {
+                    BLEService.shared.sendRawBroadcastPayload(payload, messageID: message.id, timestamp: message.timestamp)
+                }
+                return
+            } else {
+                let message = BitchatMessage(
+                    sender: context.nickname,
+                    content: trimmed,
+                    timestamp: Date(),
+                    isRelay: false,
+                    senderPeerID: context.myPeerID,
+                    mentions: mentions.isEmpty ? nil : mentions,
+                    channel: currentChannel
+                )
+                ChannelManager.shared.addChannelMessage(currentChannel, message: message)
+                appendLocalEcho(message, to: .mesh)
+                context.recordPublicActivity(forChannelKey: currentChannel)
+                if let payload = message.toBinaryPayload() {
+                    BLEService.shared.sendRawBroadcastPayload(payload, messageID: message.id, timestamp: message.timestamp)
+                } else {
+                    context.sendMeshMessage(
+                        originalContent,
+                        mentions: mentions,
+                        messageID: message.id,
+                        timestamp: message.timestamp
+                    )
+                }
+                return
+            }
+        }
+
         let message = BitchatMessage(
             sender: context.nickname,
             content: trimmed,

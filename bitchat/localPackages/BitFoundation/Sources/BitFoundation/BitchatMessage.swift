@@ -29,6 +29,9 @@ public final class BitchatMessage: Codable {
     public let recipientNickname: String?
     public let senderPeerID: PeerID?
     public let mentions: [String]?  // Array of mentioned nicknames
+    public let channel: String?     // Channel hashtag (e.g. #campus-announcements)
+    public let encryptedContent: Data? // E2EE ciphertext (AES-256-GCM)
+    public let isEncrypted: Bool
     public var deliveryStatus: DeliveryStatus // Delivery tracking
     /// True when this message reached us across a mesh bridge (signed by its
     /// author for an internet rendezvous) rather than over local radio.
@@ -48,7 +51,8 @@ public final class BitchatMessage: Codable {
     // Codable implementation
     enum CodingKeys: String, CodingKey {
         case id, sender, content, timestamp, isRelay, originalSender
-        case isPrivate, recipientNickname, senderPeerID, mentions, deliveryStatus
+        case isPrivate, recipientNickname, senderPeerID, mentions
+        case channel, encryptedContent, isEncrypted, deliveryStatus
         case isBridged
     }
 
@@ -64,10 +68,10 @@ public final class BitchatMessage: Codable {
         recipientNickname = try container.decodeIfPresent(String.self, forKey: .recipientNickname)
         senderPeerID = try container.decodeIfPresent(PeerID.self, forKey: .senderPeerID)
         mentions = try container.decodeIfPresent([String].self, forKey: .mentions)
-        // Archives written while the field was optional omit it for public
-        // messages; absent means the message never entered a send pipeline.
+        channel = try container.decodeIfPresent(String.self, forKey: .channel)
+        encryptedContent = try container.decodeIfPresent(Data.self, forKey: .encryptedContent)
+        isEncrypted = try container.decodeIfPresent(Bool.self, forKey: .isEncrypted) ?? false
         deliveryStatus = try container.decodeIfPresent(DeliveryStatus.self, forKey: .deliveryStatus) ?? .notSentYet
-        // Absent in archives written before bridging existed.
         isBridged = try container.decodeIfPresent(Bool.self, forKey: .isBridged) ?? false
     }
 
@@ -76,12 +80,15 @@ public final class BitchatMessage: Codable {
         sender: String,
         content: String,
         timestamp: Date,
-        isRelay: Bool,
+        isRelay: Bool = false,
         originalSender: String? = nil,
         isPrivate: Bool = false,
         recipientNickname: String? = nil,
         senderPeerID: PeerID? = nil,
         mentions: [String]? = nil,
+        channel: String? = nil,
+        encryptedContent: Data? = nil,
+        isEncrypted: Bool = false,
         deliveryStatus: DeliveryStatus? = nil,
         isBridged: Bool = false
     ) {
@@ -95,6 +102,9 @@ public final class BitchatMessage: Codable {
         self.recipientNickname = recipientNickname
         self.senderPeerID = senderPeerID
         self.mentions = mentions
+        self.channel = channel
+        self.encryptedContent = encryptedContent
+        self.isEncrypted = isEncrypted
         self.deliveryStatus = deliveryStatus ?? (isPrivate ? .sending : .notSentYet)
         self.isBridged = isBridged
     }
@@ -114,6 +124,9 @@ extension BitchatMessage: Equatable {
                lhs.recipientNickname == rhs.recipientNickname &&
                lhs.senderPeerID == rhs.senderPeerID &&
                lhs.mentions == rhs.mentions &&
+               lhs.channel == rhs.channel &&
+               lhs.encryptedContent == rhs.encryptedContent &&
+               lhs.isEncrypted == rhs.isEncrypted &&
                lhs.deliveryStatus == rhs.deliveryStatus &&
                lhs.isBridged == rhs.isBridged
     }
@@ -122,23 +135,8 @@ extension BitchatMessage: Equatable {
 // MARK: - Binary encoding
 
 extension BitchatMessage {
-    func toBinaryPayload() -> Data? {
+    public func toBinaryPayload() -> Data? {
         var data = Data()
-        
-        // Message format:
-        // - Flags: 1 byte (bit 0: isRelay, bit 1: isPrivate, bit 2: hasOriginalSender, bit 3: hasRecipientNickname, bit 4: hasSenderPeerID, bit 5: hasMentions)
-        // - Timestamp: 8 bytes (seconds since epoch)
-        // - ID length: 1 byte
-        // - ID: variable
-        // - Sender length: 1 byte
-        // - Sender: variable
-        // - Content length: 2 bytes
-        // - Content: variable
-        // Optional fields based on flags:
-        // - Original sender length + data
-        // - Recipient nickname length + data
-        // - Sender peer ID length + data
-        // - Mentions array
         
         var flags: UInt8 = 0
         if isRelay { flags |= 0x01 }
@@ -147,13 +145,13 @@ extension BitchatMessage {
         if recipientNickname != nil { flags |= 0x08 }
         if senderPeerID != nil { flags |= 0x10 }
         if mentions != nil && !mentions!.isEmpty { flags |= 0x20 }
-        if isBridged { flags |= 0x40 }
+        if channel != nil { flags |= 0x40 }
+        if isEncrypted { flags |= 0x80 }
         
         data.append(flags)
         
         // Timestamp (in milliseconds)
         let timestampMillis = UInt64(timestamp.timeIntervalSince1970 * 1000)
-        // Encode as 8 bytes, big-endian
         for i in (0..<8).reversed() {
             data.append(UInt8((timestampMillis >> (i * 8)) & 0xFF))
         }
@@ -174,10 +172,14 @@ extension BitchatMessage {
             data.append(0)
         }
         
-        // Content
-        if let contentData = content.data(using: .utf8) {
+        // Content or Encrypted Content
+        if isEncrypted, let encData = encryptedContent {
+            let length = UInt16(min(encData.count, 65535))
+            data.append(UInt8((length >> 8) & 0xFF))
+            data.append(UInt8(length & 0xFF))
+            data.append(encData.prefix(Int(length)))
+        } else if let contentData = content.data(using: .utf8) {
             let length = UInt16(min(contentData.count, 65535))
-            // Encode length as 2 bytes, big-endian
             data.append(UInt8((length >> 8) & 0xFF))
             data.append(UInt8(length & 0xFF))
             data.append(contentData.prefix(Int(length)))
@@ -203,7 +205,7 @@ extension BitchatMessage {
         
         // Mentions array
         if let mentions = mentions {
-            data.append(UInt8(min(mentions.count, 255))) // Number of mentions
+            data.append(UInt8(min(mentions.count, 255)))
             for mention in mentions.prefix(255) {
                 if let mentionData = mention.data(using: .utf8) {
                     data.append(UInt8(min(mentionData.count, 255)))
@@ -214,14 +216,17 @@ extension BitchatMessage {
             }
         }
         
+        // Channel hashtag
+        if let channel = channel, let channelData = channel.data(using: .utf8) {
+            data.append(UInt8(min(channelData.count, 255)))
+            data.append(channelData.prefix(255))
+        }
         
         return data
     }
     
-    convenience init?(_ data: Data) {
-        // Create an immutable copy to prevent threading issues
+    public convenience init?(_ data: Data) {
         let dataCopy = Data(data)
-        
         
         guard dataCopy.count >= 13 else {
             return nil
@@ -230,9 +235,7 @@ extension BitchatMessage {
         var offset = 0
         
         // Flags
-        guard offset < dataCopy.count else {
-            return nil
-        }
+        guard offset < dataCopy.count else { return nil }
         let flags = dataCopy[offset]; offset += 1
         let isRelay = (flags & 0x01) != 0
         let isPrivate = (flags & 0x02) != 0
@@ -240,12 +243,11 @@ extension BitchatMessage {
         let hasRecipientNickname = (flags & 0x08) != 0
         let hasSenderPeerID = (flags & 0x10) != 0
         let hasMentions = (flags & 0x20) != 0
-        let isBridged = (flags & 0x40) != 0
+        let hasChannel = (flags & 0x40) != 0
+        let isEncrypted = (flags & 0x80) != 0
         
         // Timestamp
-        guard offset + 8 <= dataCopy.count else {
-            return nil
-        }
+        guard offset + 8 <= dataCopy.count else { return nil }
         let timestampData = dataCopy[offset..<offset+8]
         let timestampMillis = timestampData.reduce(0) { result, byte in
             (result << 8) | UInt64(byte)
@@ -254,41 +256,36 @@ extension BitchatMessage {
         let timestamp = Date(timeIntervalSince1970: TimeInterval(timestampMillis) / 1000.0)
         
         // ID
-        guard offset < dataCopy.count else {
-            return nil
-        }
+        guard offset < dataCopy.count else { return nil }
         let idLength = Int(dataCopy[offset]); offset += 1
-        guard offset + idLength <= dataCopy.count else {
-            return nil
-        }
+        guard offset + idLength <= dataCopy.count else { return nil }
         let id = String(data: dataCopy[offset..<offset+idLength], encoding: .utf8) ?? UUID().uuidString
         offset += idLength
         
         // Sender
-        guard offset < dataCopy.count else {
-            return nil
-        }
+        guard offset < dataCopy.count else { return nil }
         let senderLength = Int(dataCopy[offset]); offset += 1
-        guard offset + senderLength <= dataCopy.count else {
-            return nil
-        }
+        guard offset + senderLength <= dataCopy.count else { return nil }
         let sender = String(data: dataCopy[offset..<offset+senderLength], encoding: .utf8) ?? "unknown"
         offset += senderLength
         
-        // Content
-        guard offset + 2 <= dataCopy.count else {
-            return nil
-        }
+        // Content or Encrypted Content
+        guard offset + 2 <= dataCopy.count else { return nil }
         let contentLengthData = dataCopy[offset..<offset+2]
         let contentLength = Int(contentLengthData.reduce(0) { result, byte in
             (result << 8) | UInt16(byte)
         })
         offset += 2
-        guard offset + contentLength <= dataCopy.count else {
-            return nil
-        }
+        guard offset + contentLength <= dataCopy.count else { return nil }
         
-        let content = String(data: dataCopy[offset..<offset+contentLength], encoding: .utf8) ?? ""
+        var content = ""
+        var encryptedContent: Data? = nil
+        
+        if isEncrypted {
+            encryptedContent = dataCopy[offset..<offset+contentLength]
+        } else {
+            content = String(data: dataCopy[offset..<offset+contentLength], encoding: .utf8) ?? ""
+        }
         offset += contentLength
         
         // Optional fields
@@ -339,6 +336,16 @@ extension BitchatMessage {
             }
         }
         
+        // Channel hashtag
+        var channel: String?
+        if hasChannel && offset < dataCopy.count {
+            let length = Int(dataCopy[offset]); offset += 1
+            if offset + length <= dataCopy.count {
+                channel = String(data: dataCopy[offset..<offset+length], encoding: .utf8)
+                offset += length
+            }
+        }
+        
         self.init(
             id: id,
             sender: sender,
@@ -350,7 +357,9 @@ extension BitchatMessage {
             recipientNickname: recipientNickname,
             senderPeerID: senderPeerID,
             mentions: mentions,
-            isBridged: isBridged
+            channel: channel,
+            encryptedContent: encryptedContent,
+            isEncrypted: isEncrypted
         )
     }
 }

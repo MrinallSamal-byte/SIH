@@ -110,6 +110,62 @@ final class BLEPublicMessageHandler {
             env.trackPacketSeen(packet)
         }
 
+        let ts = Date(timeIntervalSince1970: Double(packet.timestamp) / 1000)
+
+        // 1. Try decoding structured BitchatMessage binary payload (channels & E2EE squads)
+        if let binaryMsg = BitchatMessage(packet.payload) {
+            let directLink = env.linkState(peerID)
+            let hasDirectLink = directLink.hasPeripheral || directLink.hasCentral
+            let pathTag = hasDirectLink ? "direct" : "mesh"
+            
+            if binaryMsg.isEncrypted, let channelName = binaryMsg.channel, let encData = binaryMsg.encryptedContent {
+                Task { @MainActor in
+                    if let decrypted = ChannelManager.shared.decryptChannelMessage(encryptedData: encData, channel: channelName) {
+                        let finalMsg = BitchatMessage(
+                            id: binaryMsg.id,
+                            sender: senderNickname,
+                            content: decrypted,
+                            timestamp: ts,
+                            isRelay: binaryMsg.isRelay,
+                            originalSender: binaryMsg.originalSender,
+                            isPrivate: false,
+                            recipientNickname: nil,
+                            senderPeerID: peerID,
+                            mentions: binaryMsg.mentions,
+                            channel: channelName,
+                            encryptedContent: encData,
+                            isEncrypted: true
+                        )
+                        ChannelManager.shared.addChannelMessage(channelName, message: finalMsg)
+                        env.deliverPublicMessage(peerID, senderNickname, decrypted, ts, binaryMsg.id)
+                    } else {
+                        SecureLogger.debug("🔒 Relay encrypted packet for squad \(channelName) (intermediate node cannot decrypt)", category: .session)
+                    }
+                }
+                return
+            } else if let channelName = binaryMsg.channel {
+                Task { @MainActor in
+                    let finalMsg = BitchatMessage(
+                        id: binaryMsg.id,
+                        sender: senderNickname,
+                        content: binaryMsg.content,
+                        timestamp: ts,
+                        isRelay: binaryMsg.isRelay,
+                        originalSender: binaryMsg.originalSender,
+                        isPrivate: false,
+                        recipientNickname: nil,
+                        senderPeerID: peerID,
+                        mentions: binaryMsg.mentions,
+                        channel: channelName
+                    )
+                    ChannelManager.shared.addChannelMessage(channelName, message: finalMsg)
+                    env.deliverPublicMessage(peerID, senderNickname, binaryMsg.content, ts, binaryMsg.id)
+                }
+                return
+            }
+        }
+
+        // 2. Fallback: plain text broadcast
         guard let content = String(data: packet.payload, encoding: .utf8) else {
             SecureLogger.error("❌ Failed to decode message payload as UTF-8", category: .session)
             return
@@ -121,7 +177,6 @@ final class BLEPublicMessageHandler {
         let pathTag = hasDirectLink ? "direct" : "mesh"
         SecureLogger.debug("💬 [\(senderNickname)] TTL:\(packet.ttl) (\(pathTag)) chars=\(content.count) bytes=\(packet.payload.count)", category: .session)
 
-        let ts = Date(timeIntervalSince1970: Double(packet.timestamp) / 1000)
         let messageID: String?
         if peerID == env.localPeerID() {
             messageID = env.takeSelfBroadcastMessageID(packet)
