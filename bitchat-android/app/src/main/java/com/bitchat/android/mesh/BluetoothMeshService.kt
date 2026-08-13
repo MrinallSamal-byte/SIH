@@ -859,13 +859,27 @@ class BluetoothMeshService(private val context: Context) : TransportBridgeServic
         if (content.isEmpty()) return
         
         serviceScope.launch {
+            val payloadBytes: ByteArray = if (channel != null || mentions.isNotEmpty()) {
+                val bMsg = com.bitchat.android.model.BitchatMessage(
+                    sender = delegate?.getNickname() ?: myPeerID,
+                    content = content,
+                    timestamp = java.util.Date(),
+                    senderPeerID = myPeerID,
+                    mentions = if (mentions.isNotEmpty()) mentions else null,
+                    channel = channel
+                )
+                bMsg.toBinaryPayload() ?: content.toByteArray(Charsets.UTF_8)
+            } else {
+                content.toByteArray(Charsets.UTF_8)
+            }
+
             val packet = BitchatPacket(
                 version = 1u,
                 type = MessageType.MESSAGE.value,
                 senderID = hexStringToByteArray(myPeerID),
                 recipientID = SpecialRecipients.BROADCAST,
                 timestamp = System.currentTimeMillis().toULong(),
-                payload = content.toByteArray(Charsets.UTF_8),
+                payload = payloadBytes,
                 signature = null,
                 ttl = MAX_TTL
             )
@@ -874,6 +888,29 @@ class BluetoothMeshService(private val context: Context) : TransportBridgeServic
             val signedPacket = signPacketBeforeBroadcast(packet)
             broadcastRoutedPacket(RoutedPacket(signedPacket))
             // Track our own broadcast message for sync
+            try { gossipSyncManager.onPublicPacketSeen(signedPacket) } catch (_: Exception) { }
+        }
+    }
+
+    /**
+     * Send raw/encrypted broadcast message payload across mesh
+     */
+    fun sendRawMessageBroadcast(payload: ByteArray) {
+        if (payload.isEmpty()) return
+        serviceScope.launch {
+            val packet = BitchatPacket(
+                version = 1u,
+                type = MessageType.MESSAGE.value,
+                senderID = hexStringToByteArray(myPeerID),
+                recipientID = SpecialRecipients.BROADCAST,
+                timestamp = System.currentTimeMillis().toULong(),
+                payload = payload,
+                signature = null,
+                ttl = MAX_TTL
+            )
+
+            val signedPacket = signPacketBeforeBroadcast(packet)
+            broadcastRoutedPacket(RoutedPacket(signedPacket))
             try { gossipSyncManager.onPublicPacketSeen(signedPacket) } catch (_: Exception) { }
         }
     }

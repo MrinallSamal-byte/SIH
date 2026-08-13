@@ -250,45 +250,65 @@ fun ChatScreen(viewModel: ChatViewModel) {
         buildMentionPeerIdentityMap(displayMessages, knownPeers)
     }
 
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val drawerCoroutineScope = rememberCoroutineScope()
+
     // Determine whether to show media buttons (only hide in geohash location chats)
     val showMediaButtons = when {
         currentChannel != null -> true
         else -> selectedLocationChannel !is com.bitchat.android.geohash.ChannelID.Location
     }
 
-    // Use WindowInsets to handle keyboard properly
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(colorScheme.background) // Extend background to fill entire screen including status bar
-    ) {
-        val headerHeight = ChatHeaderHeight
-        val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-
-        // Both bars are translucent and the conversation scrolls underneath them, so their
-        // heights are reserved as list padding instead of as layout space. The composer's height
-        // varies (suggestion rows, wrapped lines), so it is measured rather than assumed.
-        var composerHeight by remember { mutableStateOf(0.dp) }
-        val density = LocalDensity.current
-
-        // Main content area that responds to keyboard/window insets
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        // Android 11+: Handle both IME and navigation bar insets in Compose
-                        Modifier.windowInsetsPadding(
-                            WindowInsets.ime.union(WindowInsets.navigationBars)
-                        )
-                    } else {
-
-                        // Android 10 and below: Window is resized by the system (adjustResize),
-                        // so only account for the navigation bar.
-                        Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        gesturesEnabled = true,
+        drawerContent = {
+            ModalDrawerSheet(
+                drawerContainerColor = Color(0xFF1E1F22),
+                modifier = Modifier.width(320.dp)
+            ) {
+                DiscordChannelDrawer(
+                    viewModel = viewModel,
+                    onCloseDrawer = {
+                        drawerCoroutineScope.launch { drawerState.close() }
                     }
                 )
+            }
+        }
+    ) {
+        // Use WindowInsets to handle keyboard properly
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colorScheme.background) // Extend background to fill entire screen including status bar
         ) {
+            val headerHeight = ChatHeaderHeight
+            val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+
+            // Both bars are translucent and the conversation scrolls underneath them, so their
+            // heights are reserved as list padding instead of as layout space. The composer's height
+            // varies (suggestion rows, wrapped lines), so it is measured rather than assumed.
+            var composerHeight by remember { mutableStateOf(0.dp) }
+            val density = LocalDensity.current
+
+            // Main content area that responds to keyboard/window insets
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            // Android 11+: Handle both IME and navigation bar insets in Compose
+                            Modifier.windowInsetsPadding(
+                                WindowInsets.ime.union(WindowInsets.navigationBars)
+                            )
+                        } else {
+
+                            // Android 10 and below: Window is resized by the system (adjustResize),
+                            // so only account for the navigation bar.
+                            Modifier.windowInsetsPadding(WindowInsets.navigationBars)
+                        }
+                    )
+            ) {
           Box(modifier = Modifier.weight(1f)) {
             // Messages area - takes up available space, will compress when keyboard appears
             // Nearby-notes strip and the reveal hint both live in this Box alongside the
@@ -455,7 +475,11 @@ fun ChatScreen(viewModel: ChatViewModel) {
             nickname = nickname,
             viewModel = viewModel,
             colorScheme = colorScheme,
-            onSidebarToggle = { viewModel.showMeshPeerList() },
+            onSidebarToggle = {
+                drawerCoroutineScope.launch {
+                    if (drawerState.isClosed) drawerState.open() else drawerState.close()
+                }
+            },
             onShowAppInfo = { viewModel.showAppInfo() },
             onPanicClear = { viewModel.panicClearAllData() },
             onLocationChannelsClick = { showLocationChannelsSheet = true },
@@ -502,6 +526,7 @@ fun ChatScreen(viewModel: ChatViewModel) {
                 }
             }
         }
+    }
     }
 
     // Full-screen image viewer - separate from other sheets to allow image browsing without navigation

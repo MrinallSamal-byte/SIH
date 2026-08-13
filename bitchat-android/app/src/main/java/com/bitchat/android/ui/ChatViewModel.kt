@@ -400,6 +400,46 @@ class ChatViewModel(
     val geohashPeople: StateFlow<List<GeoPerson>> = state.geohashPeople
     val teleportedGeo: StateFlow<Set<String>> = state.teleportedGeo
     val geohashParticipantCounts: StateFlow<Map<String, Int>> = state.geohashParticipantCounts
+    
+    // Discord Hierarchy & Channel State
+    val discordHubs: StateFlow<List<DiscordHub>> = channelManager.hubs
+    val discordCategories: StateFlow<List<DiscordCategory>> = channelManager.categories
+    val discordChannels: StateFlow<List<DiscordChannel>> = channelManager.channels
+    val selectedDiscordHubId: StateFlow<String> = channelManager.selectedHubId
+    val collapsedDiscordCategories: StateFlow<Set<String>> = channelManager.collapsedCategories
+    
+    fun selectDiscordHub(hubId: String) {
+        channelManager.selectHub(hubId)
+    }
+    
+    fun toggleDiscordCategoryCollapse(categoryId: String) {
+        channelManager.toggleCategoryCollapse(categoryId)
+    }
+    
+    fun createDiscordChannel(
+        name: String,
+        topic: String,
+        categoryId: String,
+        hubId: String,
+        isEncrypted: Boolean,
+        password: String? = null
+    ): Boolean {
+        return channelManager.createChannel(
+            name = name,
+            topic = topic,
+            categoryId = categoryId,
+            hubId = hubId,
+            isEncrypted = isEncrypted,
+            password = password,
+            myPeerID = mesh.myPeerID
+        )
+    }
+    
+    fun getActiveChannelInfo(channelId: String?): DiscordChannel? {
+        if (channelId == null) return null
+        return channelManager.channels.value.firstOrNull { it.id.equals(channelId, ignoreCase = true) }
+    }
+    
     val meshServiceFacade: MeshService
         get() = mesh
     val myPeerID: String
@@ -1033,8 +1073,6 @@ class ChatViewModel(
                 )
 
                 if (currentChannelValue != null) {
-                    channelManager.addChannelMessage(currentChannelValue, message, mesh.myPeerID)
-
                     // Check if encrypted channel
                     if (channelManager.hasChannelKey(currentChannelValue)) {
                         channelManager.sendEncryptedChannelMessage(
@@ -1044,13 +1082,16 @@ class ChatViewModel(
                             state.getNicknameValue(),
                             mesh.myPeerID,
                             onEncryptedPayload = { encryptedData ->
-                                mesh.sendMessage(content, mentions, currentChannelValue)
+                                channelManager.addChannelMessage(currentChannelValue, message.copy(isEncrypted = true), mesh.myPeerID)
+                                mesh.sendRawMessageBroadcast(encryptedData)
                             },
                             onFallback = {
+                                channelManager.addChannelMessage(currentChannelValue, message, mesh.myPeerID)
                                 mesh.sendMessage(content, mentions, currentChannelValue)
                             }
                         )
                     } else {
+                        channelManager.addChannelMessage(currentChannelValue, message, mesh.myPeerID)
                         mesh.sendMessage(content, mentions, currentChannelValue)
                     }
                 } else {

@@ -487,10 +487,16 @@ fun MessageInput(
                     label = "placeholderAlpha"
                 )
                 if (placeholderAlpha > 0f) {
+                    val placeholderText = when {
+                        currentChannel != null -> {
+                            "Message ${if (currentChannel.startsWith("#")) currentChannel else "#$currentChannel"}"
+                        }
+                        selectedPrivatePeer != null -> "Message @$selectedPrivatePeer (E2EE)"
+                        activePublicTalker != null -> "$activePublicTalker is live"
+                        else -> stringResource(R.string.type_a_message_placeholder)
+                    }
                     Text(
-                        text = if (
-                            selectedPrivatePeer == null && currentChannel == null && activePublicTalker != null
-                        ) "$activePublicTalker is live" else stringResource(R.string.type_a_message_placeholder),
+                        text = placeholderText,
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontFamily = BitchatFontFamily
                         ),

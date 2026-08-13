@@ -101,6 +101,13 @@ class UnifiedMeshService(
         }
     }
 
+    override fun sendRawMessageBroadcast(payload: ByteArray) {
+        when {
+            isBleEnabled() -> bluetooth.sendRawMessageBroadcast(payload)
+            else -> bluetooth.sendRawMessageBroadcast(payload)
+        }
+    }
+
     override fun sendPrivateMessage(
         content: String,
         recipientPeerID: String,

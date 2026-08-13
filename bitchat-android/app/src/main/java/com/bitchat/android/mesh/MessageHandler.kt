@@ -462,7 +462,7 @@ class MessageHandler(private val myPeerID: String, private val appContext: andro
         }
         
         try {
-            // Try file packet first (voice, image, etc.) and log outcome for FILE_TRANSFER
+            // 1. Try file packet first (voice, image, etc.) and log outcome for FILE_TRANSFER
             val isFileTransfer = com.bitchat.android.protocol.MessageType.fromValue(packet.type) == com.bitchat.android.protocol.MessageType.FILE_TRANSFER
             val file = com.bitchat.android.model.BitchatFilePacket.decode(packet.payload)
             if (file != null) {
@@ -484,7 +484,36 @@ class MessageHandler(private val myPeerID: String, private val appContext: andro
                 Log.w(TAG, "FILE_TRANSFER decode failed (broadcast) from ${peerID.take(8)}")
             }
 
-            // Fallback: plain text
+            // 2. Try decoding BitchatMessage binary payload (for structured channels & E2EE encrypted channels)
+            val binaryMessage = BitchatMessage.fromBinaryPayload(packet.payload)
+            if (binaryMessage != null) {
+                if (binaryMessage.isEncrypted && binaryMessage.channel != null && binaryMessage.encryptedContent != null) {
+                    // Try decrypting with channel key
+                    val decrypted = delegate?.decryptChannelMessage(binaryMessage.encryptedContent, binaryMessage.channel)
+                    if (decrypted != null) {
+                        val message = binaryMessage.copy(
+                            content = decrypted,
+                            sender = delegate?.getPeerNickname(peerID) ?: binaryMessage.sender,
+                            senderPeerID = peerID,
+                            timestamp = Date(packet.timestamp.toLong()),
+                            isEncrypted = true
+                        )
+                        delegate?.onMessageReceived(message)
+                    } else {
+                        Log.d(TAG, "Encrypted message for channel ${binaryMessage.channel} received (cannot decrypt locally, will relay)")
+                    }
+                } else {
+                    val message = binaryMessage.copy(
+                        sender = delegate?.getPeerNickname(peerID) ?: binaryMessage.sender,
+                        senderPeerID = peerID,
+                        timestamp = Date(packet.timestamp.toLong())
+                    )
+                    delegate?.onMessageReceived(message)
+                }
+                return
+            }
+
+            // 3. Fallback: plain text
             val message = BitchatMessage(
                 id = PacketIdUtil.computeIdHex(packet).uppercase(),
                 sender = delegate?.getPeerNickname(peerID) ?: "unknown",
