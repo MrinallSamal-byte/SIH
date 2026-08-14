@@ -456,6 +456,20 @@ fun MeshPeerListSheet(
                     },
                     backgroundAlpha = topBarAlpha,
                     actions = {
+                        IconButton(
+                            onClick = {
+                                onDismiss()
+                                viewModel.showUnifiedContactSearch()
+                            },
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = stringResource(R.string.search_contacts),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                         if (selectedLocationChannel !is ChannelID.Location) {
                             IconButton(
                                 onClick = onShowVerification,

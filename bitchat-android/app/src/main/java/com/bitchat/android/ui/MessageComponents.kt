@@ -1203,22 +1203,30 @@ private fun redeemCashu(context: Context, token: String, preferWallet: Boolean) 
 }
 
 /**
- * Per-check target colours for the delivery marker.
- *
- * Both checks always render — grey (disabled) until an acknowledgement turns them on — so a
- * status change recolours in place and never reflows text around it. Read receipts use the
- * app's primary green rather than a separate accent. [status] == null yields the all-grey
- * baseline used while a message is still being sent.
+ * WhatsApp-style cyan/blue tick color for read receipts.
  */
-private fun deliveryCheckColors(status: DeliveryStatus?, colorScheme: ColorScheme): Pair<Color, Color> {
-    val grey = colorScheme.onSurface.copy(alpha = 0.35f)
-    val green = colorScheme.primary
+private val BlueTickColor = Color(0xFF34B7F1)
+
+/**
+ * Visual configuration for the delivery marker.
+ *
+ * - Sending: Single faint checkmark (✓)
+ * - Sent: Single grey checkmark (✓)
+ * - Delivered: Double grey checkmark (✓✓)
+ * - Read: Double blue checkmark (✓✓)
+ * - Failed: Red error indicator (!)
+ */
+private fun deliveryCheckColors(status: DeliveryStatus?, colorScheme: ColorScheme): Pair<Color, Color?> {
+    val grey = colorScheme.onSurface.copy(alpha = 0.65f)
+    val dimGrey = colorScheme.onSurface.copy(alpha = 0.35f)
     return when (status) {
-        is DeliveryStatus.Read -> green to green
-        is DeliveryStatus.Delivered -> green to grey
-        is DeliveryStatus.PartiallyDelivered -> green to grey
-        is DeliveryStatus.Failed -> colorScheme.error to colorScheme.error
-        else -> grey to grey
+        is DeliveryStatus.Read -> BlueTickColor to BlueTickColor
+        is DeliveryStatus.Delivered -> grey to grey
+        is DeliveryStatus.PartiallyDelivered -> grey to grey
+        is DeliveryStatus.Sent -> grey to null
+        is DeliveryStatus.Sending -> dimGrey to null
+        is DeliveryStatus.Failed -> colorScheme.error to null
+        else -> dimGrey to null
     }
 }
 
@@ -1227,8 +1235,9 @@ private fun deliveryCheckRank(status: DeliveryStatus): Int = when (status) {
     is DeliveryStatus.Read -> 3
     is DeliveryStatus.Delivered -> 2
     is DeliveryStatus.PartiallyDelivered -> 2
-    is DeliveryStatus.Failed -> 1
-    else -> 0
+    is DeliveryStatus.Sent -> 1
+    is DeliveryStatus.Sending -> 0
+    is DeliveryStatus.Failed -> 0
 }
 
 @Composable
@@ -1241,7 +1250,7 @@ fun DeliveryStatusIcon(status: DeliveryStatus) {
         label = "firstCheckColor",
     )
     val second by animateColorAsState(
-        targetValue = secondTarget,
+        targetValue = secondTarget ?: Color.Transparent,
         animationSpec = tween(BitchatMotion.QUICK_MS),
         label = "secondCheckColor",
     )
@@ -1250,29 +1259,46 @@ fun DeliveryStatusIcon(status: DeliveryStatus) {
     // the instance, because Delivered/Read carry timestamps that would retrigger it otherwise.
     val scale = remember { Animatable(1f) }
     LaunchedEffect(deliveryCheckRank(status)) {
-        if (deliveryCheckRank(status) >= 2) {
-            scale.snapTo(1.3f)
+        if (deliveryCheckRank(status) >= 1) {
+            scale.snapTo(1.25f)
             scale.animateTo(1f, spring(dampingRatio = 0.55f, stiffness = 900f))
         }
     }
 
-    val text = remember(first, second) {
-        androidx.compose.ui.text.buildAnnotatedString {
-            pushStyle(androidx.compose.ui.text.SpanStyle(color = first))
-            append("✓")
-            pop()
-            pushStyle(androidx.compose.ui.text.SpanStyle(color = second))
-            append("✓")
-            pop()
+    if (status is DeliveryStatus.Failed) {
+        Text(
+            text = "!",
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = colorScheme.error,
+            modifier = Modifier.graphicsLayer {
+                scaleX = scale.value
+                scaleY = scale.value
+            }
+        )
+    } else {
+        val isDoubleTick = secondTarget != null
+        val text = remember(first, second, isDoubleTick) {
+            androidx.compose.ui.text.buildAnnotatedString {
+                pushStyle(androidx.compose.ui.text.SpanStyle(color = first))
+                append("✓")
+                pop()
+                if (isDoubleTick) {
+                    pushStyle(androidx.compose.ui.text.SpanStyle(color = second))
+                    append("✓")
+                    pop()
+                }
+            }
         }
+        Text(
+            text = text,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Normal,
+            letterSpacing = if (isDoubleTick) (-2).sp else 0.sp,
+            modifier = Modifier.graphicsLayer {
+                scaleX = scale.value
+                scaleY = scale.value
+            }
+        )
     }
-    Text(
-        text = text,
-        fontSize = 10.sp,
-        fontWeight = FontWeight.Normal,
-        modifier = Modifier.graphicsLayer {
-            scaleX = scale.value
-            scaleY = scale.value
-        }
-    )
 }

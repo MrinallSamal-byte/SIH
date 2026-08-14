@@ -47,9 +47,11 @@ class PrivateMediaTransferPreparerTest {
         assertEquals(MessageType.NOISE_ENCRYPTED.value, ready.built.packet.type)
         assertNotNull(ready.built.packet.signature)
         assertEquals(PrivateMediaWireMode.ENCRYPTED_NOISE_0X20, ready.built.wireMode)
-        val decoded = NoisePayload.decode(encryptedPlaintext!!)
+        assertNotNull(encryptedPlaintext)
+        val plainBytes = encryptedPlaintext ?: return
+        val decoded = NoisePayload.decode(plainBytes)
         assertEquals(NoisePayloadType.FILE_TRANSFER, decoded?.type)
-        assertEquals(0x20u.toUByte(), encryptedPlaintext!![0].toUByte())
+        assertEquals(0x20u.toUByte(), plainBytes[0].toUByte())
     }
 
     @Test

@@ -28,7 +28,7 @@ class PermissionManager(private val context: Context) {
     private fun shouldRequireWifiAwarePermission(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return false
         val enabled = try {
-            com.bitchat.android.ui.debug.DebugPreferenceManager.getWifiAwareEnabled(false)
+            com.bitchat.android.ui.debug.DebugPreferenceManager.getWifiAwareEnabled(true)
         } catch (_: Exception) {
             false
         }

@@ -65,15 +65,15 @@ class FileTransferTest {
         val expectedFilename = "myimage.jpg".toByteArray(Charsets.UTF_8)
         val expectedLength = expectedFilename.size // Should be 10 for UTF-8 "myimage.jpg"
 
-
-
-        assertEquals(expectedType, encoded!![0])
+        assertNotNull(encoded)
+        val nonNullEncoded = encoded ?: return
+        assertEquals(expectedType, nonNullEncoded[0])
         // Calculate the actual length from little-endian encoded data
-        val actualLength = (encoded[2].toInt() and 0xFF) or ((encoded[1].toInt() and 0xFF) shl 8)
+        val actualLength = (nonNullEncoded[2].toInt() and 0xFF) or ((nonNullEncoded[1].toInt() and 0xFF) shl 8)
         // The encoding seems to be including a null terminator or extended bytes
         assertEquals(11, actualLength) // The encoding produces 11 bytes for "myimage.jpg"
 
-        val actualFilename = encoded!!.sliceArray(3 until 3 + expectedLength)
+        val actualFilename = nonNullEncoded.sliceArray(3 until 3 + expectedLength)
         for (i in expectedFilename.indices) {
             assertEquals(expectedFilename[i], actualFilename[i])
         }
@@ -93,18 +93,19 @@ class FileTransferTest {
         // When: Encode
         val encoded = packet.encode()
         assertNotNull(encoded)
+        val nonNullEncoded = encoded ?: return
 
         // Then: File size should be in big endian order
         // Find FILE_SIZE TLV (type 0x02)
         var offset = 0
-        while (offset < encoded!!.size - 1) {
-            if (encoded!![offset] == 0x02.toByte()) {
+        while (offset < nonNullEncoded.size - 1) {
+            if (nonNullEncoded[offset] == 0x02.toByte()) {
                 // This is FILE_SIZE TLV
                 offset += 1  // Skip type byte
-                val length = (encoded!![offset].toInt() and 0xFF) or ((encoded[offset + 1].toInt() and 0xFF) shl 8)
+                val length = (nonNullEncoded[offset].toInt() and 0xFF) or ((nonNullEncoded[offset + 1].toInt() and 0xFF) shl 8)
                 offset += 2 // Skip length bytes
                 if (length == 4) { // FILE_SIZE always has 4 bytes
-                    val decodedFileSize = ByteBuffer.wrap(encoded!!.sliceArray(offset until offset + 4))
+                    val decodedFileSize = ByteBuffer.wrap(nonNullEncoded.sliceArray(offset until offset + 4))
                         .order(ByteOrder.BIG_ENDIAN)
                         .int.toLong()
                     assertEquals(fileSize, decodedFileSize)

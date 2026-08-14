@@ -795,6 +795,18 @@ private fun MainHeader(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(0.dp)
                 ) {
+                    HeaderIconButton(
+                        onClick = { viewModel.showUnifiedContactSearch() },
+                        contentDescription = stringResource(R.string.search_contacts)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = stringResource(R.string.search_contacts),
+                            modifier = Modifier.size(HeaderIconSize),
+                            tint = colorScheme.onSurfaceVariant
+                        )
+                    }
+
                     LocationNotesButton(
                         viewModel = viewModel,
                         onClick = onLocationNotesClick

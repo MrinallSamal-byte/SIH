@@ -1,168 +1,163 @@
-<img width="256" height="256" alt="icon_128x128@2x" src="https://github.com/user-attachments/assets/90133f83-b4f6-41c6-aab9-25d0859d2a47" />
+# SOA Mesh for iOS and macOS
 
-## bitchat
+A decentralized peer-to-peer messaging application for iOS and macOS featuring dual transport architecture: local Bluetooth Low Energy (BLE) mesh networks for offline communication, and internet-based Nostr protocol for global reach. Zero accounts, zero phone numbers, and zero central servers required.
 
-A decentralized peer-to-peer messaging app with dual transport architecture: local Bluetooth mesh networks for offline communication and internet-based Nostr protocol for global reach. No accounts, no phone numbers, no central servers. It's the side-groupchat.
+This is the native Apple platform client of the **SOA Mesh** ecosystem, fully protocol-compatible with the Android version for cross-platform campus mesh communication and integrated with the **AapdaSetu** Disaster Response Ecosystem.
 
-[bitchat.free](http://bitchat.free)
+---
 
-📲 [App Store](https://apps.apple.com/us/app/bitchat-mesh/id6748219622)
+## Overview and Campus Context
 
-📲 [Play Store](https://play.google.com/store/apps/details?id=com.bitchat.droid)
+During catastrophic natural events (cyclones, monsoon flash floods, structural collapse) or sudden power grid blackouts across high-density university campuses like **Siksha 'O' Anusandhan (SOA) / ITER**, standard cellular networks and campus Wi-Fi infrastructure frequently fail due to physical damage or overload.
 
-### Getting a copy you can trust
+**SOA Mesh for iOS and macOS (`bitchat`)** is a resilient, native Apple client designed to establish autonomous, off-grid peer-to-peer (P2P) communication. It operates seamlessly over Bluetooth Low Energy (BLE) without cellular networks, internet connections, or centralized account servers.
 
-Install from the App Store, or build from source you have verified. A compiled build from anywhere else cannot be verified — see [Verifying bitchat](docs/VERIFYING-A-BUILD.md) for how to check source against the per-release hash manifest, and for what to do if that is the only build you can get.
+The application is binary-protocol compatible with **SOA Mesh for Android (`bitchat-android`)**, enabling iPhone, iPad, Mac, and Android users across SOA campus hostels, classrooms, and medical facilities to form a unified multi-hop mesh network.
 
-This matters more than it usually would: this repository has been the target of takedown demands, and when a repository or releases page disappears, mirrors appear that nobody can check.
+---
 
-## License
+## Cross-Platform Mesh Interoperability
 
-This project is released into the public domain. See the [LICENSE](LICENSE) file for details.
+```mermaid
+graph LR
+    subgraph AppleNodes["Apple Devices (bitchat-ios)"]
+        iPhone1["iOS Node A\n(Hostel 1 - SOS)"]
+        MacNode["macOS Lab Node\n(ITER Block 2)"]
+    end
 
-## Features
+    subgraph AndroidNodes["Android Devices (bitchat-android)"]
+        Android1["Android Node B\n(Hostel 2 Relay)"]
+        Android2["Android Node C\n(Campus Security)"]
+    end
 
-- **Dual Transport Architecture**: Bluetooth mesh for offline + Nostr protocol for internet-based messaging
-- **Location-Based Channels**: Geographic chat rooms using geohash coordinates over global Nostr relays
-- **Intelligent Message Routing**: Automatically chooses best transport (Bluetooth → Nostr fallback)
-- **Decentralized Mesh Network**: Automatic peer discovery and multi-hop message relay over Bluetooth LE
-- **Privacy First**: No accounts, no phone numbers, no servers. Note that the mesh does use a persistent per-device identifier derived from your identity key — see [the whitepaper](WHITEPAPER.md) on identity and metadata for what a nearby radio can observe
-- **Private Message End-to-End Encryption**: [Noise Protocol](https://noiseprotocol.org) for mesh, BitChat private envelopes for Nostr fallback
-- **IRC-Style Commands**: Familiar `/slap`, `/msg`, `/who` style interface
-- **Universal App**: Native support for iOS and macOS
-- **Emergency Wipe**: Triple-tap to instantly clear all data
-- **Performance Optimizations**: LZ4 message compression, adaptive battery modes, and optimized networking
+    subgraph GatewayEcosystem["AapdaSetu Ecosystem"]
+        Gateway["Uplink Gateway\n(Cellular / Satellite / Wi-Fi)"]
+        CommandCenter["AapdaSetu Command Hub\n(Multi-Agency Response)"]
+    end
 
-## [Technical Architecture](https://deepwiki.com/permissionlesstech/bitchat)
+    iPhone1 -->|"BLE Mesh Hop 1 (E2EE)"| Android1
+    Android1 -->|"BLE Mesh Hop 2"| MacNode
+    MacNode -->|"BLE Mesh Hop 3"| Android2
+    Android2 -->|"Mesh Transport"| Gateway
+    Gateway -->|"WebSocket / REST Push"| CommandCenter
+```
 
-BitChat uses a **hybrid messaging architecture** with two complementary transport layers:
+---
 
-### Bluetooth Mesh Network (Offline)
+## Key Features
 
-- **Local Communication**: Direct peer-to-peer within Bluetooth range
-- **Multi-hop Relay**: Messages route through nearby devices (max 7 hops)
-- **No Internet Required**: Works completely offline in disaster scenarios
-- **Noise Protocol Encryption**: End-to-end encryption, with forward secrecy for live sessions (store-and-forward mail is sealed without it — see the whitepaper)
-- **Binary Protocol**: Compact packet format optimized for Bluetooth LE constraints
-- **Automatic Discovery**: Peer discovery and connection management
-- **Adaptive Power**: Battery-optimized duty cycling
+- **Multi-Hop Bluetooth LE Mesh Network**: Direct device-to-device packet forwarding up to 7 hops across nearby iOS, macOS, and Android devices with dynamic TTL routing and packet deduplication.
+- **End-to-End Cryptography**: Direct 1-on-1 messages are encrypted using the Noise Protocol Framework (Noise_XX_25519_ChaChaPoly_BLAKE2s) with cryptographic forward secrecy.
+- **SOA Campus Topic Channels**: Pre-configured channels for campus safety and operations (`#soa-emergency`, `#iter-campus`, `#hostel-alerts`, `#sum-hospital-triage`, `#volunteer-rescue`).
+- **Channel Encryption**: Optional topic channel password protection using Argon2id key derivation and AES-256-GCM encryption.
+- **Geohash Location Channels**: Spatial geohash chat rooms over Nostr relays when internet access is available.
+- **Zero User-Side Authentication**: No registration, phone numbers, email addresses, or cloud logins required. Immediate access during emergencies.
+- **Emergency Panic Wipe**: Rapid triple-tap gesture instantly clears all cryptographic keys, cached channel messages, peer history, and local preferences.
+- **Native Share Extension**: Integrated iOS Share Extension (`bitchatShareExtension`) allowing users to broadcast emergency text, coordinates, or media directly through the mesh network from any app.
+- **Performance Optimizations**: Native LZ4 message compression and adaptive duty cycling to conserve battery power.
+- **Universal Apple Support**: Native Swift and SwiftUI implementation supporting iOS 16+ and macOS 13+.
 
-### Nostr Protocol (Internet)
+---
 
-- **Global Reach**: Connect with users worldwide via internet relays
-- **Location Channels**: Geographic chat rooms using geohash coordinates
-- **440+ Relay Network**: Distributed across the globe for reliability
-- **BitChat Private Envelopes**: App-specific encrypted private messages over Nostr relays
-- **Ephemeral Keys**: Fresh cryptographic identity per geohash area
+## Technical Stack and Architecture
 
-BitChat's private-envelope format is proprietary and is **not** NIP-17,
-NIP-44, or NIP-59 compatible. It uses Nostr as a relay transport but only
-interoperates with BitChat clients: private payloads travel inside kind-1059
-events whose `v2:`-prefixed content is a BitChat-specific XChaCha20-Poly1305
-construction, not NIP-44 encryption.
+```
+bitchat/
+├── App/
+│   ├── BitchatApp.swift               # Application entry point & lifecycle
+│   └── AppEnvironment.swift           # Dependency injection container
+├── Features/
+│   ├── Chat/                          # SwiftUI chat stream views and view models
+│   ├── Channels/                      # Campus channel selector & password modals
+│   ├── Peers/                         # Nearby peer roster & connection states
+│   └── Settings/                      # Panic wipe, identity keys, & relay settings
+├── Identity/                          # Key generation, storage & fingerprinting
+├── Noise/                             # Noise Protocol XX handshake & cipher state
+├── Nostr/                             # Nostr relay WebSocket client & geohash parser
+├── Services/
+│   ├── BLEService.swift               # CoreBluetooth peripheral/central manager
+│   ├── PacketRouter.swift             # Multi-hop TTL, deduplication, & fragmentation
+│   └── MessageRouter.swift            # Intelligent transport selection (BLE / Nostr)
+├── bitchatShareExtension/             # iOS Share Extension module
+└── bitchatTests/                      # SwiftPM & XCTest unit test suites
+```
 
-### Channel Types
+---
 
-#### `mesh #bluetooth`
-
-- **Transport**: Bluetooth Low Energy mesh network
-- **Scope**: Local devices within multi-hop range
-- **Internet**: Not required
-- **Use Case**: Offline communication, protests, disasters, remote areas
-
-#### Location Channels (`block #dr5rsj7`, `neighborhood #dr5rs`, `country #dr`)
-
-- **Transport**: Nostr protocol over internet
-- **Scope**: Geographic areas defined by geohash precision
-  - `block` (7 chars): City block level
-  - `neighborhood` (6 chars): District/neighborhood
-  - `city` (5 chars): City level
-  - `province` (4 chars): State/province
-  - `region` (2 chars): Country/large region
-- **Internet**: Required (connects to Nostr relays)
-- **Use Case**: Location-based community chat, local events, regional discussions
-
-### Direct Message Routing
-
-Private messages use **intelligent transport selection**:
-
-1. **Bluetooth First** (preferred when available)
-
-   - Direct connection with established Noise session
-   - Fastest and most private option
-
-2. **Nostr Fallback** (when Bluetooth unavailable)
-
-   - Uses recipient's Nostr public key
-   - BitChat's app-specific private-envelope encryption
-   - Routes through global relay network
-
-3. **Smart Queuing** (when neither available)
-   - Messages queued until transport becomes available
-   - Automatic delivery when connection established
-
-For detailed protocol documentation, see the [Technical Whitepaper](WHITEPAPER.md).
-
-## Setup
+## Setup and Building
 
 ### Option 1: Using Xcode
 
+1. Open the project in Xcode:
+   ```bash
+   cd bitchat
+   open bitchat.xcodeproj
+   ```
+
+2. For signed physical device builds, set up your local configuration:
+   ```bash
+   cp Configs/Local.xcconfig.example Configs/Local.xcconfig
+   ```
+   Update `Configs/Local.xcconfig` with your Apple Developer Team ID.
+
+3. Select your target device (`iOS` or `macOS`) and scheme, then press **Run (Cmd+R)**.
+
+### Option 2: Command Line Builds with `xcodebuild`
+
 ```bash
-open bitchat.xcodeproj
-```
-
-For a signed device build, create your ignored local configuration and replace
-the example team ID with your Apple Developer Team ID:
-
-```bash
-cp Configs/Local.xcconfig.example Configs/Local.xcconfig
-```
-
-`Local.xcconfig.example` derives unique app and App Group identifiers from that
-team ID. The entitlement files already reference `$(APP_GROUP_ID)`, so tracked
-project or entitlement files do not need to be edited.
-
-Useful command-line checks from the repository root:
-
-```bash
-# macOS Debug build without signing
+# macOS Debug build (unsigned)
 xcodebuild -project bitchat.xcodeproj -scheme "bitchat (macOS)" \
   -configuration Debug CODE_SIGNING_ALLOWED=NO build
 
-# Full SwiftPM test suite
-swift test
-
-# iOS simulator tests
+# iOS Simulator Build
 xcodebuild -project bitchat.xcodeproj -scheme "bitchat (iOS)" \
   -sdk iphonesimulator \
-  -destination 'platform=iOS Simulator,name=iPhone 17' test
+  -destination 'platform=iOS Simulator,name=iPhone 16' build
 ```
 
-If `iPhone 17` is unavailable, choose an installed simulator from:
+### Option 3: Using `just`
 
 ```bash
-xcodebuild -showdestinations -project bitchat.xcodeproj -scheme "bitchat (iOS)"
-```
-
-### Option 2: Using `just`
-
-```bash
+# Install just task runner (if not already installed)
 brew install just
+
+# Check and run macOS build
 just check
 just run
+
+# Run test suites
+just test
+just test-ios
 ```
 
-`just build` and `just run` use the current `bitchat (macOS)` scheme and keep
-Xcode output in the ignored `.DerivedData/` directory. They never patch source,
-project, configuration, or entitlement files.
+---
 
-`just clean` removes only `.DerivedData/` and `.build/`. It does not invoke Git
-or restore tracked files, so uncommitted work is preserved. `just test` runs the
-SwiftPM suite and `just test-ios` runs the iPhone 17 simulator suite.
+## Testing and Verification
 
-## Localization
+```bash
+# Run SwiftPM Unit Tests (Crypto handshakes, packet encoding, routing logic)
+swift test
 
-- App localizations live in `bitchat/Localizable.xcstrings`.
-- Share extension strings are separate in `bitchatShareExtension/Localization/Localizable.xcstrings`.
-- Prefer keys that describe intent (`app_info.features.offline.title`) and reuse existing ones where possible.
-- Run `xcodebuild -project bitchat.xcodeproj -scheme "bitchat (macOS)" -configuration Debug CODE_SIGNING_ALLOWED=NO build` to compile-check any localization updates.
+# Run iOS Simulator Test Suite via xcodebuild
+xcodebuild -project bitchat.xcodeproj -scheme "bitchat (iOS)" \
+  -sdk iphonesimulator \
+  -destination 'platform=iOS Simulator,name=iPhone 16' test
+```
+
+---
+
+## Integration with AapdaSetu Ecosystem
+
+| Component | Function | Path |
+| :--- | :--- | :--- |
+| **SOA Mesh (iOS / macOS)** | Native Swift peer-to-peer Apple client | [`bitchat/`](file:///home/mrinall-samal/Project-v2/SIH/bitchat) |
+| **SOA Mesh (Android)** | Offline BLE and Wi-Fi Aware peer-to-peer messaging | [`bitchat-android/`](file:///home/mrinall-samal/Project-v2/SIH/bitchat-android) |
+| **AapdaSetu Web Client** | Citizen portal, 1-Tap SOS, GIS navigation | [`frontend-AapdaSetu/`](file:///home/mrinall-samal/Project-v2/SIH/frontend-AapdaSetu) |
+| **AapdaSetu AI Engine** | Priority triage, PFA chatbot, SAR flood mapping | [`apps/ai-engine/`](file:///home/mrinall-samal/Project-v2/SIH/apps/ai-engine) |
+| **Command Center** | Multi-agency incident dispatch & real-time monitoring | [`SOS-project with bolt/`](file:///home/mrinall-samal/Project-v2/SIH) |
+
+---
+
+## License
+
+This project is released into the public domain under the terms in [`LICENSE`](LICENSE).

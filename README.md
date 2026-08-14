@@ -17,6 +17,7 @@ During major natural disasters (floods, cyclones, earthquakes), traditional resp
 1. **React Web Application (`frontend-AapdaSetu`)**: High-speed Vite client with Leaflet.js interactive maps, hazard route planning, and emergency forms.
 2. **Next.js & Supabase Engine (`SOS-project with bolt`)**: Production-ready command center platform with 1-Tap SOS, 11 modular admin views, Supabase PostgreSQL RLS, and WebSockets real-time streaming.
 3. **Python AI Microservice Engine (`apps/ai-engine`)**: FastAPI service providing automated emergency triage, SAR satellite flood mapping, anti-fraud damage assessment, and Psychological First Aid (PFA) chatbot grounding.
+4. **SOA Mesh (`bitchat-android`)**: Decentralized, zero-infrastructure offline BLE/Wi-Fi Aware peer-to-peer mesh messaging application tailored for student hostels, academic blocks, and campus disaster communication.
 
 > [!IMPORTANT]
 > **Zero User-Side Authentication Policy:** AapdaSetu is architected for zero-friction emergency accessibility during catastrophic disasters. There is **no user-side authentication or login required** for citizens or victims to trigger emergency SOS alerts, track incident status, view safe evacuation routes, receive early warnings, interact with the PFA AI chatbot, or submit safety check-ins. All emergency features are immediately accessible out-of-the-box.
@@ -308,6 +309,11 @@ SIH-DM/
 │           ├── pfa_chatbot.py          # Psychological First Aid bot engine
 │           └── satellite_flood_mapping.py # SAR satellite flood polygon generator
 │
+├── bitchat-android/                    # SOA Mesh: Offline BLE/Wi-Fi Android App
+│   ├── app/                            # Kotlin, Jetpack Compose, BLE & Wi-Fi Aware mesh
+│   ├── wear/                           # Wear OS companion app
+│   └── README.md                       # Comprehensive SOA Mesh documentation
+│
 ├── README.md                           # Master system documentation
 ├── flow.md                             # System workflow and architecture documentation
 ├── projectrequirement.md               # Scope and master feature matrix
@@ -323,6 +329,7 @@ SIH-DM/
 - **Node.js**: v18.0.0 or higher
 - **Python**: v3.10 or higher
 - **npm**: v9.0.0 or higher
+- **Android Studio & SDK**: Android 8.0+ (API 26+) for `bitchat-android`
 
 ### 1. Web Application (`frontend-AapdaSetu`)
 ```bash
@@ -344,6 +351,13 @@ npm run dev      # Starts dev server on http://localhost:3000
 ```bash
 cd apps/ai-engine
 python app/main.py   # Executes AI microservice integration harness
+```
+
+### 4. SOA Mesh Android App (`bitchat-android`)
+```bash
+cd bitchat-android
+./gradlew assembleDebug   # Builds debug APK for offline BLE mesh testing
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ---

@@ -66,7 +66,7 @@ class CommandProcessorTest() {
         command = "/j $channel",
         meshService = meshService,
         myPeerID = "peer-id",
-        onSendMessage = { a, b, c -> { } },
+        onSendMessage = { _, _, _ -> },
         viewModel = null
     )
 
@@ -82,7 +82,7 @@ class CommandProcessorTest() {
       command = "/JOIN $channel",
       meshService = meshService,
       myPeerID = "peer-id",
-      onSendMessage = { a, b, c -> { } },
+      onSendMessage = { _, _, _ -> },
       viewModel = null
     )
 
@@ -96,7 +96,7 @@ class CommandProcessorTest() {
 
     val result = commandProcessor.processCommand(
       command = "/wtfjoin $channel", meshService = meshService, myPeerID = "peer-id",
-      onSendMessage = { a, b, c -> { } }, viewModel = null
+      onSendMessage = { _, _, _ -> }, viewModel = null
     )
 
     assertEquals(result, true)

@@ -1,6 +1,9 @@
 package com.bitchat.android.ui
 
+import android.Manifest
 import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.bitchat.android.ui.theme.BitchatFontFamily
 // [Goose] Bridge file share events to ViewModel via dispatcher is installed in ChatScreen composition
 
@@ -83,7 +86,14 @@ fun ChatScreen(viewModel: ChatViewModel) {
     val privateChatSheetPeer by viewModel.privateChatSheetPeer.collectAsStateWithLifecycle()
     val showVerificationSheet by viewModel.showVerificationSheet.collectAsStateWithLifecycle()
     val showSecurityVerificationSheet by viewModel.showSecurityVerificationSheet.collectAsStateWithLifecycle()
+    val showUnifiedContactSearchSheet by viewModel.showUnifiedContactSearchSheet.collectAsStateWithLifecycle()
     val legacyPrivateMediaConsent by viewModel.legacyPrivateMediaConsent.collectAsStateWithLifecycle()
+
+    val contactsPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        viewModel.updateContactsPermission(isGranted)
+    }
 
     var messageText by remember { mutableStateOf(TextFieldValue("")) }
     var showPasswordPrompt by remember { mutableStateOf(false) }
@@ -582,6 +592,11 @@ fun ChatScreen(viewModel: ChatViewModel) {
         onSecurityVerificationSheetDismiss = viewModel::hideSecurityVerificationSheet,
         showMeshPeerListSheet = showMeshPeerListSheet,
         onMeshPeerListDismiss = viewModel::hideMeshPeerList,
+        showUnifiedContactSearchSheet = showUnifiedContactSearchSheet,
+        onUnifiedContactSearchDismiss = viewModel::hideUnifiedContactSearch,
+        onRequestContactsPermission = {
+            contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+        }
     )
 
     legacyPrivateMediaConsent?.let { request ->
@@ -864,6 +879,9 @@ private fun ChatDialogs(
     onSecurityVerificationSheetDismiss: () -> Unit,
     showMeshPeerListSheet: Boolean,
     onMeshPeerListDismiss: () -> Unit,
+    showUnifiedContactSearchSheet: Boolean = false,
+    onUnifiedContactSearchDismiss: () -> Unit = {},
+    onRequestContactsPermission: () -> Unit = {},
 ) {
     val privateChatSheetPeer by viewModel.privateChatSheetPeer.collectAsStateWithLifecycle()
 
@@ -930,6 +948,15 @@ private fun ChatDialogs(
                 onMeshPeerListDismiss()
                 viewModel.showVerificationSheet(fromSidebar = true)
             }
+        )
+    }
+
+    if (showUnifiedContactSearchSheet) {
+        UnifiedContactSearchSheet(
+            isPresented = showUnifiedContactSearchSheet,
+            viewModel = viewModel,
+            onDismiss = onUnifiedContactSearchDismiss,
+            onRequestContactsPermission = onRequestContactsPermission
         )
     }
 

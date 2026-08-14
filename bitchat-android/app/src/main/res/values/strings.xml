@@ -5,7 +5,7 @@
     <string name="cashu_copy_token">Copy token</string>
     <string name="cashu_redeem_wallet">Redeem in wallet</string>
     <string name="cashu_redeem_web">Redeem on web</string>
-    <string name="app_name">bitchat</string>
+    <string name="app_name">SOA Mesh</string>
     <string name="permission_bluetooth_rationale">Bluetooth permission is required for peer-to-peer messaging without internet.</string>
     <string name="permission_location_rationale">Location permission is required to discover nearby devices via Bluetooth.</string>
     <string name="permission_notification_rationale">Notification permission is required to alert you of new messages.</string>
@@ -88,6 +88,11 @@
   <string name="delete_conversation_action">Delete conversation</string>
   <string name="delete_conversation_title">Delete conversation?</string>
   <string name="delete_conversation_message">Delete your conversation with %1$s from this device?</string>
+  <string name="delete_message_title">Delete message?</string>
+  <string name="delete_for_everyone">Delete for everyone</string>
+  <string name="delete_for_me">Delete for me</string>
+  <string name="action_delete_message_title">Delete message</string>
+  <string name="action_delete_message_subtitle">Remove this message from chat</string>
   <string name="search_conversations">Search conversations</string>
   <string name="clear">Clear</string>
   <string name="loading_conversations">Loading private conversations…</string>
@@ -649,9 +654,29 @@
     <item quantity="other">%d people</item>
   </plurals>
 
-    <string name="bluetooth_recommended">Bluetooth Recommended</string>
+  <string name="bluetooth_recommended">Bluetooth Recommended</string>
   <string name="about_language">Language</string>
   <string name="about_app_language">App language</string>
   <string name="about_system_default">System default</string>
   <string name="about_select_language">Select language</string>
+
+  <!-- Phone Contacts & Unified Search -->
+  <string name="phone_contacts">Phone Contacts</string>
+  <string name="contacts_permission_title">Allow Contacts Access</string>
+  <string name="contacts_permission_description">Allow contact access to show saved phone numbers and directly message people over the offline mesh network.</string>
+  <string name="grant_contacts_permission">Allow Access</string>
+  <string name="search_all_hint">Search contacts, channels, or peers…</string>
+  <string name="search_contacts">Search Contacts</string>
+  <string name="no_contacts_found">No contacts found</string>
+  <string name="no_search_results_found">No matching contacts, channels, or peers</string>
+  <string name="message_over_mesh">Message via Mesh</string>
+  <string name="phone_contact_badge">Phone Contact</string>
+  <string name="mesh_connected_badge">Online on Mesh</string>
+  <string name="mesh_direct_chat">Direct Mesh Message</string>
+  <string name="search_channels_section">Channels</string>
+  <string name="search_peers_section">Nearby Mesh Peers</string>
+  <string name="search_contacts_section">Phone Contacts</string>
+  <string name="search_conversations_section">Recent Conversations</string>
+  <string name="loading_contacts">Loading phone contacts…</string>
+  <string name="direct_message_search_action">Direct Message</string>
 </resources>

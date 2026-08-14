@@ -1,0 +1,3 @@
+- [x] Configure Foojay Toolchains Resolver in `settings.gradle.kts`
+- [/] Run `:app:assembleDebug` to verify toolchain auto-provisioning
+- [ ] Run `:wear:assembleDebug` to verify Wear OS module

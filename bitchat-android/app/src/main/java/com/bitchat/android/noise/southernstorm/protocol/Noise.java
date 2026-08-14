@@ -227,10 +227,10 @@ public final class Noise {
 	{
 		try {
 			Class<?> c = Class.forName("javax.crypto.AEADBadTagException");
-			throw (BadPaddingException)(c.newInstance());
-		} catch (ClassNotFoundException e) {
-		} catch (InstantiationException e) {
-		} catch (IllegalAccessException e) {
+			throw (BadPaddingException)(c.getDeclaredConstructor().newInstance());
+		} catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
+		         NoSuchMethodException | java.lang.reflect.InvocationTargetException e) {
+		} catch (Exception e) {
 		}
 		throw new BadPaddingException();
 	}

@@ -18,7 +18,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "bitchat-android"
+rootProject.name = "soa-mesh"
 include(":app")
 include(":wear")
 // Using published Arti AAR; local module not included

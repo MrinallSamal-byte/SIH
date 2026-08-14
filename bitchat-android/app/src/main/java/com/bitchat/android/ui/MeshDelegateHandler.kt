@@ -40,7 +40,14 @@ class MeshDelegateHandler(
                     return@launch
                 }
             }
-            
+
+            // Check for delete control message
+            val deleteControl = com.bitchat.android.model.DeleteControlMessage.parse(message.content)
+            if (deleteControl != null) {
+                messageManager.deleteMessageLocally(deleteControl.targetMessageID)
+                return@launch
+            }
+
             // Trigger haptic feedback
             onHapticFeedback()
 

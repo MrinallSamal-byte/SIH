@@ -36,11 +36,13 @@ object ContactDirectory {
     }
 
     fun isContactConversationID(value: String): Boolean =
-        ContactIdentityResolver.isContactConversationId(value)
+        ContactIdentityResolver.isContactConversationId(value) ||
+            ContactIdentityResolver.isPhoneConversationId(value)
 
     fun canonicalConversationId(peerOrConversationID: String): String {
         val value = peerOrConversationID.trim()
         if (ContactIdentityResolver.isContactConversationId(value)) return value.lowercase()
+        if (ContactIdentityResolver.isPhoneConversationId(value)) return value.lowercase()
 
         noiseKeyForAlias(value)?.let {
             return ContactIdentityResolver.contactConversationIdForNoiseKey(it)
@@ -65,6 +67,11 @@ object ContactDirectory {
 
     fun resolve(peerOrConversationID: String): ContactResolution {
         val conversationID = canonicalConversationId(peerOrConversationID)
+        val isPhoneContact = ContactIdentityResolver.isPhoneConversationId(conversationID)
+        val phoneContact = if (isPhoneContact) {
+            com.bitchat.android.contacts.PhoneContactsManager.findContactByConversationId(conversationID)
+        } else null
+
         val contactFingerprint = ContactIdentityResolver.fingerprintFromContactConversationId(conversationID)
 
         val favorite = contactFingerprint?.let { findFavoriteByFingerprint(it) }
@@ -74,7 +81,8 @@ object ContactDirectory {
                 ContactIdentityResolver.bytesFromHex(peerOrConversationID)
             else -> null
         }
-        val liveMeshPeerID = contactFingerprint?.let { findLiveMeshPeerForFingerprint(it) }
+        val liveMeshPeerID = phoneContact?.matchedMeshPeerID
+            ?: contactFingerprint?.let { findLiveMeshPeerForFingerprint(it) }
             ?: peerOrConversationID.takeIf { ContactIdentityResolver.isMeshPeerId(it) && isMeshPeerConnected(it) }
 
         return ContactResolution(
@@ -87,13 +95,16 @@ object ContactDirectory {
                         FavoritesPersistenceService.shared.findNostrPubkeyForPeerID(it)
                     }.getOrNull()
                 },
-            // A connected peer's current announcement is authoritative. Favorite and fingerprint
-            // records are offline fallbacks and can legitimately contain an older nickname.
+            // A connected peer's current announcement is authoritative. Favorite, phone contact,
+            // and fingerprint records are offline fallbacks.
             displayName = liveMeshPeerID?.let { meshProvider?.invoke()?.getPeerInfo(it)?.nickname }
                 ?.takeIf { it.isNotBlank() && !it.equals("Unknown", ignoreCase = true) }
+                ?: phoneContact?.name?.takeIf { it.isNotBlank() }
                 ?: favorite?.peerNickname?.takeIf {
                     it.isNotBlank() && !it.equals("Unknown", ignoreCase = true)
                 }
+                ?: phoneContact?.phoneNumber?.takeIf { it.isNotBlank() }
+                ?: (if (isPhoneContact) ContactIdentityResolver.phoneFromConversationId(conversationID) else null)
                 ?: contactFingerprint?.let { cachedFingerprintNickname(it) },
             isMutualFavorite = favorite?.isMutual == true
         )

@@ -135,6 +135,19 @@ class ChatState(
     private val _showSecurityVerificationSheet = MutableStateFlow(false)
     val showSecurityVerificationSheet: StateFlow<Boolean> = _showSecurityVerificationSheet.asStateFlow()
     
+    // Phone Contacts & Unified Search State
+    private val _phoneContacts = MutableStateFlow<List<com.bitchat.android.contacts.PhoneContact>>(emptyList())
+    val phoneContacts: StateFlow<List<com.bitchat.android.contacts.PhoneContact>> = _phoneContacts.asStateFlow()
+
+    private val _hasContactsPermission = MutableStateFlow(false)
+    val hasContactsPermission: StateFlow<Boolean> = _hasContactsPermission.asStateFlow()
+
+    private val _isContactsLoading = MutableStateFlow(false)
+    val isContactsLoading: StateFlow<Boolean> = _isContactsLoading.asStateFlow()
+
+    private val _showUnifiedContactSearchSheet = MutableStateFlow(false)
+    val showUnifiedContactSearchSheet: StateFlow<Boolean> = _showUnifiedContactSearchSheet.asStateFlow()
+
     // Location channels state (for Nostr geohash features)
     private val _selectedLocationChannel = MutableStateFlow<com.bitchat.android.geohash.ChannelID?>(com.bitchat.android.geohash.ChannelID.Mesh)
     val selectedLocationChannel: StateFlow<com.bitchat.android.geohash.ChannelID?> = _selectedLocationChannel.asStateFlow()
@@ -355,5 +368,21 @@ class ChatState(
 
     fun setPrivateChatSheetPeer(peerID: String?) {
         _privateChatSheetPeer.value = peerID
+    }
+
+    fun setPhoneContacts(contacts: List<com.bitchat.android.contacts.PhoneContact>) {
+        _phoneContacts.value = contacts
+    }
+
+    fun setHasContactsPermission(granted: Boolean) {
+        _hasContactsPermission.value = granted
+    }
+
+    fun setIsContactsLoading(loading: Boolean) {
+        _isContactsLoading.value = loading
+    }
+
+    fun setShowUnifiedContactSearchSheet(show: Boolean) {
+        _showUnifiedContactSearchSheet.value = show
     }
 }

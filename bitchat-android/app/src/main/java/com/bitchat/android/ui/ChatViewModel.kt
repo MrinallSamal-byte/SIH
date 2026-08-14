@@ -42,6 +42,8 @@ import com.bitchat.android.util.hexEncodedString
 import com.bitchat.android.features.voice.LiveVoicePreferences
 import com.bitchat.android.features.voice.LiveVoiceTarget
 import com.bitchat.android.features.voice.VoiceRecorder
+import com.bitchat.android.contacts.PhoneContact
+import com.bitchat.android.contacts.PhoneContactsManager
 
 private data class ConversationLiveIdentityState(
     val connectedPeerIDs: List<String>,
@@ -402,6 +404,12 @@ class ChatViewModel(
     val geohashPeople: StateFlow<List<GeoPerson>> = state.geohashPeople
     val teleportedGeo: StateFlow<Set<String>> = state.teleportedGeo
     val geohashParticipantCounts: StateFlow<Map<String, Int>> = state.geohashParticipantCounts
+
+    // Phone Contacts & Unified Search
+    val phoneContacts: StateFlow<List<PhoneContact>> = state.phoneContacts
+    val hasContactsPermission: StateFlow<Boolean> = state.hasContactsPermission
+    val isContactsLoading: StateFlow<Boolean> = state.isContactsLoading
+    val showUnifiedContactSearchSheet: StateFlow<Boolean> = state.showUnifiedContactSearchSheet
     
     // Discord Hierarchy & Channel State
     val discordHubs: StateFlow<List<DiscordHub>> = channelManager.hubs
@@ -464,6 +472,7 @@ class ChatViewModel(
         // Note: Mesh service delegate is now set by MainActivity
         loadAndInitialize()
         ContactDirectory.initialize(getApplication()) { mesh }
+        checkContactsPermission()
         com.bitchat.android.services.AppStateStore.canonicalizePrivateChats()
         observeConversationDisplayNames()
         // Application startup performs the initial restore. Repeat it for every new UI owner
@@ -842,7 +851,6 @@ class ChatViewModel(
             com.bitchat.android.services.AppStateStore
                 .restoreDeletedConversation(deletion)
         }
-        if (!restored) return false
         if (deletion.wasPinned != conversationListPreferences.isPinned(deletion.conversationID)) {
             conversationListPreferences.togglePinned(deletion.conversationID)
         }
@@ -863,6 +871,51 @@ class ChatViewModel(
             )
         }
         return true
+    }
+
+    /**
+     * Check if the current user has administrative permissions
+     */
+    fun isAdmin(): Boolean {
+        // Reserved for community administrators / channel moderators
+        return false
+    }
+
+    /**
+     * Delete a message locally from this device only
+     */
+    fun deleteMessageForMe(message: BitchatMessage) {
+        messageManager.deleteMessageLocally(message.id)
+    }
+
+    /**
+     * Delete a message for everyone (local deletion + broadcast tombstone to peers)
+     */
+    fun deleteMessageForEveryone(message: BitchatMessage) {
+        // 1. Delete locally immediately
+        messageManager.deleteMessageLocally(message.id)
+
+        // 2. Broadcast deletion control packet
+        val deletePayload = com.bitchat.android.model.DeleteControlMessage.encode(message.id)
+
+        viewModelScope.launch {
+            if (message.isPrivate) {
+                val destination = message.senderPeerID?.takeIf { it != mesh.myPeerID }
+                    ?: state.getSelectedPrivateChatPeerValue()
+                    ?: return@launch
+                val router = com.bitchat.android.services.MessageRouter.getInstance(getApplication(), mesh)
+                router.sendPrivate(
+                    deletePayload,
+                    destination,
+                    "",
+                    java.util.UUID.randomUUID().toString().uppercase()
+                )
+            } else if (message.channel != null) {
+                mesh.sendMessage(deletePayload, emptyList(), message.channel)
+            } else {
+                mesh.sendMessage(deletePayload, emptyList(), null)
+            }
+        }
     }
 
     internal suspend fun setConversationRead(
@@ -1051,7 +1104,8 @@ class ChatViewModel(
                         recipientNicknameParam,
                         messageId
                     )
-                    if (route == com.bitchat.android.services.MessageRouter.RouteResult.NOSTR) {
+                    if (route == com.bitchat.android.services.MessageRouter.RouteResult.NOSTR ||
+                        route == com.bitchat.android.services.MessageRouter.RouteResult.MESH) {
                         messageManager.updateMessageDeliveryStatus(
                             messageId,
                             com.bitchat.android.model.DeliveryStatus.Sent
@@ -1380,6 +1434,61 @@ class ChatViewModel(
 
     fun hidePrivateChatSheet() {
         state.setPrivateChatSheetPeer(null)
+    }
+
+    fun checkContactsPermission() {
+        val granted = PhoneContactsManager.hasContactsPermission(getApplication())
+        state.setHasContactsPermission(granted)
+        if (granted && state.phoneContacts.value.isEmpty()) {
+            loadPhoneContacts()
+        }
+    }
+
+    fun updateContactsPermission(granted: Boolean) {
+        state.setHasContactsPermission(granted)
+        if (granted) {
+            loadPhoneContacts()
+        }
+    }
+
+    fun loadPhoneContacts(forceReload: Boolean = false) {
+        if (!PhoneContactsManager.hasContactsPermission(getApplication())) {
+            state.setHasContactsPermission(false)
+            return
+        }
+        state.setHasContactsPermission(true)
+        if (!forceReload && state.phoneContacts.value.isNotEmpty() && !state.isContactsLoading.value) {
+            return
+        }
+        viewModelScope.launch {
+            state.setIsContactsLoading(true)
+            try {
+                val contacts = PhoneContactsManager.loadPhoneContacts(
+                    context = getApplication(),
+                    activePeerNicknames = state.peerNicknames.value
+                )
+                state.setPhoneContacts(contacts)
+            } catch (e: Exception) {
+                Log.e("ChatViewModel", "Failed to load phone contacts: ${e.message}")
+            } finally {
+                state.setIsContactsLoading(false)
+            }
+        }
+    }
+
+    fun showUnifiedContactSearch() {
+        state.setShowUnifiedContactSearchSheet(true)
+        checkContactsPermission()
+    }
+
+    fun hideUnifiedContactSearch() {
+        state.setShowUnifiedContactSearchSheet(false)
+    }
+
+    fun startPrivateChatWithPhoneContact(contact: PhoneContact) {
+        hideUnifiedContactSearch()
+        val targetPeerID = contact.matchedMeshPeerID ?: contact.conversationID
+        showPrivateChatSheet(targetPeerID)
     }
 
     fun getPeerFingerprintForDisplay(peerID: String): String? {
