@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: aapdasetu-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aapdasetu
+      POSTGRES_PASSWORD: aapdasetu
+      POSTGRES_DB: aapdasetu
+    ports:
+      - "5432:5432"
+    volumes:
+      - aapdasetu_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aapdasetu -d aapdasetu"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ai-engine:
+    build:
+      context: ./fastapi-service
+      dockerfile: Dockerfile
+    container_name: aapdasetu-ai-engine
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      DAMAGE_ML_MODEL_PATH: /app/models/damage_model.pt
+    volumes:
+      - ./fastapi-service/models:/app/models
+
+volumes:
+  aapdasetu_pgdata:
