@@ -38,6 +38,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import com.bitchat.android.R
 import com.bitchat.android.geohash.ChannelID
 import com.bitchat.android.geohash.GeohashChannelLevel

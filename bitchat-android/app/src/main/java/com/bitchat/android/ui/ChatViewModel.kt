@@ -372,6 +372,8 @@ class ChatViewModel(
     val currentChannel: StateFlow<String?> = state.currentChannel
     val channelMessages: StateFlow<Map<String, List<BitchatMessage>>> = state.channelMessages
     val unreadChannelMessages: StateFlow<Map<String, Int>> = state.unreadChannelMessages
+    val unreadPrivateMessageCounts: StateFlow<Map<String, Int>> =
+        com.bitchat.android.services.AppStateStore.unreadPrivateMessageCounts
     val passwordProtectedChannels: StateFlow<Set<String>> = state.passwordProtectedChannels
     val showPasswordPrompt: StateFlow<Boolean> = state.showPasswordPrompt
     val passwordPromptChannel: StateFlow<String?> = state.passwordPromptChannel
@@ -438,6 +440,10 @@ class ChatViewModel(
     fun getActiveChannelInfo(channelId: String?): DiscordChannel? {
         if (channelId == null) return null
         return channelManager.channels.value.firstOrNull { it.id.equals(channelId, ignoreCase = true) }
+    }
+
+    fun isChannelPasswordProtected(channelId: String): Boolean {
+        return channelManager.isChannelPasswordProtected(channelId)
     }
     
     val meshServiceFacade: MeshService

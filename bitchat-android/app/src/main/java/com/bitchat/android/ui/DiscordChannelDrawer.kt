@@ -23,6 +23,8 @@ import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,7 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.bitchat.android.ui.theme.LocalBitchatPalette
-import com.bitchat.android.ui.theme.PeerColors
+import com.bitchat.android.ui.theme.colorForPeer
+import com.bitchat.android.ui.PeerIdentity
 
 /**
  * Discord-style Channel & Community Navigation Drawer
@@ -56,7 +59,7 @@ fun DiscordChannelDrawer(
     val privateChats by viewModel.privateChats.collectAsState()
     val unreadPrivateCounts by viewModel.unreadPrivateMessageCounts.collectAsState()
     val peerNicknames by viewModel.peerNicknames.collectAsState()
-    val activePeers by viewModel.peers.collectAsState()
+    val activePeers by viewModel.connectedPeers.collectAsState()
     val myNickname by viewModel.nickname.collectAsState()
     val myPeerID = viewModel.myPeerID
 
@@ -262,7 +265,7 @@ fun DiscordChannelDrawer(
                                     .padding(horizontal = 8.dp, vertical = 2.dp)
                                     .clip(RoundedCornerShape(6.dp))
                                     .clickable {
-                                        viewModel.selectPrivateChat(peerID)
+                                        viewModel.showPrivateChatSheet(peerID)
                                         onCloseDrawer()
                                     },
                                 color = Color.Transparent
@@ -279,7 +282,7 @@ fun DiscordChannelDrawer(
                                         modifier = Modifier
                                             .size(28.dp)
                                             .clip(CircleShape)
-                                            .background(PeerColors.colorForPeer(peerID)),
+                                            .background(colorForPeer(PeerIdentity.mesh(peerID), palette)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
@@ -349,7 +352,7 @@ fun DiscordChannelDrawer(
                                     .padding(horizontal = 8.dp, vertical = 2.dp)
                                     .clip(RoundedCornerShape(6.dp))
                                     .clickable {
-                                        viewModel.selectPrivateChat(peerID)
+                                        viewModel.showPrivateChatSheet(peerID)
                                         onCloseDrawer()
                                     },
                                 color = Color.Transparent
@@ -365,7 +368,7 @@ fun DiscordChannelDrawer(
                                         modifier = Modifier
                                             .size(28.dp)
                                             .clip(CircleShape)
-                                            .background(PeerColors.colorForPeer(peerID)),
+                                            .background(colorForPeer(PeerIdentity.mesh(peerID), palette)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
@@ -480,7 +483,7 @@ fun DiscordChannelDrawer(
                                             if (channel.isEncrypted && !viewModel.isChannelPasswordProtected(channel.id)) {
                                                 unlockChannelTarget = channel
                                             } else {
-                                                viewModel.selectChannel(channel.id)
+                                                viewModel.switchToChannel(channel.id)
                                                 onCloseDrawer()
                                             }
                                         },
