@@ -139,24 +139,28 @@ data class BitchatFilePacket(
                         skippedUnknownTLVs += 1
                         continue
                     }
-                    val value = data.copyOfRange(off, off + len)
-                    off += len
                     when (t) {
-                        TLVType.FILE_NAME -> name = String(value, Charsets.UTF_8)
+                        TLVType.FILE_NAME -> name = String(data, off, len, Charsets.UTF_8)
                         TLVType.FILE_SIZE -> {
-                            if (len != 4) return null
-                            val bb = ByteBuffer.wrap(value).order(ByteOrder.BIG_ENDIAN)
-                            size = bb.int.toLong()
+                            size = when (len) {
+                                4 -> ByteBuffer.wrap(data, off, len).order(ByteOrder.BIG_ENDIAN).int.toLong()
+                                8 -> ByteBuffer.wrap(data, off, len).order(ByteOrder.BIG_ENDIAN).long
+                                else -> return null
+                            }
                         }
-                        TLVType.MIME_TYPE -> mime = String(value, Charsets.UTF_8)
+                        TLVType.MIME_TYPE -> mime = String(data, off, len, Charsets.UTF_8)
                         TLVType.CONTENT -> {
-                            // Expect a single CONTENT TLV
-                            if (contentBytes == null) contentBytes = value else {
-                                // If multiple CONTENT TLVs appear, concatenate for tolerance
-                                contentBytes = (contentBytes!! + value)
+                            if (contentBytes == null) {
+                                contentBytes = data.copyOfRange(off, off + len)
+                            } else {
+                                val combined = ByteArray(contentBytes.size + len)
+                                System.arraycopy(contentBytes, 0, combined, 0, contentBytes.size)
+                                System.arraycopy(data, off, combined, contentBytes.size, len)
+                                contentBytes = combined
                             }
                         }
                     }
+                    off += len
                 }
                 if (skippedUnknownTLVs > 0) {
                     android.util.Log.d("BitchatFilePacket", "⏭️ Skipped $skippedUnknownTLVs unknown TLV(s)")

@@ -41,7 +41,21 @@ fun ImagePickerButton(
     ) { uri: android.net.Uri? ->
         if (uri != null) {
             val outPath = ImageUtils.downscaleAndSaveToAppFiles(context, uri)
-            if (!outPath.isNullOrBlank()) onImageReady(outPath)
+            if (!outPath.isNullOrBlank()) {
+                val f = File(outPath)
+                if (f.length() > com.bitchat.android.util.AppConstants.Media.MAX_FILE_SIZE_BYTES) {
+                    try {
+                        android.widget.Toast.makeText(
+                            context,
+                            "Image exceeds maximum size limit (5 MB).",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                    } catch (_: Exception) {}
+                    runCatching { f.delete() }
+                } else {
+                    onImageReady(outPath)
+                }
+            }
         }
     }
     
@@ -53,7 +67,19 @@ fun ImagePickerButton(
             // Downscale + correct orientation, then send; delete original
             val outPath = com.bitchat.android.features.media.ImageUtils.downscalePathAndSaveToAppFiles(context, path)
             if (!outPath.isNullOrBlank()) {
-                onImageReady(outPath)
+                val f = File(outPath)
+                if (f.length() > com.bitchat.android.util.AppConstants.Media.MAX_FILE_SIZE_BYTES) {
+                    try {
+                        android.widget.Toast.makeText(
+                            context,
+                            "Photo exceeds maximum size limit (5 MB).",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                    } catch (_: Exception) {}
+                    runCatching { f.delete() }
+                } else {
+                    onImageReady(outPath)
+                }
             }
             runCatching { File(path).delete() }
         } else {

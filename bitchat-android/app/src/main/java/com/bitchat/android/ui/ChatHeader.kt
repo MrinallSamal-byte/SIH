@@ -422,6 +422,8 @@ fun ConversationHeader(
     leadingIconTint: Color,
     title: String,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    subtitleColor: Color = Color.Unspecified,
     onTitleClick: (() -> Unit)? = null,
     leadingContentDescription: String? = null,
     actions: @Composable RowScope.() -> Unit = {}
@@ -453,14 +455,7 @@ fun ConversationHeader(
 
             // Same optical correction as the main header: the 44.dp tap target leaves more gap
             // than the design wants between glyph and label.
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontSize = HeaderTextSize,
-                fontWeight = FontWeight.Medium,
-                color = colorScheme.primary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+            Column(
                 modifier = Modifier
                     .offset(x = (-6).dp)
                     .then(
@@ -473,7 +468,28 @@ fun ConversationHeader(
                             Modifier
                         }
                     )
-            )
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontSize = HeaderTextSize,
+                    fontWeight = FontWeight.Medium,
+                    color = colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (!subtitle.isNullOrEmpty()) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 11.sp,
+                        color = if (subtitleColor != Color.Unspecified) subtitleColor
+                            else colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
         }
 
         Row(
@@ -663,7 +679,8 @@ fun ChatHeaderContent(
                 channel = currentChannel,
                 onBackClick = onBackClick,
                 onLeaveChannel = { viewModel.leaveChannel(currentChannel) },
-                onSidebarClick = onSidebarClick
+                onSidebarClick = onSidebarClick,
+                onAdminClick = { viewModel.openAdminPanel() }
             )
         }
         else -> {
@@ -689,20 +706,35 @@ private fun ChannelHeader(
     channel: String,
     onBackClick: () -> Unit,
     onLeaveChannel: () -> Unit,
-    onSidebarClick: () -> Unit
+    onSidebarClick: () -> Unit,
+    onAdminClick: (() -> Unit)? = null
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val isAdminChan = channel.removePrefix("#").equals("admin", ignoreCase = true)
 
     // No back affordance: the close action on the right is the way out, exactly as in a private
     // chat. Leaving the channel outright lives on its row in the network sheet, so it does not
     // need a second, easily-mistaken home next to the exit.
     ConversationHeader(
         leadingIconRes = R.drawable.ic_spec_chat_bubbles,
-        leadingIconTint = colorScheme.primary,
+        leadingIconTint = if (isAdminChan) Color(0xFF818CF8) else colorScheme.primary,
         leadingContentDescription = null,
-        title = "#$channel",
+        title = if (channel.startsWith("#")) channel else "#$channel",
         onTitleClick = onSidebarClick
     ) {
+        if (isAdminChan && onAdminClick != null) {
+            IconButton(
+                onClick = onAdminClick,
+                modifier = Modifier.size(HeaderTapTarget)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AdminPanelSettings,
+                    contentDescription = "Admin Panel",
+                    tint = Color(0xFF818CF8),
+                    modifier = Modifier.size(HeaderIconSize)
+                )
+            }
+        }
         CloseButton(onClick = onBackClick)
     }
 }

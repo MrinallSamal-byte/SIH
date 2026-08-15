@@ -173,7 +173,18 @@ fun VoiceRecordButton(
                     val releasedEarly = withTimeoutOrNull(HoldToRecordMs) {
                         waitForUpOrCancellation().also { if (it == null) stolenDuringArm = true }
                     }
-                    if (releasedEarly != null || stolenDuringArm) return@awaitEachGesture
+                    if (releasedEarly != null || stolenDuringArm) {
+                        if (releasedEarly != null && !stolenDuringArm) {
+                            try {
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "Hold to record audio (max 10s)",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            } catch (_: Exception) {}
+                        }
+                        return@awaitEachGesture
+                    }
 
                     val rec = latestRecorderFactory.value?.invoke() ?: VoiceRecorder(context)
                     val startedFile = rec.start()
@@ -208,6 +219,13 @@ fun VoiceRecordButton(
                                 recordedFilePath = null
                                 latestOnTrackFinger.value(null)
                                 buzz()
+                                try {
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "Maximum recording limit reached (10s)",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                } catch (_: Exception) {}
                                 // Always report the outcome, even when the file is unusable,
                                 // or the caller stays stuck showing the waveform.
                                 if (!path.isNullOrBlank()) {

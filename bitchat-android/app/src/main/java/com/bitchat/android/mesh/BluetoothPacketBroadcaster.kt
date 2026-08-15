@@ -51,8 +51,8 @@ class BluetoothPacketBroadcaster(
     
     companion object {
         private const val TAG = "BluetoothPacketBroadcaster"
-        private const val MAX_PENDING_SENDS_PER_LINK = 256
-        private const val MAX_PENDING_BYTES_PER_LINK = 1_048_576
+        private const val MAX_PENDING_SENDS_PER_LINK = 2048
+        private const val MAX_PENDING_BYTES_PER_LINK = 8_388_608 // 8 MB
         private const val SEND_RETRY_DELAY_MS = 15L
         private const val MAX_CALLBACK_RETRIES = 3
     }
@@ -156,7 +156,7 @@ class BluetoothPacketBroadcaster(
     // SERIALIZATION: Actor to serialize all broadcast operations
     @OptIn(kotlinx.coroutines.ObsoleteCoroutinesApi::class)
     private val broadcasterActor = broadcasterScope.actor<BroadcastRequest>(
-        capacity = 256
+        capacity = 2048
     ) {
         for (request in channel) {
             val accepted = try {
@@ -394,7 +394,7 @@ class BluetoothPacketBroadcaster(
             Log.d(TAG, "Source Routing: First hop $firstHop not connected. Falling back to standard broadcast logic.")
         }
         
-        if (packet.recipientID != SpecialRecipients.BROADCAST) {
+        if (packet.recipientID != null && !packet.recipientID.contentEquals(SpecialRecipients.BROADCAST)) {
             val recipientID = packet.recipientID?.toHexString() ?: ""
 
             // Try to find the recipient in server connections (subscribedDevices)
@@ -481,7 +481,8 @@ class BluetoothPacketBroadcaster(
         val linkID = connectionTracker.getDeviceConnection(device.address)
             ?.takeIf { !it.isClient }
             ?.linkID
-            ?: return false
+            ?: connectionTracker.getDeviceConnection(device.address)?.linkID
+            ?: "server_${device.address}"
         return enqueueSend(
             SendKey(device.address, linkID, SendDirection.SERVER_NOTIFICATION),
             PendingSend(data.copyOf(), device, gattServer = server, characteristic = char)
@@ -574,7 +575,33 @@ class BluetoothPacketBroadcaster(
             Log.w(TAG, "BLE ${key.direction} failed to start: ${error.message}")
             false
         }
-        if (!accepted) rejectStart(key)
+        if (!accepted) {
+            rejectStart(key)
+        } else {
+            // Watchdog: If platform callback is dropped, automatically advance queue after 80ms
+            connectionScope.launch {
+                delay(80L)
+                val recover = synchronized(sendLock) {
+                    val state = sendStates[key] ?: return@synchronized false
+                    if (state.inFlight) {
+                        Log.w(TAG, "BLE ${key.direction} callback timeout for ${key.deviceAddress}; advancing queue")
+                        val head = state.pending.pollFirst()
+                        if (head != null) {
+                            state.pendingBytes -= head.data.size
+                        }
+                        state.inFlight = false
+                        if (state.pending.isEmpty()) {
+                            sendStates.remove(key)
+                            false
+                        } else {
+                            state.inFlight = true
+                            true
+                        }
+                    } else false
+                }
+                if (recover) startHead(key)
+            }
+        }
     }
 
     private fun rejectStart(key: SendKey): Boolean {
@@ -608,8 +635,16 @@ class BluetoothPacketBroadcaster(
     }
 
     fun onGattServerNotificationComplete(deviceAddress: String, linkID: String?, status: Int) {
-        if (linkID == null) return
-        completeSend(SendKey(deviceAddress, linkID, SendDirection.SERVER_NOTIFICATION), status)
+        val targetKey = synchronized(sendLock) {
+            if (linkID != null) {
+                SendKey(deviceAddress, linkID, SendDirection.SERVER_NOTIFICATION)
+            } else {
+                sendStates.keys.firstOrNull { it.deviceAddress == deviceAddress && it.direction == SendDirection.SERVER_NOTIFICATION }
+            }
+        }
+        if (targetKey != null) {
+            completeSend(targetKey, status)
+        }
     }
 
     private fun completeSend(key: SendKey, status: Int) {

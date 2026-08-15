@@ -42,6 +42,14 @@ import com.bitchat.android.util.hexEncodedString
 import com.bitchat.android.features.voice.LiveVoicePreferences
 import com.bitchat.android.features.voice.LiveVoiceTarget
 import com.bitchat.android.features.voice.VoiceRecorder
+import com.bitchat.android.features.presence.PresenceManager
+import com.bitchat.android.features.presence.PresencePacket
+import com.bitchat.android.features.presence.PeerPresenceState
+import com.bitchat.android.features.presence.PresenceUpdateType
+import com.bitchat.android.features.admin.AdminManager
+import com.bitchat.android.features.admin.ReportManager
+import com.bitchat.android.features.admin.UserReport
+import com.bitchat.android.features.admin.ReportAction
 import com.bitchat.android.contacts.PhoneContact
 import com.bitchat.android.contacts.PhoneContactsManager
 
@@ -405,6 +413,24 @@ class ChatViewModel(
     val teleportedGeo: StateFlow<Set<String>> = state.teleportedGeo
     val geohashParticipantCounts: StateFlow<Map<String, Int>> = state.geohashParticipantCounts
 
+    // ─── Presence (Online / Typing / Last Seen) ─────────────────
+    val peerPresence: StateFlow<Map<String, PeerPresenceState>> = PresenceManager.peerPresence
+    private var lastTypingSentMs = 0L
+    private val typingThrottleMs = 3_000L
+
+    // ─── Admin Panel ────────────────────────────────────────────
+    val isAdminModeEnabled: StateFlow<Boolean> = AdminManager.isAdminEnabled
+    val adminBlockedUsers = AdminManager.blockedUsers
+    val adminReports = AdminManager.reports
+    private val _showAdminSheet = MutableStateFlow(false)
+    val showAdminSheet: StateFlow<Boolean> = _showAdminSheet.asStateFlow()
+    private val _showAdminPassphraseDialog = MutableStateFlow(false)
+    val showAdminPassphraseDialog: StateFlow<Boolean> = _showAdminPassphraseDialog.asStateFlow()
+
+    // ─── Report User ────────────────────────────────────────────
+    private val _showReportUserSheet = MutableStateFlow<Pair<String, String>?>(null)
+    val showReportUserSheet: StateFlow<Pair<String, String>?> = _showReportUserSheet.asStateFlow()
+
     // Phone Contacts & Unified Search
     val phoneContacts: StateFlow<List<PhoneContact>> = state.phoneContacts
     val hasContactsPermission: StateFlow<Boolean> = state.hasContactsPermission
@@ -452,6 +478,10 @@ class ChatViewModel(
 
     fun isChannelPasswordProtected(channelId: String): Boolean {
         return channelManager.isChannelPasswordProtected(channelId)
+    }
+
+    fun hasChannelKey(channelId: String): Boolean {
+        return channelManager.hasChannelKey(channelId)
     }
     
     val meshServiceFacade: MeshService
@@ -877,8 +907,126 @@ class ChatViewModel(
      * Check if the current user has administrative permissions
      */
     fun isAdmin(): Boolean {
-        // Reserved for community administrators / channel moderators
-        return false
+        return AdminManager.isAdminEnabled.value
+    }
+
+    // ─── Presence Methods ────────────────────────────────────────
+
+    /**
+     * Called when the user types in the input field. Sends a throttled typing indicator.
+     */
+    fun onTextInputChanged(text: String, recipientPeerID: String?) {
+        val now = System.currentTimeMillis()
+        if (text.isNotEmpty() && now - lastTypingSentMs >= typingThrottleMs) {
+            lastTypingSentMs = now
+            viewModelScope.launch {
+                try {
+                    val packet = PresencePacket.encode(mesh.myPeerID, PresenceUpdateType.TYPING_START)
+                    mesh.sendRawMessageBroadcast(packet)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to send typing indicator: ${e.message}")
+                }
+            }
+        }
+    }
+
+    fun getPresenceStatusText(peerID: String): String {
+        return PresenceManager.getPresence(peerID)?.getStatusText() ?: ""
+    }
+
+    fun isPeerOnline(peerID: String): Boolean {
+        return PresenceManager.isOnline(peerID)
+    }
+
+    fun isPeerTyping(peerID: String): Boolean {
+        return PresenceManager.isTyping(peerID)
+    }
+
+    // ─── Admin Methods ───────────────────────────────────────────
+
+    fun openAdminPanel() {
+        if (AdminManager.isAdminEnabled.value) {
+            _showAdminSheet.value = true
+        } else {
+            _showAdminPassphraseDialog.value = true
+        }
+    }
+
+    fun closeAdminPanel() {
+        _showAdminSheet.value = false
+    }
+
+    fun closeAdminPassphraseDialog() {
+        _showAdminPassphraseDialog.value = false
+    }
+
+    fun onAdminAuthenticated() {
+        _showAdminPassphraseDialog.value = false
+        _showAdminSheet.value = true
+    }
+
+    fun adminBlockUser(peerID: String, nickname: String, reason: String) {
+        AdminManager.blockUser(peerID, nickname, reason, mesh.myPeerID)
+    }
+
+    fun adminUnblockUser(peerID: String) {
+        AdminManager.unblockUser(peerID)
+    }
+
+    fun adminDeleteAllContentByUser(target: String) {
+        val allMsgs = state.messages.value + state.channelMessages.value.values.flatten()
+        AdminManager.deleteAllContentByUser(target, allMsgs) { msgID ->
+            messageManager.deleteMessageLocally(msgID)
+        }
+    }
+
+    fun adminFormatChannel(channelName: String) {
+        val channelTag = if (channelName.startsWith("#")) channelName else "#$channelName"
+        val msgs = state.channelMessages.value[channelTag] ?: state.channelMessages.value[channelName] ?: return
+        AdminManager.formatChannel(channelTag, msgs) { msgID ->
+            messageManager.deleteMessageLocally(msgID)
+        }
+    }
+
+    fun getChannelNames(): List<String> {
+        return state.joinedChannels.value.toList()
+    }
+
+    // ─── Report Methods ──────────────────────────────────────────
+
+    fun showReportUser(peerID: String, nickname: String) {
+        _showReportUserSheet.value = Pair(peerID, nickname)
+    }
+
+    fun closeReportUserSheet() {
+        _showReportUserSheet.value = null
+    }
+
+    fun submitReport(reportedPeerID: String, reportedNickname: String, reason: String?) {
+        val myNickname = state.nickname.value
+        ReportManager.createReport(
+            reportedPeerID = reportedPeerID,
+            reportedNickname = reportedNickname,
+            reporterPeerID = mesh.myPeerID,
+            reporterNickname = myNickname,
+            reason = reason
+        )
+        // Broadcast report over mesh to admin peers
+        viewModelScope.launch {
+            try {
+                val packet = ReportManager.encodeReportForBroadcast(
+                    reporterPeerID = mesh.myPeerID,
+                    reporterNickname = myNickname,
+                    reportedPeerID = reportedPeerID,
+                    reportedNickname = reportedNickname,
+                    reason = reason
+                )
+                mesh.sendRawMessageBroadcast(packet)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to broadcast report: ${e.message}")
+            }
+        }
+        _showReportUserSheet.value = null
     }
 
     /**

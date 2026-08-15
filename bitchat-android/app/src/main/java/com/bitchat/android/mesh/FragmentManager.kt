@@ -218,6 +218,9 @@ class FragmentManager {
                         System.currentTimeMillis()
                     )
                     fragmentCumulativeSize[fragmentIDString] = 0
+                    if (fragmentPayload.total > 1) {
+                        TransferProgressManager.start(fragmentIDString, fragmentPayload.total, isIncoming = true)
+                    }
                 }
 
                 val fragmentMap = incomingFragments[fragmentIDString]
@@ -258,17 +261,27 @@ class FragmentManager {
                 globalBufferedBytes += delta
 
                 val expectedTotal = fragmentMetadata[fragmentIDString]?.second ?: fragmentPayload.total
+                fragmentMetadata[fragmentIDString] = Triple(fragmentPayload.originalType, expectedTotal, System.currentTimeMillis())
+                if (expectedTotal > 1) {
+                    TransferProgressManager.progress(fragmentIDString, fragmentMap.size, expectedTotal, isIncoming = true)
+                }
+
                 if (fragmentMap.size == expectedTotal) {
-                    // iOS reassembly logic: for i in 0..<total { if let fragment = fragments[i] { reassembled.append(fragment) } }
-                    val reassembledData = mutableListOf<Byte>()
+                    // High-performance direct ByteArray reassembly (Zero-allocation / Zero-boxing)
+                    val totalBytes = newSize
+                    val reassembledByteArray = ByteArray(totalBytes)
+                    var destOffset = 0
                     for (i in 0 until expectedTotal) {
-                        fragmentMap[i]?.let { data ->
-                            reassembledData.addAll(data.asIterable())
-                        }
+                        val chunk = fragmentMap[i] ?: continue
+                        System.arraycopy(chunk, 0, reassembledByteArray, destOffset, chunk.size)
+                        destOffset += chunk.size
                     }
 
-                    val originalPacket = BitchatPacket.fromBinaryData(reassembledData.toByteArray())
+                    val originalPacket = BitchatPacket.fromBinaryData(
+                        if (destOffset == totalBytes) reassembledByteArray else reassembledByteArray.copyOf(destOffset)
+                    )
                     if (originalPacket != null) {
+                        TransferProgressManager.complete(fragmentIDString, expectedTotal, isIncoming = true)
                         removeFragmentSetLocked(fragmentIDString)
 
                         val suppressedTtlPacket = originalPacket.copy(ttl = 0u.toUByte())
@@ -294,6 +307,7 @@ class FragmentManager {
         if (bytes != 0L) {
             globalBufferedBytes = (globalBufferedBytes - bytes).coerceAtLeast(0L)
         }
+        TransferProgressManager.fail(fragmentIDString, isIncoming = true)
     }
     
     /**

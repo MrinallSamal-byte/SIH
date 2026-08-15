@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
@@ -672,7 +673,7 @@ fun DiscordChannelDrawer(
                                         .padding(horizontal = 8.dp, vertical = 2.dp)
                                         .clip(RoundedCornerShape(6.dp))
                                         .clickable {
-                                            if (channel.isEncrypted && !viewModel.isChannelPasswordProtected(channel.id)) {
+                                            if (channel.isEncrypted && !viewModel.hasChannelKey(channel.id)) {
                                                 unlockChannelTarget = channel
                                             } else {
                                                 viewModel.switchToChannel(channel.id)
@@ -688,8 +689,16 @@ fun DiscordChannelDrawer(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
-                                        // Channel Icon (# or 🔒 or 🚨)
-                                        if (channel.isEmergency) {
+                                        // Channel Icon (# or 🔒 or 🚨 or 🛡️)
+                                        val isAdminChan = channel.id.equals("#admin", ignoreCase = true) || channel.name.equals("admin", ignoreCase = true)
+                                        if (isAdminChan) {
+                                            Icon(
+                                                imageVector = Icons.Default.AdminPanelSettings,
+                                                contentDescription = "Admin Channel",
+                                                tint = if (isSelected) Color(0xFF818CF8) else Color(0xFF6366F1),
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        } else if (channel.isEmergency) {
                                             Text(text = "🚨", fontSize = 14.sp)
                                         } else if (channel.isEncrypted) {
                                             Icon(
@@ -717,8 +726,21 @@ fun DiscordChannelDrawer(
                                             modifier = Modifier.weight(1f)
                                         )
 
-                                        // E2EE Badge
-                                        if (channel.isEncrypted) {
+                                        // Admin or E2EE Badge
+                                        if (isAdminChan) {
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = Color(0xFF6366F1).copy(alpha = 0.2f)
+                                            ) {
+                                                Text(
+                                                    text = "ADMIN",
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFF818CF8),
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                        } else if (channel.isEncrypted) {
                                             Surface(
                                                 shape = RoundedCornerShape(4.dp),
                                                 color = Color(0xFF1E2F23)
@@ -834,16 +856,19 @@ fun DiscordChannelDrawer(
     }
 
     // -----------------------------------------------------------------
-    // UNLOCK ENCRYPTED CHANNEL MODAL DIALOG
+    // Unlock Protected / Encrypted Channel Dialog
     // -----------------------------------------------------------------
     unlockChannelTarget?.let { channel ->
         UnlockChannelDialog(
             channel = channel,
             onDismiss = { unlockChannelTarget = null },
             onUnlock = { password ->
-                viewModel.joinChannel(channel.id, password)
-                unlockChannelTarget = null
-                onCloseDrawer()
+                val success = viewModel.joinChannel(channel.id, password)
+                if (success) {
+                    unlockChannelTarget = null
+                    onCloseDrawer()
+                }
+                success
             }
         )
     }
@@ -1048,7 +1073,7 @@ private fun CreateChannelDialog(
 private fun UnlockChannelDialog(
     channel: DiscordChannel,
     onDismiss: () -> Unit,
-    onUnlock: (password: String) -> Unit
+    onUnlock: (password: String) -> Boolean
 ) {
     var password by remember { mutableStateOf("") }
     var errorText by remember { mutableStateOf<String?>(null) }
@@ -1131,7 +1156,10 @@ private fun UnlockChannelDialog(
                                 errorText = "Password cannot be empty"
                                 return@Button
                             }
-                            onUnlock(password)
+                            val success = onUnlock(password)
+                            if (!success) {
+                                errorText = "Incorrect channel passphrase"
+                            }
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF32D74B)

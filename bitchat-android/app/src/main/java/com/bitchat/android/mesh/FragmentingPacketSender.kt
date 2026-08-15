@@ -69,24 +69,43 @@ class FragmentingPacketSender(
 
         val job = scope.launch(start = CoroutineStart.LAZY) {
             var sent = 0
+            val pacedDelayMs = 12L
+
             for (packet in packets) {
-                if (!isActive) return@launch
-                if (transferId != null && transferJobs[transferId]?.isCancelled == true) return@launch
+                if (!isActive || (transferId != null && transferJobs[transferId]?.isCancelled == true)) {
+                    if (transferId != null) TransferProgressManager.fail(transferId)
+                    return@launch
+                }
 
                 val fragment = routed.copy(
                     packet = packet,
                     transferId = transferId,
                     preparedPackets = null
                 )
-                val delivered = try {
-                    sendSingle(fragment)
-                } catch (e: Exception) {
-                    Log.e(logTag, "Fragment send failed for $description: ${e.message}", e)
-                    false
+
+                var delivered = false
+                var attempts = 0
+                while (!delivered && attempts < 25 && isActive) {
+                    if (transferId != null && transferJobs[transferId]?.isCancelled == true) break
+                    attempts++
+                    delivered = try {
+                        sendSingle(fragment)
+                    } catch (e: Exception) {
+                        Log.e(logTag, "Fragment send failed for $description: ${e.message}", e)
+                        false
+                    }
+
+                    if (!delivered) {
+                        // Back off briefly to let the hardware BLE queue drain before retrying
+                        delay(15L * minOf(attempts, 4))
+                    }
                 }
 
                 if (!delivered) {
-                    Log.w(logTag, "Stopping fragmented send for $description after $sent/$total fragments")
+                    Log.w(logTag, "Stopping fragmented send for $description after $sent/$total fragments (attempts exceeded)")
+                    if (transferId != null) {
+                        TransferProgressManager.fail(transferId)
+                    }
                     return@launch
                 }
 
@@ -95,7 +114,7 @@ class FragmentingPacketSender(
                     TransferProgressManager.progress(transferId, sent, total)
                 }
                 if (sent < total) {
-                    delay(interFragmentDelayMs)
+                    delay(pacedDelayMs)
                 }
             }
 

@@ -37,12 +37,12 @@ object AppConstants {
     object Fragmentation {
         const val FRAGMENT_SIZE_THRESHOLD: Int = 512
         const val MAX_FRAGMENT_SIZE: Int = 469
-        const val FRAGMENT_TIMEOUT_MS: Long = 30_000L
-        const val CLEANUP_INTERVAL_MS: Long = 10_000L
-        const val MAX_FRAGMENTS_PER_ID: Int = 256
-        const val MAX_FRAGMENT_TOTAL_BYTES: Int = 1_048_576
+        const val FRAGMENT_TIMEOUT_MS: Long = 300_000L // 5 minutes to support multi-fragment 5 MB transfers
+        const val CLEANUP_INTERVAL_MS: Long = 15_000L
+        const val MAX_FRAGMENTS_PER_ID: Int = 16_384 // Supports up to 7.68 MB with 469-byte fragments
+        const val MAX_FRAGMENT_TOTAL_BYTES: Int = 8 * 1024 * 1024 // 8 MB (accommodates 5 MB file + TLVs + envelope)
         const val MAX_ACTIVE_FRAGMENT_SETS: Int = 64
-        const val MAX_GLOBAL_FRAGMENT_TOTAL_BYTES: Long = 4L * 1_048_576L
+        const val MAX_GLOBAL_FRAGMENT_TOTAL_BYTES: Long = 32L * 1024 * 1024L // 32 MB
     }
 
     object Security {
@@ -127,9 +127,8 @@ object AppConstants {
     }
 
     object Media {
-        // A file is currently encoded into one protocol payload before BLE fragmentation.
-        // Reserve room for maximum filename/MIME TLVs and encryption envelope overhead.
-        const val MAX_FILE_SIZE_BYTES: Long = (10L * 1024 * 1024) - (132L * 1024)
+        // Maximum file/voice/image transfer size: 5 MB
+        const val MAX_FILE_SIZE_BYTES: Long = 5L * 1024 * 1024
     }
 
     object Router {

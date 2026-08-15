@@ -462,6 +462,24 @@ class MessageHandler(private val myPeerID: String, private val appContext: andro
         }
         
         try {
+            // 0. Check for presence update packet (0x30)
+            if (packet.payload.isNotEmpty() && packet.payload[0] == com.bitchat.android.features.presence.PresencePacket.PACKET_TYPE) {
+                val decoded = com.bitchat.android.features.presence.PresencePacket.decode(packet.payload)
+                if (decoded != null) {
+                    com.bitchat.android.features.presence.PresenceManager.handlePresenceUpdate(decoded.senderPeerID, decoded.type)
+                    return
+                }
+            }
+
+            // 0.1 Check for user report packet (0x31)
+            if (packet.payload.isNotEmpty() && packet.payload[0] == com.bitchat.android.features.admin.ReportPacket.PACKET_TYPE) {
+                val decoded = com.bitchat.android.features.admin.ReportPacket.decode(packet.payload)
+                if (decoded != null) {
+                    com.bitchat.android.features.admin.ReportManager.handleIncomingReport(decoded)
+                    return
+                }
+            }
+
             // 1. Try file packet first (voice, image, etc.) and log outcome for FILE_TRANSFER
             val isFileTransfer = com.bitchat.android.protocol.MessageType.fromValue(packet.type) == com.bitchat.android.protocol.MessageType.FILE_TRANSFER
             val file = com.bitchat.android.model.BitchatFilePacket.decode(packet.payload)
@@ -549,6 +567,24 @@ class MessageHandler(private val myPeerID: String, private val appContext: andro
             if (!isFileTransfer && packet.signature != null && !signatureIsValid) {
                 Log.w(TAG, "Invalid signature for private message from $peerID")
                 return
+            }
+
+            // 0. Check for presence update packet (0x30)
+            if (packet.payload.isNotEmpty() && packet.payload[0] == com.bitchat.android.features.presence.PresencePacket.PACKET_TYPE) {
+                val decoded = com.bitchat.android.features.presence.PresencePacket.decode(packet.payload)
+                if (decoded != null) {
+                    com.bitchat.android.features.presence.PresenceManager.handlePresenceUpdate(decoded.senderPeerID, decoded.type)
+                    return
+                }
+            }
+
+            // 0.1 Check for user report packet (0x31)
+            if (packet.payload.isNotEmpty() && packet.payload[0] == com.bitchat.android.features.admin.ReportPacket.PACKET_TYPE) {
+                val decoded = com.bitchat.android.features.admin.ReportPacket.decode(packet.payload)
+                if (decoded != null) {
+                    com.bitchat.android.features.admin.ReportManager.handleIncomingReport(decoded)
+                    return
+                }
             }
 
             // Try file packet first (voice, image, etc.) and log outcome for FILE_TRANSFER

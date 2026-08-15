@@ -530,9 +530,10 @@ fun MessageInput(
                         val secs = (elapsedMs / 1000).toInt()
                         Text(
                             text = (if (isLiveRecording) "LIVE · " else "") +
-                                String.format("%02d:%02d", secs / 60, secs % 60),
+                                String.format("%02d:%02d / 00:10", secs / 60, secs % 60),
                             fontFamily = BitchatFontFamily,
-                            color = colorScheme.error,
+                            color = if (secs >= 8) colorScheme.error else colorScheme.error.copy(alpha = 0.85f),
+                            fontWeight = if (secs >= 8) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
                             fontSize = (BASE_FONT_SIZE - 4).sp
                         )
                         Spacer(Modifier.width(12.dp))

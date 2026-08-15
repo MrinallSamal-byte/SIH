@@ -96,6 +96,10 @@ class ChannelManager(
         const val CAT_HOSTEL_LIFE = "cat_hostel_life"
         const val CAT_CLUBS_SPORTS = "cat_clubs_sports"
         const val CAT_DMS = "cat_dms"
+
+        // Admin Channel & Credentials
+        const val ADMIN_CHANNEL = "#admin"
+        const val ADMIN_DEFAULT_PASSWORD = "Mrinall@1123"
     }
     
     // Channel encryption and security
@@ -209,6 +213,15 @@ class ChannelManager(
         
         val initialChannels = listOf(
             // Campus Main Hub
+            DiscordChannel(
+                id = "#admin",
+                name = "admin",
+                topic = "🛡️ Campus Mesh Administration & Moderation Dashboard (Restricted Access)",
+                categoryId = CAT_CAMPUS_BROADCAST,
+                hubId = HUB_CAMPUS,
+                isEncrypted = true,
+                isPasswordProtected = true
+            ),
             DiscordChannel(
                 id = "#campus-announcements",
                 name = "campus-announcements",
@@ -394,10 +407,15 @@ class ChannelManager(
     
     fun joinChannel(channel: String, password: String? = null, myPeerID: String): Boolean {
         val channelTag = if (channel.startsWith("#")) channel else "#$channel"
+        val isAdminChannel = channelTag.equals(ADMIN_CHANNEL, ignoreCase = true)
+        
+        if (!isAdminChannel && com.bitchat.android.features.admin.AdminManager.isChannelBlocked(channelTag)) {
+            return false
+        }
         
         // Check if already joined
         if (state.getJoinedChannelsValue().contains(channelTag)) {
-            if (state.getPasswordProtectedChannelsValue().contains(channelTag) && !channelKeys.containsKey(channelTag)) {
+            if ((isAdminChannel || state.getPasswordProtectedChannelsValue().contains(channelTag)) && !channelKeys.containsKey(channelTag)) {
                 // Need password verification
                 if (password != null) {
                     return verifyAndSetChannelPassword(channelTag, password)
@@ -407,13 +425,26 @@ class ChannelManager(
                     return false
                 }
             }
+            if (isAdminChannel) {
+                com.bitchat.android.features.admin.AdminManager.verifyAndEnable(ADMIN_DEFAULT_PASSWORD)
+            }
             switchToChannel(channelTag)
             return true
         }
         
-        // If password protected and no key yet
-        if (state.getPasswordProtectedChannelsValue().contains(channelTag) && !channelKeys.containsKey(channelTag)) {
-            if (dataManager.isChannelCreator(channelTag, myPeerID)) {
+        // If password protected or admin channel and no key yet
+        if (isAdminChannel || (state.getPasswordProtectedChannelsValue().contains(channelTag) && !channelKeys.containsKey(channelTag))) {
+            if (isAdminChannel) {
+                if (password != null) {
+                    if (!verifyAndSetChannelPassword(channelTag, password)) {
+                        return false
+                    }
+                } else {
+                    state.setPasswordPromptChannel(channelTag)
+                    state.setShowPasswordPrompt(true)
+                    return false
+                }
+            } else if (dataManager.isChannelCreator(channelTag, myPeerID)) {
                 // Creator bypass
             } else if (password != null) {
                 if (!verifyAndSetChannelPassword(channelTag, password)) {
@@ -463,6 +494,10 @@ class ChannelManager(
             state.setCurrentChannel(null)
         }
         
+        if (channel.equals(ADMIN_CHANNEL, ignoreCase = true)) {
+            com.bitchat.android.features.admin.AdminManager.disableAdmin()
+        }
+        
         // Cleanup
         messageManager.removeChannelMessages(channel)
         dataManager.removeChannelMembers(channel)
@@ -488,6 +523,15 @@ class ChannelManager(
     
     private fun verifyAndSetChannelPassword(channel: String, password: String): Boolean {
         if (password.isBlank()) return false
+        val normalized = if (channel.startsWith("#")) channel else "#$channel"
+        if (normalized.equals(ADMIN_CHANNEL, ignoreCase = true)) {
+            if (password != ADMIN_DEFAULT_PASSWORD) {
+                Log.w(TAG, "Invalid password attempt for admin channel")
+                return false
+            }
+            com.bitchat.android.features.admin.AdminManager.setupAdmin(ADMIN_DEFAULT_PASSWORD)
+            com.bitchat.android.features.admin.AdminManager.verifyAndEnable(ADMIN_DEFAULT_PASSWORD)
+        }
         setChannelPassword(channel, password)
         return true
     }
@@ -613,7 +657,9 @@ class ChannelManager(
     // MARK: - Channel Information
     
     fun isChannelPasswordProtected(channel: String): Boolean {
-        return state.getPasswordProtectedChannelsValue().contains(channel)
+        val tag = if (channel.startsWith("#")) channel else "#$channel"
+        if (tag.equals(ADMIN_CHANNEL, ignoreCase = true)) return true
+        return state.getPasswordProtectedChannelsValue().contains(tag)
     }
     
     fun hasChannelKey(channel: String): Boolean {
@@ -639,7 +685,9 @@ class ChannelManager(
     }
     
     fun loadChannelData(): Pair<Set<String>, Set<String>> {
-        return dataManager.loadChannelData()
+        val (joined, protected) = dataManager.loadChannelData()
+        val updatedProtected = protected.toMutableSet().apply { add(ADMIN_CHANNEL) }
+        return Pair(joined, updatedProtected)
     }
     
     // MARK: - Password Management
