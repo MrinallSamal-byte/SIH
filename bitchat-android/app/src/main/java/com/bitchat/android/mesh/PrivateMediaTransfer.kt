@@ -89,6 +89,11 @@ internal class PrivateMediaTransferPreparer(
         allowLegacyFallback: Boolean,
         generationRetriesRemaining: Int
     ): PrivateMediaBuildOutcome {
+        if (!file.hasConsistentMetadata()) {
+            return PrivateMediaBuildOutcome.Rejected(
+                "File metadata does not match its content"
+            )
+        }
         val maxPrivateFragments =
             com.bitchat.android.util.AppConstants.Fragmentation.MAX_FRAGMENTS_PER_ID
         val absolutePayloadUpperBound =

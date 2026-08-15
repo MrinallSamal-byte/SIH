@@ -251,6 +251,29 @@ class MessageHandlerTest {
     }
 
     @Test
+    fun `incomplete encrypted file is not persisted or acknowledged`() = runBlocking {
+        val incomplete = BitchatFilePacket(
+            fileName = "partial.jpg",
+            fileSize = 4,
+            mimeType = "image/jpeg",
+            content = byteArrayOf(1, 2, 3)
+        )
+        val ciphertext = byteArrayOf(0x41, 0x42, 0x43)
+        whenever(delegate.decryptFromPeer(eq(ciphertext), eq(peerID))).thenReturn(
+            NoiseDecryptionResult(
+                NoisePayload(NoisePayloadType.FILE_TRANSFER, incomplete.encode()!!).encode(),
+                authenticatedSession
+            )
+        )
+
+        assertTrue(handler.handleNoiseEncrypted(RoutedPacket(encryptedPacket().copy(payload = ciphertext), peerID, "direct-link")))
+
+        verify(delegate, never()).onMessageReceived(any())
+        verify(delegate, never()).encryptForPeer(any(), eq(peerID))
+        Unit
+    }
+
+    @Test
     fun `valid encrypted peer state is delivered and malformed state is ignored`() = runBlocking {
         val state = AuthenticatedPeerState(PeerCapabilities.PRIVATE_MEDIA, signingKey)
         val validCiphertext = byteArrayOf(0x31)

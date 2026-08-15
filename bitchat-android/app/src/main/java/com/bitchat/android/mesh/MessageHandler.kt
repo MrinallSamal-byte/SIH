@@ -129,7 +129,12 @@ class MessageHandler(private val myPeerID: String, private val appContext: andro
                     if (file != null) {
                         Log.d(TAG, "Encrypted file from $peerID: ${file.fileSize} bytes")
                         val uniqueMsgId = java.util.UUID.randomUUID().toString().uppercase()
-                        val savedPath = com.bitchat.android.features.file.FileUtils.saveIncomingFile(appContext, file)
+                        val savedPath = com.bitchat.android.features.file.FileUtils
+                            .saveIncomingFile(appContext, file)
+                            ?: run {
+                                Log.w(TAG, "Rejected incomplete encrypted file transfer from $peerID")
+                                return true
+                            }
                         val message = BitchatMessage(
                             id = uniqueMsgId,
                             sender = delegate?.getPeerNickname(peerID) ?: "Unknown",
@@ -484,8 +489,12 @@ class MessageHandler(private val myPeerID: String, private val appContext: andro
             val isFileTransfer = com.bitchat.android.protocol.MessageType.fromValue(packet.type) == com.bitchat.android.protocol.MessageType.FILE_TRANSFER
             val file = com.bitchat.android.model.BitchatFilePacket.decode(packet.payload)
             if (file != null) {
-
-                val savedPath = com.bitchat.android.features.file.FileUtils.saveIncomingFile(appContext, file)
+                val savedPath = com.bitchat.android.features.file.FileUtils
+                    .saveIncomingFile(appContext, file)
+                    ?: run {
+                        Log.w(TAG, "Rejected incomplete broadcast file from ${peerID.take(8)}")
+                        return
+                    }
                 val message = BitchatMessage(
                     id = PacketIdUtil.computeIdHex(packet).uppercase(),
                     sender = delegate?.getPeerNickname(peerID) ?: "unknown",
@@ -590,8 +599,12 @@ class MessageHandler(private val myPeerID: String, private val appContext: andro
             // Try file packet first (voice, image, etc.) and log outcome for FILE_TRANSFER
             val file = com.bitchat.android.model.BitchatFilePacket.decode(packet.payload)
             if (file != null) {
-
-                val savedPath = com.bitchat.android.features.file.FileUtils.saveIncomingFile(appContext, file)
+                val savedPath = com.bitchat.android.features.file.FileUtils
+                    .saveIncomingFile(appContext, file)
+                    ?: run {
+                        Log.w(TAG, "Rejected incomplete private file from ${peerID.take(8)}")
+                        return
+                    }
                 val message = BitchatMessage(
                     id = java.util.UUID.randomUUID().toString().uppercase(),
                     sender = delegate?.getPeerNickname(peerID) ?: "unknown",

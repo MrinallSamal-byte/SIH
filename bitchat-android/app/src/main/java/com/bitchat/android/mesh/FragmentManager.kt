@@ -95,7 +95,7 @@ class FragmentManager {
             // Packet = Header + Sender + Recipient + Route + FragmentHeader + Payload + PaddingBuffer
             val hasRoute = packet.route != null
             val version = if (hasRoute) 2 else 1
-            val headerSize = if (version == 2) 15 else 13
+            val headerSize = if (version == 2) 16 else 14
             val senderSize = 8
             val recipientSize = if (packet.recipientID != null) 8 else 0
             // Route: 1 byte count + 8 bytes per hop
@@ -103,9 +103,9 @@ class FragmentManager {
             val fragmentHeaderSize = 13 // FragmentPayload header
             val paddingBuffer = 16 // MessagePadding.optimalBlockSize adds 16 bytes overhead
 
-            // 512 - Overhead
+            // 500 - Overhead to ensure it fits comfortably within a 512 MTU link
             val packetOverhead = headerSize + senderSize + recipientSize + routeSize + fragmentHeaderSize + paddingBuffer
-            val maxDataSize = (512 - packetOverhead).coerceAtMost(MAX_FRAGMENT_SIZE)
+            val maxDataSize = (500 - packetOverhead).coerceAtMost(MAX_FRAGMENT_SIZE)
 
             if (maxDataSize <= 0) {
                 Log.e(TAG, "Calculated maxDataSize is non-positive ($maxDataSize). Route too large?")
@@ -282,13 +282,14 @@ class FragmentManager {
                     )
                     if (originalPacket != null) {
                         TransferProgressManager.complete(fragmentIDString, expectedTotal, isIncoming = true)
-                        removeFragmentSetLocked(fragmentIDString)
+                        removeFragmentSetLocked(fragmentIDString, reportFailure = false)
 
                         val suppressedTtlPacket = originalPacket.copy(ttl = 0u.toUByte())
                         return suppressedTtlPacket
                     } else {
                         val metadata = fragmentMetadata[fragmentIDString]
-                        Log.e(TAG, "Failed to decode reassembled packet (type=${metadata?.first}, total=${metadata?.second})")
+                        Log.e(TAG, "Failed to decode reassembled packet (type=${metadata?.first}, total=${metadata?.second}); clearing set")
+                        removeFragmentSetLocked(fragmentIDString, reportFailure = true)
                     }
                 }
             }
@@ -300,14 +301,16 @@ class FragmentManager {
         return null
     }
 
-    private fun removeFragmentSetLocked(fragmentIDString: String) {
+    private fun removeFragmentSetLocked(fragmentIDString: String, reportFailure: Boolean = true) {
         incomingFragments.remove(fragmentIDString)
         fragmentMetadata.remove(fragmentIDString)
         val bytes = fragmentCumulativeSize.remove(fragmentIDString)?.toLong() ?: 0L
         if (bytes != 0L) {
             globalBufferedBytes = (globalBufferedBytes - bytes).coerceAtLeast(0L)
         }
-        TransferProgressManager.fail(fragmentIDString, isIncoming = true)
+        if (reportFailure) {
+            TransferProgressManager.fail(fragmentIDString, isIncoming = true)
+        }
     }
     
     /**

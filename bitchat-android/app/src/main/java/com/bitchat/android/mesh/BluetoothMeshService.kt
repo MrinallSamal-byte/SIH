@@ -949,6 +949,10 @@ class BluetoothMeshService(private val context: Context) : TransportBridgeServic
     }
 
     fun sendFileBroadcast(file: com.bitchat.android.model.BitchatFilePacket) {
+        if (!file.isCompleteAndWithinLimit()) {
+            Log.w(TAG, "Refusing incomplete or oversized broadcast file")
+            return
+        }
         try {
             val payload = file.encode()
             if (payload == null) {
@@ -979,6 +983,10 @@ class BluetoothMeshService(private val context: Context) : TransportBridgeServic
 
     /** Safe non-interactive entry point: encrypted sends commit; legacy sends require UI consent. */
     fun sendFilePrivate(recipientPeerID: String, file: com.bitchat.android.model.BitchatFilePacket) {
+        if (!file.isCompleteAndWithinLimit()) {
+            Log.w(TAG, "Refusing incomplete or oversized private file")
+            return
+        }
         val payload = file.encode() ?: return
         when (val prepared = prepareFilePrivate(
             recipientPeerID,
@@ -1043,6 +1051,11 @@ class BluetoothMeshService(private val context: Context) : TransportBridgeServic
         transferId: String,
         allowLegacyFallback: Boolean
     ): PrivateMediaPreparation {
+        if (!file.isCompleteAndWithinLimit()) {
+            return PrivateMediaPreparation.Rejected(
+                "File metadata does not match its content or exceeds the media limit"
+            )
+        }
         return when (val outcome = privateMediaPreparer.prepare(
             recipientPeerID = recipientPeerID,
             recipientID = hexStringToByteArray(recipientPeerID),

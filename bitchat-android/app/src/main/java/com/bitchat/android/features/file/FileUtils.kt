@@ -196,7 +196,14 @@ object FileUtils {
     fun saveIncomingFile(
         context: Context,
         file: com.bitchat.android.model.BitchatFilePacket
-    ): String {
+    ): String? {
+        if (!file.isCompleteAndWithinLimit()) {
+            Log.w(
+                TAG,
+                "Refusing incomplete incoming file: declared=${file.fileSize} actual=${file.content.size}"
+            )
+            return null
+        }
         val lowerMime = file.mimeType.lowercase()
         val isImage = lowerMime.startsWith("image/")
         val isAudio = lowerMime.startsWith("audio/")
@@ -280,9 +287,17 @@ object FileUtils {
                 java.io.BufferedOutputStream(java.io.FileOutputStream(out)).use { it.write(file.content) }
                 out.absolutePath
             } catch (_: Exception) {
-                val tmp = java.io.File.createTempFile(if (isImage) "img_" else "file_", if (isImage) ".jpg" else ".bin")
-                java.io.BufferedOutputStream(java.io.FileOutputStream(tmp)).use { it.write(file.content) }
-                tmp.absolutePath
+                try {
+                    val tmp = java.io.File.createTempFile(
+                        if (isImage) "img_" else "file_",
+                        if (isImage) ".jpg" else ".bin"
+                    )
+                    java.io.BufferedOutputStream(java.io.FileOutputStream(tmp)).use { it.write(file.content) }
+                    tmp.absolutePath
+                } catch (error: Exception) {
+                    Log.w(TAG, "Unable to persist incoming file", error)
+                    null
+                }
             }
         }
     }

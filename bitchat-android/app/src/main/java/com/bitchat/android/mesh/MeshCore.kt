@@ -576,6 +576,10 @@ class MeshCore(
     }
 
     fun sendFileBroadcast(file: BitchatFilePacket) {
+        if (!file.isCompleteAndWithinLimit()) {
+            Log.w("MeshCore", "Refusing incomplete or oversized broadcast file")
+            return
+        }
         try {
             val payload = file.encode() ?: return
             scope.launch {
@@ -600,6 +604,10 @@ class MeshCore(
     }
 
     fun sendFilePrivate(recipientPeerID: String, file: BitchatFilePacket) {
+        if (!file.isCompleteAndWithinLimit()) {
+            Log.w("MeshCore", "Refusing incomplete or oversized private file")
+            return
+        }
         val payload = file.encode() ?: return
         when (val prepared = prepareFilePrivate(
             recipientPeerID,
@@ -664,6 +672,11 @@ class MeshCore(
         transferId: String,
         allowLegacyFallback: Boolean
     ): PrivateMediaPreparation {
+        if (!file.isCompleteAndWithinLimit()) {
+            return PrivateMediaPreparation.Rejected(
+                "File metadata does not match its content or exceeds the media limit"
+            )
+        }
         return when (val outcome = privateMediaPreparer.prepare(
             recipientPeerID = recipientPeerID,
             recipientID = MeshPacketUtils.hexStringToByteArray(recipientPeerID),

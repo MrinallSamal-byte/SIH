@@ -35,8 +35,8 @@ object AppConstants {
     }
 
     object Fragmentation {
-        const val FRAGMENT_SIZE_THRESHOLD: Int = 512
-        const val MAX_FRAGMENT_SIZE: Int = 469
+        const val FRAGMENT_SIZE_THRESHOLD: Int = 500
+        const val MAX_FRAGMENT_SIZE: Int = 440
         const val FRAGMENT_TIMEOUT_MS: Long = 300_000L // 5 minutes to support multi-fragment 5 MB transfers
         const val CLEANUP_INTERVAL_MS: Long = 15_000L
         const val MAX_FRAGMENTS_PER_ID: Int = 16_384 // Supports up to 7.68 MB with 469-byte fragments
