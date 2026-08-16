@@ -12,6 +12,7 @@ interface ServiceCard {
   desc: string
   tag?: string
   urgent?: boolean
+  icon: 'sos' | 'report' | 'shelter' | 'route' | 'missing' | 'checkin' | 'damage' | 'chat'
 }
 
 const emergencyServices: ServiceCard[] = [
@@ -21,50 +22,128 @@ const emergencyServices: ServiceCard[] = [
     desc: 'Instant GPS distress beacon dispatched immediately to NDRF & State Emergency Operations.',
     tag: 'Life Threatening',
     urgent: true,
+    icon: 'sos',
   },
   {
     to: '/report',
     titleKey: 'nav.report',
     desc: 'Report trapped victims, medical emergencies, food shortages, or infrastructure collapse.',
     tag: 'Triage & Rescue',
+    icon: 'report',
   },
   {
     to: '/shelters',
     titleKey: 'nav.shelters',
     desc: 'Locate nearest operational relief camps with real-time bed capacity, food, and medical stations.',
     tag: 'Relief Camps',
+    icon: 'shelter',
   },
   {
     to: '/safe-routes',
     titleKey: 'nav.routes',
     desc: 'Evacuation corridors dynamically routed around flooded perimeters and blocked highways.',
     tag: 'Navigation',
+    icon: 'route',
   },
   {
     to: '/missing-persons',
     titleKey: 'nav.missing',
     desc: 'Search missing person bulletins or report a missing family member with photo verification.',
     tag: 'Registry',
+    icon: 'missing',
   },
   {
     to: '/check-in',
     titleKey: 'nav.checkin',
     desc: 'Mark yourself and family safe to reassure loved ones and reduce search team overhead.',
     tag: 'Public Notice',
+    icon: 'checkin',
   },
   {
     to: '/report-damage',
     titleKey: 'nav.damage',
     desc: 'Submit geotagged structural damage claims for SDRF / NDMA disaster relief compensation.',
     tag: 'Relief Claims',
+    icon: 'damage',
   },
   {
     to: '/pfa-chat',
     titleKey: 'nav.pfa',
     desc: '24/7 intelligent AI companion for real-time disaster survival tactics, medical triage, and trauma support.',
     tag: 'AI Companion',
+    icon: 'chat',
   },
 ]
+
+function ServiceIcon({ icon }: { icon: ServiceCard['icon'] }) {
+  const base = 'h-5 w-5'
+
+  if (icon === 'sos') {
+    return (
+      <svg className={base} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M6.75 17.25h10.5a2.25 2.25 0 0 0 2.06-3.15L13.56 4.98a1.75 1.75 0 0 0-3.12 0L5.19 14.1a2.25 2.25 0 0 0 2.06 3.15Z" />
+      </svg>
+    )
+  }
+
+  if (icon === 'report') {
+    return (
+      <svg className={base} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 4H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.172a2 2 0 0 1 1.414.586l4.828 4.828A2 2 0 0 1 19 10.828V18a2 2 0 0 1-2 2Z" />
+      </svg>
+    )
+  }
+
+  if (icon === 'shelter') {
+    return (
+      <svg className={base} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 11.5 12 4l9 7.5M5.25 10.75V20h13.5v-9.25" />
+      </svg>
+    )
+  }
+
+  if (icon === 'route') {
+    return (
+      <svg className={base} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 6h.01M17 18h.01M7 6c0 2.5 3 4 5 6s5 3.5 5 6M7 6c0 2.5 3 4 5 6M17 18c0-2.5-3-4-5-6" />
+      </svg>
+    )
+  }
+
+  if (icon === 'missing') {
+    return (
+      <svg className={base} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.5 12 16.5l-3 3M12 3a5 5 0 0 0-5 5c0 2.5 1.5 4.1 3 5.5.5.5 1 1.2 1 2v.5h2v-.5c0-.8.5-1.5 1-2 1.5-1.4 3-3 3-5.5a5 5 0 0 0-5-5Z" />
+      </svg>
+    )
+  }
+
+  if (icon === 'checkin') {
+    return (
+      <svg className={base} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="m9 12 2 2 4-5m-9.5 6.5a8 8 0 1 1 11 0L12 22l-2.5-1.5Z" />
+      </svg>
+    )
+  }
+
+  if (icon === 'damage') {
+    return (
+      <svg className={base} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 20.5h15M6.5 20.5V9.75L12 4l5.5 5.75V20.5M9 20.5v-4h6v4" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg className={base} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v8m-4-4h8" />
+    </svg>
+  )
+}
+
+function ServicePalette({ urgent }: { urgent?: boolean }) {
+  return urgent ? 'border-red-200 bg-red-50/90 dark:border-red-900/50 dark:bg-red-950/35' : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
+}
 
 export default function Home() {
   const { t } = useLanguage()
@@ -98,8 +177,14 @@ export default function Home() {
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 sm:p-8">
+      <section className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -right-24 top-0 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
+          <div className="absolute -left-24 bottom-0 h-64 w-64 rounded-full bg-red-500/10 blur-3xl" />
+        </div>
+
+        <div className="relative grid gap-4 p-6 sm:p-8 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="rounded-3xl border border-slate-200/70 bg-slate-50/70 p-6 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-950/30 sm:p-8">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-800 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300">
               <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
@@ -165,7 +250,7 @@ export default function Home() {
           </dl>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 sm:p-7">
+        <div className="rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-xs backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/80 sm:p-7">
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -199,7 +284,7 @@ export default function Home() {
             </button>
           </form>
 
-          <div className="mt-5 grid grid-cols-2 gap-2 text-sm">
+          <div className="mt-5 grid gap-2 sm:grid-cols-2">
             {[
               { label: 'Emergency', number: '112', tone: 'red' },
               { label: 'Ambulance', number: '108', tone: 'blue' },
@@ -245,61 +330,7 @@ export default function Home() {
             </div>
           )}
         </div>
-      </section>
-
-      {/* Emergency Hotline Quick Dial Strip */}
-      <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <a
-          href="tel:112"
-          className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50/80 p-3 text-red-900 transition hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300 shadow-xs"
-        >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-600 text-white font-black text-sm">
-            112
-          </div>
-          <div className="min-w-0">
-            <div className="text-xs font-black">National SOS</div>
-            <div className="text-[10px] text-red-700 dark:text-red-400 truncate">All-India Emergency</div>
-          </div>
-        </a>
-
-        <a
-          href="tel:108"
-          className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50/80 p-3 text-blue-900 transition hover:bg-blue-100 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-300 shadow-xs"
-        >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white font-black text-sm">
-            108
-          </div>
-          <div className="min-w-0">
-            <div className="text-xs font-black">Medical Ambulance</div>
-            <div className="text-[10px] text-blue-700 dark:text-blue-400 truncate">Emergency Medical Triage</div>
-          </div>
-        </a>
-
-        <a
-          href="tel:1070"
-          className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-amber-900 transition hover:bg-amber-100 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300 shadow-xs"
-        >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-600 text-white font-black text-sm">
-            1070
-          </div>
-          <div className="min-w-0">
-            <div className="text-xs font-black">Disaster Control</div>
-            <div className="text-[10px] text-amber-700 dark:text-amber-400 truncate">State Control Room</div>
-          </div>
-        </a>
-
-        <a
-          href="tel:101"
-          className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-slate-900 transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 shadow-xs"
-        >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-white font-black text-sm dark:bg-slate-200 dark:text-slate-900">
-            101
-          </div>
-          <div className="min-w-0">
-            <div className="text-xs font-black">Fire & Rescue</div>
-            <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Fire Operations</div>
-          </div>
-        </a>
+        </div>
       </section>
 
       {/* Public Warning Feed with Skeletons */}
@@ -368,30 +399,26 @@ export default function Home() {
             <Link
               key={service.to}
               to={service.to}
-              className={`group flex flex-col justify-between rounded-xl border bg-white p-5 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-sm dark:bg-slate-900 ${
-                service.urgent
-                  ? 'border-red-200 hover:border-red-400 dark:border-red-900/50 dark:hover:border-red-700'
-                  : 'border-slate-200 hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700'
-              }`}
+              className={`group flex flex-col justify-between rounded-2xl border p-5 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-sm ${ServicePalette({ urgent: service.urgent })}`}
             >
               <div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                        service.urgent
-                          ? 'bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300'
-                          : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                      }`}
-                    >
-                      {service.tag}
-                    </span>
-                    <span className="rounded px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                      {String(index + 1).padStart(2, '0')}
-                    </span>
+                <div className="flex items-start justify-between gap-3">
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${service.urgent ? 'bg-red-600 text-white' : 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'}`}>
+                    <ServiceIcon icon={service.icon} />
                   </div>
-                  <span className="text-slate-400 transition group-hover:translate-x-1 group-hover:text-slate-700 dark:group-hover:text-slate-200 text-xs font-bold">
-                    →
+                  <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-500">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                </div>
+                <div className="mt-4 flex items-center gap-1.5">
+                  <span
+                    className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                      service.urgent
+                        ? 'bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300'
+                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                    }`}
+                  >
+                    {service.tag}
                   </span>
                 </div>
                 <h3 className="mt-3 text-sm font-bold text-slate-900 dark:text-slate-100">
