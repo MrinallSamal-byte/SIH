@@ -1,11 +1,25 @@
 import { config } from '../config'
 
+export const ADMIN_SESSION_KEY = 'aapdasetu_admin_session'
+
 export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
   ) {
     super(message)
+  }
+}
+
+/** Reads the stored admin session ({ token, email, name }) from localStorage. */
+export function getAdminToken(): string | undefined {
+  try {
+    const raw = localStorage.getItem(ADMIN_SESSION_KEY)
+    if (!raw) return undefined
+    const session = JSON.parse(raw) as { token?: string }
+    return session.token || undefined
+  } catch {
+    return undefined
   }
 }
 
@@ -41,17 +55,28 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, tim
 
 /**
  * Low-level fetch wrapper for the Express REST backend.
- * @TODO BUILD: implement the Express server described in src/api/endpoints.ts,
- * then point VITE_API_URL at it. The Vite dev server proxies `/api` there.
+ * The backend wraps every response in `{ success, data }` and returns
+ * `{ success: false, error }` on failure — this unwraps both.
  */
 async function apiCall<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const headers: Record<string, string> = {}
+  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  const token = getAdminToken()
+  if (token) headers.Authorization = `Bearer ${token}`
+
   const res = await fetchWithTimeout(`${config.apiUrl}${path}`, {
     method,
-    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+    headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
-  if (!res.ok) throw new ApiError(res.status, `${method} ${path} failed (${res.status})`)
-  return (await res.json()) as T
+  const payload = (await res.json().catch(() => null)) as
+    | { success: boolean; data?: T; error?: { message?: string } }
+    | null
+
+  if (!res.ok || !payload?.success) {
+    throw new ApiError(res.status, payload?.error?.message ?? `${method} ${path} failed (${res.status})`)
+  }
+  return payload.data as T
 }
 
 /**

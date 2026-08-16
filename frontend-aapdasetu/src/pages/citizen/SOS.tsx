@@ -46,7 +46,9 @@ export default function SOS() {
       // Explainable AI urgency triage (FastAPI /ai/triage when connected)
       const triage = await aiTriage(input)
       const report = await createReport({ ...input, description: input.description })
-      setResult({ ...report, priorityScore: triage.score, priorityLabel: triage.label })
+      // Server runs the authoritative triage (computeTriage) on create —
+      // prefer its score/label so the confirmation matches the DB.
+      setResult(report.priorityLabel ? report : { ...report, priorityScore: triage.score, priorityLabel: triage.label })
       toast(t('sos.sent'))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send SOS')

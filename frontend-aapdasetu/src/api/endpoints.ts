@@ -1,4 +1,4 @@
-import { aiCall, apiCall, withMockFallback } from './client'
+import { apiCall, withMockFallback } from './client'
 import { mocks } from './mocks'
 import type {
   Agency,
@@ -16,42 +16,186 @@ import type {
 } from '../types'
 
 // =============================================================================
-// EXPRESS REST BACKEND — BUILD CONTRACT
+// EXPRESS REST BACKEND — REAL CONTRACT (backend-aapdasetu)
 // -----------------------------------------------------------------------------
-// The frontend calls relative `/api/...` paths; the Vite dev server proxies
-// them to `VITE_API_URL` (default http://localhost:4000, see vite.config.ts).
+// The backend (src/app.ts) mounts public routes under `/api/v1` and admin
+// routes under `/api/v1/admin`. Every response is wrapped in { success, data }
+// (unwrapped by client.ts::apiCall) and admin routes require a Bearer JWT
+// (attached automatically from the stored admin session).
 //
-// @TODO BUILD: create an Express server (suggested: `server/index.js` at the
-// repo root) implementing the routes below EXACTLY. Response shapes must match
-// the TypeScript types in src/types.ts. Every function below falls back to
-// in-memory mock data (src/api/mocks.ts) when the backend is unreachable.
+// Every function still falls back to in-memory mock data when the backend is
+// unreachable (or VITE_USE_MOCK_ONLY=true) via withMockFallback.
 // =============================================================================
 
-/** POST /api/reports — create incident (server runs triage).
- * body: { type, description, landmark?, location{lat,lng}?, reporterName?, reporterPhone?,
- *         victim{age?,groupSize?,isPregnant?,isCardiac?,isBleeding?}?,
- *         missing{name?,age?,desc?}?, media[{kind,name,mime,dataUrl}]?, isOneTapSos? }
- * resp: { id, trackingId, type, status, priorityScore, priorityLabel, ... }
- */
+// ---- field/response mappers ------------------------------------------------
+
+interface RawReport {
+  id: string
+  trackingId: string
+  type: Report['type']
+  status: Report['status']
+  priorityScore: number
+  priorityLabel: Report['priorityLabel']
+  latitude?: number
+  longitude?: number
+  landmark?: string | null
+  description?: string | null
+  registerNumber?: string
+  reporterName?: string | null
+  reporterPhone?: string | null
+  triageFactors?: unknown
+  assignedVolunteerId?: string | null
+  assignedAgencyId?: string | null
+  assignedVolunteer?: { id: string; name: string } | null
+  assignedAgency?: { id: string; name: string } | null
+  resolutionNotes?: string | null
+  createdAt: string
+  updatedAt?: string | null
+}
+
+interface RawVolunteer {
+  id: string
+  name: string
+  phone?: string
+  skills?: string[]
+  latitude?: number | null
+  longitude?: number | null
+  status: Volunteer['status']
+  assignments?: { id: string }[]
+}
+
+interface RawKpis {
+  totalReports: number
+  activeRed: number
+  openShelters: number
+  availableVolunteers: number
+  pendingReports: number
+  inProgressReports: number
+  crisisGaugeScore: number
+  avgPriorityScore?: number
+}
+
+interface RawAnalytics {
+  byType: { type: string; count: number }[]
+  byPriority: { priorityLabel: string; count: number }[]
+  byStatus: { status: string; count: number }[]
+  trendsByDay: { day: string; count: number }[]
+  avgResponseMinutes?: number | null
+}
+
+function normalizeTriageFactors(raw: unknown): Report['triageFactors'] {
+  if (Array.isArray(raw)) {
+    return raw.map((f: { rule?: string; reason?: string; points?: number }) => ({
+      reason: f.rule ?? f.reason ?? 'TRIAGE',
+      points: Number(f.points) || 0,
+    }))
+  }
+  if (raw && typeof raw === 'object' && Array.isArray((raw as { factors?: unknown }).factors)) {
+    return ((raw as { factors: string[] }).factors).map((rule: string) => ({ reason: rule, points: 0 }))
+  }
+  return undefined
+}
+
+function toReport(r: RawReport): Report {
+  return {
+    id: r.id,
+    trackingId: r.trackingId,
+    type: r.type,
+    status: r.status,
+    priorityScore: r.priorityScore,
+    priorityLabel: r.priorityLabel,
+    latitude: r.latitude,
+    longitude: r.longitude,
+    landmark: r.landmark ?? undefined,
+    description: r.description ?? undefined,
+    registerNumber: r.registerNumber,
+    reporterName: r.reporterName ?? undefined,
+    reporterPhone: r.reporterPhone ?? undefined,
+    triageFactors: normalizeTriageFactors(r.triageFactors),
+    assignedVolunteerId: r.assignedVolunteerId ?? undefined,
+    assignedVolunteerName: r.assignedVolunteer?.name,
+    assignedAgencyId: r.assignedAgencyId ?? undefined,
+    assignedAgencyName: r.assignedAgency?.name,
+    resolutionNotes: r.resolutionNotes ?? undefined,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt ?? undefined,
+  }
+}
+
+function toVolunteer(r: RawVolunteer): Volunteer {
+  return {
+    id: r.id,
+    name: r.name,
+    phone: r.phone,
+    skills: r.skills ?? [],
+    latitude: r.latitude ?? undefined,
+    longitude: r.longitude ?? undefined,
+    status: r.status,
+    assignedReportId: r.assignments?.[0]?.id ?? undefined,
+  }
+}
+
+function reportBody(input: ReportInput): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    type: input.type,
+    description: input.description,
+    landmark: input.landmark ?? null,
+    reporterName: input.reporterName ?? null,
+    reporterPhone: input.reporterPhone ?? null,
+    latitude: input.location?.lat,
+    longitude: input.location?.lng,
+  }
+
+  if (input.victim) {
+    const flags: string[] = []
+    if (input.victim.isPregnant) flags.push('pregnant')
+    if (input.victim.isCardiac) flags.push('cardiac')
+    if (input.victim.isBleeding) flags.push('bleeding')
+    if (flags.length) body.medicalCondition = flags.join(', ')
+  }
+  if (input.missing) {
+    if (input.missing.name) body.missingPersonName = input.missing.name
+    if (input.missing.age !== undefined) body.missingPersonAge = input.missing.age
+    if (input.missing.desc) body.missingPersonDesc = input.missing.desc
+  }
+  const media = input.media?.[0]
+  if (media) {
+    body.mediaData = media.dataUrl
+    body.mediaType = media.kind
+  }
+  return body
+}
+
+// ---- reports -----------------------------------------------------------------
+
+/** POST /api/v1/sos | /api/v1/reports — create incident (server runs triage). */
 export function createReport(input: ReportInput): Promise<Report> {
+  const path = input.isOneTapSos ? '/api/v1/sos' : '/api/v1/reports'
   return withMockFallback(
-    () => apiCall<Report>('POST', '/api/reports', input),
+    () => apiCall<RawReport & { triage?: unknown }>('POST', path, reportBody(input)).then((d) => toReport(d)),
     () => mocks.createReport(input),
   )
 }
 
-/** GET /api/reports?status=&priority=&q= — list + search reports. */
+/** GET /api/v1/admin/reports?status=&priorityLabel=&search= — list + search reports. */
 export function listReports(params: { status?: string; priority?: string; q?: string } = {}): Promise<Report[]> {
+  const qs = new URLSearchParams()
+  if (params.status) qs.set('status', params.status)
+  if (params.priority) qs.set('priorityLabel', params.priority)
+  if (params.q) qs.set('search', params.q)
   return withMockFallback(
-    () => apiCall<Report[]>(`GET`, `/api/reports?${new URLSearchParams(params).toString()}`),
+    () =>
+      apiCall<{ items: RawReport[] }>(`GET`, `/api/v1/admin/reports?${qs.toString()}`).then((d) =>
+        (d.items ?? []).map(toReport),
+      ),
     () => mocks.listReports(params),
   )
 }
 
-/** GET /api/reports/:id — single report (tracking lookup); 404 if missing. */
+/** GET /api/v1/reports/track/:trackingId — single report via public tracking lookup. */
 export function getReport(id: string): Promise<Report> {
   return withMockFallback(
-    () => apiCall<Report>('GET', `/api/reports/${encodeURIComponent(id)}`),
+    () => apiCall<RawReport>('GET', `/api/v1/reports/track/${encodeURIComponent(id)}`).then(toReport),
     () => {
       const report = mocks.getReport(id)
       if (!report) throw new Error('Report not found')
@@ -60,15 +204,25 @@ export function getReport(id: string): Promise<Report> {
   )
 }
 
-/** PATCH /api/reports/:id — dispatch: assign volunteer/agency, change status, resolve.
- * body: { status?, assignedVolunteerId?, assignedAgencyId?, resolutionNotes? }
- */
+/** PATCH /api/v1/admin/reports/:id/status | POST :id/assign — dispatch actions. */
 export function updateReport(
   id: string,
   patch: { status?: Report['status']; assignedVolunteerId?: string; assignedAgencyId?: string; resolutionNotes?: string },
 ): Promise<Report> {
+  const realCall = () => {
+    if (patch.assignedVolunteerId !== undefined || patch.assignedAgencyId !== undefined) {
+      return apiCall<RawReport>('POST', `/api/v1/admin/reports/${encodeURIComponent(id)}/assign`, {
+        volunteerId: patch.assignedVolunteerId,
+        agencyId: patch.assignedAgencyId,
+      }).then(toReport)
+    }
+    return apiCall<RawReport>('PATCH', `/api/v1/admin/reports/${encodeURIComponent(id)}/status`, {
+      status: patch.status,
+      resolutionNotes: patch.resolutionNotes,
+    }).then(toReport)
+  }
   return withMockFallback(
-    () => apiCall<Report>('PATCH', `/api/reports/${encodeURIComponent(id)}`, patch),
+    realCall,
     () => {
       const updated = mocks.updateReport(id, patch)
       if (!updated) throw new Error('Report not found')
@@ -77,48 +231,75 @@ export function updateReport(
   )
 }
 
-/** GET /api/overview-kpis — admin KPI cards + crisis gauge. */
+// ---- admin overview -----------------------------------------------------------
+
+/** GET /api/v1/admin/overview — admin KPI cards + crisis gauge. */
 export function getOverviewKPIs(): Promise<OverviewKPIs> {
-  return withMockFallback(
-    () => apiCall<OverviewKPIs>('GET', '/api/overview-kpis'),
-    () => mocks.overviewKpis(),
-  )
+  return withMockFallback(async () => {
+    const d = await apiCall<{ kpis: RawKpis }>('GET', '/api/v1/admin/overview')
+    const k = d.kpis
+    let avgResponseMinutes = 0
+    try {
+      const analytics = await apiCall<RawAnalytics>('GET', '/api/v1/admin/analytics?rangeDays=14')
+      avgResponseMinutes = Number(analytics.avgResponseMinutes) || 0
+    } catch {
+      // non-critical: keep 0
+    }
+    return {
+      totalReports: Number(k.totalReports) || 0,
+      activeRedAlerts: Number(k.activeRed) || 0,
+      openShelters: Number(k.openShelters) || 0,
+      availableVolunteers: Number(k.availableVolunteers) || 0,
+      avgResponseTimeMins: avgResponseMinutes,
+      crisisScore: Number(k.crisisGaugeScore) || 0,
+      openCases: (Number(k.pendingReports) || 0) + (Number(k.inProgressReports) || 0),
+    }
+  }, mocks.overviewKpis)
 }
 
-/** GET /api/safety-checkins — recent check-ins. */
+// ---- safety check-ins ----------------------------------------------------------
+
+/** GET /api/v1/admin/checkins — recent check-ins. */
 export function listSafetyCheckins(): Promise<SafetyCheckin[]> {
   return withMockFallback(
-    () => apiCall<SafetyCheckin[]>('GET', '/api/safety-checkins'),
+    () => apiCall<{ items: SafetyCheckin[] }>('GET', '/api/v1/admin/checkins').then((d) => d.items ?? []),
     () => mocks.listSafetyCheckins(),
   )
 }
 
-/** POST /api/safety-checkins — citizen check-in.
- * body: { fullName?, phone?, status, locationName?, location{lat,lng}?, notes? }
- */
+/** POST /api/v1/checkins — citizen check-in. */
 export function createSafetyCheckin(
   input: Omit<SafetyCheckin, 'id' | 'createdAt'>,
 ): Promise<SafetyCheckin> {
   return withMockFallback(
-    () => apiCall<SafetyCheckin>('POST', '/api/safety-checkins', input),
+    () =>
+      apiCall<SafetyCheckin>('POST', '/api/v1/checkins', {
+        fullName: input.fullName,
+        phone: input.phone ?? null,
+        status: input.status,
+        locationName: input.locationName ?? null,
+        notes: input.notes ?? null,
+        latitude: input.latitude ?? null,
+        longitude: input.longitude ?? null,
+      }),
     () => mocks.createSafetyCheckin(input),
   )
 }
 
-/** GET /api/shelters?status= — shelter list (distance computed client-side). */
+// ---- shelters ------------------------------------------------------------------
+
+/** GET /api/v1/shelters?status= — shelter list (public; distance computed client-side). */
 export function listShelters(status?: string): Promise<Shelter[]> {
   return withMockFallback(
-    () => apiCall<Shelter[]>(`GET`, `/api/shelters${status ? `?status=${status}` : ''}`),
+    () => apiCall<Shelter[]>(`GET`, `/api/v1/shelters${status ? `?status=${status}` : ''}`),
     () => mocks.listShelters(status),
   )
 }
 
-/** PATCH /api/shelters/:id — capacity/status update.
- * body: { occupancy?, status?, facilities?, contactPhone?, notes? }
- */
+/** PATCH /api/v1/admin/shelters/:id — capacity/status update. */
 export function updateShelter(id: string, patch: Partial<Shelter>): Promise<Shelter> {
   return withMockFallback(
-    () => apiCall<Shelter>('PATCH', `/api/shelters/${encodeURIComponent(id)}`, patch),
+    () => apiCall<Shelter>('PATCH', `/api/v1/admin/shelters/${encodeURIComponent(id)}`, patch),
     () => {
       const updated = mocks.updateShelter(id, patch)
       if (!updated) throw new Error('Shelter not found')
@@ -127,38 +308,62 @@ export function updateShelter(id: string, patch: Partial<Shelter>): Promise<Shel
   )
 }
 
-/** GET /api/alerts — public live alerts. */
+// ---- alerts --------------------------------------------------------------------
+
+/** GET /api/v1/alerts — public live alerts. */
 export function listAlerts(): Promise<Alert[]> {
   return withMockFallback(
-    () => apiCall<Alert[]>('GET', '/api/alerts'),
+    () => apiCall<Alert[]>('GET', '/api/v1/alerts'),
     () => mocks.listAlerts(),
   )
 }
 
-/** POST /api/alerts — create web alert.
- * body: { severity, title, body, region? }
- */
+/** POST /api/v1/admin/alerts — create web alert. */
 export function createAlert(input: Omit<Alert, 'id' | 'createdAt'>): Promise<Alert> {
   return withMockFallback(
-    () => apiCall<Alert>('POST', '/api/alerts', input),
+    () =>
+      apiCall<Alert>('POST', '/api/v1/admin/alerts', {
+        title: input.title,
+        message: input.message,
+        severity: input.severity,
+        channel: input.channel,
+        targetArea: input.region,
+      }),
     () => mocks.createAlert(input),
   )
 }
 
-/** GET /api/volunteers?status= — volunteer roster. */
+// ---- volunteers -----------------------------------------------------------------
+
+/** GET /api/v1/admin/volunteers?status= — volunteer roster. */
 export function listVolunteers(status?: string): Promise<Volunteer[]> {
   return withMockFallback(
-    () => apiCall<Volunteer[]>(`GET`, `/api/volunteers${status ? `?status=${status}` : ''}`),
+    () =>
+      apiCall<RawVolunteer[]>(`GET`, `/api/v1/admin/volunteers${status ? `?status=${status}` : ''}`).then((d) =>
+        (d ?? []).map(toVolunteer),
+      ),
     () => mocks.listVolunteers(status),
   )
 }
 
-/** PATCH /api/volunteers/:id — dispatch status / assignment.
- * body: { status?, assignedReportId? }
- */
+/** PATCH /api/v1/admin/volunteers/:id[/status] — dispatch status / assignment. */
 export function updateVolunteer(id: string, patch: Partial<Volunteer>): Promise<Volunteer> {
+  const realCall = () => {
+    if (patch.status) {
+      return apiCall<RawVolunteer>('PATCH', `/api/v1/admin/volunteers/${encodeURIComponent(id)}/status`, {
+        status: patch.status,
+      }).then(toVolunteer)
+    }
+    return apiCall<RawVolunteer>('PATCH', `/api/v1/admin/volunteers/${encodeURIComponent(id)}`, {
+      name: patch.name,
+      phone: patch.phone,
+      skills: patch.skills,
+      latitude: patch.latitude,
+      longitude: patch.longitude,
+    }).then(toVolunteer)
+  }
   return withMockFallback(
-    () => apiCall<Volunteer>('PATCH', `/api/volunteers/${encodeURIComponent(id)}`, patch),
+    realCall,
     () => {
       const updated = mocks.updateVolunteer(id, patch)
       if (!updated) throw new Error('Volunteer not found')
@@ -167,38 +372,48 @@ export function updateVolunteer(id: string, patch: Partial<Volunteer>): Promise<
   )
 }
 
-/** GET /api/agencies — multi-agency roster. */
+// ---- agencies ------------------------------------------------------------------
+
+/** GET /api/v1/admin/agencies — multi-agency roster. */
 export function listAgencies(): Promise<Agency[]> {
   return withMockFallback(
-    () => apiCall<Agency[]>('GET', '/api/agencies'),
+    () => apiCall<Agency[]>('GET', '/api/v1/admin/agencies'),
     () => mocks.listAgencies(),
   )
 }
 
-/** GET /api/missing-persons — missing persons registry. */
+// ---- missing persons --------------------------------------------------------------
+
+/** GET /api/v1/missing-persons — public missing persons registry. */
 export function listMissingPersons(): Promise<MissingPerson[]> {
   return withMockFallback(
-    () => apiCall<MissingPerson[]>('GET', '/api/missing-persons'),
+    () => apiCall<{ items: MissingPerson[] }>('GET', '/api/v1/missing-persons').then((d) => d.items ?? []),
     () => mocks.listMissingPersons(),
   )
 }
 
-/** POST /api/missing-persons — citizen report-missing.
- * body: { name, age?, gender?, lastSeenAt?, lastSeenLocation, clothes?, contactPhone, photoUrl? }
- */
+/** POST /api/v1/missing-persons — citizen report-missing. */
 export function createMissingPerson(input: Omit<MissingPerson, 'id' | 'status'>): Promise<MissingPerson> {
   return withMockFallback(
-    () => apiCall<MissingPerson>('POST', '/api/missing-persons', input),
+    () =>
+      apiCall<MissingPerson>('POST', '/api/v1/missing-persons', {
+        name: input.name,
+        age: input.age ?? null,
+        gender: input.gender ?? null,
+        lastSeenAt: input.lastSeenAt ?? null,
+        lastSeenLocation: input.lastSeenLocation ?? null,
+        clothes: input.clothes ?? null,
+        contactPhone: input.contactPhone ?? null,
+        photoUrl: input.photoUrl ?? null,
+      }),
     () => mocks.createMissingPerson(input),
   )
 }
 
-/** PATCH /api/missing-persons/:id — match / status update.
- * body: { status?, matched? }
- */
+/** PATCH /api/v1/admin/missing-persons/:id — match / status update. */
 export function updateMissingPerson(id: string, patch: Partial<MissingPerson>): Promise<MissingPerson> {
   return withMockFallback(
-    () => apiCall<MissingPerson>('PATCH', `/api/missing-persons/${encodeURIComponent(id)}`, patch),
+    () => apiCall<MissingPerson>('PATCH', `/api/v1/admin/missing-persons/${encodeURIComponent(id)}`, patch),
     () => {
       const updated = mocks.updateMissingPerson(id, patch)
       if (!updated) throw new Error('Missing person record not found')
@@ -207,45 +422,62 @@ export function updateMissingPerson(id: string, patch: Partial<MissingPerson>): 
   )
 }
 
-/** GET /api/audit-logs?limit= — read-only compliance log. */
+// ---- audit logs ------------------------------------------------------------------
+
+/** GET /api/v1/admin/audit-logs?limit= — read-only compliance log. */
 export function listAuditLogs(): Promise<AuditLog[]> {
   return withMockFallback(
-    () => apiCall<AuditLog[]>('GET', '/api/audit-logs'),
+    () => apiCall<{ items: AuditLog[] }>('GET', '/api/v1/admin/audit-logs').then((d) => d.items ?? []),
     () => mocks.listAuditLogs(),
   )
 }
 
-/** POST /api/admin/login — admin auth (replaces Supabase verify_admin_login()).
- * @TODO BUILD: server-side bcrypt compare, return { token, email, name }.
- * body: { email, password }
- */
+// ---- auth & broadcast --------------------------------------------------------------
+
+/** POST /api/v1/admin/auth/login — admin auth (backend scrypt/JWT). */
 export function adminLogin(email: string, password: string): Promise<{ token: string; email: string; name: string }> {
   return withMockFallback(
-    () => apiCall<{ token: string; email: string; name: string }>('POST', '/api/admin/login', { email, password }),
+    () =>
+      apiCall<{ token: string; admin: { id: string; email: string; name: string } }>('POST', '/api/v1/admin/auth/login', {
+        email,
+        password,
+      }).then((d) => ({ token: d.token, email: d.admin.email, name: d.admin.name })),
     () => ({ token: 'mock-token', email, name: 'Admin' }),
   )
 }
 
-/** POST /api/communications/broadcast — multi-channel push (sms/whatsapp/web).
- * @TODO BUILD: consume Twilio SID+Auth (sms) and WhatsApp Cloud API token+phone
- * number id (whatsapp) — credentials entered in admin Settings.tsx, stored
- * server-side, NEVER in the browser bundle.
- * body: { severity, title, body, region?, channels[], recipientNumbers? }
- */
+/** POST /api/v1/admin/communications/broadcast — multi-channel push (persists alert; Twilio/WhatsApp only if creds set). */
 export function broadcastAlert(input: BroadcastPayload): Promise<{ delivered: number; channels: string[] }> {
   return withMockFallback(
-    () => apiCall<{ delivered: number; channels: string[] }>('POST', '/api/communications/broadcast', input),
+    () =>
+      apiCall<{ delivered: number; channels: string[] }>('POST', '/api/v1/admin/communications/broadcast', {
+        severity: input.severity,
+        title: input.title,
+        body: input.body,
+        region: input.region,
+        channels: input.channels,
+        recipientNumbers: input.recipientNumbers,
+      }),
     () => mocks.broadcast(input),
   )
 }
 
-/** GET /api/analytics — crisis charts data. */
+/** GET /api/v1/admin/analytics — crisis charts data. */
 export function getAnalytics(): Promise<AnalyticsData> {
-  return withMockFallback(
-    () => apiCall<AnalyticsData>('GET', '/api/analytics'),
-    () => mocks.analytics(),
-  )
+  return withMockFallback(async () => {
+    const d = await apiCall<RawAnalytics>('GET', '/api/v1/admin/analytics?rangeDays=14')
+    const byKey = (rows: { count: number }[] | undefined, key: string) =>
+      Object.fromEntries(
+        (rows ?? []).map((r: { [k: string]: string | number; count: number }) => [r[key], Number(r.count) || 0]),
+      )
+    return {
+      byType: byKey(d.byType, 'type'),
+      byPriority: byKey(d.byPriority, 'priorityLabel'),
+      byStatus: byKey(d.byStatus, 'status'),
+      byTime: (d.trendsByDay ?? []).map((t: { day: string; count: number }) => ({
+        date: t.day,
+        count: Number(t.count) || 0,
+      })),
+    }
+  }, mocks.analytics)
 }
-
-// AI-engine helpers re-exported here for convenience (imported from ai.ts too).
-export { aiCall }

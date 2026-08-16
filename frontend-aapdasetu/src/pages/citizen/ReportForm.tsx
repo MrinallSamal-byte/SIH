@@ -109,7 +109,8 @@ export default function ReportForm() {
 
       const triage = await aiTriage(input)
       const report = await createReport(input)
-      setResult({ ...report, priorityScore: triage.score, priorityLabel: triage.label })
+      // Prefer the server's authoritative triage so the confirmation matches the DB.
+      setResult(report.priorityLabel ? report : { ...report, priorityScore: triage.score, priorityLabel: triage.label })
       toast('Incident report submitted')
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Submission failed', 'error')
