@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.local
+*.log
+uploads/
+fastapi-service/__pycache__/
+fastapi-service/.venv/
+.pytest_cache/
