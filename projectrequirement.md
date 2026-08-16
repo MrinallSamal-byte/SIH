@@ -6,7 +6,7 @@
 
 The system delivers real-time emergency response, AI-driven priority triage, disaster-aware dynamic routing, psychological first aid support, anti-fraud property damage assessment, satellite flood mapping, and multi-agency incident command.
 
----
+----
 
 ## 2. Master Feature Scope Matrix
 
