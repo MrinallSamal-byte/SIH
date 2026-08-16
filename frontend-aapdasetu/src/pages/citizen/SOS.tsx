@@ -331,7 +331,6 @@ export default function SOS() {
                 </>
               ) : (
                 <>
-                  <span className="text-xl sm:text-2xl">🚨</span>
                   <span className="text-base sm:text-lg font-black uppercase tracking-tight">
                     Send SOS Now
                   </span>

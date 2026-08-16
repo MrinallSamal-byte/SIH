@@ -8,14 +8,14 @@ import { fileToDataUrl, getCurrentPosition, reverseGeocode } from '../../lib/hel
 import { useLocation } from '../../hooks/useLocation'
 import type { GeoPoint, IncidentType, MediaPayload, Report, ReportInput } from '../../types'
 
-const emergencyTypeOptions: { value: IncidentType; label: string; icon: string }[] = [
-  { value: 'flood', label: 'Flood / Water Rising', icon: '🌊' },
-  { value: 'medical', label: 'Critical Medical Emergency', icon: '🚑' },
-  { value: 'earthquake', label: 'Building Collapse / Trapped Victims', icon: '🏚️' },
-  { value: 'fire', label: 'Fire / Explosion', icon: '🔥' },
-  { value: 'accident', label: 'Road / Transit Accident', icon: '🚗' },
-  { value: 'missing_person', label: 'Missing Person Search', icon: '🔍' },
-  { value: 'other', label: 'Other Disaster Emergency', icon: '🚨' },
+const emergencyTypeOptions: { value: IncidentType; label: string }[] = [
+  { value: 'flood', label: 'Flood / Water Rising' },
+  { value: 'medical', label: 'Critical Medical Emergency' },
+  { value: 'earthquake', label: 'Building Collapse / Trapped Victims' },
+  { value: 'fire', label: 'Fire / Explosion' },
+  { value: 'accident', label: 'Road / Transit Accident' },
+  { value: 'missing_person', label: 'Missing Person Search' },
+  { value: 'other', label: 'Other Disaster Emergency' },
 ]
 
 export default function ReportForm() {
@@ -338,7 +338,7 @@ export default function ReportForm() {
               </option>
               {emergencyTypeOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  {opt.icon} {opt.label}
+                  {opt.label}
                 </option>
               ))}
             </select>
@@ -384,7 +384,6 @@ export default function ReportForm() {
                 disabled={locatingGps}
                 className="flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 cursor-pointer"
               >
-                <span>🔄</span>
                 <span>Retry GPS</span>
               </button>
             </div>
@@ -403,7 +402,6 @@ export default function ReportForm() {
                 onClick={() => setShowMap((s) => !s)}
                 className="font-bold text-blue-600 hover:underline dark:text-blue-400 flex items-center gap-1 cursor-pointer"
               >
-                <span>🗺️</span>
                 <span>{showMap ? 'Hide map' : 'Adjust location on interactive map'}</span>
               </button>
             </div>
@@ -489,7 +487,6 @@ export default function ReportForm() {
                 onClick={() => videoInputRef.current?.click()}
                 className="flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white py-2.5 px-3 text-xs font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
               >
-                <span className="text-base">🎥</span>
                 <span>Record Video</span>
               </button>
 
@@ -500,7 +497,6 @@ export default function ReportForm() {
                   onClick={startAudioRecording}
                   className="flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white py-2.5 px-3 text-xs font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
                 >
-                  <span className="text-base">🎙️</span>
                   <span>Record Audio</span>
                 </button>
               ) : (
@@ -572,7 +568,6 @@ export default function ReportForm() {
               </div>
             ) : (
               <>
-                <span>✓</span>
                 <span>Submit Report</span>
               </>
             )}

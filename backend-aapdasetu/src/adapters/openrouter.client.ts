@@ -21,6 +21,7 @@
 import { env } from '../config/env.js';
 import { ServiceUnavailableError } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
+import { z } from 'zod';
 
 export interface ChatTurn {
   role: 'system' | 'user' | 'assistant';
@@ -32,6 +33,12 @@ export interface PfaStructuredResponse {
   intent: string;
   escalationRequired: boolean;
 }
+
+const PfaStructuredResponseSchema = z.object({
+  message: z.string().min(1),
+  intent: z.string().min(1),
+  escalationRequired: z.boolean().optional().default(false),
+});
 
 const MAX_RETRIES = 2;
 
@@ -316,6 +323,9 @@ Be:
 - Action-oriented
 - Easy to understand under stress
 
+Return plain text only inside the JSON message field.
+Do not use markdown, bullet asterisks, emojis, or decorative symbols.
+
 For emergencies:
 SAFETY INSTRUCTIONS > EMOTIONAL SUPPORT > BREATHING/GROUNDING
 
@@ -493,25 +503,18 @@ function parseStructured(
 
     const obj = JSON.parse(
       trimmed,
-    ) as Partial<PfaStructuredResponse>;
+    ) as unknown;
+
+    const parsed = PfaStructuredResponseSchema.safeParse(obj);
+
+    if (!parsed.success) {
+      throw new Error('OpenRouter response did not match the expected schema');
+    }
 
     return {
-      message:
-        typeof obj.message === 'string' &&
-        obj.message.trim().length > 0
-          ? obj.message.trim()
-          : 'Please move to a safe location if you are in immediate danger and contact emergency services.',
-
-      intent:
-        typeof obj.intent === 'string' &&
-        obj.intent.trim().length > 0
-          ? obj.intent.trim()
-          : 'general_disaster',
-
-      escalationRequired:
-        typeof obj.escalationRequired === 'boolean'
-          ? obj.escalationRequired
-          : false,
+      message: sanitizeAssistantText(parsed.data.message),
+      intent: parsed.data.intent.trim() || 'general_disaster',
+      escalationRequired: parsed.data.escalationRequired,
     };
   } catch (error) {
     logger.warn(
@@ -526,7 +529,7 @@ function parseStructured(
 
     return {
       message:
-        content.trim() ||
+        sanitizeAssistantText(content) ||
         'If you are in immediate danger, move to a safer location and contact emergency services.',
 
       intent: 'general_disaster',
@@ -534,6 +537,18 @@ function parseStructured(
       escalationRequired: false,
     };
   }
+}
+
+function sanitizeAssistantText(rawText: string): string {
+  return rawText
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
+    .replace(/```(?:json)?/gi, '')
+    .replace(/[\*_`~]/g, '')
+    .replace(/^\s*[-•*]+\s+/gm, '')
+    .replace(/\p{Extended_Pictographic}|\p{Emoji_Presentation}|\u200d/gu, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 function sleep(ms: number): Promise<void> {

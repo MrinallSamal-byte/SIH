@@ -61,6 +61,10 @@ CORE PROTOCOLS:
 3. PSYCHOLOGICAL FIRST AID & PANIC MANAGEMENT: If the user expresses panic, fear, trembling, or grief, speak with warmth and strength. Offer grounding techniques like 4-4-4 Box Breathing (Inhale 4s, Hold 4s, Exhale 4s) or 5-4-3-2-1 Sensory Grounding.
 4. MULTI-LINGUAL SUPPORT: Automatically detect and respond in English, Hindi, Hinglish, Bengali, Odia, Tamil, Telugu, Marathi, etc., matching the user's language smoothly.
 5. CONCISE & ACTIONABLE: Keep responses structured, easy to read under stress, prioritizing life over property. Always remind the user to stay safe and that emergency services can be reached at 112/108.`
+const AAPDAMITRA_PLAIN_TEXT_RULE = `
+
+Return only JSON. The message field must be plain text only.
+Do not use markdown, bullet asterisks, emojis, or decorative symbols in the message field.`
 
 interface ChatHistoryItem {
   role: 'user' | 'bot' | 'assistant' | 'system'
@@ -94,8 +98,14 @@ function detectBreathingExercise(text: string): string | undefined {
 
 function cleanAiOutput(rawText: string): string {
   // Strip <think>...</think> reasoning tags if present
-  let text = rawText.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
-  return text
+  let text = rawText.replace(/<think>[\s\S]*?<\/think>/gi, '')
+  text = text.replace(/```(?:json)?/gi, '')
+  text = text.replace(/[\*_`~]/g, '')
+  text = text.replace(/^\s*[-•*]+\s+/gm, '')
+  text = text.replace(/\p{Extended_Pictographic}|\p{Emoji_Presentation}|\u200d/gu, '')
+  text = text.replace(/[ \t]{2,}/g, ' ')
+  text = text.replace(/\n{3,}/g, '\n\n')
+  return text.trim()
 }
 
 async function callOpenRouter(
@@ -103,7 +113,7 @@ async function callOpenRouter(
   history: ChatHistoryItem[] = []
 ): Promise<string> {
   const openRouterMessages = [
-    { role: 'system', content: AAPDAMITRA_SYSTEM_PROMPT },
+    { role: 'system', content: `${AAPDAMITRA_SYSTEM_PROMPT}${AAPDAMITRA_PLAIN_TEXT_RULE}` },
     ...history.slice(-8).map((h) => ({
       role: h.role === 'bot' ? ('assistant' as const) : ('user' as const),
       content: h.content,
@@ -175,7 +185,12 @@ export async function aiPfaChat(
     }
   } catch (err) {
     console.warn('[AapdaMitra AI] Falling back to local crisis intelligence engine:', err)
-    return mocks.aiPfaChat(message, victimName)
+    const fallback = mocks.aiPfaChat(message, victimName)
+    return {
+      ...fallback,
+      reply: cleanAiOutput(fallback.reply),
+      safetyChecklist: fallback.safetyChecklist?.map((item) => cleanAiOutput(item)).filter(Boolean),
+    }
   }
 }
 

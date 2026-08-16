@@ -11,7 +11,6 @@ interface ServiceCard {
   titleKey: string
   desc: string
   tag?: string
-  icon: string
   urgent?: boolean
 }
 
@@ -21,7 +20,6 @@ const emergencyServices: ServiceCard[] = [
     titleKey: 'nav.sos',
     desc: 'Instant GPS distress beacon dispatched immediately to NDRF & State Emergency Operations.',
     tag: 'Life Threatening',
-    icon: '🚨',
     urgent: true,
   },
   {
@@ -29,49 +27,42 @@ const emergencyServices: ServiceCard[] = [
     titleKey: 'nav.report',
     desc: 'Report trapped victims, medical emergencies, food shortages, or infrastructure collapse.',
     tag: 'Triage & Rescue',
-    icon: '📋',
   },
   {
     to: '/shelters',
     titleKey: 'nav.shelters',
     desc: 'Locate nearest operational relief camps with real-time bed capacity, food, and medical stations.',
     tag: 'Relief Camps',
-    icon: '🏕️',
   },
   {
     to: '/safe-routes',
     titleKey: 'nav.routes',
     desc: 'Evacuation corridors dynamically routed around flooded perimeters and blocked highways.',
     tag: 'Navigation',
-    icon: '🛣️',
   },
   {
     to: '/missing-persons',
     titleKey: 'nav.missing',
     desc: 'Search missing person bulletins or report a missing family member with photo verification.',
     tag: 'Registry',
-    icon: '🔍',
   },
   {
     to: '/check-in',
     titleKey: 'nav.checkin',
     desc: 'Mark yourself and family safe to reassure loved ones and reduce search team overhead.',
     tag: 'Public Notice',
-    icon: '💚',
   },
   {
     to: '/report-damage',
     titleKey: 'nav.damage',
     desc: 'Submit geotagged structural damage claims for SDRF / NDMA disaster relief compensation.',
     tag: 'Relief Claims',
-    icon: '🏚️',
   },
   {
     to: '/pfa-chat',
     titleKey: 'nav.pfa',
     desc: '24/7 intelligent AI companion for real-time disaster survival tactics, medical triage, and trauma support.',
     tag: 'AI Companion',
-    icon: '🤖',
   },
 ]
 
@@ -128,7 +119,6 @@ export default function Home() {
               to="/sos"
               className="flex items-center justify-center gap-2 rounded-xl bg-red-600 px-6 py-3.5 text-sm font-black text-white shadow-md transition hover:bg-red-700 active:scale-95 ring-2 ring-red-200 dark:ring-red-950"
             >
-              <span className="text-lg">🚨</span>
               <span>1-TAP EMERGENCY SOS</span>
             </Link>
 
@@ -137,7 +127,6 @@ export default function Home() {
               to="/report"
               className="flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-50 px-5 py-2.5 text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
             >
-              <span>📋</span>
               <span>Submit Incident Report</span>
             </Link>
 
@@ -303,7 +292,6 @@ export default function Home() {
               <div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-base">{service.icon}</span>
                     <span
                       className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                         service.urgent
