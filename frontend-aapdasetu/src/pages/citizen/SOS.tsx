@@ -306,56 +306,36 @@ export default function SOS() {
               disabled={triggering}
               aria-label="Press for Emergency Satellite SOS Dispatch"
               className="
-      relative flex h-44 w-44 sm:h-48 sm:w-48
-      flex-col items-center justify-center
-      rounded-full
-      border-4 border-red-100
+      relative flex h-16 w-full max-w-lg
+      flex-row items-center justify-center gap-3
+      rounded-2xl
+      border-2 border-red-200
       bg-red-600
       text-white
-      shadow-[0_8px_24px_rgba(220,38,38,0.28)]
+      shadow-[0_8px_24px_rgba(220,38,38,0.22)]
       transition-all duration-150
       hover:bg-red-700
-      hover:shadow-[0_10px_30px_rgba(220,38,38,0.38)]
+      hover:shadow-[0_10px_30px_rgba(220,38,38,0.32)]
       active:scale-95
       disabled:cursor-not-allowed
       disabled:opacity-80
       select-none
     "
             >
-              {/* Subtle pulse ring */}
-              {!triggering && (
-                <span
-                  className="
-          absolute inset-[-8px]
-          rounded-full
-          border-2 border-red-300/60
-          animate-pulse
-          pointer-events-none
-        "
-                />
-              )}
-
               {triggering ? (
-                <div className="flex flex-col items-center gap-3">
-                  <span className="h-8 w-8 animate-spin rounded-full border-3 border-white border-t-transparent" />
-                  <span className="text-xs font-black uppercase tracking-wider">
+                <>
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <span className="text-sm sm:text-base font-black uppercase tracking-wide">
                     Dispatching…
                   </span>
-                </div>
+                </>
               ) : (
-                <div className="flex flex-col items-center text-center px-5">
-                  <span className="mb-2 text-2xl">🚨</span>
-
-                  <span className="text-base sm:text-lg font-black uppercase tracking-tight leading-tight">
-                    Press for
-                    <br />
-                    Emergency
+                <>
+                  <span className="text-xl sm:text-2xl">🚨</span>
+                  <span className="text-base sm:text-lg font-black uppercase tracking-tight">
+                    Send SOS Now
                   </span>
-
-                  <span className="mt-2 text-[9px] font-bold uppercase tracking-widest text-red-100">
-                    1-Tap Dispatch
-                  </span>
-                </div>
+                </>
               )}
             </button>
 
