@@ -8,7 +8,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
+## 🌐 Live Deployment
 
+**AapdaSetu:** [https://sih-ochre-xi.vercel.app/](https://sih-ochre-xi.vercel.app/)
+
+---
 ## 📌 Executive Summary
 
 During major natural disasters (floods, cyclones, earthquakes), traditional response applications fail due to cellular network blackouts, control room overload, outdated navigation, and illiteracy barriers.
