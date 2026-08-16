@@ -485,28 +485,200 @@ export const mocks = {
     return computeTriage(payload)
   },
 
-  aiPfaChat(message: string, victimName = 'Friend') {
-    const msg = message.toLowerCase()
-    if (['panic', 'scared', 'fear', 'afraid'].some((w) => msg.includes(w))) {
+  aiPfaChat(message: string, victimName = 'Friend'): {
+    reply: string
+    exerciseType?: string
+    safetyChecklist?: string[]
+    isCritical?: boolean
+    helpline?: string
+  } {
+    const msg = message.toLowerCase().trim()
+
+    // 1. Critical Emergency: Drowning / Water Submergence
+    if (['drown', 'drowning', 'sink', 'sinking', 'swept away', 'water rising', 'submerged', 'water in house', 'डूब', 'पानी'].some((w) => msg.includes(w))) {
       return {
-        reply: `I hear you, ${victimName}. Please take a slow, deep breath in... hold for 4 seconds... and exhale slowly. You are not alone. Let's try a 5-4-3-2-1 grounding exercise: name 5 things you can see around you right now.`,
-        exerciseType: 'BREATHING_AND_GROUNDING',
-        safetyChecklist: ['Stay dry', 'Save battery', 'Keep whistle or flashlight ready'],
+        reply: `🚨 CRITICAL FLOOD & DROWNING SURVIVAL PROTOCOL:
+1. Stay Calm & Float: Turn onto your back, arch your back slightly, and spread your arms and legs wide in a Starfish Pose. Keep your chin pointing up and breathe steadily.
+2. Discard Heavy Items: Kick off heavy boots/shoes and discard heavy jackets that pull you down.
+3. Grab Floating Objects: Look for plastic water cans, wooden planks, thermocol, or sealed bottles to hug against your chest.
+4. Signal Rescuers: Wave brightly colored cloth or blow a whistle. Do NOT swim against high-velocity currents; swim diagonally across the current towards high ground.
+
+📞 Emergency Medical & Disaster Rescue Helpline: 108 / 112`,
+        exerciseType: 'DROWNING_SURVIVAL_FLOAT',
+        isCritical: true,
+        helpline: '108',
+        safetyChecklist: ['Float on back', 'Do not fight current', 'Keep face out of water', 'Call 108 immediately'],
       }
     }
-    if (['water', 'roof', 'flood'].some((w) => msg.includes(w))) {
+
+    // 2. Critical Emergency: Trapped in Rubble / Collapse
+    if (['trap', 'trapped', 'rubble', 'debris', 'collapse', 'crushed', 'stuck under', 'मलबे', 'दब'].some((w) => msg.includes(w))) {
       return {
-        reply: `Stay on the roof or the highest sturdy point, ${victimName}. Do not touch electrical wires or submerged sockets. Keep your phone battery saved. Help is on the way.`,
-        exerciseType: 'SURVIVAL_SAFETY_GUIDANCE',
-        safetyChecklist: ['Stay on high ground', 'Avoid electric wires', 'Keep battery saved'],
+        reply: `🚨 CRITICAL COLLAPSE & RESCUE PROTOCOL:
+1. Protect Your Airway: Cover your mouth and nose with a cloth or shirt to prevent dust inhalation.
+2. Conserve Energy & Oxygen: Do NOT shout continuously. Instead, tap in a rhythm of 3 (TAP-TAP-TAP) on metal pipes, beams, or walls using a stone or hard object. Rescuers with acoustic sensors listen for this.
+3. Do NOT light matches or lighters — flammable gas leaks can ignite.
+4. Protect Vital Organs: Curl into a fetal position if spaces are shifting.
+
+📞 Emergency Disaster Relief Helpline: 108 / 112`,
+        exerciseType: 'TRAPPED_SURVIVAL_ACOUSTIC',
+        isCritical: true,
+        helpline: '108',
+        safetyChecklist: ['Cover nose/mouth', 'Tap in 3s on pipes', 'Avoid spark/open flame', 'Conserve oxygen'],
       }
     }
+
+    // 3. Critical Emergency: Severe Bleeding / Trauma
+    if (['bleed', 'bleeding', 'blood', 'hemorrhage', 'deep cut', 'wound', 'artery', 'stab', 'खून', 'रक्त'].some((w) => msg.includes(w))) {
+      return {
+        reply: `🚨 URGENT FIRST AID — SEVERE BLEEDING:
+1. Apply Direct Pressure: Press a clean cloth, towel, or sterile gauze firmly against the wound with both hands. Maintain continuous pressure for at least 15 minutes without lifting.
+2. Elevate: If the wound is on an arm or leg, elevate it above the heart while keeping pressure on it.
+3. Pressure Bandage: Wrap firmly with a bandage or cloth. If blood soaks through, add another cloth on top — do NOT remove the first layer.
+4. Keep Patient Warm: Lie the victim flat and cover them with a blanket to prevent hypothermia and hemorrhagic shock.
+
+📞 Emergency Ambulance Helpline: 108`,
+        exerciseType: 'HEMORRHAGE_CONTROL',
+        isCritical: true,
+        helpline: '108',
+        safetyChecklist: ['Direct continuous pressure', 'Elevate limb', 'Do not remove soaked cloth', 'Call 108'],
+      }
+    }
+
+    // 4. Critical Emergency: Chest Pain / Cardiac / Severe Breathing Trouble
+    if (['chest pain', 'heart attack', 'cardiac', 'cant breathe', "can't breathe", 'cannot breathe', 'suffocating', 'unconscious', 'सीने', 'हार्ट'].some((w) => msg.includes(w))) {
+      return {
+        reply: `🚨 URGENT MEDICAL EMERGENCY — CARDIAC / AIRWAY DISTRESS:
+1. Comfortable Position: Sit upright in a supported 'W' position with knees bent and back supported against a wall. Loosen tight collar, belt, or clothing.
+2. Emergency Medication: If the person is conscious and has prescribed Sorbitrate / Aspirin, assist them in taking it.
+3. Hands-Only CPR: If the person becomes completely unresponsive and stops breathing, place the heel of your hands in the center of the chest and push hard & fast (100–120 compressions per minute, 2 inches deep).
+
+📞 Emergency Ambulance & Life Support: 108`,
+        exerciseType: 'CARDIAC_LIFE_SUPPORT',
+        isCritical: true,
+        helpline: '108',
+        safetyChecklist: ['Sit in W position', 'Loosen clothing', 'Be ready for CPR', 'Immediate 108 dispatch'],
+      }
+    }
+
+    // 5. Critical Emergency: Fire / Burns / Gas Leak
+    if (['fire', 'burn', 'smoke', 'gas leak', 'explosion', 'cylinder', 'आग', 'जल'].some((w) => msg.includes(w))) {
+      return {
+        reply: `🚨 CRITICAL FIRE & BURN PROTOCOL:
+1. Smoke Inhalation: Crawl low on your knees; breathable cool air is within 1 to 2 feet of the floor. Cover your nose with a damp cloth.
+2. Clothes on Fire: STOP, DROP to the ground, and ROLL back and forth to smother flames.
+3. Burn First Aid: Pour cool running water over the burn for 15–20 minutes. Do NOT apply ice, butter, oil, or toothpaste.
+4. Gas Leak: Turn off cylinder regulator valve immediately, open all windows, and do NOT flip any electrical switches or create sparks.
+
+📞 Fire Emergency & Rescue: 108 / 112`,
+        exerciseType: 'FIRE_EVACUATION_SAFETY',
+        isCritical: true,
+        helpline: '108',
+        safetyChecklist: ['Crawl low under smoke', 'Cool burns with water 15m', 'Do not use electricity near gas', 'Call 108'],
+      }
+    }
+
+    // 6. Critical Emergency: Electric Shock / Power Lines
+    if (['electric', 'shock', 'live wire', 'power line', 'electrocution', 'करंट', 'बिजली'].some((w) => msg.includes(w))) {
+      return {
+        reply: `🚨 CRITICAL ELECTRICAL SAFETY WARNING:
+1. Do NOT Touch: Never touch the victim directly with bare hands while they are in contact with the live current.
+2. Cut Power: Switch off the main circuit breaker or trip switch immediately.
+3. Insulated Separation: If power cannot be turned off, use a DRY wooden pole, PVC pipe, or rubber broom to push the wire away from the victim.
+4. Submerged Water Hazard: Stay at least 10 meters (33 feet) away from water puddles containing downed power lines.
+
+📞 Medical Ambulance & Power Emergency: 108 / 112`,
+        exerciseType: 'ELECTRICAL_HAZARD_PROTOCOL',
+        isCritical: true,
+        helpline: '108',
+        safetyChecklist: ['Do not touch victim barehanded', 'Cut main power', 'Use dry wood/plastic', 'Call 108'],
+      }
+    }
+
+    // 7. Critical Emergency: Snakebite / Envenomation
+    if (['snake', 'bite', 'venom', 'poison', 'सांप', 'डस'].some((w) => msg.includes(w))) {
+      return {
+        reply: `🚨 URGENT SNAKEBITE PROTOCOL:
+1. Immobilize Immediately: Keep the patient completely still and calm; movement increases venom circulation.
+2. Position Limb: Keep the bitten limb below the level of the heart.
+3. Remove Constrictors: Remove rings, tight watches, or tight clothing around the limb before swelling begins.
+4. STRICT WARNINGS: Do NOT cut the wound, do NOT suck venom, do NOT apply ice, and do NOT tie a tight tourniquet (use a broad pressure bandage instead).
+5. Transport to nearest District Hospital equipped with Anti-Snake Venom (ASV).
+
+📞 Emergency Hospital Transport: 108`,
+        exerciseType: 'SNAKEBITE_MANAGEMENT',
+        isCritical: true,
+        helpline: '108',
+        safetyChecklist: ['Immobilize limb below heart', 'Remove tight rings', 'Do NOT cut/suck', 'Immediate 108 ASV transfer'],
+      }
+    }
+
+    // 8. Psychological First Aid: Panic / Anxiety / Shaking
+    if (['panic', 'scared', 'fear', 'afraid', 'shaking', 'crying', 'dizzy', 'anxious', 'terrified', 'डर', 'घबराहट'].some((w) => msg.includes(w))) {
+      return {
+        reply: `I am here beside you, ${victimName}. It is completely natural to feel overwhelmed during a disaster, but you are not alone. Let's do a gentle breathing exercise together:
+
+🌬️ 4-4-4 Box Breathing Cycle:
+1. Inhale slowly through your nose for 4 seconds...
+2. Hold that breath gently for 4 seconds...
+3. Exhale smoothly through your mouth for 4 seconds...
+4. Rest for 4 seconds...
+
+Look around right now and name:
+• 5 things you can see
+• 4 things you can touch
+• 3 sounds you can hear
+
+You are resilient, you are doing your best, and rescue teams are actively operating across your area.`,
+        exerciseType: 'BOX_BREATHING_AND_GROUNDING',
+        isCritical: false,
+        safetyChecklist: ['4-second breathing', '5-4-3-2-1 sensory grounding', 'Keep battery conserved'],
+      }
+    }
+
+    // 9. Disaster Knowledge: Clean Drinking Water & Food Safety
+    if (['water', 'drink', 'food', 'ration', 'hunger', 'प्यास', 'खाना', 'पानी'].some((w) => msg.includes(w))) {
+      return {
+        reply: `💧 FLOOD WATER SANITATION & FOOD SAFETY GUIDELINES:
+1. Do NOT Drink Untreated Flood Water: Flood water carries sewage, bacteria (Cholera/Leptospirosis), and chemical toxins.
+2. Purification Methods:
+   • Boiling: Boil water vigorously for at least 1 full minute.
+   • Chlorine Tablets (Halazone/Chlor-floc): 1 tablet per 20 liters of clear water; wait 30 minutes before drinking.
+3. Food Protection: Discard any food that has come into contact with flood water unless stored in hermetically sealed metal cans (disinfect outside of can before opening).
+4. Relief Supplies: Nearest community relief camps distribute clean drinking water and dry ration packets. Visit the Shelter Finder tab to locate the nearest distribution point.`,
+        exerciseType: 'WATER_AND_FOOD_SAFETY',
+        isCritical: false,
+        safetyChecklist: ['Boil water 1 min', 'Use chlorine tablets', 'Discard submerged food', 'Check shelter supplies'],
+      }
+    }
+
+    // 10. Evacuation & Shelter Finder Guidance
+    if (['shelter', 'camp', 'where to go', 'evacuation', 'safe place', 'राहत', 'आश्रय', 'कहाँ'].some((w) => msg.includes(w))) {
+      return {
+        reply: `🏛️ SHELTER & EVACUATION ASSISTANCE:
+1. Open Relief Shelters: Municipal schools, community centers, and cyclone shelters are active with emergency power, dry rations, sanitation, and medical first-aid desks.
+2. Use Shelter Finder: Open the "Shelter Finder" tab in AapdaSetu to view live occupancy, facilities, and one-tap GPS navigation directions.
+3. Evacuation Rules: Carry an Emergency Go-Bag with essential medicine, ID cards in a plastic ziplock, phone chargers, and a battery flashlight. Avoid walking through water over 6 inches deep.`,
+        exerciseType: 'EVACUATION_ROUTING',
+        isCritical: false,
+        safetyChecklist: ['Check Shelter Finder tab', 'Pack medicine in ziplock', 'Follow safe routes', 'Wear sturdy footwear'],
+      }
+    }
+
+    // Default Empathetic & Knowledgeable Emergency Companion
     return {
-      reply: `Hello ${victimName}, I am your AapdaSetu emergency companion. I am here with you while rescue is en route. How are you feeling right now? Is anyone injured?`,
+      reply: `Hello ${victimName}, I am your AapdaSetu emergency companion. I am trained in disaster psychological first aid, trauma stabilization, medical triage, flood survival, and relief logistics.
+
+How can I best support you right now?
+• If you or someone near you is in immediate physical danger, tell me what happened so I can provide instant survival steps and dispatch alert.
+• If you need calming breathing, type "help me breathe".
+• For medical emergency or ambulance, emergency helpline is 108 / 112.`,
       exerciseType: 'EMPATHETIC_LISTENING',
-      safetyChecklist: ['Stay calm', 'Conserve battery', 'Signal with whistle/light'],
+      isCritical: false,
+      safetyChecklist: ['Stay calm', 'Conserve battery', 'Signal with light/whistle', 'Helpline 108 available'],
     }
   },
+
 
   aiDamageAssessment(photoDataUrl: string, reportedLat?: number, reportedLng?: number, description?: string) {
     const name = photoDataUrl.slice(0, 32)

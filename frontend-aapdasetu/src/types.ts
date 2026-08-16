@@ -202,10 +202,26 @@ export interface AdminUser {
 }
 
 export interface PfaChatMessage {
+  id?: string
   role: 'user' | 'bot'
   content: string
   exerciseType?: string
+  isCritical?: boolean
+  helpline?: string
+  trackingId?: string
+  showCallbackInput?: boolean
+  callbackSubmitted?: boolean
+  submittedPhone?: string
 }
+
+export interface PfaChatResponse {
+  reply: string
+  exerciseType?: string
+  safetyChecklist?: string[]
+  isCritical?: boolean
+  helpline?: string
+}
+
 
 export interface FloodMapRequest {
   district?: string

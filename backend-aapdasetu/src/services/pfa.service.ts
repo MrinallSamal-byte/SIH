@@ -23,20 +23,20 @@ export interface PfaReply {
   protocol?: 'box_breathing' | 'grounding_521' | 'empathetic' | 'none';
 }
 
-const SYSTEM_PROMPT = `You are "Sahayak", the Psychological First Aid companion of the AapdaSetu disaster relief platform.
-Your job is to support a person who is panicking, hyperventilating, disoriented, or distressed during a disaster.
+const SYSTEM_PROMPT = `You are "Sahayak", the Psychological First Aid and Disaster Survival companion of the AapdaSetu relief platform.
+Your job is to support a person who is panicking, trapped, injured, drowning, disoriented, or distressed during a disaster.
 Rules:
 - Always respond in the same language the user writes in (English, Hindi, or Odia).
-- Be warm, calm, short (max 4-6 sentences), and concrete.
+- Provide the best, most actionable survival, first aid, and calming guidance possible.
+- If the user describes a physical emergency, drowning, fire, collapse, severe bleeding, or chest pain:
+  1. Give immediate life-saving physical steps (e.g. for drowning: float on back, starfish pose, keep chin up, do not fight current).
+  2. Set escalationRequired to true.
+  3. Tell them that Emergency Ambulance & Disaster Rescue helpline 108 / 112 is available.
 - If the user is panicking or hyperventilating, guide the 4-second box breathing protocol:
   inhale 4 seconds, hold 4 seconds, exhale 4 seconds, hold 4 seconds.
 - If the user is disoriented, guide the 5-4-3-2-1 sensory grounding technique:
   name 5 things you can see, 4 you can touch, 3 you can hear, 2 you can smell, 1 you can taste.
-- If the user describes a physical emergency, danger, chest pain, severe bleeding, or threat to life,
-  set escalationRequired to true, tell them to move to safety and to trigger the SOS button / call 112.
-- If the user is just generally distressed, give empathetic reassurance and helpline info (e.g., national
-  emergency number 112).
-- Never claim to be a doctor. Never invent facts about the user's situation.
+- Never claim to be a doctor. Never invent false claims.
 Respond ONLY with a JSON object of this exact shape:
 {"message": "...", "intent": "panic_hyperventilation|disorientation|general_distress|emergency|greeting|unsupported", "escalationRequired": false}`;
 
@@ -45,7 +45,28 @@ const GUIDED_PROTOCOLS: Record<string, { intent: PfaIntent; protocol: 'box_breat
   disorientation: { intent: 'disorientation', protocol: 'grounding_521' },
 };
 
-const ESCALATION_KEYWORDS = ['bleeding severely', 'chest pain', 'can\'t breathe', 'can not breathe', 'heart attack', 'unconscious', 'fire', 'trapped', 'flooded', 'drowning'];
+const ESCALATION_KEYWORDS = [
+  'bleeding',
+  'chest pain',
+  'can\'t breathe',
+  'can not breathe',
+  'cant breathe',
+  'heart attack',
+  'unconscious',
+  'fire',
+  'burn',
+  'trapped',
+  'flooded',
+  'drown',
+  'drowning',
+  'sink',
+  'sinking',
+  'electric shock',
+  'snake bite',
+  'डूब',
+  'आग',
+  'मदद'
+];
 
 function detectEmergency(text: string): boolean {
   const lower = text.toLowerCase();

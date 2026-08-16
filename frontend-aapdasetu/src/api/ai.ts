@@ -1,6 +1,7 @@
 import { aiCall, withMockFallback } from './client'
 import { mocks } from './mocks'
-import type { FloodGeoJson, ReportInput, TriageResult } from '../types'
+import type { FloodGeoJson, ReportInput, TriageResult, PfaChatResponse } from '../types'
+
 
 // =============================================================================
 // FASTAPI AI ENGINE — BUILD CONTRACT
@@ -29,20 +30,21 @@ export function aiTriage(input: ReportInput): Promise<TriageResult> {
   )
 }
 
-/** POST /ai/pfa-chat — Psychological First Aid chatbot.
+/** POST /ai/pfa-chat — Psychological First Aid & Emergency AI companion.
  * body: { message, victimName? }
- * resp: { reply, exerciseType, safetyChecklist[] }
+ * resp: PfaChatResponse
  */
-export function aiPfaChat(message: string, victimName = 'Friend') {
+export function aiPfaChat(message: string, victimName = 'Friend'): Promise<PfaChatResponse> {
   return withMockFallback(
     () =>
-      aiCall<{ reply: string; exerciseType: string; safetyChecklist: string[] }>('POST', '/ai/pfa-chat', {
+      aiCall<PfaChatResponse>('POST', '/ai/pfa-chat', {
         message,
         victimName,
       }),
     () => mocks.aiPfaChat(message, victimName),
   )
 }
+
 
 /** POST /ai/damage-assessment — anti-fraud photo damage grading.
  * @TODO BUILD (multipart): backend should accept FormData: photo[] images +
