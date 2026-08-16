@@ -131,8 +131,9 @@ export default function ChatWidget() {
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
                   <h2 className="text-xs font-bold truncate text-white">AapdaMitra AI</h2>
-                  <span className="rounded bg-emerald-500/20 px-1.5 py-0.2 text-[9px] font-bold text-emerald-300">
-                    Nemotron 3.5
+                  <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold text-emerald-300 flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Online
                   </span>
                 </div>
                 <p className="truncate text-[10px] text-slate-400">24/7 Intelligent Crisis & Survival Companion</p>

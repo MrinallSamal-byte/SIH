@@ -4,7 +4,6 @@ import { getReport } from '../../api/endpoints'
 import { Field, Input } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import PriorityBadge from '../../components/common/PriorityBadge'
-import Loader from '../../components/common/Loader'
 import LeafletMap, { type MapMarker, type MapPolyline } from '../../components/map/LeafletMap'
 import { formatDateTime, haversineKm, getNavigationUrl } from '../../lib/helpers'
 import type { Report } from '../../types'
@@ -210,8 +209,9 @@ export default function ReportTracker() {
       </div>
 
       {loading && (
-        <div className="mt-8 flex justify-center">
-          <Loader />
+        <div className="mt-6 space-y-4">
+          <div className="skeleton-shimmer h-28 rounded-2xl border border-slate-200 dark:border-slate-800" />
+          <div className="skeleton-shimmer h-64 rounded-2xl border border-slate-200 dark:border-slate-800" />
         </div>
       )}
 
@@ -219,19 +219,27 @@ export default function ReportTracker() {
         <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300">
           <div className="font-semibold">{error}</div>
           <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-            Double check the tracking ID format or submit a new emergency SOS if you require immediate assistance.
+            Double check the tracking ID format (e.g. SOS-7890) or submit a new emergency SOS if you require immediate assistance.
           </p>
         </div>
       )}
 
       {/* Incident Details Card */}
-      {report && (
-        <div className="mt-6 space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      {report && !loading && (
+        <div className="mt-6 space-y-6 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           {/* Header */}
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4 dark:border-slate-800">
             <div>
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Incident Tracking ID</div>
-              <div className="font-mono text-2xl font-bold text-slate-900 dark:text-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Incident Tracking ID</span>
+                {report.status !== 'resolved' && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                    <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-ping" />
+                    LIVE TELEMETRY
+                  </span>
+                )}
+              </div>
+              <div className="font-mono text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100">
                 {report.trackingId}
               </div>
               <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">

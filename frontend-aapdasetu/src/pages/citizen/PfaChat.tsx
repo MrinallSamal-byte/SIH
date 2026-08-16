@@ -159,7 +159,7 @@ export default function PfaChatPage() {
               <span>AapdaMitra AI</span>
               <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 flex items-center gap-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                NVIDIA Nemotron 3.5 (Free)
+                24/7 Active
               </span>
             </h1>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">

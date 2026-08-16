@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { listShelters } from '../../api/endpoints'
 import Card from '../../components/common/Card'
 import Badge from '../../components/common/Badge'
-import Loader from '../../components/common/Loader'
 import LeafletMap from '../../components/map/LeafletMap'
 import { useLocation } from '../../hooks/useLocation'
 import { haversineKm, getNavigationUrl } from '../../lib/helpers'
@@ -81,7 +80,22 @@ export default function ShelterFinder() {
     return list
   }, [filteredAndSorted, userPos, accuracy])
 
-  if (!shelters) return <Loader />
+  if (!shelters) {
+    return (
+      <div className="space-y-4">
+        <div className="skeleton-shimmer h-12 w-64 rounded-xl" />
+        <div className="skeleton-shimmer h-20 rounded-2xl" />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-2">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="skeleton-shimmer h-48 rounded-2xl" />
+            ))}
+          </div>
+          <div className="skeleton-shimmer h-96 rounded-2xl" />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
