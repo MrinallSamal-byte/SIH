@@ -18,11 +18,32 @@ import { computeTriage } from '../lib/triage'
 import { generateTrackingId } from '../lib/helpers'
 
 // -----------------------------------------------------------------------------
-// In-memory mock store. Mirrors the Express + FastAPI backends so the UI works
-// end-to-end in demo mode (VITE_USE_MOCK_ONLY=true or backend unreachable).
+// In-memory + localStorage persistent mock store.
+// Mirrors the Express + FastAPI backends so the UI works end-to-end in demo mode.
 // -----------------------------------------------------------------------------
 
-let reports: Report[] = [
+function loadLocal<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return fallback
+    return JSON.parse(raw) as T
+  } catch {
+    return fallback
+  }
+}
+
+function saveLocal<T>(key: string, val: T): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(val))
+  } catch {}
+}
+
+const STORAGE_KEY_REPORTS = 'aapdasetu_mock_reports'
+const STORAGE_KEY_CHECKINS = 'aapdasetu_mock_checkins'
+const STORAGE_KEY_MISSING = 'aapdasetu_mock_missing'
+
+const initialReports: Report[] = [
+
   {
     id: 'rep-001',
     trackingId: 'SOS-A1B2C3',
@@ -59,15 +80,18 @@ let reports: Report[] = [
     id: 'rep-003',
     trackingId: 'SOS-G7H8I9',
     type: 'medical',
-    status: 'pending',
-    priorityScore: 64,
-    priorityLabel: 'YELLOW',
-    latitude: 22.5731,
-    longitude: 88.3611,
-    landmark: 'Community Health Centre',
-    description: 'Pregnant woman in labour, needs urgent transport',
-    reporterName: 'Sita Patel',
+    status: 'resolved',
+    priorityScore: 91,
+    priorityLabel: 'RED',
+    latitude: 22.576,
+    longitude: 88.361,
+    landmark: 'Salt Lake Stadium Gate 3',
+    description: 'Cardiac patient requiring oxygen and urgent transport',
+    reporterName: 'Suresh Bose',
     reporterPhone: '+91-9000000003',
+    assignedVolunteerName: 'Priya Singh',
+    assignedAgencyName: 'RG Kar Medical Hospital',
+    resolutionNotes: 'Patient evacuated to RG Kar ICU, vitals stabilized.',
     createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
   },
   {
@@ -89,18 +113,9 @@ let reports: Report[] = [
   },
 ]
 
-let checkins: SafetyCheckin[] = [
-  {
-    id: 'chk-001',
-    fullName: 'Anita Das',
-    phone: '+91-9000000001',
-    status: 'safe',
-    locationName: 'Salt Lake Sector V',
-    latitude: 22.5726,
-    longitude: 88.3639,
-    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-  },
-]
+let reports: Report[] = loadLocal<Report[]>(STORAGE_KEY_REPORTS, initialReports)
+
+
 
 const shelters: Shelter[] = [
   {
@@ -199,7 +214,7 @@ let alerts: Alert[] = [
   },
 ]
 
-let missingPersons: MissingPerson[] = [
+let missingPersons: MissingPerson[] = loadLocal<MissingPerson[]>(STORAGE_KEY_MISSING, [
   {
     id: 'mis-001',
     name: 'Harish Chandra',
@@ -222,7 +237,28 @@ let missingPersons: MissingPerson[] = [
     contactPhone: '+91-9444444442',
     status: 'open',
   },
-]
+])
+
+let checkins: SafetyCheckin[] = loadLocal<SafetyCheckin[]>(STORAGE_KEY_CHECKINS, [
+  {
+    id: 'chk-001',
+    fullName: 'Ramesh Sen',
+    phone: '+91-9876543210',
+    status: 'safe',
+    locationName: 'Salt Lake Community Hall',
+    notes: 'Family is safe and evacuated to relief shelter',
+    createdAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
+  },
+  {
+    id: 'chk-002',
+    fullName: 'Kavita Roy',
+    phone: '+91-9876543211',
+    status: 'need_assistance',
+    locationName: 'Block B, Sector 2',
+    notes: 'Power outage, elderly grandmother needs wheelchair assistance',
+    createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+  },
+])
 
 let auditLogs: AuditLog[] = [
   {
@@ -268,6 +304,7 @@ export const mocks = {
   createReport(input: ReportInput): Report {
     const report = buildReport(input)
     reports = [report, ...reports]
+    saveLocal(STORAGE_KEY_REPORTS, reports)
     return report
   },
 
@@ -295,6 +332,7 @@ export const mocks = {
     const idx = reports.findIndex((r) => r.id === id)
     if (idx === -1) return undefined
     reports[idx] = { ...reports[idx], ...patch, updatedAt: new Date().toISOString() }
+    saveLocal(STORAGE_KEY_REPORTS, reports)
     return reports[idx]
   },
 
@@ -322,6 +360,7 @@ export const mocks = {
       createdAt: new Date().toISOString(),
     }
     checkins = [checkin, ...checkins]
+    saveLocal(STORAGE_KEY_CHECKINS, checkins)
     return checkin
   },
 
@@ -378,6 +417,7 @@ export const mocks = {
       status: 'open',
     }
     missingPersons = [person, ...missingPersons]
+    saveLocal(STORAGE_KEY_MISSING, missingPersons)
     return person
   },
 
@@ -385,8 +425,10 @@ export const mocks = {
     const idx = missingPersons.findIndex((m) => m.id === id)
     if (idx === -1) return undefined
     missingPersons[idx] = { ...missingPersons[idx], ...patch }
+    saveLocal(STORAGE_KEY_MISSING, missingPersons)
     return missingPersons[idx]
   },
+
 
   listAuditLogs(): AuditLog[] {
     return [...auditLogs]

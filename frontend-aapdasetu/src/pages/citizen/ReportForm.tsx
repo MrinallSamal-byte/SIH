@@ -74,15 +74,32 @@ export default function ReportForm() {
     setMedia((prev) => [...prev, ...items])
   }
 
+  const validatePhone = (raw: string) => {
+    const clean = raw.replace(/\D/g, '')
+    return clean.length >= 10 && clean.length <= 15
+  }
+
   const submit = async () => {
+    if (!reporterPhone.trim() || !validatePhone(reporterPhone.trim())) {
+      toast('Please provide a valid 10-digit mobile number in Step 1', 'error')
+      setStep(0)
+      return
+    }
+
+    if (!description.trim()) {
+      toast('Please describe the emergency in Step 1', 'error')
+      setStep(0)
+      return
+    }
+
     setSending(true)
     try {
       const input: ReportInput = {
         type,
-        description,
-        landmark,
-        reporterName,
-        reporterPhone,
+        description: description.trim(),
+        landmark: landmark.trim() || undefined,
+        reporterName: reporterName.trim() || undefined,
+        reporterPhone: reporterPhone.trim(),
         victim: {
           age: age ? Number(age) : undefined,
           groupSize: groupSize ? Number(groupSize) : undefined,
@@ -92,7 +109,7 @@ export default function ReportForm() {
         },
         missing:
           type === 'missing_person'
-            ? { name: missingName, age: missingAge ? Number(missingAge) : undefined, desc: description }
+            ? { name: missingName.trim(), age: missingAge ? Number(missingAge) : undefined, desc: description.trim() }
             : undefined,
         media,
       }
@@ -109,9 +126,18 @@ export default function ReportForm() {
 
       const triage = await aiTriage(input)
       const report = await createReport(input)
-      // Prefer the server's authoritative triage so the confirmation matches the DB.
-      setResult(report.priorityLabel ? report : { ...report, priorityScore: triage.score, priorityLabel: triage.label })
-      toast('Incident report submitted')
+      const finalReport = report.priorityLabel ? report : { ...report, priorityScore: triage.score, priorityLabel: triage.label }
+      setResult(finalReport)
+
+      // Save to localStorage
+      try {
+        const existingTracked = JSON.parse(localStorage.getItem('aapdasetu_tracked_reports') || '[]') as string[]
+        if (!existingTracked.includes(finalReport.trackingId)) {
+          localStorage.setItem('aapdasetu_tracked_reports', JSON.stringify([finalReport.trackingId, ...existingTracked]))
+        }
+      } catch {}
+
+      toast('Incident report submitted successfully')
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Submission failed', 'error')
     } finally {
@@ -121,19 +147,45 @@ export default function ReportForm() {
 
   if (result) {
     return (
-      <div className="mx-auto max-w-xl rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-6">
-        <h1 className="text-xl font-bold">Incident registered</h1>
-        <div className="mt-4 flex items-center justify-between">
+      <div className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-md dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-center gap-3 rounded-xl bg-emerald-50 p-4 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-lg text-white">
+            ✓
+          </span>
           <div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">Tracking ID — save this</div>
-            <div className="font-mono text-xl font-bold">{result.trackingId}</div>
+            <h1 className="text-base font-bold">Incident Registered with Command Center</h1>
+            <p className="text-xs text-emerald-700 dark:text-emerald-400">
+              Your report is prioritized by the AI triage engine and logged in the dispatch queue.
+            </p>
           </div>
-          <PriorityBadge label={result.priorityLabel} />
         </div>
-        <div className="mt-2 text-sm">Priority score: {result.priorityScore}/100</div>
-        <div className="mt-4 flex gap-2">
+
+        <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Tracking ID — Save this</div>
+              <div className="mt-0.5 font-mono text-2xl font-black text-slate-900 dark:text-slate-100">{result.trackingId}</div>
+            </div>
+            <PriorityBadge label={result.priorityLabel} />
+          </div>
+          <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-2 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-400">
+            <span>Priority Score: <strong>{result.priorityScore}/100</strong></span>
+            <span>Emergency Type: <strong>{result.type.toUpperCase()}</strong></span>
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+          <a
+            href={`#/track?id=${encodeURIComponent(result.trackingId)}`}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-700"
+          >
+            <span>Track Incident Status</span>
+            <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clipRule="evenodd" />
+            </svg>
+          </a>
           <Button variant="secondary" onClick={() => window.location.reload()}>
-            New report
+            New Report
           </Button>
         </div>
       </div>
@@ -197,12 +249,18 @@ export default function ReportForm() {
                 </p>
               </div>
             )}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Your name">
-                <Input value={reporterName} onChange={(e) => setReporterName(e.target.value)} />
+                <Input value={reporterName} onChange={(e) => setReporterName(e.target.value)} placeholder="Full name (optional)" />
               </Field>
-              <Field label="Your phone">
-                <Input value={reporterPhone} onChange={(e) => setReporterPhone(e.target.value)} />
+              <Field label="Your phone *">
+                <Input
+                  type="tel"
+                  required
+                  value={reporterPhone}
+                  onChange={(e) => setReporterPhone(e.target.value)}
+                  placeholder="10-digit mobile number"
+                />
               </Field>
             </div>
           </div>

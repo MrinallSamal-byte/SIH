@@ -13,6 +13,7 @@ import Alerts from './pages/citizen/Alerts'
 import ReportDamage from './pages/citizen/ReportDamage'
 import MissingPersons from './pages/citizen/MissingPersons'
 import SafeRoutes from './pages/citizen/SafeRoutes'
+import PfaChat from './pages/citizen/PfaChat'
 
 import AdminLogin from './pages/admin/Login'
 import Overview from './pages/admin/Overview'
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="/report-damage" element={<ReportDamage />} />
           <Route path="/missing-persons" element={<MissingPersons />} />
           <Route path="/safe-routes" element={<SafeRoutes />} />
+          <Route path="/pfa-chat" element={<PfaChat />} />
         </Route>
 
         <Route path="/admin/login" element={<AdminLogin />} />

@@ -75,8 +75,15 @@ export function computeTriage(input: ReportInput): TriageResult {
     factors.push({ reason: 'Cardiac condition', points: 20 })
   }
 
-  // 5. Clamp & classify
+  // 5. 1-Tap SOS emergency distress boost
+  if (input.isOneTapSos) {
+    score += 55
+    factors.push({ reason: '1-Tap SOS direct emergency trigger', points: 55 })
+  }
+
+  // 6. Clamp & classify
   const finalScore = Math.max(1, Math.min(100, Math.round(score)))
   const label: PriorityLabel = finalScore >= 80 ? 'RED' : finalScore >= 50 ? 'YELLOW' : 'GREEN'
   return { score: finalScore, label, factors }
 }
+
