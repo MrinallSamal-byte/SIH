@@ -72,6 +72,7 @@ export default function Home() {
   const [alerts, setAlerts] = useState<Alert[] | null>(null)
   const [quickTrackId, setQuickTrackId] = useState('')
   const [recentTracked, setRecentTracked] = useState<string[]>([])
+  const activeAlertCount = alerts?.length ?? null
 
   useEffect(() => {
     let active = true
@@ -97,73 +98,152 @@ export default function Home() {
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      {/* Top Emergency Action Command Banner */}
-      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 sm:p-7 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="max-w-xl space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-800 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300">
+      <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 sm:p-8">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-800 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300">
               <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
               National Incident Response System
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
-              Disaster Response & Triage Command
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-              Report trapped victims without login, trigger 1-tap satellite SOS, locate open relief camps, and access live safe evacuation corridors.
-            </p>
+            </span>
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
+              {activeAlertCount === null ? 'Syncing live alerts' : `${activeAlertCount} active bulletins`}
+            </span>
           </div>
 
-          <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0">
-            {/* 1-Tap SOS Primary Button */}
-            <Link
-              to="/sos"
-              className="flex items-center justify-center gap-2 rounded-xl bg-red-600 px-6 py-3.5 text-sm font-black text-white shadow-md transition hover:bg-red-700 active:scale-95 ring-2 ring-red-200 dark:ring-red-950"
-            >
-              <span>1-TAP EMERGENCY SOS</span>
-            </Link>
+          <div className="mt-5 space-y-4">
+            <div className="space-y-2">
+              <h1 className="max-w-2xl text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-4xl lg:text-5xl">
+                Disaster Response & Triage Command
+              </h1>
+              <p className="max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400 sm:text-base">
+                Report trapped victims without login, trigger 1-tap SOS, locate open relief camps, and follow live evacuation corridors from one clean public entry point.
+              </p>
+            </div>
 
-            {/* Quick Report Link */}
-            <Link
-              to="/report"
-              className="flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-50 px-5 py-2.5 text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-            >
-              <span>Submit Incident Report</span>
-            </Link>
-
-            {/* Quick Status Lookup */}
-            <form onSubmit={handleTrackSubmit} className="flex gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800">
-              <input
-                type="text"
-                value={quickTrackId}
-                onChange={(e) => setQuickTrackId(e.target.value)}
-                placeholder="Track ID (e.g. SOS-7890)"
-                className="w-full sm:w-48 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-mono text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-              />
-              <button
-                type="submit"
-                className="shrink-0 rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link
+                to="/sos"
+                className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-5 py-3 text-sm font-black text-white shadow-md transition hover:bg-red-700 active:scale-[0.99]"
               >
-                Track
-              </button>
-            </form>
+                1-TAP EMERGENCY SOS
+              </Link>
+              <Link
+                to="/report"
+                className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-slate-50 px-5 py-3 text-sm font-bold text-slate-800 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              >
+                Submit Incident Report
+              </Link>
+              <Link
+                to="/pfa-chat"
+                className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-800 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              >
+                AapdaMitra AI
+              </Link>
+            </div>
+          </div>
 
-            {/* Recent Tracked Chips */}
-            {recentTracked.length > 0 && (
-              <div className="flex items-center gap-1.5 flex-wrap text-[11px] text-slate-500">
-                <span className="font-semibold">Recent:</span>
+          <dl className="mt-6 grid gap-3 sm:grid-cols-3">
+            {[
+              {
+                label: 'No login required',
+                value: 'Fast public access',
+              },
+              {
+                label: 'Live bulletin feed',
+                value: activeAlertCount === null ? 'Loading' : `${activeAlertCount} active`,
+              },
+              {
+                label: 'Immediate routing',
+                value: 'Shelters and safe routes',
+              },
+            ].map((item) => (
+              <div key={item.label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/50">
+                <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{item.label}</dt>
+                <dd className="mt-1 text-sm font-bold text-slate-900 dark:text-slate-100">{item.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 sm:p-7">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Quick Access
+              </div>
+              <div className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">
+                Track and escalate fast
+              </div>
+              <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500 dark:text-slate-400">
+                Use a tracking ID to check status, recover recent reports, or jump straight into the command flow.
+              </p>
+            </div>
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
+              Live
+            </span>
+          </div>
+
+          <form onSubmit={handleTrackSubmit} className="mt-5 flex gap-2">
+            <input
+              type="text"
+              value={quickTrackId}
+              onChange={(e) => setQuickTrackId(e.target.value)}
+              placeholder="Enter tracking ID"
+              className="min-w-0 flex-1 rounded-2xl border border-slate-300 bg-white px-3 py-3 text-sm font-mono text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+            />
+            <button
+              type="submit"
+              className="shrink-0 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+            >
+              Track
+            </button>
+          </form>
+
+          <div className="mt-5 grid grid-cols-2 gap-2 text-sm">
+            {[
+              { label: 'Emergency', number: '112', tone: 'red' },
+              { label: 'Ambulance', number: '108', tone: 'blue' },
+              { label: 'Disaster', number: '1070', tone: 'amber' },
+              { label: 'Fire', number: '101', tone: 'slate' },
+            ].map((contact) => (
+              <a
+                key={contact.number}
+                href={`tel:${contact.number}`}
+                className={`rounded-2xl border p-3 transition hover:-translate-y-0.5 ${
+                  contact.tone === 'red'
+                    ? 'border-red-200 bg-red-50 text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300'
+                    : contact.tone === 'blue'
+                      ? 'border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-300'
+                      : contact.tone === 'amber'
+                        ? 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300'
+                        : 'border-slate-200 bg-white text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200'
+                }`}
+              >
+                <div className="text-[11px] font-bold uppercase tracking-wider opacity-80">{contact.label}</div>
+                <div className="mt-1 text-xl font-black leading-none">{contact.number}</div>
+              </a>
+            ))}
+          </div>
+
+          {recentTracked.length > 0 && (
+            <div className="mt-5 border-t border-slate-100 pt-4 text-[11px] text-slate-500 dark:border-slate-800">
+              <div className="mb-2 font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                Recent Tracking IDs
+              </div>
+              <div className="flex flex-wrap gap-2">
                 {recentTracked.map((id) => (
                   <button
                     key={id}
                     type="button"
                     onClick={() => navigate(`/track?id=${id}`)}
-                    className="font-mono font-bold text-blue-600 hover:underline dark:text-blue-400"
+                    className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-[11px] font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
                   >
                     {id}
                   </button>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -273,13 +353,18 @@ export default function Home() {
 
       {/* Core Emergency Services Grid */}
       <section>
-        <div className="mb-4">
-          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Disaster Response & Citizen Services</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Direct incident actions for affected citizens and search & rescue teams.</p>
+        <div className="mb-4 flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Disaster Response & Citizen Services</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Direct incident actions for affected citizens and search & rescue teams.</p>
+          </div>
+          <span className="hidden rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400 sm:inline-flex">
+            Structured access
+          </span>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {emergencyServices.map((service) => (
+          {emergencyServices.map((service, index) => (
             <Link
               key={service.to}
               to={service.to}
@@ -300,6 +385,9 @@ export default function Home() {
                       }`}
                     >
                       {service.tag}
+                    </span>
+                    <span className="rounded px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                      {String(index + 1).padStart(2, '0')}
                     </span>
                   </div>
                   <span className="text-slate-400 transition group-hover:translate-x-1 group-hover:text-slate-700 dark:group-hover:text-slate-200 text-xs font-bold">

@@ -47,7 +47,9 @@ const mobileBottomTabs = [
     label: '1-TAP SOS',
     isSos: true,
     icon: (
-      <span className="text-base font-black">🚨</span>
+      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 17h12M7.5 17V9.75a4.5 4.5 0 0 1 9 0V17m-12 0h14a1 1 0 0 0 1-1v-1a1 1 0 0 0-1-1H5.5a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1Zm5.25 2.75h1.5" />
+      </svg>
     ),
   },
   {
@@ -99,7 +101,7 @@ export default function MainLayout() {
       {/* Offline Ambient Banner */}
       {isOffline && (
         <div className="bg-amber-600 px-4 py-2 text-center text-xs font-bold text-white shadow-sm flex items-center justify-center gap-2">
-          <span>⚠️</span>
+          <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-white/40 text-[10px] font-black leading-none">!</span>
           <span>Offline Mode Active — Incident submissions will automatically queue and sync once reconnected.</span>
           <a href="tel:112" className="ml-2 underline font-extrabold text-amber-100 hover:text-white">
             Call 112 Offline
@@ -227,22 +229,28 @@ export default function MainLayout() {
           <nav className="border-t border-slate-100 bg-white px-4 py-3 md:hidden dark:border-slate-800 dark:bg-slate-950">
             <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
               <Link to="/safe-routes" className="rounded-lg border border-slate-100 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-900">
-                🛣️ Evacuation Routes
+                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">Route</span>
+                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">Evacuation Routes</span>
               </Link>
               <Link to="/missing-persons" className="rounded-lg border border-slate-100 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-900">
-                🔍 Missing Persons
+                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">Find</span>
+                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">Missing Persons</span>
               </Link>
               <Link to="/check-in" className="rounded-lg border border-slate-100 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-900">
-                💚 Safe Check-In
+                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">Safe</span>
+                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">Safe Check-In</span>
               </Link>
               <Link to="/alerts" className="rounded-lg border border-slate-100 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-900">
-                ⚠️ Public Warnings
+                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">Warn</span>
+                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">Public Warnings</span>
               </Link>
               <Link to="/report-damage" className="col-span-2 rounded-lg border border-slate-100 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-900">
-                🏚️ SDRF Property Damage Assessment
+                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">Damage</span>
+                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">SDRF Property Damage Assessment</span>
               </Link>
               <Link to="/pfa-chat" className="col-span-2 rounded-lg border border-blue-100 bg-blue-50 p-2.5 text-blue-800 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-300 font-bold">
-                🤖 AapdaMitra AI Crisis Lifeline
+                <span className="mb-2 inline-flex rounded-full bg-blue-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-blue-900 dark:bg-blue-900 dark:text-blue-100">AI</span>
+                <span className="block text-sm font-semibold">AapdaMitra AI Crisis Lifeline</span>
               </Link>
             </div>
           </nav>
@@ -257,15 +265,15 @@ export default function MainLayout() {
       </main>
 
       {/* Minimal Clean Footer */}
-      <footer className="border-t border-slate-200 bg-white py-6 pb-24 md:pb-6 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
-        <div className="mx-auto max-w-7xl px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <footer className="border-t border-slate-200 bg-white py-6 pb-24 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400 md:pb-6">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 sm:flex-row">
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-800 dark:text-slate-200">AapdaSetu</span>
-            <span>— National Incident Command & Disaster Response.</span>
+            <span>National Incident Command & Disaster Response.</span>
           </div>
 
           <div className="flex items-center gap-4">
-            <a href="tel:112" className="text-red-600 hover:underline dark:text-red-400 font-bold">
+            <a href="tel:112" className="font-bold text-red-600 hover:underline dark:text-red-400">
               Emergency: 112
             </a>
             <span className="text-slate-300 dark:text-slate-700">|</span>
@@ -297,7 +305,9 @@ export default function MainLayout() {
           >
             {tab.isSos ? (
               <div className="flex flex-col items-center">
-                <span className="text-lg leading-none">🚨</span>
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 17h12M7.5 17V9.75a4.5 4.5 0 0 1 9 0V17m-12 0h14a1 1 0 0 0 1-1v-1a1 1 0 0 0-1-1H5.5a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1Zm5.25 2.75h1.5" />
+                </svg>
                 <span className="mt-0.5 text-[9px] font-black tracking-wider">SOS</span>
               </div>
             ) : (
