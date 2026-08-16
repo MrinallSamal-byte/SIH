@@ -10,7 +10,7 @@ import { getCurrentPosition, generateEmergencySms } from '../../lib/helpers'
 import { useLocation } from '../../hooks/useLocation'
 import type { IncidentType, Report, ReportInput } from '../../types'
 
-const emergencyTypes: { type: IncidentType; label: string; icon: string }[] = [
+const emergencyTypes: { type: IncidentType; label: string }[] = [
   { type: 'other', label: 'General Emergency' },
   { type: 'flood', label: 'Flood / Water Rising' },
   { type: 'medical', label: 'Critical Medical' },
@@ -233,7 +233,6 @@ export default function SOS() {
                       : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
                     }`}
                 >
-                  <span className="text-lg shrink-0">{item.icon}</span>
                   <span className="leading-tight">{item.label}</span>
                 </button>
               ))}
