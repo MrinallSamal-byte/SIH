@@ -21,11 +21,11 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-900 p-4">
-      <form onSubmit={onSubmit} className="w-full max-w-sm rounded-xl bg-white dark:bg-slate-950 p-8">
-        <h1 className="text-xl font-bold">AapdaSetu Command Center</h1>
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
+      <form onSubmit={onSubmit} className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Admin Login</h1>
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          Admin sign-in · POST /api/admin/login (server-side bcrypt compare)
+          Sign in to the admin dashboard.
         </p>
         <div className="mt-5 space-y-4">
           <Field label="Email">

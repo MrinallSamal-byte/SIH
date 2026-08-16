@@ -6,7 +6,7 @@ import PriorityBadge from '../../components/common/PriorityBadge'
 import { Field, Input } from '../../components/common/Input'
 import { useToast } from '../../components/common/Toast'
 import { useLanguage } from '../../lib/i18n'
-import { getCurrentPosition } from '../../lib/helpers'
+import { getCurrentPosition, generateEmergencySms } from '../../lib/helpers'
 import { useLocation } from '../../hooks/useLocation'
 import type { IncidentType, Report, ReportInput } from '../../types'
 
@@ -22,16 +22,22 @@ export default function SOS() {
   const { t } = useLanguage()
   const { toast } = useToast()
   const navigate = useNavigate()
-  const { coords, status: geoStatus } = useLocation()
+  const { coords, status: geoStatus, accuracy, refresh: refreshLocation } = useLocation()
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [landmark, setLandmark] = useState('')
   const [selectedType, setSelectedType] = useState<IncidentType>('other')
   const [phoneError, setPhoneError] = useState<string | null>(null)
   const [triggering, setTriggering] = useState(false)
   const [result, setResult] = useState<Report | null>(null)
   const [copied, setCopied] = useState(false)
+  const [sirenActive, setSirenActive] = useState(false)
+  const [strobeActive, setStrobeActive] = useState(false)
+  const [isOffline, setIsOffline] = useState(!navigator.onLine)
   const phoneInputRef = useRef<HTMLInputElement>(null)
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const sirenOscRef = useRef<OscillatorNode | null>(null)
 
   // Clear phone error when user types
   useEffect(() => {
@@ -40,13 +46,90 @@ export default function SOS() {
     }
   }, [phone, phoneError])
 
+  // Track online/offline status
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false)
+      // Check for pending offline SOS
+      try {
+        const pending = localStorage.getItem('aapdasetu_pending_sos')
+        if (pending) {
+          const parsed = JSON.parse(pending) as ReportInput
+          createReport(parsed).then(() => {
+            localStorage.removeItem('aapdasetu_pending_sos')
+            toast('Pending offline SOS synced successfully!', 'success')
+          }).catch(() => {})
+        }
+      } catch {}
+    }
+    const handleOffline = () => setIsOffline(true)
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [toast])
+
+  // Acoustic Siren Audio Controller (3kHz alternating acoustic beacon)
+  useEffect(() => {
+    if (sirenActive) {
+      try {
+        const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+        const ctx = new AudioCtx()
+        audioCtxRef.current = ctx
+
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'sawtooth'
+        gain.gain.setValueAtTime(0.3, ctx.currentTime)
+
+        // Frequency modulation for loud siren sweep (700Hz to 1400Hz)
+        let high = false
+        const interval = setInterval(() => {
+          if (ctx.state === 'running') {
+            osc.frequency.setValueAtTime(high ? 1300 : 750, ctx.currentTime)
+            high = !high
+          }
+        }, 350)
+
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start()
+        sirenOscRef.current = osc
+
+        return () => {
+          clearInterval(interval)
+          try {
+            osc.stop()
+            ctx.close()
+          } catch {}
+        }
+      } catch {}
+    }
+  }, [sirenActive])
+
+  // Screen Strobe Beacon
+  useEffect(() => {
+    if (!strobeActive) return
+    let on = false
+    const interval = setInterval(() => {
+      on = !on
+      document.body.style.backgroundColor = on ? '#ffffff' : '#000000'
+    }, 250)
+    return () => {
+      clearInterval(interval)
+      document.body.style.backgroundColor = ''
+    }
+  }, [strobeActive])
+
   const validatePhone = (raw: string): boolean => {
     const clean = raw.replace(/\D/g, '')
     return clean.length >= 10 && clean.length <= 15
   }
 
   const trigger = async () => {
-    // 1. Mandatory Phone Number Validation
     if (!phone.trim()) {
       setPhoneError(t('sos.phoneRequiredError'))
       phoneInputRef.current?.focus()
@@ -66,26 +149,40 @@ export default function SOS() {
 
     try {
       const typeLabel = emergencyTypes.find((e) => e.type === selectedType)?.label || 'Emergency'
+      
+      // Resilient GPS coordinates retrieval with fallback
+      let lat = coords?.latitude
+      let lng = coords?.longitude
+
+      if (lat === undefined || lng === undefined) {
+        try {
+          const pos = await getCurrentPosition(false, 3500)
+          lat = pos.coords.latitude
+          lng = pos.coords.longitude
+        } catch {
+          // Fallback regional center (Kolkata/Disaster Center) if GPS is blocked in indoor/basement
+          lat = 22.5726
+          lng = 88.3639
+        }
+      }
+
       const input: ReportInput = {
         type: selectedType,
         description: `1-Tap SOS distress trigger: ${typeLabel}`,
         isOneTapSos: true,
         reporterName: name.trim() || undefined,
         reporterPhone: phone.trim(),
+        location: { lat, lng },
+        landmark: landmark.trim() || undefined,
       }
 
-      try {
-        if (coords) {
-          input.location = { lat: coords.latitude, lng: coords.longitude }
-        } else {
-          const pos = await getCurrentPosition()
-          input.location = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-        }
-      } catch {
-        // Geolocation fallback
+      // Offline handling
+      if (!navigator.onLine) {
+        localStorage.setItem('aapdasetu_pending_sos', JSON.stringify(input))
+        toast('Offline: SOS queued! Will dispatch as soon as network reconnects.', 'error')
       }
 
-      // Explainable AI urgency triage (FastAPI /ai/triage when connected)
+      // AI urgency triage
       const triage = await aiTriage(input)
       const report = await createReport({ ...input, description: input.description })
       const finalReport = report.priorityLabel ? report : { ...report, priorityScore: triage.score, priorityLabel: triage.label }
@@ -117,41 +214,68 @@ export default function SOS() {
     })
   }
 
+  const emergencySmsLink = generateEmergencySms({
+    lat: coords?.latitude,
+    lng: coords?.longitude,
+    name: name.trim() || undefined,
+    type: selectedType,
+    phone: phone.trim() || undefined,
+  })
+
   return (
     <div className="mx-auto flex min-h-[calc(100vh-6.5rem)] w-full max-w-2xl flex-col items-center justify-center py-6 text-center">
-      <div className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold uppercase tracking-wider text-red-700 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300">
-        <span className="h-2 w-2 animate-ping rounded-full bg-red-600" />
-        High-Priority Distress Channel
+      {/* Distress Badge */}
+      <div className="inline-flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold uppercase tracking-wider text-red-700 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300">
+        <span className="h-2 w-2 rounded-full bg-red-600" />
+        Emergency Channel
       </div>
 
-      <h1 className="mt-3 text-3xl font-extrabold text-slate-900 dark:text-slate-100 sm:text-4xl">
+      <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
         {t('sos.title')}
       </h1>
       <p className="mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
-        Instant zero-delay emergency broadcast to NDRF, SDRF, and nearby response units.
+        Emergency broadcast to NDRF, SDRF, and nearby response units.
       </p>
 
-      {/* GPS Status Indicator */}
-      <div className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-3 py-1 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-        <svg className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
-        </svg>
-        {coords ? (
-          <span>GPS Locked: <strong>{coords.latitude.toFixed(4)}°N, {coords.longitude.toFixed(4)}°E</strong></span>
-        ) : geoStatus === 'locating' ? (
-          <span>Acquiring high-precision GPS...</span>
-        ) : (
-          <span>GPS Ready (Network Geolocation)</span>
-        )}
+      {/* GPS Status Indicator & Accuracy */}
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-3 py-1 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+          <svg className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+          </svg>
+          {coords ? (
+            <span>
+              GPS: <strong>{coords.latitude.toFixed(4)}°N, {coords.longitude.toFixed(4)}°E</strong>
+              {accuracy !== null && ` (±${Math.round(accuracy)}m)`}
+            </span>
+          ) : geoStatus === 'locating' ? (
+            <span>Acquiring satellite GPS lock…</span>
+          ) : (
+            <span>GPS: Regional Fallback Active</span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={refreshLocation}
+          className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+        >
+          🔄 Re-detect GPS
+        </button>
       </div>
+
+      {isOffline && (
+        <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
+          ⚠️ Cellular Data Offline — Submissions will auto-queue, or use SMS Fallback below.
+        </div>
+      )}
 
       {!result ? (
         <>
           {/* Emergency Category Chips */}
           <div className="mt-6 w-full max-w-md text-left">
             <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Select Emergency Situation (Optional)
+              Select Emergency Situation
             </label>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {emergencyTypes.map((item) => (
@@ -172,8 +296,8 @@ export default function SOS() {
             </div>
           </div>
 
-          {/* Mandatory Contact Details Card */}
-          <div className="mt-6 w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          {/* Rescue Details Card */}
+          <div className="mt-5 w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="mb-3 flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
                 Rescue Contact Details
@@ -221,40 +345,89 @@ export default function SOS() {
                   autoComplete="name"
                 />
               </Field>
+
+              <Field label="Landmark / Floor / Specific Location (Optional)">
+                <Input
+                  value={landmark}
+                  onChange={(e) => setLandmark(e.target.value)}
+                  placeholder="e.g. 2nd Floor, Room 204, near Water Tank"
+                />
+              </Field>
             </div>
           </div>
 
           {/* Big SOS Trigger Button */}
-          <div className="mt-8 flex flex-col items-center">
+          <div className="mt-7 flex flex-col items-center">
             <button
               type="button"
               onClick={trigger}
               disabled={triggering}
-              className="relative flex h-52 w-52 items-center justify-center rounded-full bg-red-600 text-2xl font-black text-white shadow-2xl ring-8 ring-red-200 transition-all duration-300 hover:scale-105 hover:bg-red-700 active:scale-95 disabled:opacity-75 sm:h-64 sm:w-64 sm:text-3xl dark:ring-red-950"
+              className="relative flex h-40 w-40 items-center justify-center rounded-full bg-red-600 text-xl font-bold text-white shadow-sm ring-2 ring-red-200 transition-colors duration-300 hover:bg-red-700 disabled:opacity-75 sm:h-44 sm:w-44 sm:text-2xl dark:ring-red-950"
               aria-label="Send SOS Distress Alert"
             >
               {triggering ? (
                 <div className="flex flex-col items-center gap-2">
                   <span className="h-8 w-8 animate-spin rounded-full border-4 border-white border-t-transparent" />
-                  <span className="text-sm font-bold tracking-widest uppercase">DISPATCHING…</span>
+                  <span className="text-xs font-bold tracking-widest uppercase">DISPATCHING…</span>
                 </div>
               ) : (
                 <div className="flex flex-col items-center">
-                  <span className="text-3xl sm:text-4xl">🚨</span>
                   <span className="mt-1 leading-tight">{t('sos.trigger')}</span>
                 </div>
               )}
             </button>
             <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-              * Tap to alert response units immediately. Your location will be forwarded.
+              * Tap to alert response units immediately. Your location and contacts will be forwarded.
             </p>
+          </div>
+
+          {/* Field Survival Tools: Siren & Strobe Beacon & SMS Fallback */}
+          <div className="mt-6 w-full max-w-md space-y-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <span className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Trapped Victim Tools & Offline Fallbacks
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setSirenActive((s) => !s)}
+                className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold transition ${
+                  sirenActive
+                    ? 'border-red-600 bg-red-600 text-white'
+                    : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
+                }`}
+              >
+                <span>🔊</span>
+                <span>{sirenActive ? 'Stop Audio Siren' : 'Acoustic Siren'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStrobeActive((s) => !s)}
+                className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold transition ${
+                  strobeActive
+                    ? 'border-amber-500 bg-amber-500 text-white'
+                    : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
+                }`}
+              >
+                <span>⚡</span>
+                <span>{strobeActive ? 'Stop Strobe Light' : 'Strobe Beacon'}</span>
+              </button>
+            </div>
+
+            <a
+              href={emergencySmsLink}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 py-2.5 text-xs font-bold text-blue-800 transition hover:bg-blue-100 dark:border-blue-900/40 dark:bg-blue-950/40 dark:text-blue-300"
+            >
+              <span>💬</span>
+              <span>1-Tap Emergency SMS (112 Offline Fallback)</span>
+            </a>
           </div>
         </>
       ) : (
-        /* Real-Life Distress Confirmation & Live Tracking CTA */
-        <div className="mt-6 w-full max-w-lg space-y-5 rounded-2xl border border-red-200 bg-white p-6 text-left shadow-xl dark:border-red-900/50 dark:bg-slate-900">
+        /* Distress Confirmation & Live Tracking CTA */
+        <div className="mt-6 w-full max-w-lg space-y-5 rounded-2xl border border-red-200 bg-white p-6 text-left shadow-xs dark:border-red-900/50 dark:bg-slate-900">
           <div className="flex items-center gap-3 rounded-xl bg-red-50 p-3.5 text-red-800 dark:bg-red-950/50 dark:text-red-300">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-600 text-lg text-white">
+            <span className="text-lg font-bold">
               ✓
             </span>
             <div>
@@ -273,7 +446,7 @@ export default function SOS() {
                   Your Incident Tracking ID
                 </span>
                 <div className="mt-0.5 flex items-center gap-2">
-                  <span className="font-mono text-xl font-black text-slate-900 dark:text-slate-100">
+                  <span className="font-mono text-xl font-bold text-slate-900 dark:text-slate-100">
                     {result.trackingId}
                   </span>
                   <button
@@ -299,7 +472,7 @@ export default function SOS() {
             <button
               type="button"
               onClick={() => navigate(`/track?id=${encodeURIComponent(result.trackingId)}`)}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 text-sm font-bold text-white shadow-md transition hover:bg-blue-700"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 text-sm font-bold text-white shadow-xs transition hover:bg-blue-700"
             >
               <span>Track Live Response Status</span>
               <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -313,6 +486,7 @@ export default function SOS() {
                 setResult(null)
                 setPhone('')
                 setName('')
+                setLandmark('')
               }}
               className="w-full rounded-xl border border-slate-200 bg-white py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
             >
@@ -330,21 +504,21 @@ export default function SOS() {
                 href="tel:112"
                 className="rounded-lg bg-slate-100 p-2 text-slate-800 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
               >
-                <div className="text-base font-extrabold text-red-600">112</div>
+                <div className="text-base font-bold text-red-600">112</div>
                 <div className="text-[10px] text-slate-500 dark:text-slate-400">National SOS</div>
               </a>
               <a
                 href="tel:108"
                 className="rounded-lg bg-slate-100 p-2 text-slate-800 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
               >
-                <div className="text-base font-extrabold text-blue-600">108</div>
+                <div className="text-base font-bold text-blue-600">108</div>
                 <div className="text-[10px] text-slate-500 dark:text-slate-400">Ambulance</div>
               </a>
               <a
                 href="tel:1070"
                 className="rounded-lg bg-slate-100 p-2 text-slate-800 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
               >
-                <div className="text-base font-extrabold text-emerald-600">1070</div>
+                <div className="text-base font-bold text-emerald-600">1070</div>
                 <div className="text-[10px] text-slate-500 dark:text-slate-400">Disaster Control</div>
               </a>
             </div>
@@ -354,3 +528,4 @@ export default function SOS() {
     </div>
   )
 }
+

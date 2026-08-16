@@ -51,12 +51,12 @@ export default function Communications() {
 
   return (
     <div className="max-w-xl">
-      <h1 className="text-2xl font-bold">Multi-channel alert broadcaster</h1>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Multi-channel alert broadcaster</h1>
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
         Push warnings across SMS, WhatsApp, and the public web channel.
       </p>
 
-      <div className="mt-4 space-y-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6">
+      <div className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
         <Field label="Severity">
           <div className="flex gap-2">
             {(['info', 'warning', 'critical'] as AlertSeverity[]).map((s) => (

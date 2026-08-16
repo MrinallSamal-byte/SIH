@@ -45,26 +45,104 @@ export function fileToDataUrl(file: File): Promise<string> {
   })
 }
 
-/** Browser geolocation helper with a friendly fallback. */
-export function getCurrentPosition(): Promise<GeolocationPosition> {
+/** Client-side image compression to prevent HTTP 413 timeouts on congested 2G/3G disaster cellular networks. */
+export function compressImage(file: File, maxWidth = 1200, quality = 0.75): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = (e) => {
+      const img = new Image()
+      img.src = String(e.target?.result)
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let width = img.width
+        let height = img.height
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width)
+          width = maxWidth
+        }
+
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          resolve(String(e.target?.result))
+          return
+        }
+        ctx.drawImage(img, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/jpeg', quality))
+      }
+      img.onerror = reject
+    }
+    reader.onerror = reject
+  })
+}
+
+/** Browser geolocation helper with configurable accuracy and timeout. */
+export function getCurrentPosition(enableHighAccuracy = true, timeout = 8000): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
     if (!('geolocation' in navigator)) {
       reject(new Error('Geolocation not supported'))
       return
     }
     navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
-      timeout: 8000,
-      maximumAge: 0,
+      enableHighAccuracy,
+      timeout,
+      maximumAge: enableHighAccuracy ? 5000 : 30000,
     })
   })
 }
 
-/** Reverse-geocode a coordinate to a human-readable address (OpenStreetMap Nominatim). */
+/** Reverse-geocode a coordinate to a human-readable address with safe error handling and fallback. */
 export async function reverseGeocode(point: GeoPoint): Promise<string | null> {
-  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&lat=${point.lat}&lon=${point.lng}`
-  const res = await fetch(url)
-  if (!res.ok) return null
-  const data: { display_name?: string } = await res.json()
-  return data.display_name ?? null
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&lat=${point.lat}&lon=${point.lng}`
+    const res = await fetch(url, {
+      headers: {
+        Accept: 'application/json',
+      },
+    })
+    if (!res.ok) return null
+    const data: { display_name?: string } = await res.json()
+    return data.display_name ?? null
+  } catch {
+    return null
+  }
 }
+
+/** Generates native navigation deep-links for Google Maps, Apple Maps, and OpenStreetMap. */
+export function getNavigationUrl(lat: number, lng: number): string {
+  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+}
+
+/** Offline Emergency SMS string generator (National SOS 112). */
+export function generateEmergencySms(options: {
+  lat?: number
+  lng?: number
+  name?: string
+  type?: string
+  phone?: string
+}): string {
+  const parts = ['EMERGENCY SOS']
+  if (options.type) parts.push(`TYPE:${options.type.toUpperCase()}`)
+  if (options.name) parts.push(`NAME:${options.name}`)
+  if (options.phone) parts.push(`PHONE:${options.phone}`)
+  if (options.lat && options.lng) {
+    parts.push(`GPS:${options.lat.toFixed(5)},${options.lng.toFixed(5)}`)
+    parts.push(`MAPS:https://maps.google.com/?q=${options.lat},${options.lng}`)
+  }
+  const body = encodeURIComponent(parts.join(' | '))
+  return `sms:112?body=${body}`
+}
+
+/** Privacy masking for phone numbers in public registries (e.g. +91-98765***12). */
+export function maskPhone(phone: string | null | undefined): string {
+  if (!phone) return '—'
+  const clean = phone.trim()
+  if (clean.length <= 5) return '*****'
+  const start = clean.slice(0, clean.length - 5)
+  const end = clean.slice(-2)
+  return `${start}***${end}`
+}
+

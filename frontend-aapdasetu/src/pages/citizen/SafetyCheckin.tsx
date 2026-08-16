@@ -5,7 +5,7 @@ import Button from '../../components/common/Button'
 import Badge from '../../components/common/Badge'
 import Loader from '../../components/common/Loader'
 import { useToast } from '../../components/common/Toast'
-import { getCurrentPosition, formatDateTime } from '../../lib/helpers'
+import { getCurrentPosition, formatDateTime, maskPhone } from '../../lib/helpers'
 import type { CheckinStatus, SafetyCheckin } from '../../types'
 
 type ActiveTab = 'checkin' | 'search'
@@ -100,8 +100,8 @@ export default function SafetyCheckinPage() {
 
   return (
     <div className="mx-auto max-w-xl">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Disaster Safety Check-in</h1>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Disaster Safety Check-in</h1>
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
         Let family, relatives, and disaster authorities know your current status and location.
       </p>
 
@@ -111,13 +111,13 @@ export default function SafetyCheckinPage() {
           variant={activeTab === 'checkin' ? 'primary' : 'outline'}
           onClick={() => setActiveTab('checkin')}
         >
-          ✍️ My Safety Check-in
+          My Safety Check-in
         </Button>
         <Button
           variant={activeTab === 'search' ? 'primary' : 'outline'}
           onClick={() => setActiveTab('search')}
         >
-          🔍 Search Family / Friends
+          Search Family / Friends
         </Button>
       </div>
 
@@ -128,13 +128,13 @@ export default function SafetyCheckinPage() {
               <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
                 ✓ Status Recorded
               </div>
-              <h2 className="text-xl font-black text-emerald-900 dark:text-emerald-100">
+              <h2 className="text-xl font-bold text-emerald-900 dark:text-emerald-100">
                 {confirm.status === 'safe' ? 'You are Marked as SAFE' : 'Assistance Request Logged'}
               </h2>
               <p className="text-xs text-slate-600 dark:text-slate-300">
                 Your family, relatives, and rescue teams can now verify your status in the public registry.
                 {confirm.locationName && (
-                  <span className="block mt-1 font-semibold">📍 Location: {confirm.locationName}</span>
+                  <span className="block mt-1 font-semibold">Location: {confirm.locationName}</span>
                 )}
               </p>
 
@@ -167,14 +167,14 @@ export default function SafetyCheckinPage() {
                   className="flex-1 font-bold"
                   onClick={() => setStatus('safe')}
                 >
-                  🟢 I am Safe
+                  I am Safe
                 </Button>
                 <Button
                   variant={status === 'need_assistance' ? 'danger' : 'outline'}
                   className="flex-1 font-bold"
                   onClick={() => setStatus('need_assistance')}
                 >
-                  🚨 Need Assistance
+                  Need Assistance
                 </Button>
               </div>
 
@@ -267,7 +267,7 @@ export default function SafetyCheckinPage() {
                         {item.fullName}
                       </div>
                       <div className="text-xs text-slate-500 dark:text-slate-400">
-                        📞 {item.phone ?? 'Contact on file'}
+                        {maskPhone(item.phone)}
                       </div>
                     </div>
                     <Badge value={item.status} />
@@ -275,7 +275,7 @@ export default function SafetyCheckinPage() {
 
                   {item.locationName && (
                     <div className="mt-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      📍 {item.locationName}
+                      {item.locationName}
                     </div>
                   )}
 

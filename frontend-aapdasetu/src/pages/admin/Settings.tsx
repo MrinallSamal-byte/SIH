@@ -52,8 +52,8 @@ export default function Settings() {
 
   return (
     <div className="max-w-xl">
-      <h1 className="text-2xl font-bold">System settings & API integrations</h1>
-      <p className="mt-1 text-sm text-slate-500">
+      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">System settings & API integrations</h1>
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
         Admin portal for API credentials and default thresholds. Server-side credentials are NEVER bundled into the
         frontend.
       </p>

@@ -37,8 +37,8 @@ export default function Analytics() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">Crisis analytics</h1>
-      <p className="mt-1 text-sm text-slate-500">Incident trends, priority distribution, and response timelines.</p>
+      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Crisis analytics</h1>
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Incident trends, priority distribution, and response timelines.</p>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         <Card title="Incidents by type">

@@ -16,10 +16,10 @@ export default function AuditLogs() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">Compliance & security audit log</h1>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Read-only record of every admin action, status change, and login event.</p>
+      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Compliance & security audit log</h1>
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Read-only record of every admin action, status change, and login event.</p>
 
-      <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+      <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900">
         <table className="w-full text-left text-sm">
           <thead className="border-b bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400">
             <tr>

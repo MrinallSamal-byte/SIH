@@ -2,23 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
-  font-family:
-    'Poppins', 'Noto Sans Devanagari', 'Noto Sans Oriya', system-ui, -apple-system, sans-serif;
+@layer base {
+  html {
+    font-family: 'Plus Jakarta Sans', 'Inter', 'Noto Sans Devanagari', 'Noto Sans Oriya', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 selection:bg-blue-600 selection:text-white dark:bg-slate-950 dark:text-slate-100;
+  }
+
+  input, select, textarea, button {
+    font-family: inherit;
+  }
 }
 
-@keyframes slide-in {
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-slate-300 dark:bg-slate-700;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-400 dark:bg-slate-600;
+}
+
+/* Subtle page enter transition */
+@keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateX(24px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateY(0);
   }
 }
 
-.animate-slide-in {
-  animation: slide-in 0.3s ease-out both;
+.animate-page-enter {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+

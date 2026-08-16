@@ -25,12 +25,12 @@ export default function MissingPersons() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">Missing persons registry</h1>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Case management and match tracking.</p>
+      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Missing persons registry</h1>
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Case management and match tracking.</p>
 
       <div className="mt-4 space-y-3">
         {persons.map((p) => (
-          <div key={p.id} className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 p-4">
+          <div key={p.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-semibold">{p.name}</span>
               <span className="text-xs text-slate-500 dark:text-slate-400">{p.age !== undefined ? `age ${p.age}` : ''} · {p.gender ?? ''}</span>

@@ -21,12 +21,12 @@ export default function Volunteers() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">Volunteer roster & skill dispatch</h1>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Skills: medical · search_rescue · driving · logistics</p>
+      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Volunteer roster & skill dispatch</h1>
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Skills: medical · search_rescue · driving · logistics</p>
 
       <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         {volunteers.map((v) => (
-          <div key={v.id} className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4">
+          <div key={v.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-center justify-between">
               <div className="font-semibold">{v.name}</div>
               <Badge value={v.status} />

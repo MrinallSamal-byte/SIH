@@ -140,6 +140,14 @@ export async function updateReportStatus(input: {
   if (input.resolutionNotes !== undefined) data.resolutionNotes = input.resolutionNotes;
   if (input.status === 'resolved') data.resolvedAt = new Date();
 
+  // If resolving report, release the assigned volunteer back to available
+  if (input.status === 'resolved' && existing.assignedVolunteerId) {
+    await prisma.volunteer.update({
+      where: { id: existing.assignedVolunteerId },
+      data: { status: 'available' },
+    }).catch(() => {});
+  }
+
   const report = await prisma.report.update({ where: { id: input.id }, data });
 
   await writeAuditLog({
@@ -169,10 +177,18 @@ export async function assignDispatch(input: {
   const report = await prisma.report.findUnique({ where: { id: input.id } });
   if (!report) throw new NotFoundError('Report not found');
 
+  // If reassigning away from a previous volunteer, release the old volunteer back to available
+  if (report.assignedVolunteerId && report.assignedVolunteerId !== input.volunteerId) {
+    await prisma.volunteer.update({
+      where: { id: report.assignedVolunteerId },
+      data: { status: 'available' },
+    }).catch(() => {});
+  }
+
   if (input.volunteerId) {
     const volunteer = await prisma.volunteer.findUnique({ where: { id: input.volunteerId } });
     if (!volunteer) throw new NotFoundError('Volunteer not found');
-    if (volunteer.status !== 'available') {
+    if (volunteer.status !== 'available' && report.assignedVolunteerId !== input.volunteerId) {
       throw new ConflictError('Volunteer is not available for dispatch');
     }
     await prisma.volunteer.update({

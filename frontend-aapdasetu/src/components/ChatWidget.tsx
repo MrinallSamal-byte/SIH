@@ -3,6 +3,7 @@ import { aiPfaChat } from '../api/ai'
 import { createReport } from '../api/endpoints'
 import { useToast } from './common/Toast'
 import { useLanguage } from '../lib/i18n'
+import { getCurrentPosition } from '../lib/helpers'
 import type { PfaChatMessage } from '../types'
 
 export default function ChatWidget() {
@@ -70,11 +71,21 @@ export default function ChatWidget() {
 
     setSubmittingCallback(msgIndex)
     try {
+      let lat = 22.5726
+      let lng = 88.3639
+      try {
+        const pos = await getCurrentPosition(false, 3000)
+        lat = pos.coords.latitude
+        lng = pos.coords.longitude
+      } catch {}
+
       const report = await createReport({
         type: 'other',
         isOneTapSos: true,
         reporterPhone: phone,
         description: `Chatbot Critical Distress Callback: ${userPromptText.slice(0, 120)}`,
+        location: { lat, lng },
+        landmark: 'AI Psychological First-Aid Callback Request',
       })
 
       setMessages((prev) =>
@@ -103,22 +114,22 @@ export default function ChatWidget() {
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3">
       {open && (
-        <div className="flex h-[32rem] w-[min(94vw,25rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+        <div className="flex h-[32rem] w-[min(94vw,25rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-900">
           {/* Header */}
-          <div className="flex items-center justify-between gap-2 bg-gradient-to-r from-blue-600 to-indigo-700 px-4 py-3 text-white">
+          <div className="flex items-center justify-between gap-2 border-b border-slate-800 bg-slate-900 px-4 py-3 text-white">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 text-sm">
-                🤖
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-600 font-bold text-xs">
+                AI
               </span>
               <div className="min-w-0">
-                <h2 className="text-sm font-bold truncate">AapdaSetu AI Assistant</h2>
-                <p className="truncate text-[11px] text-blue-100">Disaster Survival, First Aid & PFA</p>
+                <h2 className="text-xs font-bold truncate text-white">Disaster First-Aid & Triage</h2>
+                <p className="truncate text-[10px] text-slate-400">Survival assistance & mental health</p>
               </div>
             </div>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="shrink-0 rounded-md p-1 transition hover:bg-white/20"
+              className="shrink-0 rounded-md p-1 text-slate-400 transition hover:bg-slate-800 hover:text-white"
               aria-label={t('common.close')}
             >
               <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -157,7 +168,7 @@ export default function ChatWidget() {
                         </span>
                         <a
                           href={`tel:${m.helpline || '108'}`}
-                          className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2.5 py-1 text-[11px] font-black text-white shadow-sm hover:bg-red-700"
+                          className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-xs hover:bg-red-700"
                         >
                           📞 Call {m.helpline || '108'}
                         </a>
@@ -211,7 +222,7 @@ export default function ChatWidget() {
             {busy && (
               <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 italic">
                 <span className="h-2 w-2 animate-bounce rounded-full bg-blue-500" />
-                <span>AI Companion is thinking…</span>
+                <span>Generating response…</span>
               </div>
             )}
             <div ref={bottomRef} />
@@ -260,11 +271,11 @@ export default function ChatWidget() {
           <button
             type="button"
             onClick={() => setDismissed(true)}
-            className="rounded-full bg-white/90 p-1.5 text-xs text-slate-500 shadow-md transition hover:text-slate-800 dark:bg-slate-800/90 dark:text-slate-300 dark:hover:text-white"
+            className="rounded-full border border-slate-200 bg-white p-1 text-slate-400 shadow-sm transition hover:text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:hover:text-slate-200"
             aria-label={t('common.close')}
             title={t('common.close')}
           >
-            <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+            <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
               <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
             </svg>
           </button>
@@ -272,10 +283,10 @@ export default function ChatWidget() {
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-xl transition hover:scale-105 active:scale-95"
+          className="flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-white shadow-md transition hover:bg-slate-800 dark:border-slate-200 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
         >
-          <span className="text-base">🤖</span>
-          <span>{open ? t('common.close') : 'Disaster AI Assistant'}</span>
+          <span className="flex h-4 w-4 items-center justify-center rounded bg-blue-500 font-bold text-[10px] text-white">?</span>
+          <span>{open ? t('common.close') : 'First Aid & Companion'}</span>
         </button>
       </div>
     </div>

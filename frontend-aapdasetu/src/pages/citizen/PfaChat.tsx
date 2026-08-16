@@ -3,6 +3,7 @@ import { aiPfaChat } from '../../api/ai'
 import { createReport } from '../../api/endpoints'
 import { useToast } from '../../components/common/Toast'
 import { useLanguage } from '../../lib/i18n'
+import { getCurrentPosition } from '../../lib/helpers'
 import type { PfaChatMessage } from '../../types'
 
 const promptShortcuts = [
@@ -34,7 +35,7 @@ export default function PfaChatPage() {
           role: 'bot',
           content:
             t('chat.greeting') ||
-            'Hello, I am your AapdaSetu AI Disaster Companion. I am trained in emergency first aid, psychological grounding, flood/fire survival, and rescue triage. How are you and your family right now?',
+            'Hello. This is AapdaSetu emergency first aid and psychological support. We can help with injury triage, survival guidance, grounding exercises, and connecting you with rescue services. How are you and your family right now?',
         },
       ])
     }
@@ -98,11 +99,21 @@ export default function PfaChatPage() {
 
     setSubmittingCallback(msgIndex)
     try {
+      let lat = 22.5726
+      let lng = 88.3639
+      try {
+        const pos = await getCurrentPosition(false, 3000)
+        lat = pos.coords.latitude
+        lng = pos.coords.longitude
+      } catch {}
+
       const report = await createReport({
         type: 'other',
         isOneTapSos: true,
         reporterPhone: phone,
         description: `AI Companion Critical Rescue Request: ${userPromptText.slice(0, 120)}`,
+        location: { lat, lng },
+        landmark: 'AI Mental Health & First-Aid Emergency Escalation',
       })
 
       setMessages((prev) =>
@@ -129,21 +140,20 @@ export default function PfaChatPage() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col h-[calc(100vh-7.5rem)]">
       {/* Top Banner */}
-      <div className="flex items-center justify-between rounded-t-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex items-center justify-between rounded-t-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-xl text-white shadow-md">
-            🧘
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900 font-bold text-white text-xs dark:bg-slate-100 dark:text-slate-900">
+            PFA
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <span>AI Disaster Companion & PFA</span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-                Live 24/7
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <span>Psychological First Aid & First-Aid Companion</span>
+              <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                Online
               </span>
             </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Instant survival guidance, psychological first aid & direct emergency 108 escalation.
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Immediate disaster coping, bleeding/injury triage & emergency 108 escalation.
             </p>
           </div>
         </div>
@@ -151,28 +161,28 @@ export default function PfaChatPage() {
         <button
           type="button"
           onClick={() => setBreathingActive((b) => !b)}
-          className={`rounded-xl px-3.5 py-2 text-xs font-bold transition shadow-sm ${
+          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
             breathingActive
-              ? 'bg-emerald-600 text-white shadow-emerald-200'
+              ? 'bg-emerald-600 text-white'
               : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
           }`}
         >
-          {breathingActive ? '⏹ Stop Breath Coach' : '🌬️ 4-4-4 Box Breath Coach'}
+          {breathingActive ? 'Stop Breath Coach' : '4-4-4 Box Breathing'}
         </button>
       </div>
 
       {/* Breathing Coach Interactive Bar */}
       {breathingActive && (
-        <div className="flex items-center justify-center gap-4 border-x border-slate-200 bg-blue-50/90 py-3 dark:border-slate-800 dark:bg-blue-950/40">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 font-bold text-white shadow-lg animate-pulse">
-            {breathPhase === 'Inhale' ? '⬆️' : breathPhase === 'Hold' ? '⏸️' : '⬇️'}
+        <div className="flex items-center justify-center gap-4 border-x border-slate-200 bg-slate-100 py-3 dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 font-bold text-white text-xs dark:bg-slate-100 dark:text-slate-900">
+            {breathPhase === 'Inhale' ? 'IN' : breathPhase === 'Hold' ? 'HOLD' : 'OUT'}
           </div>
           <div>
-            <div className="text-xs font-bold uppercase tracking-wider text-blue-900 dark:text-blue-300">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Guided 4-Second Box Breathing
             </div>
-            <div className="text-lg font-black text-blue-700 dark:text-blue-200">
-              {breathPhase.toUpperCase()} NOW...
+            <div className="text-sm font-bold text-slate-900 dark:text-slate-100">
+              {breathPhase.toUpperCase()} NOW
             </div>
           </div>
         </div>
@@ -204,8 +214,8 @@ export default function PfaChatPage() {
                 <div className="mt-3 space-y-3 rounded-xl border border-red-200 bg-white p-4 dark:border-red-900/50 dark:bg-slate-900 shadow-sm">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5 dark:border-slate-800">
                     <div>
-                      <span className="text-xs font-black uppercase tracking-wider text-red-600 dark:text-red-400">
-                        🚨 Emergency Helpline Available
+                      <span className="text-xs font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
+                        Emergency Helpline
                       </span>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">
                         Direct toll-free connection to medical & rescue ambulance dispatch
@@ -213,9 +223,9 @@ export default function PfaChatPage() {
                     </div>
                     <a
                       href={`tel:${m.helpline || '108'}`}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 px-3.5 py-1.5 text-xs font-black text-white shadow-md transition hover:bg-red-700 active:scale-95"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-red-700"
                     >
-                      📞 Call {m.helpline || '108'}
+                      Call {m.helpline || '108'}
                     </a>
                   </div>
 
@@ -269,7 +279,7 @@ export default function PfaChatPage() {
         {busy && (
           <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 italic">
             <span className="h-2 w-2 animate-bounce rounded-full bg-blue-500" />
-            <span>AI Companion is generating survival instructions…</span>
+            <span>Preparing response…</span>
           </div>
         )}
         <div ref={bottomRef} />

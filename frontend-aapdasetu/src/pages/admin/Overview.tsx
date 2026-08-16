@@ -22,13 +22,13 @@ export default function Overview() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">Overview & KPIs</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Overview & KPIs</h1>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Command center crisis gauge and live performance metrics.</p>
 
       <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-3">
         {cards.map((c) => (
           <Card key={c.label}>
-            <div className={`text-3xl font-bold ${c.color}`}>{c.value}</div>
+            <div className={`text-2xl font-bold tabular-nums ${c.color}`}>{c.value}</div>
             <div className="mt-1 text-xs text-slate-500">{c.label}</div>
           </Card>
         ))}
@@ -37,7 +37,7 @@ export default function Overview() {
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <Card title="Crisis severity gauge">
           <div className="flex items-center gap-4">
-            <div className="relative flex h-36 w-36 items-center justify-center rounded-full border-8 border-slate-100 dark:border-slate-600">
+            <div className="relative flex h-32 w-32 items-center justify-center rounded-full border-4 border-slate-100 dark:border-slate-600">
               <div
                 className="absolute inset-0 rounded-full"
                 style={{
@@ -46,7 +46,7 @@ export default function Overview() {
                   } ${kpis.crisisScore * 3.6}deg, transparent 0deg)`,
                 }}
               />
-              <div className="flex h-28 w-28 items-center justify-center rounded-full bg-white text-2xl font-bold dark:bg-slate-900">
+              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white text-xl font-bold dark:bg-slate-900">
                 {kpis.crisisScore}
               </div>
             </div>

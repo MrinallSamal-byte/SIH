@@ -27,14 +27,14 @@ export default function Shelters() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">Relief shelters & capacity</h1>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Update occupancy numbers and operational status.</p>
+      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Relief shelters & capacity</h1>
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Update occupancy numbers and operational status.</p>
 
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         {shelters.map((s) => {
           const pct = s.capacity ? Math.round((s.occupancy / s.capacity) * 100) : 0
           return (
-            <div key={s.id} className="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-950 p-4">
+            <div key={s.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-semibold">{s.name}</div>

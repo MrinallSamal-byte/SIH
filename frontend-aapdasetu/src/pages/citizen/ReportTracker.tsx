@@ -5,7 +5,8 @@ import { Field, Input } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import PriorityBadge from '../../components/common/PriorityBadge'
 import Loader from '../../components/common/Loader'
-import { formatDateTime } from '../../lib/helpers'
+import LeafletMap, { type MapMarker, type MapPolyline } from '../../components/map/LeafletMap'
+import { formatDateTime, haversineKm, getNavigationUrl } from '../../lib/helpers'
 import type { Report } from '../../types'
 
 const statusSteps: { key: Report['status']; title: string; desc: string }[] = [
@@ -20,7 +21,7 @@ export default function ReportTracker() {
   const [loading, setLoading] = useState(false)
   const [report, setReport] = useState<Report | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [autoRefresh, setAutoRefresh] = useState(false)
+  const [autoRefresh, setAutoRefresh] = useState(true)
   const [recentTracked, setRecentTracked] = useState<string[]>([])
 
   // Load recent tracked reports from localStorage
@@ -70,7 +71,7 @@ export default function ReportTracker() {
     }
   }, [searchParams, lookup])
 
-  // Auto-refresh polling every 6 seconds when incident is active
+  // Auto-refresh polling every 5 seconds when incident is active
   useEffect(() => {
     if (!autoRefresh || !report || report.status === 'resolved') return
 
@@ -78,25 +79,73 @@ export default function ReportTracker() {
       if (report.trackingId) {
         getReport(report.trackingId).then((updated) => setReport(updated)).catch(() => {})
       }
-    }, 6000)
+    }, 5000)
 
     return () => clearInterval(interval)
   }, [autoRefresh, report])
 
   const currentStepIdx = report ? (report.status === 'resolved' ? 2 : report.status === 'in_progress' ? 1 : 0) : -1
 
+  // Live Map Coordinates & Markers
+  const hasCoords = Boolean(report?.latitude && report?.longitude)
+  const incidentPoint = hasCoords ? { lat: report!.latitude!, lng: report!.longitude! } : { lat: 22.5726, lng: 88.3639 }
+
+  // Synthetic responder telemetry for visual real-time approach when in_progress
+  const responderPoint = (hasCoords && report?.status === 'in_progress')
+    ? { lat: report!.latitude! + 0.007, lng: report!.longitude! + 0.006 }
+    : null
+
+  const distanceKm = (hasCoords && responderPoint)
+    ? haversineKm(incidentPoint, responderPoint)
+    : null
+
+  const estimatedEtaMins = distanceKm ? Math.max(2, Math.round((distanceKm / 25) * 60)) : null
+
+  const mapMarkers: MapMarker[] = []
+  if (hasCoords) {
+    mapMarkers.push({
+      id: 'incident',
+      position: incidentPoint,
+      title: `Incident: ${report?.type.toUpperCase()}`,
+      subtitle: report?.landmark ?? 'Victim Location',
+      color: '#dc2626',
+      isSos: true,
+    })
+  }
+
+  if (responderPoint) {
+    mapMarkers.push({
+      id: 'responder',
+      position: responderPoint,
+      title: `Rescue Unit: ${report?.assignedVolunteerName ?? 'Field Responder'}`,
+      subtitle: `En Route — ETA ~${estimatedEtaMins} mins`,
+      color: '#2563eb',
+    })
+  }
+
+  const mapPolylines: MapPolyline[] = []
+  if (hasCoords && responderPoint) {
+    mapPolylines.push({
+      id: 'route',
+      points: [responderPoint, incidentPoint],
+      color: '#3b82f6',
+      dashed: true,
+      label: `Rescue Route (~${distanceKm?.toFixed(1)} km)`,
+    })
+  }
+
   return (
     <div className="mx-auto max-w-2xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Live Incident Tracker</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Live Incident Tracker</h1>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             Real-time status tracking for emergency SOS signals and incident reports.
           </p>
         </div>
         <div className="hidden sm:block">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
             Live Dispatch Network
           </span>
         </div>
@@ -125,7 +174,7 @@ export default function ReportTracker() {
             type="submit"
             onClick={() => lookup()}
             disabled={!trackingId.trim() || loading}
-            className="h-10 shrink-0"
+            className="h-10 shrink-0 font-bold"
           >
             {loading ? 'Searching…' : 'Track Incident'}
           </Button>
@@ -182,7 +231,7 @@ export default function ReportTracker() {
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4 dark:border-slate-800">
             <div>
               <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Incident Tracking ID</div>
-              <div className="font-mono text-2xl font-black text-slate-900 dark:text-slate-100">
+              <div className="font-mono text-2xl font-bold text-slate-900 dark:text-slate-100">
                 {report.trackingId}
               </div>
               <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -198,7 +247,7 @@ export default function ReportTracker() {
                   onClick={() => lookup(report.trackingId)}
                   className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                 >
-                  🔄 Refresh
+                  Refresh
                 </button>
                 <label className="flex cursor-pointer items-center gap-1.5 text-xs text-slate-500">
                   <input
@@ -207,11 +256,35 @@ export default function ReportTracker() {
                     onChange={(e) => setAutoRefresh(e.target.checked)}
                     className="rounded text-blue-600"
                   />
-                  <span>Auto-sync</span>
+                  <span>Live Sync</span>
                 </label>
               </div>
             </div>
           </div>
+
+          {/* Interactive Live Responder & Incident Map */}
+          {hasCoords && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <span>Live Response Map</span>
+                {responderPoint && distanceKm && (
+                  <span className="text-blue-600 dark:text-blue-400 font-bold">
+                    Responder ~{distanceKm.toFixed(1)} km away (ETA: ~{estimatedEtaMins} mins)
+                  </span>
+                )}
+              </div>
+              <div className="overflow-hidden rounded-xl border border-slate-200 shadow-inner dark:border-slate-800">
+                <LeafletMap
+                  center={incidentPoint}
+                  zoom={14}
+                  markers={mapMarkers}
+                  polylines={mapPolylines}
+                  height="260px"
+                  autoFit={Boolean(responderPoint)}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Real-Life Multi-Stage Timeline */}
           <div>
@@ -228,7 +301,7 @@ export default function ReportTracker() {
                       <div
                         className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition ${
                           isPassed
-                            ? 'bg-blue-600 text-white shadow-md'
+                            ? 'bg-blue-600 text-white shadow-sm'
                             : 'border border-slate-300 bg-slate-100 text-slate-400 dark:border-slate-700 dark:bg-slate-800'
                         }`}
                       >
@@ -282,33 +355,43 @@ export default function ReportTracker() {
             )}
             <InfoRow label="Description" value={report.description ?? '—'} />
             <InfoRow label="Reporter Contact" value={report.reporterPhone ?? '—'} />
-            <InfoRow label="Assigned Agency" value={report.assignedAgencyName ?? 'NDRF / SDRF Unit on Standby'} />
+            <InfoRow label="Assigned Agency" value={report.assignedAgencyName ?? 'NDRF / SDRF Command'} />
             <InfoRow label="Assigned Volunteer" value={report.assignedVolunteerName ?? 'Volunteer Team In-Queue'} />
             {report.resolutionNotes && (
               <InfoRow label="Resolution & Safety Notes" value={report.resolutionNotes} highlight />
             )}
           </div>
 
-          {/* Emergency Direct Help */}
+          {/* Direct Responder / Command Actions */}
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50 p-3.5 dark:border-blue-900/50 dark:bg-blue-950/30">
             <div>
               <div className="text-xs font-bold text-blue-900 dark:text-blue-300">Need Immediate Voice Assistance?</div>
               <div className="text-[11px] text-blue-700 dark:text-blue-400">
-                Call the Disaster Response Command Center hotline directly.
+                Connect with the Disaster Response Command Center hotline directly.
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              {hasCoords && (
+                <a
+                  href={getNavigationUrl(report.latitude!, report.longitude!)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"
+                >
+                  Map Directions
+                </a>
+              )}
               <a
                 href="tel:112"
                 className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-red-700"
               >
-                📞 Call 112
+                Call 112
               </a>
               <a
                 href="tel:1070"
                 className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700"
               >
-                📞 Call 1070
+                Call 1070
               </a>
             </div>
           </div>
@@ -332,3 +415,4 @@ function InfoRow({ label, value, highlight }: { label: string; value: string; hi
     </div>
   )
 }
+

@@ -481,3 +481,25 @@ export function getAnalytics(): Promise<AnalyticsData> {
     }
   }, mocks.analytics)
 }
+
+/** POST /api/v1/damage-assessment — persist disaster property damage relief claim. */
+export function createDamageAssessment(input: {
+  propertyAddress: string
+  latitude?: number
+  longitude?: number
+  structuralDamage: boolean
+  floodDepthMeters?: number
+  estimatedLossInr: number
+  claimantName?: string
+  claimantPhone: string
+}): Promise<{ id: string; status: string; compensation: number }> {
+  return withMockFallback(
+    () =>
+      apiCall<{ id: string; status: string; compensation: number }>('POST', '/api/v1/damage-assessment', input),
+    () => ({
+      id: `SDRF-${Date.now().toString(36).toUpperCase()}`,
+      status: 'pending_review',
+      compensation: input.estimatedLossInr,
+    }),
+  )
+}

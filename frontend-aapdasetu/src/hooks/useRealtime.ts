@@ -1,38 +1,45 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 /**
- * Realtime-ish data hook. Currently POLLS the REST API every `intervalMs`.
- *
- * @TODO BUILD (optional): the spec's realtime transport is Supabase
- * `postgres_changes` WebSockets. To enable, set VITE_SUPABASE_URL + anon key
- * (see .env.example) and swap the polling in this hook for:
- *
- *   const channel = supabase
- *     .channel('db-changes')
- *     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reports' },
- *       (payload) => setData(prev => [payload.new, ...(prev ?? [])]))
- *     .subscribe()
+ * Realtime-ish data hook with tab visibility awareness to save mobile battery
+ * and reduce backend load when the tab is backgrounded.
  */
 export function useRealtime<T>(fetcher: () => Promise<T>, intervalMs = 5000): T | null {
   const [data, setData] = useState<T | null>(null)
+  const fetcherRef = useRef(fetcher)
+  fetcherRef.current = fetcher
 
   useEffect(() => {
     let cancelled = false
-    const tick = async () => {
+
+    const execute = async () => {
+      // Pause background polling when tab is inactive to preserve responder battery
+      if (document.hidden) return
       try {
-        const result = await fetcher()
+        const result = await fetcherRef.current()
         if (!cancelled) setData(result)
       } catch {
-        // keep last known data
+        // Keep last known valid state on transient network glitch
       }
     }
-    tick()
-    const id = setInterval(tick, intervalMs)
+
+    execute()
+    const id = setInterval(execute, intervalMs)
+
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        execute()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
     return () => {
       cancelled = true
       clearInterval(id)
+      document.removeEventListener('visibilitychange', handleVisibility)
     }
-  }, [fetcher, intervalMs])
+  }, [intervalMs])
 
   return data
 }
+

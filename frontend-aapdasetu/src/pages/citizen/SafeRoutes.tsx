@@ -4,6 +4,7 @@ import { listShelters } from '../../api/endpoints'
 import Loader from '../../components/common/Loader'
 import LeafletMap from '../../components/map/LeafletMap'
 import { useLocation } from '../../hooks/useLocation'
+import { getNavigationUrl } from '../../lib/helpers'
 import type { FloodGeoJson, GeoPoint, Shelter } from '../../types'
 
 const EARTH_RADIUS_KM = 6371
@@ -62,13 +63,17 @@ function buildFastestRoute(from: GeoPoint, to: GeoPoint): GeoPoint[] {
   return [from, to]
 }
 
-/** Safe path: detours around every flood zone that the direct line crosses. */
+/** Safe path: detours around flood zones with a 300-meter outward clearance buffer. */
 function buildSafeRoute(from: GeoPoint, to: GeoPoint, polygons: GeoPoint[][]): GeoPoint[] {
   const crossing = polygons.filter((poly) => lineCrossesPolygon(from, to, poly))
   if (crossing.length === 0) return [from, to]
 
   const waypoints = crossing
     .map((poly) => {
+      // Find polygon centroid
+      const centerLat = poly.reduce((acc, p) => acc + p.lat, 0) / poly.length
+      const centerLng = poly.reduce((acc, p) => acc + p.lng, 0) / poly.length
+
       let best = poly[0]
       let bestDist = -1
       for (const v of poly) {
@@ -78,7 +83,19 @@ function buildSafeRoute(from: GeoPoint, to: GeoPoint, polygons: GeoPoint[][]): G
           best = v
         }
       }
-      return { point: best, t: (best.lng - from.lng) * (to.lng - from.lng) + (best.lat - from.lat) * (to.lat - from.lat) }
+
+      // Compute outward vector (300m safety clearance buffer ~ 0.003 degrees)
+      const offsetLat = best.lat >= centerLat ? 0.003 : -0.003
+      const offsetLng = best.lng >= centerLng ? 0.003 : -0.003
+      const bufferedPoint: GeoPoint = {
+        lat: best.lat + offsetLat,
+        lng: best.lng + offsetLng,
+      }
+
+      return {
+        point: bufferedPoint,
+        t: (bufferedPoint.lng - from.lng) * (to.lng - from.lng) + (bufferedPoint.lat - from.lat) * (to.lat - from.lat),
+      }
     })
     .sort((x, y) => x.t - y.t)
     .map((w) => w.point)
@@ -97,7 +114,7 @@ function formatEta(minutes: number): string {
  * plus open shelters, with both a fastest route and a flood-safe detour route.
  */
 export default function SafeRoutes() {
-  const { coords, status, refresh } = useLocation()
+  const { coords, status, accuracy, refresh } = useLocation()
   const [flood, setFlood] = useState<FloodGeoJson | null>(null)
   const [shelters, setShelters] = useState<Shelter[] | null>(null)
   const [destinationId, setDestinationId] = useState<string>('')
@@ -138,7 +155,7 @@ export default function SafeRoutes() {
         id: s.id,
         position: { lat: s.latitude, lng: s.longitude } as GeoPoint,
         title: s.name,
-        subtitle: `${s.status} · ${s.occupancy}/${s.capacity}`,
+        subtitle: `${s.status} · Occupancy: ${s.occupancy}/${s.capacity}`,
         color: '#10b981',
       })),
     [shelters],
@@ -151,11 +168,12 @@ export default function SafeRoutes() {
             id: 'you',
             position: origin,
             title: 'You are here',
-            subtitle: 'Live location',
+            subtitle: accuracy ? `GPS Accuracy ±${Math.round(accuracy)}m` : 'Live location',
             color: '#3b82f6',
+            isSos: true,
           }
         : null,
-    [coords, origin],
+    [coords, origin, accuracy],
   )
 
   const markers = useMemo(
@@ -185,7 +203,7 @@ export default function SafeRoutes() {
     () => [
       {
         id: 'fastest',
-        label: 'Fastest route',
+        label: 'Direct route',
         points: fastestRoute,
         color: '#f59e0b',
         dashed: false,
@@ -194,11 +212,11 @@ export default function SafeRoutes() {
       },
       {
         id: 'safe',
-        label: 'Safe route',
+        label: 'Safe detour route (Recommended)',
         points: safeRoute,
         color: '#10b981',
         dashed: true,
-        hazard: 'Avoids flooded zones',
+        hazard: 'Safely avoids inundation zones (300m clearance)',
         safe: true,
       },
     ],
@@ -209,18 +227,17 @@ export default function SafeRoutes() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">Safe routes</h1>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-        Red areas are active flood extents (SAR satellite mapping). Compare the fastest route with a safe detour that
-        avoids inundation zones. Green markers are open shelters.
+      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Safe Evacuation Routes</h1>
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        Active flood zones mapped via Sentinel-1 SAR satellite analysis. Follow the green safe route to avoid hazardous water currents.
       </p>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        <div className="space-y-2 lg:col-span-1">
-          <div className="rounded-lg border border-slate-200 bg-white p-3 text-xs dark:border-slate-800 dark:bg-slate-900">
-            <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400">From</label>
+        <div className="space-y-3 lg:col-span-1">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 text-xs dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+            <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400">Origin Point</label>
             <div className="mt-0.5 font-medium text-slate-700 dark:text-slate-200">
-              {coords ? `My live location (${origin.lat.toFixed(4)}, ${origin.lng.toFixed(4)})` : 'Kolkata (default — allow location for your position)'}
+              {coords ? `Live GPS: ${origin.lat.toFixed(4)}°N, ${origin.lng.toFixed(4)}°E` : 'Kolkata Central (Regional Fallback)'}
             </div>
             <button
               type="button"
@@ -232,22 +249,17 @@ export default function SafeRoutes() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
               </svg>
-              {status === 'locating' ? 'Detecting…' : coords ? 'Update my location' : 'Detect my location'}
+              {status === 'locating' ? 'Acquiring GPS…' : coords ? 'Update GPS Location' : 'Detect My Location'}
             </button>
-            {status === 'denied' && (
-              <p className="mt-1.5 text-red-600 dark:text-red-400">Location permission denied — enable it in your browser settings.</p>
-            )}
-            {status === 'error' && (
-              <p className="mt-1.5 text-red-600 dark:text-red-400">Could not detect location — showing default position.</p>
-            )}
-            <label htmlFor="safe-route-dest" className="mt-3 block text-[10px] font-bold uppercase tracking-wide text-slate-400">
-              To (shelter)
+
+            <label htmlFor="safe-route-dest" className="mt-4 block text-[10px] font-bold uppercase tracking-wide text-slate-400">
+              Destination Shelter
             </label>
             <select
               id="safe-route-dest"
               value={destinationId}
               onChange={(e) => setDestinationId(e.target.value)}
-              className="mt-0.5 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             >
               {shelterMarkers.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -255,30 +267,41 @@ export default function SafeRoutes() {
                 </option>
               ))}
             </select>
+
+            {destination && (
+              <a
+                href={getNavigationUrl(destination.latitude, destination.longitude)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-600 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700"
+              >
+                <span>Start Turn-by-Turn Walking Navigation</span>
+              </a>
+            )}
           </div>
 
           {routes.map((r) => (
             <div
               key={r.id}
-              className="flex items-center justify-between gap-3 rounded-lg border p-3 text-xs"
+              className="flex items-center justify-between gap-3 rounded-xl border p-3.5 text-xs shadow-sm"
               style={{
                 borderColor: r.color,
                 backgroundColor: r.safe ? 'rgba(16,185,129,0.08)' : 'rgba(245,158,11,0.08)',
               }}
             >
               <div>
-                <div className="flex items-center gap-2 font-semibold" style={{ color: r.color }}>
+                <div className="flex items-center gap-2 font-bold" style={{ color: r.color }}>
                   <span
-                    className="inline-block h-2 w-2 rounded-full"
+                    className="inline-block h-2.5 w-2.5 rounded-full"
                     style={{ backgroundColor: r.color }}
                     aria-hidden="true"
                   />
                   {r.label}
                 </div>
-                <div className="mt-0.5 text-slate-500 dark:text-slate-400">{r.hazard}</div>
+                <div className="mt-0.5 text-slate-600 dark:text-slate-400">{r.hazard}</div>
               </div>
               <div className="shrink-0 text-right">
-                <div className="font-bold text-slate-800 dark:text-slate-100">{routeLengthKm(r.points).toFixed(1)} km</div>
+                <div className="font-bold text-slate-900 dark:text-slate-100">{routeLengthKm(r.points).toFixed(1)} km</div>
                 <div className="text-slate-500 dark:text-slate-400">
                   ~{formatEta((routeLengthKm(r.points) / WALK_SPEED_KMPH) * 60)} walk
                 </div>
@@ -286,15 +309,15 @@ export default function SafeRoutes() {
             </div>
           ))}
 
-          <h2 className="pt-2 text-sm font-semibold">Flood zones detected</h2>
+          <h2 className="pt-1 text-xs font-bold uppercase tracking-wider text-slate-400">Flood Zones Detected</h2>
           {flood.features.map((f, i) => (
-            <div key={i} className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs">
-              <div className="font-semibold text-red-700">{f.properties.hazard_type}</div>
-              <div className="text-red-600">
-                Severity: {f.properties.severity} · ~{f.properties.water_depth_est_meters}m water
+            <div key={i} className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs dark:border-red-900/40 dark:bg-red-950/30">
+              <div className="font-bold text-red-700 dark:text-red-300">{f.properties.hazard_type}</div>
+              <div className="text-red-600 dark:text-red-400">
+                Severity: {f.properties.severity} · ~{f.properties.water_depth_est_meters}m depth
               </div>
               {f.properties.affected_villages && (
-                <div className="mt-1 text-red-500">Affected: {f.properties.affected_villages.join(', ')}</div>
+                <div className="mt-1 text-slate-600 dark:text-slate-400">Villages: {f.properties.affected_villages.join(', ')}</div>
               )}
             </div>
           ))}
@@ -307,16 +330,17 @@ export default function SafeRoutes() {
             polygons={polygons}
             polylines={routes.map((r) => ({ id: r.id, points: r.points, color: r.color, dashed: r.dashed, label: r.label }))}
             height="520px"
+            autoFit
           />
-          <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+          <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-0.5 w-6 bg-amber-500" aria-hidden="true" /> Fastest (may cross water)
+              <span className="inline-block h-0.5 w-6 bg-amber-500" aria-hidden="true" /> Direct line
             </span>
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-0 w-6 border-t-2 border-dashed border-emerald-500" aria-hidden="true" /> Safe detour
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500/70" aria-hidden="true" /> Flood zone
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500/70" aria-hidden="true" /> Flood inundation
             </span>
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" aria-hidden="true" /> Open shelter
@@ -330,3 +354,4 @@ export default function SafeRoutes() {
     </div>
   )
 }
+

@@ -47,17 +47,17 @@ export default function CheckIn() {
 
   return (
     <div className="max-w-md">
-      <h1 className="text-2xl font-bold">Volunteer check-in</h1>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-        Record your safe status (written to <code>safety_checkins</code>) and mark yourself available for dispatch.
+      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Volunteer Check-In</h1>
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        Record your safe status and mark yourself available.
       </p>
 
-      <div className="mt-4 space-y-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-6">
+      <div className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
         <Field label="Notes (optional)">
           <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. reached Sector V camp" />
         </Field>
         <Button onClick={submit} disabled={sending}>
-          {sending ? 'Checking in…' : 'Check in & go available'}
+          {sending ? 'Checking in…' : 'Check In & Go Available'}
         </Button>
       </div>
     </div>

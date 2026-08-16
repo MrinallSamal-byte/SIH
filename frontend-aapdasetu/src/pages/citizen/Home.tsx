@@ -1,28 +1,76 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { listAlerts } from '../../api/endpoints'
 import Badge from '../../components/common/Badge'
 import { useLanguage } from '../../lib/i18n'
 import { timeAgo } from '../../lib/helpers'
 import type { Alert } from '../../types'
 
-const features = [
-  { to: '/sos', icon: 'SOS', titleKey: 'nav.sos', desc: 'One-tap distress alert with live GPS + instant RED dispatch' },
-  { to: '/report', icon: 'FORM', titleKey: 'nav.report', desc: '7-type incident form with media upload and AI triage' },
-  { to: '/track', icon: 'TRACK', titleKey: 'nav.track', desc: 'Look up your incident status with a tracking ID' },
-  { to: '/check-in', icon: 'SAFE', titleKey: 'nav.checkin', desc: 'Tell family and responders you are safe' },
-  { to: '/shelters', icon: 'HOME', titleKey: 'nav.shelters', desc: 'Nearest open shelters with capacity and amenities' },
-  { to: '/alerts', icon: 'ALERT', titleKey: 'nav.alerts', desc: 'Live public warnings from the Command Center' },
-  { to: '/pfa-chat', icon: 'PFA', titleKey: 'nav.pfa', desc: 'Calm breathing and grounding while you wait' },
-  { to: '/report-damage', icon: 'DAMAGE', titleKey: 'nav.damage', desc: 'Anti-fraud photo damage assessment & SDRF payout' },
-  { to: '/missing-persons', icon: 'MISSING', titleKey: 'nav.missing', desc: 'Report or search for missing loved ones' },
-  { to: '/safe-routes', icon: 'ROUTE', titleKey: 'nav.routes', desc: 'Evacuation routes that avoid flooded zones' },
+interface ServiceCard {
+  to: string
+  titleKey: string
+  desc: string
+  tag?: string
+  urgent?: boolean
+}
+
+const emergencyServices: ServiceCard[] = [
+  {
+    to: '/sos',
+    titleKey: 'nav.sos',
+    desc: 'Instant GPS distress beacon dispatched immediately to NDRF & State Emergency Operations.',
+    tag: 'Life Threatening',
+    urgent: true,
+  },
+  {
+    to: '/report',
+    titleKey: 'nav.report',
+    desc: 'Report trapped victims, medical emergencies, food shortages, or infrastructure collapse.',
+    tag: 'Triage & Rescue',
+  },
+  {
+    to: '/shelters',
+    titleKey: 'nav.shelters',
+    desc: 'Locate nearest operational relief camps with real-time bed capacity, food, and medical stations.',
+    tag: 'Relief Camps',
+  },
+  {
+    to: '/safe-routes',
+    titleKey: 'nav.routes',
+    desc: 'Evacuation corridors dynamically routed around flooded perimeters and blocked highways.',
+    tag: 'Navigation',
+  },
+  {
+    to: '/missing-persons',
+    titleKey: 'nav.missing',
+    desc: 'Search missing person bulletins or report a missing family member with photo verification.',
+    tag: 'Registry',
+  },
+  {
+    to: '/check-in',
+    titleKey: 'nav.checkin',
+    desc: 'Mark yourself and family safe to reassure loved ones and reduce search team overhead.',
+    tag: 'Public Notice',
+  },
+  {
+    to: '/report-damage',
+    titleKey: 'nav.damage',
+    desc: 'Submit geotagged structural damage claims for SDRF / NDMA disaster relief compensation.',
+    tag: 'Relief Claims',
+  },
+  {
+    to: '/pfa-chat',
+    titleKey: 'nav.pfa',
+    desc: 'Psychological first aid, guided breathing exercises, and emergency medical companion.',
+    tag: 'First Aid',
+  },
 ]
 
 export default function Home() {
   const { t } = useLanguage()
+  const navigate = useNavigate()
   const [alerts, setAlerts] = useState<Alert[] | null>(null)
-  const toolsRef = useRef<HTMLDivElement | null>(null)
+  const [quickTrackId, setQuickTrackId] = useState('')
 
   useEffect(() => {
     let active = true
@@ -34,136 +82,140 @@ export default function Home() {
     }
   }, [])
 
-  const scrollTools = (direction: 'next' | 'prev') => {
-    const container = toolsRef.current
-    if (!container) return
-
-    const firstCard = container.querySelector<HTMLElement>('[data-tool-card]')
-    const gap = 16
-    const cardWidth = firstCard ? firstCard.offsetWidth + gap : 320
-
-    container.scrollBy({
-      left: direction === 'next' ? cardWidth : -cardWidth,
-      behavior: 'smooth',
-    })
+  const handleTrackSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (quickTrackId.trim()) {
+      navigate(`/track?id=${encodeURIComponent(quickTrackId.trim())}`)
+    }
   }
 
   return (
     <div className="space-y-8">
-      <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-800">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-          {t('app.name')} <span className="text-base font-normal text-slate-500 dark:text-slate-400">— {t('app.tagline')}</span>
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Zero-login emergency tools for victims, real-time AI triage, shelter finder, PFA chatbot, and safe
-          evacuation routes. Built for high-density, low-infrastructure disaster zones.
-        </p>
-        <Link
-          to="/sos"
-          className="mt-4 inline-block rounded-lg bg-red-600 px-6 py-3 text-lg font-bold text-white hover:bg-red-700"
-        >
-          {t('sos.trigger')}
-        </Link>
+      {/* Top Emergency Incident Banner */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="max-w-2xl">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              Emergency Disaster Response
+            </h1>
+            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Report incidents without login, find nearby shelters, search missing persons, and access safe evacuation routes.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0">
+            <Link
+              to="/sos"
+              className="flex items-center justify-center gap-2 rounded-xl bg-red-600 px-6 py-3.5 text-sm font-bold text-white shadow-xs transition hover:bg-red-700"
+            >
+              <span>{t('sos.trigger')}</span>
+            </Link>
+
+            {/* Quick Status Lookup */}
+            <form onSubmit={handleTrackSubmit} className="flex gap-1.5">
+              <input
+                type="text"
+                value={quickTrackId}
+                onChange={(e) => setQuickTrackId(e.target.value)}
+                placeholder="Track ID (e.g. SOS-7890)"
+                className="w-full sm:w-48 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              />
+              <button
+                type="submit"
+                className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+              >
+                Track
+              </button>
+            </form>
+          </div>
+        </div>
       </section>
 
+      {/* Public Warning Feed */}
       <section>
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold dark:text-slate-100">Latest public warnings</h2>
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Official Warning Bulletins</h2>
+            <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+              Live Feed
+            </span>
+          </div>
           <Link
             to="/alerts"
-            className="rounded-md border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:border-blue-400 hover:bg-blue-50 hover:text-blue-800 dark:border-slate-700 dark:bg-slate-800 dark:text-blue-300 dark:hover:bg-slate-800"
+            className="text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
           >
-            View all alerts
+            All Bulletins →
           </Link>
         </div>
+
         {alerts === null ? (
-          <div className="text-sm text-slate-400">{t('common.loading')}</div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-400 dark:border-slate-800 dark:bg-slate-900">
+            {t('common.loading')}
+          </div>
         ) : alerts.length === 0 ? (
-          <div className="text-sm text-slate-400">No active alerts</div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900">
+            No critical weather or flood alerts currently in your sector.
+          </div>
         ) : (
-          <div className="space-y-2">
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
             {alerts.slice(0, 3).map((a) => (
-              <div key={a.id} className="flex items-start justify-between rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+              <div
+                key={a.id}
+                className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900"
+              >
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between gap-2">
                     <Badge value={a.severity} />
-                    <span className="text-sm font-semibold dark:text-slate-100">{a.title}</span>
+                    <span className="text-[11px] text-slate-400">{timeAgo(a.createdAt)}</span>
                   </div>
-                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{a.message}</p>
+                  <h3 className="mt-2 text-xs font-bold text-slate-900 dark:text-slate-100 line-clamp-1">{a.title}</h3>
+                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 line-clamp-2">{a.message}</p>
                 </div>
-                <span className="ml-3 shrink-0 text-xs text-slate-400">{timeAgo(a.createdAt)}</span>
               </div>
             ))}
           </div>
         )}
       </section>
 
+      {/* Core Emergency Services Grid */}
       <section>
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold dark:text-slate-100">Emergency tools</h2>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => scrollTools('prev')}
-              className="rounded-md border border-slate-300 bg-white p-2 text-slate-700 transition hover:border-blue-400 hover:text-blue-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:border-slate-500"
-              aria-label="Previous emergency tools"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path
-                  fillRule="evenodd"
-                  d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.83 10l3.94 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollTools('next')}
-              className="rounded-md border border-slate-300 bg-white p-2 text-slate-700 transition hover:border-blue-400 hover:text-blue-800 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-500"
-              aria-label="Next emergency tools"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path
-                  fillRule="evenodd"
-                  d="M7.21 5.23a.75.75 0 0 1 1.02-.02l4.25 4.5a.75.75 0 0 1 0 1.08l-4.25 4.25a.75.75 0 1 1-1.04-1.08L11.17 10l-3.94-3.71a.75.75 0 0 1-.02-1.06Z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
-          </div>
+        <div className="mb-4">
+          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Disaster Response & Citizen Services</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Direct incident actions for affected citizens and search & rescue teams.</p>
         </div>
 
-        <div
-          ref={toolsRef}
-          className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-        >
-          {features.map((f) => (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {emergencyServices.map((service) => (
             <Link
-              key={f.to}
-              to={f.to}
-              data-tool-card
-              className="group min-h-[200px] w-[260px] shrink-0 snap-start rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md sm:w-[290px] dark:border-slate-800 dark:bg-slate-950 dark:hover:border-blue-500"
+              key={service.to}
+              to={service.to}
+              className={`group flex flex-col justify-between rounded-xl border bg-white p-5 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-sm dark:bg-slate-900 ${
+                service.urgent
+                  ? 'border-red-200 hover:border-red-400 dark:border-red-900/50 dark:hover:border-red-700'
+                  : 'border-slate-200 hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700'
+              }`}
             >
-              <div className="flex h-full flex-col">
-                <div className="inline-flex w-fit rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-800 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300">
-                  {f.icon}
-                </div>
-                <div className="mt-3 text-sm font-semibold text-slate-900 dark:text-slate-100">{t(f.titleKey)}</div>
-                <div className="mt-2 flex-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{f.desc}</div>
-                <div className="mt-4 flex justify-end">
-                  <svg
-                    className="h-4 w-4 text-blue-600 transition group-hover:translate-x-0.5 dark:text-blue-400"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    aria-hidden="true"
+              <div>
+                <div className="flex items-center justify-between">
+                  <span
+                    className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                      service.urgent
+                        ? 'bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300'
+                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                    }`}
                   >
-                    <path
-                      fillRule="evenodd"
-                      d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.23 5.29a.75.75 0 1 1 1.04-1.08l5.5 5.25a.75.75 0 0 1 0 1.08l-5.5 5.25a.75.75 0 1 1-1.04-1.08l4.158-3.96H3.75A.75.75 0 0 1 3 10Z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+                    {service.tag}
+                  </span>
+                  <span className="text-slate-400 transition group-hover:translate-x-1 group-hover:text-slate-700 dark:group-hover:text-slate-200 text-xs">
+                    →
+                  </span>
                 </div>
+                <h3 className="mt-3 text-sm font-bold text-slate-900 dark:text-slate-100">
+                  {t(service.titleKey)}
+                </h3>
+                <p className="mt-1.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                  {service.desc}
+                </p>
               </div>
             </Link>
           ))}
@@ -172,3 +224,4 @@ export default function Home() {
     </div>
   )
 }
+

@@ -164,7 +164,7 @@ export default function ReportForm() {
           <div className="flex items-center justify-between">
             <div>
               <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Tracking ID — Save this</div>
-              <div className="mt-0.5 font-mono text-2xl font-black text-slate-900 dark:text-slate-100">{result.trackingId}</div>
+              <div className="mt-0.5 font-mono text-2xl font-bold text-slate-900 dark:text-slate-100">{result.trackingId}</div>
             </div>
             <PriorityBadge label={result.priorityLabel} />
           </div>
@@ -194,23 +194,34 @@ export default function ReportForm() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-bold">Report an incident</h1>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">No login required. A tracking ID lets you follow the response.</p>
+      <div className="mb-5">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Report Disaster Incident & Need Help</h1>
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Zero authentication required. A tracking ID will be generated to follow rescue response.</p>
+      </div>
 
-      <div className="mt-4 flex gap-1">
+      {/* Modern Segmented Progress Bar */}
+      <div className="mb-4 grid grid-cols-4 gap-2">
         {steps.map((s, i) => (
-          <div
+          <button
             key={s}
-            className={`flex-1 rounded-t-lg border-b-2 px-3 py-2 text-center text-xs font-semibold ${
-              i === step ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500'
+            type="button"
+            onClick={() => i < step && setStep(i)}
+            disabled={i > step}
+            className={`rounded-lg px-2.5 py-2 text-left text-xs font-bold transition-all ${
+              i === step
+                ? 'border border-slate-900 bg-slate-900 text-white shadow-xs dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900'
+                : i < step
+                ? 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
+                : 'border border-slate-100 bg-slate-50/60 text-slate-400 dark:border-slate-800/40 dark:bg-slate-900/30 dark:text-slate-600'
             }`}
           >
-            {s}
-          </div>
+            <div className="text-[10px] opacity-70">Step {i + 1}</div>
+            <div className="truncate">{s}</div>
+          </button>
         ))}
       </div>
 
-      <div className="rounded-b-xl rounded-tr-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
         {step === 0 && (
           <div className="space-y-4">
             <Field label="Incident type">

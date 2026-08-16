@@ -130,9 +130,9 @@ export async function assessDamage(input: DamageAssessmentInput): Promise<Damage
       locationDistanceM,
       classification: prediction.classification,
       confidence: prediction.confidence,
-      compensation,
+      compensation: prediction.confidence !== null ? compensation : 0,
       rawModelResponse: { classification: prediction.classification, confidence: prediction.confidence, sha256 },
-      status: 'approved',
+      status: prediction.confidence !== null && locationVerified ? 'approved' : 'flagged_fraud',
     },
   });
 
