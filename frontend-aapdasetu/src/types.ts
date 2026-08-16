@@ -201,6 +201,15 @@ export interface AdminUser {
   name: string
 }
 
+export interface VolunteerUser {
+  token: string
+  id: string
+  email: string
+  name: string
+  phone?: string
+  skills?: string[]
+}
+
 export interface PfaChatMessage {
   id?: string
   role: 'user' | 'bot'

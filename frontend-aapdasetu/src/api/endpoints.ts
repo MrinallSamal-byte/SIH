@@ -13,6 +13,7 @@ import type {
   SafetyCheckin,
   Shelter,
   Volunteer,
+  VolunteerUser,
 } from '../types'
 
 // =============================================================================
@@ -443,6 +444,37 @@ export function adminLogin(email: string, password: string): Promise<{ token: st
         password,
       }).then((d) => ({ token: d.token, email: d.admin.email, name: d.admin.name })),
     () => ({ token: 'mock-token', email, name: 'Admin' }),
+  )
+}
+
+/** POST /api/v1/volunteer/auth/login — volunteer auth with fallback. */
+export function volunteerLogin(email: string, password: string): Promise<VolunteerUser> {
+  return withMockFallback(
+    () =>
+      apiCall<{ token: string; volunteer: { id: string; email: string; name: string; phone?: string; skills?: string[] } }>(
+        'POST',
+        '/api/v1/volunteer/auth/login',
+        { email, password },
+      ).then((d) => ({
+        token: d.token,
+        id: d.volunteer.id,
+        email: d.volunteer.email,
+        name: d.volunteer.name,
+        phone: d.volunteer.phone,
+        skills: d.volunteer.skills,
+      })),
+    () => {
+      const vols = mocks.listVolunteers()
+      const found = vols[0]
+      return {
+        token: 'mock-volunteer-token',
+        id: found?.id || 'vol-001',
+        email,
+        name: found?.name || 'Rahul Sharma',
+        phone: found?.phone || '+91-9222222221',
+        skills: found?.skills || ['search_rescue', 'medical'],
+      }
+    },
   )
 }
 

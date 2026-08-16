@@ -30,19 +30,153 @@ export function aiTriage(input: ReportInput): Promise<TriageResult> {
   )
 }
 
-/** POST /ai/pfa-chat — Psychological First Aid & Emergency AI companion.
- * body: { message, victimName? }
- * resp: PfaChatResponse
- */
-export function aiPfaChat(message: string, victimName = 'Friend'): Promise<PfaChatResponse> {
-  return withMockFallback(
-    () =>
-      aiCall<PfaChatResponse>('POST', '/ai/pfa-chat', {
-        message,
-        victimName,
-      }),
-    () => mocks.aiPfaChat(message, victimName),
-  )
+// =============================================================================
+// OPENROUTER AI INTEGRATION (Free Tier Models)
+// -----------------------------------------------------------------------------
+const OPENROUTER_API_KEY =
+  import.meta.env.VITE_OPENROUTER_API_KEY ||
+  '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'
+
+export const OPENROUTER_FREE_MODELS = [
+  'nvidia/nemotron-3.5-lightning:free',
+  'google/gemma-4-31b-it:free',
+  'nvidia/nemotron-3-super-120b-a12b:free',
+  'openai/gpt-oss-20b:free',
+] as const
+
+const AAPDAMITRA_SYSTEM_PROMPT = `You are AapdaMitra AI (आपदामित्र), an elite, compassionate, and highly intelligent 24/7 Disaster Survival, Emergency Medical Triage, and Psychological First Aid AI Companion for the AapdaSetu Incident Response Platform.
+
+YOUR MISSION:
+Save lives, deliver precise actionable survival guidance, reduce panic, perform fast emergency medical triage, and escalate to authorities (National Emergency 112, Medical Ambulance 108, NDMA 1078, Police 100, Fire 101, Tele-MANAS 14416).
+
+CORE PROTOCOLS:
+1. IMMEDIATE ACTION FIRST: If the user is in danger (flooding, earthquake, building collapse, fire, gas leak, trapped under debris, drowning), give the immediate 3-4 life-saving actions in bold bullets first.
+2. MEDICAL FIRST AID:
+   - Severe Bleeding: Apply direct firm pressure with clean cloth, elevate, do not remove embedded objects.
+   - Choking: 5 back blows between shoulder blades followed by 5 abdominal thrusts (Heimlich).
+   - CPR: 100-120 chest compressions/min in center of chest for unresponsive victims.
+   - Burns: Cool with clean running water for 10-20 min. Never use ice, toothpaste, or butter.
+   - Snakebite: Keep victim calm, immobilize bitten limb below heart level, rush to nearest hospital for Anti-Snake Venom (ASV). Do not cut, suck venom, or apply tight tourniquet.
+   - Heatstroke: Move to shade, cool with wet cloths, fan vigorously, hydrate if conscious.
+3. PSYCHOLOGICAL FIRST AID & PANIC MANAGEMENT: If the user expresses panic, fear, trembling, or grief, speak with warmth and strength. Offer grounding techniques like 4-4-4 Box Breathing (Inhale 4s, Hold 4s, Exhale 4s) or 5-4-3-2-1 Sensory Grounding.
+4. MULTI-LINGUAL SUPPORT: Automatically detect and respond in English, Hindi, Hinglish, Bengali, Odia, Tamil, Telugu, Marathi, etc., matching the user's language smoothly.
+5. CONCISE & ACTIONABLE: Keep responses structured, easy to read under stress, prioritizing life over property. Always remind the user to stay safe and that emergency services can be reached at 112/108.`
+
+interface ChatHistoryItem {
+  role: 'user' | 'bot' | 'assistant' | 'system'
+  content: string
+}
+
+function detectCriticalDistress(text: string): boolean {
+  const lower = text.toLowerCase()
+  const criticalKeywords = [
+    'bleed', 'blood', 'hemorrhage', 'unconscious', 'fainted', 'trapped',
+    'drown', 'sinking', 'heart attack', 'chest pain', 'stroke', 'electrocute',
+    'severe burn', 'fire', 'choking', 'snake', 'snakebite', 'poison', 'collapse',
+    'debris', 'fracture', 'broken bone', 'खून', 'बेहोश', 'फंसा', 'डूब', 'हार्ट अटैक', 'सांप',
+    'रକ୍ତ', 'ଚେତାଶୂନ୍ୟ', 'ଫସିରହିଛି'
+  ]
+  return criticalKeywords.some((kw) => lower.includes(kw))
+}
+
+function detectBreathingExercise(text: string): string | undefined {
+  const lower = text.toLowerCase()
+  const panicKeywords = [
+    'panic', 'scared', 'afraid', 'fear', 'anxious', 'anxiety', 'hyperventilat',
+    'heart racing', 'shaking', 'trembling', 'breathe', 'breathing', 'grounding',
+    'डर', 'घबराहट', 'चिंता', 'सांस', 'ଡର', 'ଭୟ'
+  ]
+  if (panicKeywords.some((kw) => lower.includes(kw))) {
+    return '4-4-4_BOX_BREATHING'
+  }
+  return undefined
+}
+
+function cleanAiOutput(rawText: string): string {
+  // Strip <think>...</think> reasoning tags if present
+  let text = rawText.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
+  return text
+}
+
+async function callOpenRouter(
+  message: string,
+  history: ChatHistoryItem[] = []
+): Promise<string> {
+  const openRouterMessages = [
+    { role: 'system', content: AAPDAMITRA_SYSTEM_PROMPT },
+    ...history.slice(-8).map((h) => ({
+      role: h.role === 'bot' ? ('assistant' as const) : ('user' as const),
+      content: h.content,
+    })),
+    { role: 'user', content: message },
+  ]
+
+  let lastError: unknown = null
+
+  for (const model of OPENROUTER_FREE_MODELS) {
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://aapdasetu.in',
+          'X-Title': 'AapdaSetu Disaster Response Ecosystem',
+        },
+        body: JSON.stringify({
+          model,
+          messages: openRouterMessages,
+          temperature: 0.4,
+          max_tokens: 1024,
+        }),
+      })
+
+      if (!res.ok) {
+        const errorBody = await res.text()
+        console.warn(`[AapdaMitra AI] Model ${model} returned HTTP ${res.status}:`, errorBody)
+        continue
+      }
+
+      const data = await res.json()
+      const content = data?.choices?.[0]?.message?.content
+      if (content && typeof content === 'string' && content.trim().length > 0) {
+        return cleanAiOutput(content)
+      }
+    } catch (err) {
+      lastError = err
+      console.warn(`[AapdaMitra AI] Error requesting model ${model}:`, err)
+    }
+  }
+
+  throw lastError || new Error('All OpenRouter free models failed')
+}
+
+/** POST /ai/pfa-chat — Intelligent AapdaMitra AI Crisis & Survival Companion. */
+export async function aiPfaChat(
+  message: string,
+  history: ChatHistoryItem[] = [],
+  victimName = 'Friend'
+): Promise<PfaChatResponse> {
+  try {
+    const aiReply = await callOpenRouter(message, history)
+    const isCritical = detectCriticalDistress(message) || detectCriticalDistress(aiReply)
+    const exerciseType = detectBreathingExercise(message) || detectBreathingExercise(aiReply)
+
+    return {
+      reply: aiReply,
+      exerciseType,
+      isCritical,
+      helpline: isCritical ? '108' : undefined,
+      safetyChecklist: [
+        'Prioritize human life over property',
+        'Keep phone battery saved for emergency updates',
+        'National Emergency Helpline: 112 | Medical Ambulance: 108',
+      ],
+    }
+  } catch (err) {
+    console.warn('[AapdaMitra AI] Falling back to local crisis intelligence engine:', err)
+    return mocks.aiPfaChat(message, victimName)
+  }
 }
 
 

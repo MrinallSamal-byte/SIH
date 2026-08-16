@@ -61,8 +61,8 @@ const emergencyServices: ServiceCard[] = [
   {
     to: '/pfa-chat',
     titleKey: 'nav.pfa',
-    desc: 'Psychological first aid, guided breathing exercises, and emergency medical companion.',
-    tag: 'First Aid',
+    desc: '24/7 intelligent AI companion for real-time disaster survival tactics, medical triage, and trauma support.',
+    tag: 'AI Companion',
   },
 ]
 

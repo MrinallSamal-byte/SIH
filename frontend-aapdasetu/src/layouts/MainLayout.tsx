@@ -53,14 +53,9 @@ export default function MainLayout() {
             </span>
           </div>
 
-          <div className="flex items-center gap-3 text-[11px]">
-            <Link to="/admin/login" className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200">
-              Official Portal →
-            </Link>
-            <span className="text-slate-300 dark:text-slate-700">|</span>
-            <Link to="/volunteer" className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200">
-              Volunteer
-            </Link>
+          <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span>24x7 Emergency Services Active</span>
           </div>
         </div>
       </div>
@@ -188,7 +183,7 @@ export default function MainLayout() {
                   🏚️ SDRF Property Damage Assessment
                 </Link>
                 <Link to="/pfa-chat" className="px-3.5 py-1.5 text-slate-600 dark:text-slate-400">
-                  💬 Psychological First-Aid
+                  🤖 AapdaMitra AI Crisis Companion
                 </Link>
               </div>
             </div>
@@ -213,15 +208,10 @@ export default function MainLayout() {
 
           <div className="flex items-center gap-4">
             <a href="tel:112" className="text-red-600 hover:underline dark:text-red-400 font-medium">
-              Dial 112
+              Dial 112 Emergency
             </a>
-            <Link to="/admin/login" className="hover:text-slate-800 dark:hover:text-slate-200">
-              Admin Command
-            </Link>
-            <Link to="/volunteer" className="hover:text-slate-800 dark:hover:text-slate-200">
-              Volunteer Hub
-            </Link>
-            <span>© {year}</span>
+            <span className="text-slate-300 dark:text-slate-700">|</span>
+            <span>© {year} AapdaSetu Emergency Operations</span>
           </div>
         </div>
       </footer>

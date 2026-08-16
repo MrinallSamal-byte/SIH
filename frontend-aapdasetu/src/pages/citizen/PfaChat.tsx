@@ -7,12 +7,14 @@ import { getCurrentPosition } from '../../lib/helpers'
 import type { PfaChatMessage } from '../../types'
 
 const promptShortcuts = [
-  '🌊 Water is entering house / Drowning',
-  '🧘 I feel panicked and scared',
-  '🩸 First aid for bleeding wound',
+  '🌊 Water entering house / Flooding',
+  '🩸 First aid for severe bleeding',
+  '🧘 Panic / Help me calm down',
   '🏚️ Trapped under debris / collapse',
   '❤️ Chest pain / Heart attack advice',
-  '💧 Is flood water safe to drink?',
+  '⚡ Electric hazard & flood safety',
+  '🐍 Snakebite emergency protocol',
+  '🔥 Fire evacuation tactics',
 ]
 
 export default function PfaChatPage() {
@@ -35,7 +37,7 @@ export default function PfaChatPage() {
           role: 'bot',
           content:
             t('chat.greeting') ||
-            'Hello. This is AapdaSetu emergency first aid and psychological support. We can help with injury triage, survival guidance, grounding exercises, and connecting you with rescue services. How are you and your family right now?',
+            'Namaste! I am AapdaMitra AI (आपदामित्र), your 24/7 intelligent disaster survival, triage, and crisis companion. How can I help you and your family right now?',
         },
       ])
     }
@@ -62,11 +64,18 @@ export default function PfaChatPage() {
     if (!text || busy) return
 
     setInput('')
-    setMessages((prev) => [...prev, { id: `u-${Date.now()}`, role: 'user', content: text }])
+    const updatedMessages: PfaChatMessage[] = [
+      ...messages,
+      { id: `u-${Date.now()}`, role: 'user', content: text },
+    ]
+    setMessages(updatedMessages)
     setBusy(true)
 
     try {
-      const res = await aiPfaChat(text)
+      const res = await aiPfaChat(
+        text,
+        updatedMessages.map((m) => ({ role: m.role, content: m.content }))
+      )
       setMessages((prev) => [
         ...prev,
         {
@@ -83,7 +92,7 @@ export default function PfaChatPage() {
         setBreathingActive(true)
       }
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'AI Companion unreachable', 'error')
+      toast(err instanceof Error ? err.message : 'AapdaMitra AI unreachable', 'error')
     } finally {
       setBusy(false)
     }
@@ -111,9 +120,9 @@ export default function PfaChatPage() {
         type: 'other',
         isOneTapSos: true,
         reporterPhone: phone,
-        description: `AI Companion Critical Rescue Request: ${userPromptText.slice(0, 120)}`,
+        description: `AapdaMitra AI Critical Rescue Request: ${userPromptText.slice(0, 120)}`,
         location: { lat, lng },
-        landmark: 'AI Mental Health & First-Aid Emergency Escalation',
+        landmark: 'AapdaMitra AI Mental Health & First-Aid Emergency Escalation',
       })
 
       setMessages((prev) =>
@@ -142,18 +151,19 @@ export default function PfaChatPage() {
       {/* Top Banner */}
       <div className="flex items-center justify-between rounded-t-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900 font-bold text-white text-xs dark:bg-slate-100 dark:text-slate-900">
-            PFA
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 font-bold text-white text-lg shadow-xs">
+            🤖
           </div>
           <div>
-            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <span>Psychological First Aid & First-Aid Companion</span>
-              <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
-                Online
+            <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <span>AapdaMitra AI</span>
+              <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                NVIDIA Nemotron 3.5 (Free)
               </span>
             </h1>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Immediate disaster coping, bleeding/injury triage & emergency 108 escalation.
+              24/7 intelligent disaster survival guidance, emergency first-aid & trauma support.
             </p>
           </div>
         </div>
@@ -167,7 +177,7 @@ export default function PfaChatPage() {
               : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
           }`}
         >
-          {breathingActive ? 'Stop Breath Coach' : '4-4-4 Box Breathing'}
+          {breathingActive ? 'Stop Breath Coach' : '🧘 4-4-4 Box Breathing'}
         </button>
       </div>
 

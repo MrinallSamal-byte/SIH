@@ -38,10 +38,17 @@ export default function ChatWidget() {
     const text = (customText ?? input).trim()
     if (!text || busy) return
     setInput('')
-    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: 'user', content: text }])
+    const updatedMessages: PfaChatMessage[] = [
+      ...messages,
+      { id: `user-${Date.now()}`, role: 'user', content: text },
+    ]
+    setMessages(updatedMessages)
     setBusy(true)
     try {
-      const res = await aiPfaChat(text)
+      const res = await aiPfaChat(
+        text,
+        updatedMessages.map((m) => ({ role: m.role, content: m.content }))
+      )
       setMessages((prev) => [
         ...prev,
         {
@@ -55,7 +62,7 @@ export default function ChatWidget() {
         },
       ])
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Chatbot unreachable', 'error')
+      toast(err instanceof Error ? err.message : 'AapdaMitra AI unreachable', 'error')
     } finally {
       setBusy(false)
     }
@@ -83,9 +90,9 @@ export default function ChatWidget() {
         type: 'other',
         isOneTapSos: true,
         reporterPhone: phone,
-        description: `Chatbot Critical Distress Callback: ${userPromptText.slice(0, 120)}`,
+        description: `AapdaMitra AI Critical Distress Callback: ${userPromptText.slice(0, 120)}`,
         location: { lat, lng },
-        landmark: 'AI Psychological First-Aid Callback Request',
+        landmark: 'AapdaMitra AI Emergency Escalation',
       })
 
       setMessages((prev) =>
@@ -114,16 +121,21 @@ export default function ChatWidget() {
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3">
       {open && (
-        <div className="flex h-[32rem] w-[min(94vw,25rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex h-[32rem] w-[min(94vw,26rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900">
           {/* Header */}
           <div className="flex items-center justify-between gap-2 border-b border-slate-800 bg-slate-900 px-4 py-3 text-white">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-600 font-bold text-xs">
-                AI
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 font-bold text-xs shadow-xs text-white">
+                🤖
               </span>
               <div className="min-w-0">
-                <h2 className="text-xs font-bold truncate text-white">Disaster First-Aid & Triage</h2>
-                <p className="truncate text-[10px] text-slate-400">Survival assistance & mental health</p>
+                <div className="flex items-center gap-1.5">
+                  <h2 className="text-xs font-bold truncate text-white">AapdaMitra AI</h2>
+                  <span className="rounded bg-emerald-500/20 px-1.5 py-0.2 text-[9px] font-bold text-emerald-300">
+                    Nemotron 3.5
+                  </span>
+                </div>
+                <p className="truncate text-[10px] text-slate-400">24/7 Intelligent Crisis & Survival Companion</p>
               </div>
             </div>
             <button
@@ -133,7 +145,7 @@ export default function ChatWidget() {
               aria-label={t('common.close')}
             >
               <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06-1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
               </svg>
             </button>
           </div>
@@ -178,7 +190,7 @@ export default function ChatWidget() {
                       {!m.callbackSubmitted ? (
                         <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
                           <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                            Enter mobile number — we will reach you as soon as possible:
+                            Enter mobile number — emergency teams will reach you immediately:
                           </label>
                           <div className="flex gap-1.5">
                             <input
@@ -222,7 +234,7 @@ export default function ChatWidget() {
             {busy && (
               <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 italic">
                 <span className="h-2 w-2 animate-bounce rounded-full bg-blue-500" />
-                <span>Generating response…</span>
+                <span>AapdaMitra AI is thinking…</span>
               </div>
             )}
             <div ref={bottomRef} />
@@ -230,7 +242,7 @@ export default function ChatWidget() {
 
           {/* Quick Shortcuts */}
           <div className="flex gap-1.5 overflow-x-auto border-t border-slate-200 bg-white px-3 py-1.5 dark:border-slate-800 dark:bg-slate-900 [scrollbar-width:none]">
-            {['🌊 Trapped in water', '🩸 Bleeding wound', '🧘 Help me breathe', '❤️ Chest pain', '🏛️ Nearest shelter'].map(
+            {['🌊 Water entering house', '🩸 Bleeding wound', '🧘 Help me breathe', '❤️ Chest pain', '⚡ Electric hazard', '🐍 Snakebite protocol'].map(
               (prompt) => (
                 <button
                   key={prompt}
@@ -250,7 +262,7 @@ export default function ChatWidget() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && send()}
-              placeholder="Ask disaster guidance or describe situation…"
+              placeholder="Ask AapdaMitra AI (e.g. 'water rising', 'how to treat burn')…"
               className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2 text-xs sm:text-sm focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
             <button
@@ -283,10 +295,10 @@ export default function ChatWidget() {
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-bold text-white shadow-md transition hover:bg-slate-800 dark:border-slate-200 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+          className="flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-4 py-2.5 text-xs font-bold text-white shadow-lg transition hover:bg-slate-800 dark:border-slate-200 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
         >
-          <span className="flex h-4 w-4 items-center justify-center rounded bg-blue-500 font-bold text-[10px] text-white">?</span>
-          <span>{open ? t('common.close') : 'First Aid & Companion'}</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 font-bold text-[11px] text-white">🤖</span>
+          <span>{open ? t('common.close') : 'AapdaMitra AI Companion'}</span>
         </button>
       </div>
     </div>

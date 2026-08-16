@@ -28,6 +28,7 @@ import Analytics from './pages/admin/Analytics'
 import AuditLogs from './pages/admin/AuditLogs'
 import Settings from './pages/admin/Settings'
 
+import VolunteerLogin from './pages/volunteer/Login'
 import VolunteerDashboard from './pages/volunteer/Dashboard'
 import AssignedTasks from './pages/volunteer/AssignedTasks'
 import VolunteerCheckIn from './pages/volunteer/CheckIn'
@@ -50,6 +51,7 @@ export default function App() {
           <Route path="/pfa-chat" element={<PfaChat />} />
         </Route>
 
+        {/* Admin Portal (Protected) */}
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Overview />} />
@@ -65,11 +67,19 @@ export default function App() {
           <Route path="settings" element={<Settings />} />
         </Route>
 
+        {/* Volunteer Portal (Protected) */}
+        <Route path="/volunteer/login" element={<VolunteerLogin />} />
         <Route path="/volunteer" element={<VolunteerLayout />}>
           <Route index element={<VolunteerDashboard />} />
           <Route path="tasks" element={<AssignedTasks />} />
           <Route path="check-in" element={<VolunteerCheckIn />} />
         </Route>
+
+        {/* Aliases for direct URL typing & common variations */}
+        <Route path="/volunteers" element={<Navigate to="/volunteer" replace />} />
+        <Route path="/volienter" element={<Navigate to="/volunteer" replace />} />
+        <Route path="/volunter" element={<Navigate to="/volunteer" replace />} />
+        <Route path="/vorianters" element={<Navigate to="/volunteer" replace />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
