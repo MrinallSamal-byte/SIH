@@ -4,6 +4,7 @@ import android.util.Log
 import com.bitchat.android.model.RoutedPacket
 import com.bitchat.android.protocol.BitchatPacket
 import com.bitchat.android.protocol.MessageType
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
@@ -28,7 +29,7 @@ class FragmentingPacketSender(
     fun send(
         routed: RoutedPacket,
         description: String,
-        sendSingle: (RoutedPacket) -> Boolean
+        sendSingle: suspend (RoutedPacket) -> Boolean
     ): Boolean {
         val transferId = transferIdFor(routed)
         val packets = packetsForTransport(routed)
@@ -39,54 +40,51 @@ class FragmentingPacketSender(
             return false
         }
         val total = packets.size
-
-        if (total <= 1) {
-            if (transferId != null) {
-                TransferProgressManager.start(transferId, 1)
-            }
-            val sent = sendSingle(
-                routed.copy(
-                    packet = packets.first(),
-                    transferId = transferId,
-                    preparedPackets = null
-                )
-            )
-            if (transferId != null) {
-                if (sent) {
-                    TransferProgressManager.progress(transferId, 1, 1)
-                    TransferProgressManager.complete(transferId, 1)
-                } else {
-                    TransferProgressManager.fail(transferId)
-                }
-            }
-            return sent
+        if (total > 1) {
+            Log.d(logTag, "Fragmenting packet type ${routed.packet.type} into $total fragments for $description")
         }
-
-        Log.d(logTag, "Fragmenting packet type ${routed.packet.type} into $total fragments for $description")
-        if (transferId != null) {
-            TransferProgressManager.start(transferId, total)
-        }
+        if (transferId != null) TransferProgressManager.start(transferId, total)
 
         val job = scope.launch(start = CoroutineStart.LAZY) {
             var sent = 0
+            val pacedDelayMs = interFragmentDelayMs.coerceAtLeast(0L)
+
             for (packet in packets) {
-                if (!isActive) return@launch
-                if (transferId != null && transferJobs[transferId]?.isCancelled == true) return@launch
+                if (!isActive) {
+                    if (transferId != null) TransferProgressManager.fail(transferId)
+                    return@launch
+                }
 
                 val fragment = routed.copy(
                     packet = packet,
                     transferId = transferId,
                     preparedPackets = null
                 )
-                val delivered = try {
-                    sendSingle(fragment)
-                } catch (e: Exception) {
-                    Log.e(logTag, "Fragment send failed for $description: ${e.message}", e)
-                    false
+
+                var delivered = false
+                var attempts = 0
+                while (!delivered && attempts < 500 && isActive) {
+                    attempts++
+                    delivered = try {
+                        sendSingle(fragment)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.e(logTag, "Fragment send failed for $description: ${e.message}", e)
+                        false
+                    }
+
+                    if (!delivered && isActive) {
+                        // Progressive backoff: start at 25ms, grow to 200ms as BLE queue drains
+                        delay(25L * minOf(attempts, 8))
+                    }
                 }
 
                 if (!delivered) {
-                    Log.w(logTag, "Stopping fragmented send for $description after $sent/$total fragments")
+                    Log.w(logTag, "Stopping fragmented send for $description after $sent/$total fragments (attempts exceeded)")
+                    if (transferId != null) {
+                        TransferProgressManager.fail(transferId)
+                    }
                     return@launch
                 }
 
@@ -94,8 +92,8 @@ class FragmentingPacketSender(
                 if (transferId != null) {
                     TransferProgressManager.progress(transferId, sent, total)
                 }
-                if (sent < total) {
-                    delay(interFragmentDelayMs)
+                if (sent < total && pacedDelayMs > 0L) {
+                    delay(pacedDelayMs)
                 }
             }
 

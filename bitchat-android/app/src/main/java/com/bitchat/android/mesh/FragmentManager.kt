@@ -95,7 +95,7 @@ class FragmentManager {
             // Packet = Header + Sender + Recipient + Route + FragmentHeader + Payload + PaddingBuffer
             val hasRoute = packet.route != null
             val version = if (hasRoute) 2 else 1
-            val headerSize = if (version == 2) 15 else 13
+            val headerSize = if (version == 2) 16 else 14
             val senderSize = 8
             val recipientSize = if (packet.recipientID != null) 8 else 0
             // Route: 1 byte count + 8 bytes per hop
@@ -103,9 +103,9 @@ class FragmentManager {
             val fragmentHeaderSize = 13 // FragmentPayload header
             val paddingBuffer = 16 // MessagePadding.optimalBlockSize adds 16 bytes overhead
 
-            // 512 - Overhead
+            // 500 - Overhead to ensure it fits comfortably within a 512 MTU link
             val packetOverhead = headerSize + senderSize + recipientSize + routeSize + fragmentHeaderSize + paddingBuffer
-            val maxDataSize = (512 - packetOverhead).coerceAtMost(MAX_FRAGMENT_SIZE)
+            val maxDataSize = (500 - packetOverhead).coerceAtMost(MAX_FRAGMENT_SIZE)
 
             if (maxDataSize <= 0) {
                 Log.e(TAG, "Calculated maxDataSize is non-positive ($maxDataSize). Route too large?")
@@ -218,6 +218,9 @@ class FragmentManager {
                         System.currentTimeMillis()
                     )
                     fragmentCumulativeSize[fragmentIDString] = 0
+                    if (fragmentPayload.total > 1) {
+                        TransferProgressManager.start(fragmentIDString, fragmentPayload.total, isIncoming = true)
+                    }
                 }
 
                 val fragmentMap = incomingFragments[fragmentIDString]
@@ -258,24 +261,35 @@ class FragmentManager {
                 globalBufferedBytes += delta
 
                 val expectedTotal = fragmentMetadata[fragmentIDString]?.second ?: fragmentPayload.total
+                fragmentMetadata[fragmentIDString] = Triple(fragmentPayload.originalType, expectedTotal, System.currentTimeMillis())
+                if (expectedTotal > 1) {
+                    TransferProgressManager.progress(fragmentIDString, fragmentMap.size, expectedTotal, isIncoming = true)
+                }
+
                 if (fragmentMap.size == expectedTotal) {
-                    // iOS reassembly logic: for i in 0..<total { if let fragment = fragments[i] { reassembled.append(fragment) } }
-                    val reassembledData = mutableListOf<Byte>()
+                    // High-performance direct ByteArray reassembly (Zero-allocation / Zero-boxing)
+                    val totalBytes = newSize
+                    val reassembledByteArray = ByteArray(totalBytes)
+                    var destOffset = 0
                     for (i in 0 until expectedTotal) {
-                        fragmentMap[i]?.let { data ->
-                            reassembledData.addAll(data.asIterable())
-                        }
+                        val chunk = fragmentMap[i] ?: continue
+                        System.arraycopy(chunk, 0, reassembledByteArray, destOffset, chunk.size)
+                        destOffset += chunk.size
                     }
 
-                    val originalPacket = BitchatPacket.fromBinaryData(reassembledData.toByteArray())
+                    val originalPacket = BitchatPacket.fromBinaryData(
+                        if (destOffset == totalBytes) reassembledByteArray else reassembledByteArray.copyOf(destOffset)
+                    )
                     if (originalPacket != null) {
-                        removeFragmentSetLocked(fragmentIDString)
+                        TransferProgressManager.complete(fragmentIDString, expectedTotal, isIncoming = true)
+                        removeFragmentSetLocked(fragmentIDString, reportFailure = false)
 
                         val suppressedTtlPacket = originalPacket.copy(ttl = 0u.toUByte())
                         return suppressedTtlPacket
                     } else {
                         val metadata = fragmentMetadata[fragmentIDString]
-                        Log.e(TAG, "Failed to decode reassembled packet (type=${metadata?.first}, total=${metadata?.second})")
+                        Log.e(TAG, "Failed to decode reassembled packet (type=${metadata?.first}, total=${metadata?.second}); clearing set")
+                        removeFragmentSetLocked(fragmentIDString, reportFailure = true)
                     }
                 }
             }
@@ -287,12 +301,15 @@ class FragmentManager {
         return null
     }
 
-    private fun removeFragmentSetLocked(fragmentIDString: String) {
+    private fun removeFragmentSetLocked(fragmentIDString: String, reportFailure: Boolean = true) {
         incomingFragments.remove(fragmentIDString)
         fragmentMetadata.remove(fragmentIDString)
         val bytes = fragmentCumulativeSize.remove(fragmentIDString)?.toLong() ?: 0L
         if (bytes != 0L) {
             globalBufferedBytes = (globalBufferedBytes - bytes).coerceAtLeast(0L)
+        }
+        if (reportFailure) {
+            TransferProgressManager.fail(fragmentIDString, isIncoming = true)
         }
     }
     

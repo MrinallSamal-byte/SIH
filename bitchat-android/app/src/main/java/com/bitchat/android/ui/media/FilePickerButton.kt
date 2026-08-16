@@ -36,7 +36,22 @@ fun FilePickerButton(
             // Persist temporary read permission so we can copy
             try { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) {}
             val path = FileUtils.copyFileForSending(context, uri)
-            if (!path.isNullOrBlank()) onFileReady(path)
+            if (!path.isNullOrBlank()) {
+                val f = java.io.File(path)
+                if (f.length() > com.bitchat.android.util.AppConstants.Media.MAX_FILE_SIZE_BYTES) {
+                    val sizeFormatted = FileUtils.formatFileSize(f.length())
+                    try {
+                        android.widget.Toast.makeText(
+                            context,
+                            "File exceeds maximum size limit ($sizeFormatted). Maximum size is 5 MB.",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                    } catch (_: Exception) {}
+                    runCatching { f.delete() }
+                } else {
+                    onFileReady(path)
+                }
+            }
         }
     }
 

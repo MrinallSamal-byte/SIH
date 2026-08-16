@@ -57,6 +57,7 @@ fun BitchatBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
         dragHandle = null,
+        sheetMaxWidth = androidx.compose.ui.unit.Dp.Unspecified,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         containerColor = MaterialTheme.colorScheme.background,
     ) {

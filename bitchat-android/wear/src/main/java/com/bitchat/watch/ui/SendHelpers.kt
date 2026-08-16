@@ -5,6 +5,7 @@ import com.bitchat.android.model.BitchatMessage
 import com.bitchat.android.model.BitchatMessageType
 import com.bitchat.android.model.DeliveryStatus
 import com.bitchat.android.services.AppStateStore
+import com.bitchat.android.util.AppConstants
 import com.bitchat.watch.mesh.WearMeshService
 import java.io.File
 import java.util.Date
@@ -79,11 +80,13 @@ internal fun sendPrivateMessage(
 internal fun sendVoiceNote(mesh: WearMeshService, peerID: String?, path: String) {
     val file = File(path)
     if (!file.isFile) return
+    val content = file.readBytes()
+    if (content.size.toLong() > AppConstants.Media.MAX_FILE_SIZE_BYTES) return
     val packet = BitchatFilePacket(
         fileName = file.name,
-        fileSize = file.length(),
+        fileSize = content.size.toLong(),
         mimeType = "audio/mp4",
-        content = file.readBytes()
+        content = content
     )
     if (peerID == null) {
         mesh.sendFileBroadcast(packet)

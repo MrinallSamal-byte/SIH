@@ -192,7 +192,28 @@ class PermissionManager(private val context: Context) {
     }
 
     fun areRequiredPermissionsGranted(): Boolean {
-        return getRequiredPermissions().all { isPermissionGranted(it) }
+        // Bluetooth permissions
+        val bluetoothGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            isPermissionGranted(Manifest.permission.BLUETOOTH_ADVERTISE) &&
+            isPermissionGranted(Manifest.permission.BLUETOOTH_CONNECT) &&
+            isPermissionGranted(Manifest.permission.BLUETOOTH_SCAN)
+        } else {
+            isPermissionGranted(Manifest.permission.BLUETOOTH) &&
+            isPermissionGranted(Manifest.permission.BLUETOOTH_ADMIN)
+        }
+        if (!bluetoothGranted) return false
+
+        // Location: either FINE or COARSE
+        val locationGranted = isPermissionGranted(Manifest.permission.ACCESS_FINE_LOCATION) ||
+            isPermissionGranted(Manifest.permission.ACCESS_COARSE_LOCATION)
+        if (!locationGranted) return false
+
+        // Wi-Fi Aware
+        if (shouldRequireWifiAwarePermission()) {
+            if (!wifiAwarePermissions().all { isPermissionGranted(it) }) return false
+        }
+
+        return true
     }
 
     /**
@@ -224,7 +245,29 @@ class PermissionManager(private val context: Context) {
      * Get the list of permissions that are missing
      */
     fun getMissingPermissions(): List<String> {
-        return getRequiredPermissions().filter { !isPermissionGranted(it) }
+        val missing = mutableListOf<String>()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (!isPermissionGranted(Manifest.permission.BLUETOOTH_ADVERTISE)) missing.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+            if (!isPermissionGranted(Manifest.permission.BLUETOOTH_CONNECT)) missing.add(Manifest.permission.BLUETOOTH_CONNECT)
+            if (!isPermissionGranted(Manifest.permission.BLUETOOTH_SCAN)) missing.add(Manifest.permission.BLUETOOTH_SCAN)
+        } else {
+            if (!isPermissionGranted(Manifest.permission.BLUETOOTH)) missing.add(Manifest.permission.BLUETOOTH)
+            if (!isPermissionGranted(Manifest.permission.BLUETOOTH_ADMIN)) missing.add(Manifest.permission.BLUETOOTH_ADMIN)
+        }
+
+        val hasLocation = isPermissionGranted(Manifest.permission.ACCESS_FINE_LOCATION) ||
+            isPermissionGranted(Manifest.permission.ACCESS_COARSE_LOCATION)
+        if (!hasLocation) {
+            missing.add(Manifest.permission.ACCESS_FINE_LOCATION)
+            missing.add(Manifest.permission.ACCESS_COARSE_LOCATION)
+        }
+
+        if (shouldRequireWifiAwarePermission()) {
+            wifiAwarePermissions().forEach {
+                if (!isPermissionGranted(it)) missing.add(it)
+            }
+        }
+        return missing
     }
 
     fun getMissingBackgroundLocationPermission(): List<String> {

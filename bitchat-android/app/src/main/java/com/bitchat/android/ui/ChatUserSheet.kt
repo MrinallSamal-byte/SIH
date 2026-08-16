@@ -181,6 +181,22 @@ fun ChatUserSheet(
                                 }
                             )
                         }
+
+                        // Report action
+                        item {
+                            UserActionRow(
+                                title = "⚑ Report $targetNickname",
+                                subtitle = "Report this user with a message to admins",
+                                titleColor = Color(0xFFEF4444),
+                                onClick = {
+                                    val peerID = selectedMessage?.senderPeerID
+                                        ?: viewModel.getPeerIDForNickname(targetNickname)
+                                        ?: targetNickname
+                                    viewModel.showReportUser(peerID, targetNickname)
+                                    onDismiss()
+                                }
+                            )
+                        }
                     }
                 }
                 

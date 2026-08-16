@@ -40,6 +40,11 @@ class BitchatApplication : Application() {
             com.bitchat.android.services.AppStateStore.initializeConversationPersistence(this)
         } catch (_: Exception) { }
 
+        // Initialize admin system (blocked users, reports, admin config)
+        try {
+            com.bitchat.android.features.admin.AdminManager.initialize(this)
+        } catch (_: Exception) { }
+
         // Warm up Nostr identity to ensure npub is available for favorite notifications
         try {
             com.bitchat.android.nostr.NostrIdentityBridge.getCurrentNostrIdentity(this)

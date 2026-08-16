@@ -6,6 +6,7 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.content.Context
+import android.os.Build
 import android.os.ParcelUuid
 import android.util.Log
 import com.bitchat.android.protocol.BitchatPacket
@@ -208,10 +209,9 @@ class BluetoothGattClientManager(
             return
         }
         
-        val scanFilter = ScanFilter.Builder()
-            .setServiceUuid(ParcelUuid(AppConstants.Mesh.Gatt.SERVICE_UUID))
-            .build()
-        
+        // Open ScanFilter ensures hardware BLE controllers do not drop 128-bit UUIDs.
+        // Software filtering in handleScanResult ensures only bitchat packets are processed.
+        val scanFilter = ScanFilter.Builder().build()
         val scanFilters = listOf(scanFilter)
 
         scanCallback = object : ScanCallback() {
@@ -374,8 +374,9 @@ class BluetoothGattClientManager(
         val deviceAddress = device.address
         val scanRecord = result.scanRecord
         
-        // CRITICAL: Only process devices that have our service UUID
-        val hasOurService = scanRecord?.serviceUuids?.any { it.uuid == AppConstants.Mesh.Gatt.SERVICE_UUID } == true
+        // CRITICAL: Only process devices that have our service UUID or service data
+        val hasOurService = scanRecord?.serviceUuids?.any { it.uuid == AppConstants.Mesh.Gatt.SERVICE_UUID } == true ||
+            scanRecord?.getServiceData(ParcelUuid(AppConstants.Mesh.Gatt.SERVICE_UUID)) != null
         if (!hasOurService) {
             return
         }
@@ -469,10 +470,35 @@ class BluetoothGattClientManager(
         val gattCallback = object : BluetoothGattCallback() {
             override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
                 if (newState == BluetoothProfile.STATE_CONNECTED && status == BluetoothGatt.GATT_SUCCESS) {
+                    val deviceConn = BluetoothConnectionTracker.DeviceConnection(
+                        device = gatt.device,
+                        gatt = gatt,
+                        rssi = rssi,
+                        isClient = true,
+                        peerID = peerID,
+                        linkID = linkID
+                    )
+                    connectionTracker.addDeviceConnection(deviceAddress, deviceConn)
+
                     // Request a larger MTU. Must be done before any data transfer.
                     connectionScope.launch {
-                        delay(200) // A small delay can improve reliability of MTU request.
-                        gatt.requestMtu(517)
+                        delay(200)
+                        try {
+                            gatt.requestMtu(517)
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Exception requesting MTU for $deviceAddress: ${e.message}")
+                            try { gatt.discoverServices() } catch (_: Exception) { }
+                        }
+                    }
+
+                    // Fallback timer: if discoverServices has not run within 1500ms, discover now
+                    connectionScope.launch {
+                        delay(1500)
+                        val current = connectionTracker.getDeviceConnection(deviceAddress)
+                        if (current?.linkID == linkID && current.characteristic == null) {
+                            Log.d(TAG, "MTU fallback trigger: discovering services for $deviceAddress")
+                            try { gatt.discoverServices() } catch (_: Exception) { }
+                        }
                     }
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                     if (status != BluetoothGatt.GATT_SUCCESS) {
@@ -502,23 +528,16 @@ class BluetoothGattClientManager(
                 val deviceAddress = gatt.device.address
 
                 if (status == BluetoothGatt.GATT_SUCCESS) {
-                    // Now that MTU is set, connection is fully ready.
-                    val deviceConn = BluetoothConnectionTracker.DeviceConnection(
-                        device = gatt.device,
-                        gatt = gatt,
-                        rssi = rssi,
-                        isClient = true,
-                        peerID = peerID, // Store the peerID discovered during scan
-                        linkID = linkID
-                    )
-                    connectionTracker.addDeviceConnection(deviceAddress, deviceConn)
-                    
-                    // Start service discovery only AFTER MTU is set.
-                    gatt.discoverServices()
+                    Log.i(TAG, "MTU negotiated to $mtu for $deviceAddress")
                 } else {
-                    Log.w(TAG, "MTU negotiation failed for $deviceAddress with status: $status. Disconnecting.")
-                    //connectionTracker.removePendingConnection(deviceAddress)
-                    gatt.disconnect()
+                    Log.w(TAG, "MTU negotiation failed for $deviceAddress with status: $status; proceeding with default MTU")
+                }
+                
+                // Start service discovery after MTU negotiation
+                try {
+                    gatt.discoverServices()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error starting service discovery for $deviceAddress: ${e.message}")
                 }
             }
 
@@ -528,24 +547,30 @@ class BluetoothGattClientManager(
                     if (service != null) {
                         val characteristic = service.getCharacteristic(AppConstants.Mesh.Gatt.CHARACTERISTIC_UUID)
                         if (characteristic != null) {
-                            if (connectionTracker.updateDeviceConnectionIfCurrent(
-                                    deviceAddress,
-                                    linkID
-                                ) { it.copy(characteristic = characteristic) }
-                            ) {
-                                // Characteristic stored on the current device connection
-                            }
+                            connectionTracker.updateDeviceConnectionIfCurrent(
+                                deviceAddress,
+                                linkID
+                            ) { it.copy(characteristic = characteristic) }
                             
                             gatt.setCharacteristicNotification(characteristic, true)
                             val descriptor = characteristic.getDescriptor(AppConstants.Mesh.Gatt.DESCRIPTOR_UUID)
                             if (descriptor != null) {
-                                descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                                gatt.writeDescriptor(descriptor)
-                                
-                                connectionScope.launch {
-                                    delay(200)
-                                    Log.i(TAG, "Connected to $deviceAddress (client)")
-                                    delegate?.onDeviceConnected(device)
+                                val writeSuccess = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    gatt.writeDescriptor(
+                                        descriptor,
+                                        BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                                    ) == android.bluetooth.BluetoothStatusCodes.SUCCESS
+                                } else {
+                                    descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                                    gatt.writeDescriptor(descriptor)
+                                }
+
+                                if (!writeSuccess) {
+                                    connectionScope.launch {
+                                        delay(300)
+                                        Log.i(TAG, "Connected to $deviceAddress (client, direct)")
+                                        delegate?.onDeviceConnected(device)
+                                    }
                                 }
                             } else {
                                 Log.e(TAG, "Client: CCCD descriptor not found for $deviceAddress")
@@ -565,14 +590,52 @@ class BluetoothGattClientManager(
                 }
             }
             
+            override fun onDescriptorWrite(
+                gatt: BluetoothGatt,
+                descriptor: BluetoothGattDescriptor,
+                status: Int
+            ) {
+                if (descriptor.characteristic.uuid == AppConstants.Mesh.Gatt.CHARACTERISTIC_UUID) {
+                    Log.i(TAG, "Client: CCCD descriptor write complete for ${gatt.device.address}, status: $status")
+                    if (status == BluetoothGatt.GATT_SUCCESS) {
+                        connectionScope.launch {
+                            delay(100)
+                            Log.i(TAG, "Connected to ${gatt.device.address} (client, notifications enabled)")
+                            delegate?.onDeviceConnected(device)
+                        }
+                    }
+                }
+            }
+
+            override fun onCharacteristicChanged(
+                gatt: BluetoothGatt,
+                characteristic: BluetoothGattCharacteristic,
+                value: ByteArray
+            ) {
+                if (characteristic.uuid == AppConstants.Mesh.Gatt.CHARACTERISTIC_UUID) {
+                    processIncomingPacket(value, gatt.device, linkID)
+                }
+            }
+
+            @Deprecated("Deprecated in Java")
             override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-                val value = characteristic.value
+                if (characteristic.uuid == AppConstants.Mesh.Gatt.CHARACTERISTIC_UUID) {
+                    @Suppress("DEPRECATION")
+                    val value = characteristic.value
+                    if (value != null) {
+                        processIncomingPacket(value, gatt.device, linkID)
+                    }
+                }
+            }
+
+            private fun processIncomingPacket(value: ByteArray, device: BluetoothDevice, linkID: String) {
+                if (value.isEmpty()) return
                 val packet = BitchatPacket.fromBinaryData(value)
                 if (packet != null) {
                     val peerID = packet.senderID.take(8).toByteArray().joinToString("") { "%02x".format(it) }
-                    delegate?.onPacketReceived(packet, peerID, gatt.device, linkID)
+                    delegate?.onPacketReceived(packet, peerID, device, linkID)
                 } else {
-                    Log.d(TAG, "Failed to parse packet from ${gatt.device.address}, size: ${value.size} bytes")
+                    Log.d(TAG, "Failed to parse packet from ${device.address}, size: ${value.size} bytes")
                 }
             }
 

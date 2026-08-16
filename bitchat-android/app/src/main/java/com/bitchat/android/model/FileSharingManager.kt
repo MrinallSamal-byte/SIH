@@ -34,10 +34,15 @@ object FileSharingManager {
             // Read file content
             val file = File(localPath)
             val content = file.readBytes()
-            val fileSize = file.length()
+            val fileSize = content.size.toLong()
 
             // Clean up temp file
             file.delete()
+
+            if (fileSize > com.bitchat.android.util.AppConstants.Media.MAX_FILE_SIZE_BYTES) {
+                Log.w(TAG, "Refusing file above the media size limit: $fileSize bytes")
+                return null
+            }
 
             val packet = BitchatFilePacket(
                 fileName = fileName,

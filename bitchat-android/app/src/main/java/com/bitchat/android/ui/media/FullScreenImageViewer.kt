@@ -73,7 +73,7 @@ fun FullScreenImageViewer(imagePaths: List<String>, initialIndex: Int = 0, onClo
                     modifier = Modifier.fillMaxSize()
                 ) { page ->
                     val currentPath = imagePaths[page]
-                    val bmp = remember(currentPath) { try { android.graphics.BitmapFactory.decodeFile(currentPath) } catch (_: Exception) { null } }
+                    val bmp = remember(currentPath) { com.bitchat.android.features.file.FileUtils.loadSafeBitmap(currentPath, maxDimension = 4096) }
 
                     bmp?.let {
                         androidx.compose.foundation.Image(

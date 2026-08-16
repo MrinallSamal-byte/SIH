@@ -1830,6 +1830,13 @@ fun PrivateChatSheet(
 
                     HorizontalDivider(thickness = 1.dp, color = colorScheme.outlineVariant)
 
+                    val activeIncomingTransfers by com.bitchat.android.mesh.TransferProgressManager.activeIncomingTransfers.collectAsStateWithLifecycle()
+                    if (activeIncomingTransfers.isNotEmpty()) {
+                        com.bitchat.android.ui.media.IncomingTransferBanner(
+                            transfers = activeIncomingTransfers
+                        )
+                    }
+
                     // Messages list
                     var forceScrollToBottom by remember { mutableStateOf(false) }
                     var isScrolledUp by remember { mutableStateOf(false) }
@@ -1910,6 +1917,16 @@ fun PrivateChatSheet(
                     modifier = Modifier.align(Alignment.TopCenter),
                     color = colorScheme.background
                 ) {
+                    // Observe presence for subtitle
+                    val presenceMap by com.bitchat.android.features.presence.PresenceManager.peerPresence.collectAsState()
+                    val peerPresence = presenceMap[peerID]
+                    val presenceSubtitle = peerPresence?.getStatusText() ?: ""
+                    val presenceColor = when {
+                        peerPresence?.isTyping == true -> colorScheme.primary
+                        peerPresence?.isOnline == true -> androidx.compose.ui.graphics.Color(0xFF22C55E)
+                        else -> colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    }
+
                     ConversationHeader(
                         leadingIconRes = conversationTransportIcon(
                             isReachedOverInternet = isNostrPeer || isNostrReachableFavorite,
@@ -1922,7 +1939,9 @@ fun PrivateChatSheet(
                                 stringResource(R.string.cd_nostr_reachable)
                             else -> null
                         },
-                        title = titleText
+                        title = titleText,
+                        subtitle = presenceSubtitle,
+                        subtitleColor = presenceColor
                     ) {
                         ConversationHeaderAction(
                             onClick = { viewModel.toggleFavorite(peerID) },
@@ -1979,6 +1998,19 @@ fun PrivateChatSheet(
                                     )
                                 }
                             }
+                        }
+
+                        // Report user action
+                        ConversationHeaderAction(
+                            onClick = { viewModel.showReportUser(peerID, titleText) },
+                            contentDescription = "Report User"
+                        ) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Filled.Flag,
+                                contentDescription = "Report User",
+                                modifier = Modifier.size(HeaderIconSize),
+                                tint = colorScheme.error.copy(alpha = 0.85f)
+                            )
                         }
 
                         val dismiss = LocalSheetDismiss.current

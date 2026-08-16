@@ -114,7 +114,7 @@ class BluetoothMeshService(private val context: Context) : TransportBridgeServic
     private val packetProcessor = PacketProcessor(myPeerID)
     private data class VoiceFrameRequest(val recipientPeerID: String?, val payload: ByteArray)
     private val voiceFrameQueue = Channel<VoiceFrameRequest>(capacity = 128)
-    private lateinit var gossipSyncManager: GossipSyncManager
+    private var gossipSyncManager: GossipSyncManager
     // Service-level notification manager for background (no-UI) DMs
     private val serviceNotificationManager = com.bitchat.android.ui.NotificationManager(
         context.applicationContext,
@@ -682,10 +682,14 @@ class BluetoothMeshService(private val context: Context) : TransportBridgeServic
         }
             
             override fun onDeviceConnected(device: android.bluetooth.BluetoothDevice) {
-                // Send initial announcements after services are ready
+                // Send initial announcements after services are ready with staggered retries
                 serviceScope.launch {
                     Log.i(TAG, "Device connected: ${device.address}")
-                    delay(200)
+                    delay(300)
+                    sendBroadcastAnnounce()
+                    delay(1000)
+                    sendBroadcastAnnounce()
+                    delay(2000)
                     sendBroadcastAnnounce()
                 }
                 // Verbose debug: device connected
@@ -945,6 +949,10 @@ class BluetoothMeshService(private val context: Context) : TransportBridgeServic
     }
 
     fun sendFileBroadcast(file: com.bitchat.android.model.BitchatFilePacket) {
+        if (!file.isCompleteAndWithinLimit()) {
+            Log.w(TAG, "Refusing incomplete or oversized broadcast file")
+            return
+        }
         try {
             val payload = file.encode()
             if (payload == null) {
@@ -975,6 +983,10 @@ class BluetoothMeshService(private val context: Context) : TransportBridgeServic
 
     /** Safe non-interactive entry point: encrypted sends commit; legacy sends require UI consent. */
     fun sendFilePrivate(recipientPeerID: String, file: com.bitchat.android.model.BitchatFilePacket) {
+        if (!file.isCompleteAndWithinLimit()) {
+            Log.w(TAG, "Refusing incomplete or oversized private file")
+            return
+        }
         val payload = file.encode() ?: return
         when (val prepared = prepareFilePrivate(
             recipientPeerID,
@@ -1039,6 +1051,11 @@ class BluetoothMeshService(private val context: Context) : TransportBridgeServic
         transferId: String,
         allowLegacyFallback: Boolean
     ): PrivateMediaPreparation {
+        if (!file.isCompleteAndWithinLimit()) {
+            return PrivateMediaPreparation.Rejected(
+                "File metadata does not match its content or exceeds the media limit"
+            )
+        }
         return when (val outcome = privateMediaPreparer.prepare(
             recipientPeerID = recipientPeerID,
             recipientID = hexStringToByteArray(recipientPeerID),
@@ -1470,6 +1487,13 @@ class BluetoothMeshService(private val context: Context) : TransportBridgeServic
      */
     fun getActivePeerCount(): Int {
         return try { peerManager.getActivePeerCount() } catch (_: Exception) { 0 }
+    }
+
+    /**
+     * Get current low-level BLE connection count
+     */
+    fun getConnectionCount(): Int {
+        return try { connectionManager.getConnectedDeviceCount() } catch (_: Exception) { 0 }
     }
 
     /**

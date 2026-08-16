@@ -149,8 +149,8 @@ class NoiseChannelEncryption {
         try {
             val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
             
-            // Use channel name as salt (UTF-8 bytes)
-            val salt = channel.toByteArray(Charsets.UTF_8)
+            // Use channel name as salt (UTF-8 bytes, normalized to lowercase)
+            val salt = channel.lowercase().toByteArray(Charsets.UTF_8)
             
             val spec = PBEKeySpec(
                 password.toCharArray(),

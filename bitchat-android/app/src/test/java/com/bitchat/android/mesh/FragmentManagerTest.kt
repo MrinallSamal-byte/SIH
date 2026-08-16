@@ -183,11 +183,11 @@ class FragmentManagerTest {
     }
 
     @Test
-    fun `inbound fragment set above 256 is rejected`() {
+    fun `inbound fragment set above the receiver cap is rejected`() {
         val payload = FragmentPayload(
             fragmentID = ByteArray(8) { 1 },
             index = 0,
-            total = 257,
+            total = com.bitchat.android.util.AppConstants.Fragmentation.MAX_FRAGMENTS_PER_ID + 1,
             originalType = MessageType.NOISE_ENCRYPTED.value,
             data = byteArrayOf(1)
         ).encode()
@@ -202,6 +202,30 @@ class FragmentManagerTest {
         )
 
         assertNull(fragmentManager.handleFragment(packet))
+    }
+
+    @Test
+    fun `inbound fragment set above the legacy 256 bound is still accepted`() {
+        val fragmentID = ByteArray(8) { 3 }
+        val first = FragmentPayload(
+            fragmentID = fragmentID,
+            index = 0,
+            total = 257,
+            originalType = MessageType.FILE_TRANSFER.value,
+            data = byteArrayOf(1)
+        ).encode()
+        val packet = BitchatPacket(
+            version = 1u,
+            type = MessageType.FRAGMENT.value,
+            senderID = hexStringToByteArray(senderID),
+            recipientID = hexStringToByteArray(recipientID),
+            timestamp = 1u,
+            payload = first,
+            ttl = 7u
+        )
+
+        assertNull(fragmentManager.handleFragment(packet))
+        assertTrue(fragmentManager.getDebugInfo().contains("1/257 fragments"))
     }
 
     @Test

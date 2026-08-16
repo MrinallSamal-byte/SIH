@@ -11,12 +11,16 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.util.Random
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 @RunWith(RobolectricTestRunner::class)
 class FragmentingPacketSenderTest {
@@ -42,8 +46,8 @@ class FragmentingPacketSenderTest {
     fun `oversized packet exceeding receiver fragment cap is rejected with fail event`() = runBlocking {
         val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         val sender = FragmentingPacketSender(scope, FragmentManager(), "test")
-        // ~256 * 469 bytes fit; 1 MiB clearly exceeds MAX_FRAGMENTS_PER_ID
-        val packet = packetWithPayload(1024 * 1024)
+        // Exceed MAX_FRAGMENTS_PER_ID fragments
+        val packet = packetWithPayload((AppConstants.Fragmentation.MAX_FRAGMENTS_PER_ID + 50) * 500)
         var sent = false
 
         val failed = java.util.concurrent.ConcurrentLinkedQueue<String>()
@@ -81,6 +85,83 @@ class FragmentingPacketSenderTest {
             }
         }
         assertTrue(writes > 0)
+    }
+
+    @Test
+    fun `temporarily full transport retries the same fragment instead of dropping it`() = runBlocking {
+        val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        val manager = FragmentManager()
+        val sender = FragmentingPacketSender(scope, manager, "test", interFragmentDelayMs = 0L)
+        val packet = packetWithPayload(1_500)
+        val expectedFragments = manager.createFragments(
+            packet,
+            AppConstants.Fragmentation.MAX_FRAGMENTS_PER_ID
+        ).size
+        val rejectedOnce = AtomicBoolean(false)
+        val calls = AtomicInteger(0)
+        val accepted = ConcurrentLinkedQueue<BitchatPacket>()
+
+        assertTrue(
+            sender.send(RoutedPacket(packet, transferId = "retry-test"), "test") { routed ->
+                calls.incrementAndGet()
+                if (!rejectedOnce.getAndSet(true)) {
+                    false
+                } else {
+                    accepted.add(routed.packet)
+                    true
+                }
+            }
+        )
+
+        withTimeout(5_000) {
+            while (accepted.size < expectedFragments) {
+                kotlinx.coroutines.delay(10)
+            }
+        }
+        assertEquals(expectedFragments, accepted.size)
+        assertEquals(expectedFragments + 1, calls.get())
+    }
+
+    @Test
+    fun `sender delivers every fragment through a small sliding window`() = runBlocking {
+        val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        val manager = FragmentManager()
+        val sender = FragmentingPacketSender(scope, manager, "test", interFragmentDelayMs = 0L)
+        val packet = packetWithPayload(8_000)
+        val expectedFragments = manager.createFragments(
+            packet,
+            AppConstants.Fragmentation.MAX_FRAGMENTS_PER_ID
+        ).size
+        assertTrue(expectedFragments > 4)
+        val inFlight = AtomicInteger(0)
+        val delivered = AtomicInteger(0)
+        val window = 4
+
+        assertTrue(
+            sender.send(RoutedPacket(packet, transferId = "window-test"), "test") { _ ->
+                val occupied = inFlight.get()
+                if (occupied >= window) {
+                    false
+                } else if (!inFlight.compareAndSet(occupied, occupied + 1)) {
+                    false
+                } else {
+                    delivered.incrementAndGet()
+                    scope.launch {
+                        kotlinx.coroutines.yield()
+                        inFlight.decrementAndGet()
+                    }
+                    true
+                }
+            }
+        )
+
+        withTimeout(10_000) {
+            while (delivered.get() < expectedFragments) {
+                kotlinx.coroutines.yield()
+            }
+        }
+        assertEquals(expectedFragments, delivered.get())
+        assertEquals(0, inFlight.get())
     }
 
     @Test

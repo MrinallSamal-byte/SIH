@@ -104,6 +104,8 @@ val sharedSourceIncludes = listOf(
     "com/bitchat/android/nostr/GeohashAliasRegistry.kt",
     "com/bitchat/android/features/file/FileUtils.kt",
     "com/bitchat/android/features/voice/**",
+    "com/bitchat/android/features/presence/**",
+    "com/bitchat/android/features/admin/**",
     "com/bitchat/android/ui/debug/DebugSettingsManager.kt",
     "com/bitchat/android/ui/debug/DebugPreferenceManager.kt",
     "com/bitchat/android/ui/NotificationTextUtils.kt",
@@ -114,6 +116,10 @@ val sharedSourceIncludes = listOf(
 )
 val sharedSourceExcludes = listOf(
     "com/bitchat/android/model/FileSharingManager.kt",
+    "com/bitchat/android/features/admin/AdminScreen.kt",
+    "com/bitchat/android/features/admin/AdminPassphraseDialog.kt",
+    "com/bitchat/android/features/admin/ReportUserSheet.kt",
+    "com/bitchat/android/features/admin/AboutSheetAdminBridge.kt",
     // Legacy phone monolith and Wi-Fi Aware multiplexer; the watch composes its own service
     // (MeshCore-style) in M2 instead of reusing these.
     "com/bitchat/android/mesh/BluetoothMeshService.kt",

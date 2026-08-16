@@ -92,13 +92,18 @@ class MediaSendingManager(
         file: java.io.File,
         toPeerIDOrNull: String?,
         channelOrNull: String?
+    ): Boolean = rejectIfOversized(file.name, file.length(), toPeerIDOrNull, channelOrNull)
+
+    private fun rejectIfOversized(
+        fileName: String,
+        size: Long,
+        toPeerIDOrNull: String?,
+        channelOrNull: String?
     ): Boolean {
-        val size = file.length()
         if (size <= MAX_FILE_SIZE) return false
         Log.e(TAG, "❌ File too large: $size bytes (max: $MAX_FILE_SIZE)")
-        val sizeMb = size / (1024 * 1024)
-        val maxMb = MAX_FILE_SIZE / (1024 * 1024)
-        val text = "cannot send ${file.name}: file is too large (${sizeMb} MB, max $maxMb MB)"
+        val sizeFormatted = com.bitchat.android.features.file.FileUtils.formatFileSize(size)
+        val text = "Cannot send $fileName: file is too large ($sizeFormatted, max 5 MB). Files over 5 MB cannot be sent over mesh."
         when {
             toPeerIDOrNull != null -> {
                 val sys = BitchatMessage(
@@ -149,11 +154,16 @@ class MediaSendingManager(
                     return@withContext null
                 }
 
+                val content = file.readBytes()
+                if (rejectIfOversized(file.name, content.size.toLong(), toPeerIDOrNull, channelOrNull)) {
+                    return@withContext null
+                }
+
                 BitchatFilePacket(
                     fileName = file.name,
-                    fileSize = file.length(),
+                    fileSize = content.size.toLong(),
                     mimeType = "audio/mp4",
-                    content = file.readBytes()
+                    content = content
                 )
             } ?: return
 
@@ -193,11 +203,16 @@ class MediaSendingManager(
                     return@withContext null
                 }
 
+                val content = file.readBytes()
+                if (rejectIfOversized(file.name, content.size.toLong(), toPeerIDOrNull, channelOrNull)) {
+                    return@withContext null
+                }
+
                 BitchatFilePacket(
                     fileName = file.name,
-                    fileSize = file.length(),
+                    fileSize = content.size.toLong(),
                     mimeType = "image/jpeg",
-                    content = file.readBytes()
+                    content = content
                 )
             } ?: return
 
@@ -259,11 +274,16 @@ class MediaSendingManager(
                     stripped + ext
                 }
 
+                val content = file.readBytes()
+                if (rejectIfOversized(originalName, content.size.toLong(), toPeerIDOrNull, channelOrNull)) {
+                    return@withContext null
+                }
+
                 BitchatFilePacket(
                     fileName = originalName,
-                    fileSize = file.length(),
+                    fileSize = content.size.toLong(),
                     mimeType = mimeType,
-                    content = file.readBytes()
+                    content = content
                 )
             } ?: return
 
