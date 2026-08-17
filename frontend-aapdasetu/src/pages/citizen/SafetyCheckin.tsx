@@ -1,16 +1,24 @@
 import { useState, useEffect } from 'react'
+import {
+  ShieldCheck,
+  MapPin,
+  CheckCircle2,
+  Search
+} from 'lucide-react'
 import { createSafetyCheckin, listSafetyCheckins } from '../../api/endpoints'
 import { Field, Input, Textarea } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import Badge from '../../components/common/Badge'
 import Loader from '../../components/common/Loader'
 import { useToast } from '../../components/common/Toast'
+import { useLanguage } from '../../lib/i18n'
 import { getCurrentPosition, formatDateTime, maskPhone } from '../../lib/helpers'
 import type { CheckinStatus, SafetyCheckin } from '../../types'
 
 type ActiveTab = 'checkin' | 'search'
 
 export default function SafetyCheckinPage() {
+  const { t } = useLanguage()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState<ActiveTab>('checkin')
 
@@ -97,12 +105,16 @@ export default function SafetyCheckinPage() {
     )
   })
 
-
   return (
     <div className="mx-auto max-w-xl">
-      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Disaster Safety Check-in</h1>
+      <div className="flex items-center gap-2 mb-1">
+        <ShieldCheck className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+          {t('checkin.title')}
+        </h1>
+      </div>
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-        Let family, relatives, and disaster authorities know your current status and location.
+        {t('checkin.subtitle')}
       </p>
 
       {/* Tabs */}
@@ -111,30 +123,31 @@ export default function SafetyCheckinPage() {
           variant={activeTab === 'checkin' ? 'primary' : 'outline'}
           onClick={() => setActiveTab('checkin')}
         >
-          My Safety Check-in
+          {t('checkin.myCheckin')}
         </Button>
         <Button
           variant={activeTab === 'search' ? 'primary' : 'outline'}
           onClick={() => setActiveTab('search')}
         >
-          Search Family / Friends
+          {t('checkin.searchFamily')}
         </Button>
       </div>
 
       {activeTab === 'checkin' && (
         <>
           {confirm ? (
-            <div className="mt-5 space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/40">
+            <div className="mt-5 space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center shadow-xs dark:border-emerald-900/50 dark:bg-emerald-950/40">
               <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
-                ✓ Status Recorded
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-300" />
+                <span>{t('checkin.statusRecorded')}</span>
               </div>
               <h2 className="text-xl font-bold text-emerald-900 dark:text-emerald-100">
-                {confirm.status === 'safe' ? 'You are Marked as SAFE' : 'Assistance Request Logged'}
+                {confirm.status === 'safe' ? t('checkin.markedSafe') : t('checkin.needHelp')}
               </h2>
-              <p className="text-xs text-slate-600 dark:text-slate-300">
-                Your family, relatives, and rescue teams can now verify your status in the public registry.
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                {t('checkin.recordDesc')}
                 {confirm.locationName && (
-                  <span className="block mt-1 font-semibold">Location: {confirm.locationName}</span>
+                  <span className="block mt-1 font-semibold">{t('common.landmark')}: {confirm.locationName}</span>
                 )}
               </p>
 
@@ -149,36 +162,36 @@ export default function SafetyCheckinPage() {
                     setNotes('')
                   }}
                 >
-                  New Check-in
+                  {t('checkin.newCheckin')}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => setActiveTab('search')}
                 >
-                  View Public Registry
+                  {t('checkin.viewRegistry')}
                 </Button>
               </div>
             </div>
           ) : (
-            <div className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
               <div className="flex gap-2">
                 <Button
                   variant={status === 'safe' ? 'primary' : 'outline'}
                   className="flex-1 font-bold"
                   onClick={() => setStatus('safe')}
                 >
-                  I am Safe
+                  {t('checkin.imSafe')}
                 </Button>
                 <Button
                   variant={status === 'need_assistance' ? 'danger' : 'outline'}
                   className="flex-1 font-bold"
                   onClick={() => setStatus('need_assistance')}
                 >
-                  Need Assistance
+                  {t('checkin.needHelp')}
                 </Button>
               </div>
 
-              <Field label="Your Full Name *">
+              <Field label={`${t('checkin.fullName')} *`}>
                 <Input
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
@@ -188,7 +201,7 @@ export default function SafetyCheckinPage() {
               </Field>
 
               <div>
-                <Field label="Mobile Number (for family lookup) *">
+                <Field label={`${t('checkin.phone')} *`}>
                   <Input
                     type="tel"
                     value={phone}
@@ -197,7 +210,7 @@ export default function SafetyCheckinPage() {
                       if (phoneError) setPhoneError(null)
                     }}
                     required
-                    placeholder="10-digit mobile number"
+                    placeholder={t('report.phonePlaceholder')}
                   />
                 </Field>
                 {phoneError && (
@@ -205,7 +218,7 @@ export default function SafetyCheckinPage() {
                 )}
               </div>
 
-              <Field label="Current Location / Shelter Name">
+              <Field label={t('checkin.locationName')}>
                 <Input
                   value={locationName}
                   onChange={(e) => setLocationName(e.target.value)}
@@ -213,7 +226,7 @@ export default function SafetyCheckinPage() {
                 />
               </Field>
 
-              <Field label="Additional Message / Notes for Family (optional)">
+              <Field label={t('checkin.message')}>
                 <Textarea
                   rows={3}
                   value={notes}
@@ -228,7 +241,7 @@ export default function SafetyCheckinPage() {
                 onClick={submit}
                 disabled={sending || !fullName.trim() || !phone.trim()}
               >
-                {sending ? 'Recording Check-in…' : 'Submit Safety Check-in'}
+                {sending ? t('common.loading') : t('checkin.submitCheckin')}
               </Button>
             </div>
           )}
@@ -237,14 +250,18 @@ export default function SafetyCheckinPage() {
 
       {activeTab === 'search' && (
         <div className="mt-4 space-y-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
             <Field label="Search by Name, Phone Number, or Location">
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Type name or 10-digit phone number…"
-                autoFocus
-              />
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Type name or 10-digit phone number…"
+                  autoFocus
+                  className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3.5 py-2.5 text-sm placeholder:text-slate-400 outline-none focus:border-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                />
+              </div>
             </Field>
           </div>
 
@@ -259,14 +276,14 @@ export default function SafetyCheckinPage() {
               {filteredCheckins.map((item) => (
                 <div
                   key={item.id}
-                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="text-base font-bold text-slate-900 dark:text-slate-100">
                         {item.fullName}
                       </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400">
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mono">
                         {maskPhone(item.phone)}
                       </div>
                     </div>
@@ -274,25 +291,26 @@ export default function SafetyCheckinPage() {
                   </div>
 
                   {item.locationName && (
-                    <div className="mt-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      {item.locationName}
+                    <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                      <span>{item.locationName}</span>
                     </div>
                   )}
 
                   {item.notes && (
-                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 italic">
+                    <p className="mt-1.5 text-xs text-slate-600 dark:text-slate-400 italic">
                       "{item.notes}"
                     </p>
                   )}
 
-                  <div className="mt-2 text-[11px] text-slate-400">
+                  <div className="mt-2 text-[11px] text-slate-400 mono">
                     Checked in {formatDateTime(item.createdAt)}
                   </div>
                 </div>
               ))}
 
               {filteredCheckins.length === 0 && (
-                <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
                   No check-in records matched your search query.
                 </div>
               )}

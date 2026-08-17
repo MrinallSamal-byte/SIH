@@ -1,16 +1,30 @@
 import { useEffect, useRef, useState } from 'react'
-import { aiPfaChat } from '../api/ai'
+import {
+  Bot,
+  Phone,
+  Siren,
+  CheckCircle2,
+  X,
+  AlertTriangle,
+  Send
+} from 'lucide-react'
+import { aiPfaChat, cleanAiOutput } from '../api/ai'
 import { createReport } from '../api/endpoints'
 import { useToast } from './common/Toast'
 import { useLanguage } from '../lib/i18n'
 import { getCurrentPosition } from '../lib/helpers'
 import type { PfaChatMessage } from '../types'
 
+export function openChatWidget() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('open-aapdasetu-chat'))
+  }
+}
+
 export default function ChatWidget() {
   const { toast } = useToast()
   const { t } = useLanguage()
   const [open, setOpen] = useState(false)
-  const [dismissed, setDismissed] = useState(false)
   const [messages, setMessages] = useState<PfaChatMessage[]>([])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
@@ -19,16 +33,22 @@ export default function ChatWidget() {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (open && messages.length === 0) {
+    const handleOpen = () => setOpen(true)
+    window.addEventListener('open-aapdasetu-chat', handleOpen)
+    return () => window.removeEventListener('open-aapdasetu-chat', handleOpen)
+  }, [])
+
+  useEffect(() => {
+    if (open && (messages.length === 0 || (messages.length === 1 && messages[0].id === 'msg-init'))) {
       setMessages([
         {
           id: 'msg-init',
           role: 'bot',
-          content: t('chat.greeting') || 'Hello, I am your AapdaSetu AI Disaster Companion. How can I help you right now?',
+          content: t('chat.greeting') || 'Namaste! I am AapdaMitra AI. Tell me what emergency, injury, or safety assistance you need.',
         },
       ])
     }
-  }, [open, messages.length, t])
+  }, [open, t])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -54,11 +74,12 @@ export default function ChatWidget() {
         {
           id: `bot-${Date.now()}`,
           role: 'bot',
-          content: res.reply,
+          content: cleanAiOutput(res.reply),
           exerciseType: res.exerciseType,
           isCritical: res.isCritical,
-          helpline: res.helpline || (res.isCritical ? '108' : undefined),
-          showCallbackInput: res.isCritical,
+          dangerLevel: res.dangerLevel || (res.isCritical ? 'CRITICAL' : 'LOW'),
+          helpline: res.helpline || (res.isCritical ? '112' : undefined),
+          showCallbackInput: res.isCritical || res.dangerLevel === 'MODERATE',
         },
       ])
     } catch (err) {
@@ -90,218 +111,253 @@ export default function ChatWidget() {
         type: 'other',
         isOneTapSos: true,
         reporterPhone: phone,
-        description: `AapdaMitra AI Critical Distress Callback: ${userPromptText.slice(0, 120)}`,
+        description: `AapdaMitra AI Priority Callback Dispatch: ${userPromptText.slice(0, 120)}`,
         location: { lat, lng },
-        landmark: 'AapdaMitra AI Emergency Escalation',
       })
 
       setMessages((prev) =>
-        prev.map((m, i) =>
-          i === msgIndex
+        prev.map((msg, idx) =>
+          idx === msgIndex
             ? {
-                ...m,
+                ...msg,
                 callbackSubmitted: true,
-                trackingId: report.trackingId,
                 submittedPhone: phone,
+                trackingId: report.trackingId,
               }
-            : m
+            : msg
         )
       )
 
-      toast('Urgent rescue callback requested! Responders notified.', 'success')
-    } catch (err) {
-      toast(err instanceof Error ? err.message : 'Failed to request callback', 'error')
+      toast('Emergency callback requested! Rescue team notified.')
+    } catch {
+      toast('Failed to dispatch callback request', 'error')
     } finally {
       setSubmittingCallback(null)
     }
   }
 
-  if (dismissed) return null
-
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3">
+    <aside aria-label="AapdaMitra AI Assistant" className="fixed bottom-4 right-4 z-40">
+      {/* Floating Toggle Button */}
+      {!open && (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="group flex items-center gap-2.5 rounded-full border border-slate-700 bg-slate-900 px-4 py-3 text-white shadow-2xl transition hover:bg-slate-800 active:scale-95 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer"
+          aria-label="Open AapdaMitra AI assistant"
+        >
+          <div className="relative">
+            <Bot className="h-5 w-5" />
+            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+          </div>
+          <span className="text-xs font-bold tracking-tight">AapdaMitra AI</span>
+        </button>
+      )}
+
+      {/* Floating Chat Modal */}
       {open && (
-        <div className="flex h-[32rem] w-[min(94vw,26rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900">
+        <div
+          role="dialog"
+          aria-label="AapdaMitra AI Disaster Support"
+          className="flex h-[530px] w-[92vw] max-w-[400px] flex-col overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+        >
           {/* Header */}
-          <div className="flex items-center justify-between gap-2 border-b border-slate-800 bg-slate-900 px-4 py-3 text-white">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 font-bold text-xs shadow-xs text-white">
-                🤖
-              </span>
+          <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-3 text-white">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-600 text-white">
+                <Bot className="h-4.5 w-4.5" />
+              </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <h2 className="text-xs font-bold truncate text-white">AapdaMitra AI</h2>
-                  <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold text-emerald-300 flex items-center gap-1">
+                  <span className="font-bold text-xs">AapdaMitra AI</span>
+                  <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold text-emerald-300 flex items-center gap-1 mono">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Online
+                    LIVE ASSIST
                   </span>
                 </div>
-                <p className="truncate text-[10px] text-slate-400">24/7 Intelligent Crisis & Survival Companion</p>
+                <p className="truncate text-[10px] text-slate-400">Rapid 24/7 Disaster Survival Guidance</p>
               </div>
             </div>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="shrink-0 rounded-md p-1 text-slate-400 transition hover:bg-slate-800 hover:text-white"
+              className="shrink-0 rounded-md p-1 text-slate-400 transition hover:bg-slate-800 hover:text-white cursor-pointer"
               aria-label={t('common.close')}
             >
-              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06-1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-              </svg>
+              <X className="h-4 w-4" />
             </button>
           </div>
 
-          {/* Messages */}
+          {/* Messages List */}
           <div className="flex-1 space-y-3.5 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-950">
-            {messages.map((m, i) => (
-              <div key={m.id || i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`max-w-[92%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-sm shadow-sm ${
-                    m.role === 'user'
-                      ? 'bg-blue-600 text-white rounded-br-none'
-                      : m.isCritical
-                      ? 'border border-red-200 bg-red-50/90 text-slate-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-slate-100 rounded-bl-none'
-                      : 'border border-slate-200 bg-white text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 rounded-bl-none'
-                  }`}
-                >
-                  <div className="whitespace-pre-wrap leading-relaxed">{m.content}</div>
+            {messages.map((m, i) => {
+              const isCrit = m.dangerLevel === 'CRITICAL' || m.isCritical
+              const isMod = m.dangerLevel === 'MODERATE'
 
-                  {m.exerciseType && (
-                    <div className="mt-2 inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                      🧘 {m.exerciseType.replace(/_/g, ' ')}
-                    </div>
-                  )}
+              return (
+                <div key={m.id || i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    className={`max-w-[92%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-sm shadow-xs ${
+                      m.role === 'user'
+                        ? 'bg-slate-900 text-white rounded-br-none dark:bg-slate-100 dark:text-slate-950'
+                        : isCrit
+                        ? 'border border-red-200 bg-red-50/90 text-slate-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-slate-100 rounded-bl-none'
+                        : isMod
+                        ? 'border border-amber-200 bg-amber-50/90 text-slate-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-slate-100 rounded-bl-none'
+                        : 'border border-slate-200 bg-white text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 rounded-bl-none'
+                    }`}
+                  >
+                    {/* Message Body */}
+                    <div className="whitespace-pre-wrap leading-relaxed">{cleanAiOutput(m.content)}</div>
 
-                  {/* Critical Helpline & Emergency Callback Box */}
-                  {m.isCritical && (
-                    <div className="mt-3 space-y-2 rounded-xl border border-red-200 bg-white p-3 dark:border-red-900/50 dark:bg-slate-900">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
-                          🚨 Emergency Helpline
-                        </span>
-                        <a
-                          href={`tel:${m.helpline || '108'}`}
-                          className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-xs hover:bg-red-700"
-                        >
-                          📞 Call {m.helpline || '108'}
-                        </a>
+                    {m.exerciseType && (
+                      <div className="mt-2 inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-800 border border-emerald-200 dark:border-emerald-900/50 dark:bg-emerald-950/60 dark:text-emerald-300 mono">
+                        {m.exerciseType.replace(/_/g, ' ')}
                       </div>
+                    )}
 
-                      {/* Callback Form */}
-                      {!m.callbackSubmitted ? (
-                        <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                          <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                            Enter mobile number — emergency teams will reach you immediately:
-                          </label>
-                          <div className="flex gap-1.5">
-                            <input
-                              type="tel"
-                              placeholder="10-digit mobile number"
-                              value={callbackPhones[i] || ''}
-                              onChange={(e) =>
-                                setCallbackPhones((prev) => ({ ...prev, [i]: e.target.value }))
-                              }
-                              className="min-w-0 flex-1 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs outline-none focus:border-red-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleEmergencyCallback(i, m.content)}
-                              disabled={submittingCallback === i}
-                              className="shrink-0 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-red-700 disabled:opacity-50"
+                    {/* DANGER LEVEL ACTION CARD: Critical or Moderate */}
+                    {(isCrit || isMod) && (
+                      <div className={`mt-3 space-y-2.5 rounded-xl border p-3 ${
+                        isCrit
+                          ? 'border-red-300 bg-white dark:border-red-800 dark:bg-slate-900'
+                          : 'border-amber-300 bg-white dark:border-amber-800 dark:bg-slate-900'
+                      }`}>
+                        {/* Emergency Hotline Buttons */}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`text-[10px] font-bold uppercase tracking-wider mono flex items-center gap-1 ${
+                            isCrit ? 'text-red-600 dark:text-red-400' : 'text-amber-700 dark:text-amber-400'
+                          }`}>
+                            {isCrit ? <Siren className="h-3.5 w-3.5 animate-pulse" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+                            {isCrit ? 'Critical Emergency' : 'Assistance Hotline'}
+                          </span>
+
+                          <div className="flex items-center gap-1">
+                            <a
+                              href={`tel:${isCrit ? '112' : '108'}`}
+                              className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-bold text-white shadow-xs ${
+                                isCrit ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'
+                              }`}
                             >
-                              {submittingCallback === i ? 'Alerting…' : 'Reach Me'}
-                            </button>
+                              <Phone className="h-3 w-3" />
+                              <span>Call {isCrit ? '112' : '108'}</span>
+                            </a>
+                            {isCrit && (
+                              <a
+                                href="tel:108"
+                                className="inline-flex items-center gap-1 rounded-md bg-slate-800 px-2 py-1 text-[11px] font-bold text-white shadow-xs hover:bg-slate-700"
+                              >
+                                <span>108</span>
+                              </a>
+                            )}
                           </div>
                         </div>
-                      ) : (
-                        <div className="rounded-lg bg-emerald-50 p-2.5 text-[11px] text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50">
-                          <div className="font-bold">✓ Priority Dispatch Alert Created!</div>
-                          <div className="mt-0.5">
-                            Tracking ID: <strong>{m.trackingId}</strong> ({m.submittedPhone})
+
+                        {/* Immediate Rescue Team Callback Input */}
+                        {!m.callbackSubmitted ? (
+                          <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                            <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                              {isCrit
+                                ? 'Enter phone number — Rescue team will call & dispatch:'
+                                : 'Enter phone number for relief volunteer callback:'}
+                            </label>
+                            <div className="flex gap-1.5">
+                              <input
+                                type="tel"
+                                value={callbackPhones[i] || ''}
+                                onChange={(e) =>
+                                  setCallbackPhones((prev) => ({ ...prev, [i]: e.target.value }))
+                                }
+                                placeholder="10-digit mobile number"
+                                className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-slate-50 px-2 py-1 text-xs outline-none focus:border-red-500 focus:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 font-mono"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleEmergencyCallback(i, messages[i - 1]?.content || m.content)}
+                                disabled={submittingCallback === i}
+                                className={`rounded-lg px-2.5 py-1 text-xs font-bold text-white shadow-xs cursor-pointer disabled:opacity-50 ${
+                                  isCrit ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'
+                                }`}
+                              >
+                                {submittingCallback === i ? 'Dispatching…' : 'Request Help'}
+                              </button>
+                            </div>
                           </div>
-                          <a
-                            href={`#/track?id=${m.trackingId}`}
-                            className="mt-1 inline-block font-bold text-blue-600 underline dark:text-blue-400"
-                          >
-                            Track Live Response Status →
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 font-medium pt-1">
+                            <CheckCircle2 className="h-4 w-4 shrink-0" />
+                            <span>
+                              Emergency SOS dispatched! Rescue team notified to call {m.submittedPhone} (Ref: {m.trackingId})
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
+
             {busy && (
-              <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 italic">
-                <span className="h-2 w-2 animate-bounce rounded-full bg-blue-500" />
-                <span>AapdaMitra AI is thinking…</span>
+              <div className="flex justify-start">
+                <div className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 shadow-xs">
+                  <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" />
+                  <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce [animation-delay:0.2s]" />
+                  <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce [animation-delay:0.4s]" />
+                  <span className="ml-1 font-medium">AapdaMitra AI formulating safety guidance…</span>
+                </div>
               </div>
             )}
             <div ref={bottomRef} />
           </div>
 
-          {/* Quick Shortcuts */}
-          <div className="flex gap-1.5 overflow-x-auto border-t border-slate-200 bg-white px-3 py-1.5 dark:border-slate-800 dark:bg-slate-900 [scrollbar-width:none]">
-            {['🌊 Water entering house', '🩸 Bleeding wound', '🧘 Help me breathe', '❤️ Chest pain', '⚡ Electric hazard', '🐍 Snakebite protocol'].map(
-              (prompt) => (
-                <button
-                  key={prompt}
-                  type="button"
-                  onClick={() => send(prompt)}
-                  className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                >
-                  {prompt}
-                </button>
-              )
-            )}
+          {/* Quick Prompts */}
+          <div className="flex gap-1.5 overflow-x-auto border-t border-slate-100 bg-slate-50 px-3 py-1.5 dark:border-slate-800 dark:bg-slate-950">
+            {[
+              { label: 'Water rising', text: 'Flood water is entering the building fast' },
+              { label: 'Severe wound', text: 'Someone has deep bleeding wound' },
+              { label: 'Trapped under debris', text: 'Help, someone is trapped under collapsed wall' },
+              { label: 'Safe evacuation', text: 'Where is the nearest safe shelter route?' },
+            ].map((qp, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => send(qp.text)}
+                disabled={busy}
+                className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[10px] font-semibold text-slate-700 shadow-xs hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 cursor-pointer"
+              >
+                {qp.label}
+              </button>
+            ))}
           </div>
 
           {/* Input Bar */}
-          <div className="flex gap-2 border-t border-slate-200 bg-white p-2.5 dark:border-slate-800 dark:bg-slate-900">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              send()
+            }}
+            className="flex items-center gap-2 border-t border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
+          >
             <input
+              type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && send()}
-              placeholder="Ask AapdaMitra AI (e.g. 'water rising', 'how to treat burn')…"
-              className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2 text-xs sm:text-sm focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              placeholder={t('chat.placeholder')}
+              disabled={busy}
+              className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 outline-none transition focus:border-slate-900 focus:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-300"
             />
             <button
-              type="button"
-              onClick={() => send()}
-              disabled={busy || !input.trim()}
-              className="shrink-0 rounded-xl bg-blue-600 px-3.5 py-2 text-xs sm:text-sm font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
+              type="submit"
+              disabled={!input.trim() || busy}
+              className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 text-white transition hover:bg-slate-800 disabled:opacity-40 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer"
+              aria-label="Send message"
             >
-              {t('common.send')}
+              <Send className="h-3.5 w-3.5" />
             </button>
-          </div>
+          </form>
         </div>
       )}
-
-      {/* Floating Launcher Button */}
-      <div className="flex items-center gap-2">
-        {!open && (
-          <button
-            type="button"
-            onClick={() => setDismissed(true)}
-            className="rounded-full border border-slate-200 bg-white p-1 text-slate-400 shadow-sm transition hover:text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:hover:text-slate-200"
-            aria-label={t('common.close')}
-            title={t('common.close')}
-          >
-            <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-            </svg>
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          className="flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-4 py-2.5 text-xs font-bold text-white shadow-lg transition hover:bg-slate-800 dark:border-slate-200 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-        >
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 font-bold text-[11px] text-white">🤖</span>
-          <span>{open ? t('common.close') : 'AapdaMitra AI Companion'}</span>
-        </button>
-      </div>
-    </div>
+    </aside>
   )
 }

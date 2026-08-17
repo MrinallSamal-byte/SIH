@@ -15,6 +15,8 @@ export type DamageClassification =
 export interface DamagePrediction {
   classification: DamageClassification;
   confidence: number;
+  damageScore?: number;
+  huggingFaceModel?: string;
 }
 
 export interface DamagePredictRequest {

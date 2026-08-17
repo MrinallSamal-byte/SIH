@@ -85,6 +85,7 @@ export interface Report {
   assignedAgencyId?: string
   assignedAgencyName?: string
   resolutionNotes?: string
+  source?: 'sos' | 'form' | 'sms' | 'call' | string
   createdAt: string
   updatedAt?: string
 }
@@ -216,6 +217,7 @@ export interface PfaChatMessage {
   content: string
   exerciseType?: string
   isCritical?: boolean
+  dangerLevel?: 'CRITICAL' | 'MODERATE' | 'LOW'
   helpline?: string
   trackingId?: string
   showCallbackInput?: boolean
@@ -228,6 +230,7 @@ export interface PfaChatResponse {
   exerciseType?: string
   safetyChecklist?: string[]
   isCritical?: boolean
+  dangerLevel?: 'CRITICAL' | 'MODERATE' | 'LOW'
   helpline?: string
 }
 
@@ -258,3 +261,36 @@ export interface FloodGeoJson {
   satellite_source?: string
   features: FloodFeature[]
 }
+
+export type DamageInfrastructureType =
+  | 'broken_home'
+  | 'gov_pipeline'
+  | 'road_bridge'
+  | 'electrical_power'
+  | 'commercial_public'
+  | 'agricultural'
+
+export type DamageGrade = 'DESTROYED' | 'MAJOR' | 'MINOR'
+
+export interface DamageAssessmentReport {
+  id: string
+  claimId: string
+  claimantName?: string
+  claimantPhone: string
+  infrastructureType: DamageInfrastructureType
+  propertyAddress: string
+  district: string
+  latitude: number
+  longitude: number
+  photoUrl?: string
+  damageGrade: DamageGrade
+  damageScore: number // 0-100 points
+  confidence: number // percentage e.g. 98.4
+  compensationInr: number
+  verified: boolean
+  status: 'approved' | 'pending_review' | 'flagged_fraud'
+  factors: string[]
+  huggingFaceModel?: string
+  createdAt: string
+}
+

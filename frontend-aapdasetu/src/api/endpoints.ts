@@ -6,6 +6,7 @@ import type {
   AnalyticsData,
   AuditLog,
   BroadcastPayload,
+  DamageAssessmentReport,
   MissingPerson,
   OverviewKPIs,
   Report,
@@ -179,10 +180,11 @@ export function createReport(input: ReportInput): Promise<Report> {
 }
 
 /** GET /api/v1/admin/reports?status=&priorityLabel=&search= — list + search reports. */
-export function listReports(params: { status?: string; priority?: string; q?: string } = {}): Promise<Report[]> {
+export function listReports(params: { status?: string; priority?: string; type?: string; q?: string } = {}): Promise<Report[]> {
   const qs = new URLSearchParams()
   if (params.status) qs.set('status', params.status)
   if (params.priority) qs.set('priorityLabel', params.priority)
+  if (params.type) qs.set('type', params.type)
   if (params.q) qs.set('search', params.q)
   return withMockFallback(
     () =>
@@ -287,13 +289,21 @@ export function createSafetyCheckin(
   )
 }
 
-// ---- shelters ------------------------------------------------------------------
+// ---- shelters (Admin Full Control) ---------------------------------------------
 
 /** GET /api/v1/shelters?status= — shelter list (public; distance computed client-side). */
-export function listShelters(status?: string): Promise<Shelter[]> {
+export function listShelters(status?: string, includeHidden = false): Promise<Shelter[]> {
   return withMockFallback(
     () => apiCall<Shelter[]>(`GET`, `/api/v1/shelters${status ? `?status=${status}` : ''}`),
-    () => mocks.listShelters(status),
+    () => mocks.listShelters(status, includeHidden),
+  )
+}
+
+/** POST /api/v1/admin/shelters — create new shelter. */
+export function createShelter(input: Omit<Shelter, 'id'>): Promise<Shelter> {
+  return withMockFallback(
+    () => apiCall<Shelter>('POST', '/api/v1/admin/shelters', input),
+    () => mocks.createShelter(input),
   )
 }
 
@@ -307,6 +317,19 @@ export function updateShelter(id: string, patch: Partial<Shelter>): Promise<Shel
       return updated
     },
   )
+}
+
+/** DELETE /api/v1/admin/shelters/:id — delete shelter. */
+export function deleteShelter(id: string): Promise<boolean> {
+  return withMockFallback(
+    () => apiCall<{ success: boolean }>('DELETE', `/api/v1/admin/shelters/${encodeURIComponent(id)}`).then(() => true),
+    () => mocks.deleteShelter(id),
+  )
+}
+
+/** Reset mock database to 1000+ fresh records. */
+export function resetMockDatabase(): Promise<void> {
+  return Promise.resolve(mocks.resetData())
 }
 
 // ---- alerts --------------------------------------------------------------------
@@ -514,6 +537,19 @@ export function getAnalytics(): Promise<AnalyticsData> {
   }, mocks.analytics)
 }
 
+/** GET /api/v1/damage-assessments — list all damage assessment submissions. */
+export function listDamageAssessments(filters?: {
+  infrastructureType?: string
+  damageGrade?: string
+  district?: string
+  q?: string
+}): Promise<DamageAssessmentReport[]> {
+  return withMockFallback(
+    () => apiCall<DamageAssessmentReport[]>('GET', '/api/v1/damage-assessments', filters),
+    () => mocks.listDamageAssessments(filters),
+  )
+}
+
 /** POST /api/v1/damage-assessment — persist disaster property damage relief claim. */
 export function createDamageAssessment(input: {
   propertyAddress: string
@@ -524,14 +560,42 @@ export function createDamageAssessment(input: {
   estimatedLossInr: number
   claimantName?: string
   claimantPhone: string
-}): Promise<{ id: string; status: string; compensation: number }> {
+  infrastructureType?: string
+  photoUrl?: string
+  damageGrade?: string
+  damageScore?: number
+  confidence?: number
+  district?: string
+}): Promise<DamageAssessmentReport> {
   return withMockFallback(
     () =>
-      apiCall<{ id: string; status: string; compensation: number }>('POST', '/api/v1/damage-assessment', input),
-    () => ({
-      id: `SDRF-${Date.now().toString(36).toUpperCase()}`,
-      status: 'pending_review',
-      compensation: input.estimatedLossInr,
-    }),
+      apiCall<DamageAssessmentReport>('POST', '/api/v1/damage-assessment', input),
+    () =>
+      mocks.createDamageAssessment({
+        propertyAddress: input.propertyAddress,
+        latitude: input.latitude,
+        longitude: input.longitude,
+        claimantName: input.claimantName,
+        claimantPhone: input.claimantPhone,
+        infrastructureType: (input.infrastructureType as any) || 'broken_home',
+        photoUrl: input.photoUrl,
+        damageGrade: (input.damageGrade as any) || 'MAJOR',
+        damageScore: input.damageScore || 75.0,
+        confidence: input.confidence || 98.36,
+        compensationInr: input.estimatedLossInr || 47550,
+        district: input.district || 'North 24 Parganas',
+      }),
+  )
+}
+
+/** PATCH /api/v1/admin/damage-assessments/:id/status — update claim review status. */
+export function updateDamageAssessmentStatus(
+  id: string,
+  status: DamageAssessmentReport['status'],
+): Promise<DamageAssessmentReport | undefined> {
+  return withMockFallback(
+    () =>
+      apiCall<DamageAssessmentReport>('PATCH', `/api/v1/admin/damage-assessments/${id}/status`, { status }),
+    () => mocks.updateDamageAssessmentStatus(id, status),
   )
 }

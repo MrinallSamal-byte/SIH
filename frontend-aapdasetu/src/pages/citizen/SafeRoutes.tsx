@@ -1,9 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
+import {
+  Compass,
+  Navigation,
+  AlertTriangle,
+  CheckCircle2,
+  MapPin
+} from 'lucide-react'
 import { aiSatelliteFloodMap } from '../../api/ai'
 import { listShelters } from '../../api/endpoints'
 import Loader from '../../components/common/Loader'
 import LeafletMap from '../../components/map/LeafletMap'
 import { useLocation } from '../../hooks/useLocation'
+import { useLanguage } from '../../lib/i18n'
 import { getNavigationUrl } from '../../lib/helpers'
 import type { FloodGeoJson, GeoPoint, Shelter } from '../../types'
 
@@ -70,7 +78,6 @@ function buildSafeRoute(from: GeoPoint, to: GeoPoint, polygons: GeoPoint[][]): G
 
   const waypoints = crossing
     .map((poly) => {
-      // Find polygon centroid
       const centerLat = poly.reduce((acc, p) => acc + p.lat, 0) / poly.length
       const centerLng = poly.reduce((acc, p) => acc + p.lng, 0) / poly.length
 
@@ -84,7 +91,6 @@ function buildSafeRoute(from: GeoPoint, to: GeoPoint, polygons: GeoPoint[][]): G
         }
       }
 
-      // Compute outward vector (300m safety clearance buffer ~ 0.003 degrees)
       const offsetLat = best.lat >= centerLat ? 0.003 : -0.003
       const offsetLng = best.lng >= centerLng ? 0.003 : -0.003
       const bufferedPoint: GeoPoint = {
@@ -108,12 +114,8 @@ function formatEta(minutes: number): string {
   return `${Math.floor(minutes / 60)} hr ${Math.round(minutes % 60)} min`
 }
 
-/**
- * Disaster-aware dynamic navigation.
- * Renders Sentinel-1 SAR flood extent polygons (via FastAPI /ai/satelliteflood-map)
- * plus open shelters, with both a fastest route and a flood-safe detour route.
- */
 export default function SafeRoutes() {
+  const { t } = useLanguage()
   const { coords, status, accuracy, refresh } = useLocation()
   const [flood, setFlood] = useState<FloodGeoJson | null>(null)
   const [shelters, setShelters] = useState<Shelter[] | null>(null)
@@ -227,39 +229,41 @@ export default function SafeRoutes() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Safe Evacuation Routes</h1>
+      <div className="flex items-center gap-2 mb-1">
+        <Compass className="h-6 w-6 text-slate-900 dark:text-slate-100" />
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+          {t('routes.title')}
+        </h1>
+      </div>
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-        Active flood zones mapped via Sentinel-1 SAR satellite analysis. Follow the green safe route to avoid hazardous water currents.
+        {t('routes.subtitle')}
       </p>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <div className="space-y-3 lg:col-span-1">
-          <div className="rounded-xl border border-slate-200 bg-white p-4 text-xs dark:border-slate-800 dark:bg-slate-900 shadow-sm">
-            <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400">Origin Point</label>
-            <div className="mt-0.5 font-medium text-slate-700 dark:text-slate-200">
-              {coords ? `Live GPS: ${origin.lat.toFixed(4)}°N, ${origin.lng.toFixed(4)}°E` : 'Kolkata Central (Regional Fallback)'}
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-xs dark:border-slate-800 dark:bg-slate-900 shadow-xs">
+            <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mono">{t('routes.origin')}</label>
+            <div className="mt-1 font-medium text-slate-700 dark:text-slate-200">
+              {coords ? `GPS: ${origin.lat.toFixed(4)}°N, ${origin.lng.toFixed(4)}°E` : 'Regional Center Fallback'}
             </div>
             <button
               type="button"
               onClick={refresh}
               disabled={status === 'locating'}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-blue-300 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-800 transition hover:bg-blue-100 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-blue-300 dark:hover:bg-slate-700"
+              className="mt-2.5 inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
             >
-              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
-              </svg>
-              {status === 'locating' ? 'Acquiring GPS…' : coords ? 'Update GPS Location' : 'Detect My Location'}
+              <MapPin className="h-3.5 w-3.5 text-slate-900 dark:text-slate-100" />
+              <span>{status === 'locating' ? t('shelter.locating') : coords ? t('shelter.updateLocation') : t('shelter.detectLocation')}</span>
             </button>
 
-            <label htmlFor="safe-route-dest" className="mt-4 block text-[10px] font-bold uppercase tracking-wide text-slate-400">
-              Destination Shelter
+            <label htmlFor="safe-route-dest" className="mt-4 block text-[10px] font-bold uppercase tracking-wide text-slate-400 mono">
+              {t('routes.destination')}
             </label>
             <select
               id="safe-route-dest"
               value={destinationId}
               onChange={(e) => setDestinationId(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             >
               {shelterMarkers.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -273,9 +277,10 @@ export default function SafeRoutes() {
                 href={getNavigationUrl(destination.latitude, destination.longitude)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-600 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700"
+                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
               >
-                <span>Start Turn-by-Turn Walking Navigation</span>
+                <Navigation className="h-3.5 w-3.5" />
+                <span>{t('common.directions')}</span>
               </a>
             )}
           </div>
@@ -283,37 +288,31 @@ export default function SafeRoutes() {
           {routes.map((r) => (
             <div
               key={r.id}
-              className="flex items-center justify-between gap-3 rounded-xl border p-3.5 text-xs shadow-sm"
-              style={{
-                borderColor: r.color,
-                backgroundColor: r.safe ? 'rgba(16,185,129,0.08)' : 'rgba(245,158,11,0.08)',
-              }}
+              className={`flex items-center justify-between gap-3 rounded-2xl border p-4 text-xs shadow-xs ${
+                r.safe ? 'border-emerald-300 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20' : 'border-amber-300 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/20'
+              }`}
             >
               <div>
-                <div className="flex items-center gap-2 font-bold" style={{ color: r.color }}>
-                  <span
-                    className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: r.color }}
-                    aria-hidden="true"
-                  />
-                  {r.label}
+                <div className={`flex items-center gap-1.5 font-bold ${r.safe ? 'text-emerald-800 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-300'}`}>
+                  {r.safe ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertTriangle className="h-4 w-4 text-amber-600" />}
+                  <span>{r.safe ? t('routes.safeDistance') : t('routes.directDistance')}</span>
                 </div>
-                <div className="mt-0.5 text-slate-600 dark:text-slate-400">{r.hazard}</div>
+                <div className="mt-1 text-slate-600 dark:text-slate-400 leading-relaxed">{r.hazard}</div>
               </div>
               <div className="shrink-0 text-right">
-                <div className="font-bold text-slate-900 dark:text-slate-100">{routeLengthKm(r.points).toFixed(1)} km</div>
+                <div className="font-bold text-slate-900 dark:text-slate-100 mono text-sm">{routeLengthKm(r.points).toFixed(1)} km</div>
                 <div className="text-slate-500 dark:text-slate-400">
-                  ~{formatEta((routeLengthKm(r.points) / WALK_SPEED_KMPH) * 60)} walk
+                  ~{formatEta((routeLengthKm(r.points) / WALK_SPEED_KMPH) * 60)} {t('routes.walkingTime')}
                 </div>
               </div>
             </div>
           ))}
 
-          <h2 className="pt-1 text-xs font-bold uppercase tracking-wider text-slate-400">Flood Zones Detected</h2>
+          <h2 className="pt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">{t('routes.hazardActive')}</h2>
           {flood.features.map((f, i) => (
-            <div key={i} className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs dark:border-red-900/40 dark:bg-red-950/30">
+            <div key={i} className="rounded-2xl border border-red-200 bg-red-50/70 p-3.5 text-xs dark:border-red-900/40 dark:bg-red-950/30">
               <div className="font-bold text-red-700 dark:text-red-300">{f.properties.hazard_type}</div>
-              <div className="text-red-600 dark:text-red-400">
+              <div className="text-red-600 dark:text-red-400 mt-0.5">
                 Severity: {f.properties.severity} · ~{f.properties.water_depth_est_meters}m depth
               </div>
               {f.properties.affected_villages && (
@@ -323,30 +322,32 @@ export default function SafeRoutes() {
           ))}
         </div>
         <div className="lg:col-span-2">
-          <LeafletMap
-            center={origin}
-            zoom={13}
-            markers={markers}
-            polygons={polygons}
-            polylines={routes.map((r) => ({ id: r.id, points: r.points, color: r.color, dashed: r.dashed, label: r.label }))}
-            height="520px"
-            autoFit
-          />
+          <div className="rounded-2xl overflow-hidden shadow-xs border border-slate-200 dark:border-slate-800">
+            <LeafletMap
+              center={origin}
+              zoom={13}
+              markers={markers}
+              polygons={polygons}
+              polylines={routes.map((r) => ({ id: r.id, points: r.points, color: r.color, dashed: r.dashed, label: r.label }))}
+              height="520px"
+              autoFit
+            />
+          </div>
           <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-0.5 w-6 bg-amber-500" aria-hidden="true" /> Direct line
+              <span className="inline-block h-0.5 w-5 bg-amber-500" /> {t('routes.directDistance')}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-0 w-6 border-t-2 border-dashed border-emerald-500" aria-hidden="true" /> Safe detour
+              <span className="inline-block h-0 w-5 border-t-2 border-dashed border-emerald-500" /> {t('routes.safeDistance')}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500/70" aria-hidden="true" /> Flood inundation
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" /> {t('routes.hazardActive')}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" aria-hidden="true" /> Open shelter
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" /> {t('shelter.allShelters')}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-blue-500" aria-hidden="true" /> You are here
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-slate-900 dark:bg-slate-100" /> {t('routes.origin')}
             </span>
           </div>
         </div>
@@ -354,4 +355,3 @@ export default function SafeRoutes() {
     </div>
   )
 }
-

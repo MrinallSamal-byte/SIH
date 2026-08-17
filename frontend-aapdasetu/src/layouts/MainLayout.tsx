@@ -1,5 +1,20 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import {
+  Siren,
+  FileText,
+  Search,
+  Home as HomeIcon,
+  Building,
+  Sun,
+  Moon,
+  Menu,
+  X,
+  Phone,
+  AlertTriangle
+} from 'lucide-react'
+import AapdaSetuLogo from '../components/common/AapdaSetuLogo'
+import ErrorBoundary from '../components/common/ErrorBoundary'
 import ChatWidget from '../components/ChatWidget'
 import { LANGUAGES, useLanguage } from '../lib/i18n'
 import { useTheme } from '../lib/theme'
@@ -26,49 +41,29 @@ const navItems: NavLinkItem[] = [
 const mobileBottomTabs = [
   {
     to: '/',
-    label: 'Home',
-    icon: (
-      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-      </svg>
-    ),
+    labelKey: 'nav.home',
+    icon: HomeIcon,
   },
   {
     to: '/report',
-    label: 'Report',
-    icon: (
-      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-      </svg>
-    ),
+    labelKey: 'nav.report',
+    icon: FileText,
   },
   {
     to: '/sos',
-    label: '1-TAP SOS',
+    labelKey: 'nav.sos',
     isSos: true,
-    icon: (
-      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6 17h12M7.5 17V9.75a4.5 4.5 0 0 1 9 0V17m-12 0h14a1 1 0 0 0 1-1v-1a1 1 0 0 0-1-1H5.5a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1Zm5.25 2.75h1.5" />
-      </svg>
-    ),
+    icon: Siren,
   },
   {
     to: '/track',
-    label: 'Track',
-    icon: (
-      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-      </svg>
-    ),
+    labelKey: 'nav.track',
+    icon: Search,
   },
   {
     to: '/shelters',
-    label: 'Shelters',
-    icon: (
-      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21m0 0h4.5V3.545M12.75 21h7.5V10.75M2.25 21h1.5m18 0h-18M2.25 9l4.5-1.636M18.75 3l-1.5.545m0 6.205 3 1" />
-      </svg>
-    ),
+    labelKey: 'nav.shelters',
+    icon: Building,
   },
 ]
 
@@ -101,10 +96,10 @@ export default function MainLayout() {
       {/* Offline Ambient Banner */}
       {isOffline && (
         <div className="bg-amber-600 px-4 py-2 text-center text-xs font-bold text-white shadow-sm flex items-center justify-center gap-2">
-          <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-white/40 text-[10px] font-black leading-none">!</span>
-          <span>Offline Mode Active — Incident submissions will automatically queue and sync once reconnected.</span>
+          <AlertTriangle className="h-4 w-4" />
+          <span>{t('header.offlineNotice')}</span>
           <a href="tel:112" className="ml-2 underline font-extrabold text-amber-100 hover:text-white">
-            Call 112 Offline
+            {t('header.callOffline')}
           </a>
         </div>
       )}
@@ -115,45 +110,43 @@ export default function MainLayout() {
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="flex items-center gap-1.5 font-bold text-red-600 dark:text-red-400">
               <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse" />
-              National Emergency: <a href="tel:112" className="underline font-black text-sm">112</a>
+              {t('header.nationalEmergency')}: <a href="tel:112" className="underline font-black text-sm mono">112</a>
             </span>
             <span className="text-slate-300 dark:text-slate-700">|</span>
             <span className="flex items-center gap-1">
-              Ambulance: <a href="tel:108" className="hover:text-slate-900 dark:hover:text-slate-200 font-bold">108</a>
+              {t('header.ambulance')}: <a href="tel:108" className="hover:text-slate-900 dark:hover:text-slate-200 font-bold mono">108</a>
             </span>
             <span className="hidden sm:inline text-slate-300 dark:text-slate-700">|</span>
             <span className="hidden sm:inline">
-              Disaster Helpline: <a href="tel:1078" className="hover:text-slate-900 dark:hover:text-slate-200 font-medium">1078</a>
+              {t('header.disasterHelpline')}: <a href="tel:1070" className="hover:text-slate-900 dark:hover:text-slate-200 font-medium mono">1070</a>
             </span>
           </div>
 
           <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="hidden xs:inline">NDRF / SDRF Command Active</span>
+            <span className="hidden xs:inline font-medium">NDRF / SDRF Command Active</span>
           </div>
         </div>
       </div>
 
       {/* Main Navigation Header */}
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-950/95">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-950/90">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
           {/* Logo / Brand */}
-          <Link to="/" className="flex items-center gap-2.5 no-underline">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white font-black text-sm shadow-xs">
-              आ
-            </div>
-            <div>
-              <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">
+          <Link to="/" className="flex items-center gap-2.5 font-bold tracking-tight group">
+            <AapdaSetuLogo size={34} />
+            <div className="flex flex-col">
+              <span className="text-base font-extrabold leading-none text-slate-900 dark:text-slate-100 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
                 {t('app.name')}
               </span>
-              <span className="hidden sm:inline-block ml-2 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                ICS Network
+              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 tracking-wider mono uppercase mt-0.5">
+                ICS NETWORK
               </span>
             </div>
           </Link>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden items-center gap-1 md:flex">
+          <nav className="hidden lg:flex items-center gap-1" aria-label="Desktop Navigation">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -161,168 +154,175 @@ export default function MainLayout() {
                 end={item.end}
                 className={({ isActive }) =>
                   item.isSos
-                    ? `ml-1 rounded-lg px-3.5 py-1.5 text-xs font-black transition-all ${
-                        isActive
-                          ? 'bg-red-600 text-white shadow-sm'
-                          : 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-900/60'
+                    ? `ml-1.5 inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-red-700 active:scale-95 ${
+                        isActive ? 'ring-2 ring-red-400 ring-offset-2 dark:ring-offset-slate-950' : ''
                       }`
-                    : `rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    : `rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
                         isActive
                           ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100 font-bold'
                           : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-200'
                       }`
                 }
               >
-                {t(item.labelKey)}
+                {item.isSos && <Siren className="h-3.5 w-3.5 animate-pulse" />}
+                <span>{t(item.labelKey)}</span>
               </NavLink>
             ))}
           </nav>
 
-          {/* Controls: Theme & Language */}
+          {/* Controls: Language Selector, Theme Toggle, Mobile Menu Button */}
           <div className="flex items-center gap-2">
-            <select
-              value={lang}
-              onChange={(e) => setLang(e.target.value as typeof lang)}
-              className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
-              aria-label="Language selector"
-            >
-              {LANGUAGES.map((l) => (
-                <option key={l.code} value={l.code}>
-                  {l.label}
-                </option>
-              ))}
-            </select>
+            {/* Language Selector */}
+            <div className="relative">
+              <select
+                aria-label="Language selector"
+                value={lang}
+                onChange={(e) => setLang(e.target.value as any)}
+                className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-800 outline-none transition hover:bg-slate-100 focus:border-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                {LANGUAGES.map((l) => (
+                  <option key={l.code} value={l.code}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
+            {/* Theme Toggle */}
             <button
               type="button"
               onClick={toggleTheme}
-              className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+              aria-label="Toggle theme"
             >
-              {theme === 'dark' ? (
-                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M10 2a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1Zm4.96 2.04a1 1 0 0 1 0 1.414l-.707.707a1 1 0 1 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 0ZM10 6a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm7 4a1 1 0 1 1 0 2h-1a1 1 0 1 1 0-2h1Zm-3.243 4.243a1 1 0 0 1 1.414 0l.707.707a1 1 0 0 1-1.414 1.414l-.707-.707a1 1 0 0 1 0-1.414ZM10 16a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1Zm-4.243-.243a1 1 0 0 1 0 1.414l-.707.707a1 1 0 0 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 0ZM4 10a1 1 0 0 1-1 1H2a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1Zm1.05-3.95a1 1 0 0 1 0-1.414l.707-.707a1 1 0 1 1 1.414 1.414l-.707.707a1 1 0 0 1-1.414 0Z" />
-                </svg>
-              ) : (
-                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M17.293 13.293A8 8 0 0 1 6.707 2.707a8.001 8.001 0 1 0 10.586 10.586Z" />
-                </svg>
-              )}
+              {theme === 'dark' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
             </button>
 
-            {/* Mobile Hamburger Toggle for Secondary Links */}
+            {/* Mobile Hamburger Toggle */}
             <button
               type="button"
               onClick={() => setMobileMenuOpen((o) => !o)}
-              className="rounded-lg border border-slate-200 p-1.5 text-slate-700 md:hidden dark:border-slate-700 dark:text-slate-300"
-              aria-label="Open mobile menu"
+              className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 lg:hidden dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800"
+              aria-label="Toggle mobile menu"
             >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                {mobileMenuOpen ? <path d="M6 18L18 6M6 6l12 12" /> : <path d="M4 6h16M4 12h16M4 18h16" />}
-              </svg>
+              {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Extended Drawer */}
+        {/* Mobile Dropdown Menu Drawer */}
         {mobileMenuOpen && (
-          <nav className="border-t border-slate-100 bg-white px-4 py-3 md:hidden dark:border-slate-800 dark:bg-slate-950">
-            <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
-              <Link to="/safe-routes" className="rounded-lg border border-slate-100 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-900">
-                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">Route</span>
-                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">Evacuation Routes</span>
-              </Link>
-              <Link to="/missing-persons" className="rounded-lg border border-slate-100 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-900">
-                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">Find</span>
-                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">Missing Persons</span>
-              </Link>
-              <Link to="/check-in" className="rounded-lg border border-slate-100 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-900">
-                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">Safe</span>
-                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">Safe Check-In</span>
-              </Link>
-              <Link to="/alerts" className="rounded-lg border border-slate-100 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-900">
-                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">Warn</span>
-                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">Public Warnings</span>
-              </Link>
-              <Link to="/report-damage" className="col-span-2 rounded-lg border border-slate-100 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-900">
-                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">Damage</span>
-                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">SDRF Property Damage Assessment</span>
-              </Link>
-              <Link to="/pfa-chat" className="col-span-2 rounded-lg border border-blue-100 bg-blue-50 p-2.5 text-blue-800 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-300 font-bold">
-                <span className="mb-2 inline-flex rounded-full bg-blue-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-blue-900 dark:bg-blue-900 dark:text-blue-100">AI</span>
-                <span className="block text-sm font-semibold">AapdaMitra AI Crisis Lifeline</span>
-              </Link>
+          <nav className="border-t border-slate-200 bg-white px-4 py-3 shadow-lg lg:hidden dark:border-slate-800 dark:bg-slate-950 animate-dropdown">
+            <div className="grid grid-cols-2 gap-1.5">
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  className={({ isActive }) =>
+                    item.isSos
+                      ? `col-span-2 flex items-center justify-center gap-2 rounded-xl bg-red-600 p-2.5 text-xs font-bold text-white shadow-sm`
+                      : `flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition ${
+                          isActive
+                            ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100 font-bold'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-200'
+                        }`
+                  }
+                >
+                  {item.isSos && <Siren className="h-4 w-4" />}
+                  <span>{t(item.labelKey)}</span>
+                </NavLink>
+              ))}
+
+              <div className="col-span-2 border-t border-slate-100 my-1 pt-1 dark:border-slate-800 grid grid-cols-2 gap-1">
+                <Link
+                  to="/admin"
+                  className="rounded-lg px-3 py-2 text-xs text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900 font-medium"
+                >
+                  {t('nav.admin')}
+                </Link>
+                <Link
+                  to="/volunteer"
+                  className="rounded-lg px-3 py-2 text-xs text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900 font-medium"
+                >
+                  {t('nav.volunteer')}
+                </Link>
+              </div>
             </div>
           </nav>
         )}
       </header>
 
-      {/* Main Container — with bottom padding on mobile so fixed bottom bar doesn't obscure content */}
+      {/* Main Container */}
       <main className="mx-auto flex-1 w-full max-w-7xl px-4 py-6 pb-24 md:pb-8">
         <div key={location.pathname} className="animate-page-enter">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </div>
       </main>
 
       {/* Minimal Clean Footer */}
-      <footer className="border-t border-slate-200 bg-white py-6 pb-24 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400 md:pb-6">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 sm:flex-row">
+      <footer className="border-t border-slate-200 bg-white py-8 pb-24 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400 md:pb-8">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-800 dark:text-slate-200">AapdaSetu</span>
-            <span>National Incident Command & Disaster Response.</span>
+            <AapdaSetuLogo size={20} />
+            <span className="font-bold text-slate-900 dark:text-slate-100">{t('app.name')}</span>
+            <span>—</span>
+            <span>{t('app.tagline')}</span>
           </div>
 
           <div className="flex items-center gap-4">
-            <a href="tel:112" className="font-bold text-red-600 hover:underline dark:text-red-400">
-              Emergency: 112
+            <a href="tel:112" className="flex items-center gap-1 font-bold text-red-600 hover:underline dark:text-red-400">
+              <Phone className="h-3.5 w-3.5" />
+              {t('header.nationalEmergency')}: 112
             </a>
             <span className="text-slate-300 dark:text-slate-700">|</span>
-            <span>© {year} AapdaSetu</span>
+            <span className="mono">© {year} AapdaSetu</span>
           </div>
         </div>
       </footer>
 
-      {/* Fixed Mobile Bottom Action Bar (Thumb Reach Zone) */}
+      {/* Fixed Mobile Bottom Action Bar */}
       <nav
         className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-slate-200 bg-white/95 py-2 px-1 backdrop-blur-md md:hidden dark:border-slate-800 dark:bg-slate-950/95"
         aria-label="Mobile Navigation"
       >
-        {mobileBottomTabs.map((tab) => (
-          <NavLink
-            key={tab.to}
-            to={tab.to}
-            className={({ isActive }) =>
-              tab.isSos
-                ? `relative -top-3 flex flex-col items-center justify-center rounded-full bg-red-600 p-3.5 text-white shadow-lg ring-4 ring-white transition active:scale-95 dark:ring-slate-950 ${
-                    isActive ? 'animate-sos-pulse' : ''
-                  }`
-                : `flex flex-1 flex-col items-center justify-center py-1 text-[10px] font-bold transition ${
-                    isActive
-                      ? 'text-blue-600 dark:text-blue-400'
-                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`
-            }
-          >
-            {tab.isSos ? (
-              <div className="flex flex-col items-center">
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 17h12M7.5 17V9.75a4.5 4.5 0 0 1 9 0V17m-12 0h14a1 1 0 0 0 1-1v-1a1 1 0 0 0-1-1H5.5a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1Zm5.25 2.75h1.5" />
-                </svg>
-                <span className="mt-0.5 text-[9px] font-black tracking-wider">SOS</span>
-              </div>
-            ) : (
-              <>
-                <span className="mb-0.5">{tab.icon}</span>
-                <span>{tab.label}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
+        {mobileBottomTabs.map((tab) => {
+          const Icon = tab.icon
+          return (
+            <NavLink
+              key={tab.to}
+              to={tab.to}
+              className={({ isActive }) =>
+                tab.isSos
+                  ? `relative -top-3 flex flex-col items-center justify-center rounded-full bg-red-600 p-3.5 text-white shadow-lg ring-4 ring-white transition active:scale-95 dark:ring-slate-950 ${
+                      isActive ? 'animate-sos-pulse' : ''
+                    }`
+                  : `flex flex-1 flex-col items-center justify-center py-1 text-[10px] font-bold transition ${
+                      isActive
+                        ? 'text-slate-900 dark:text-slate-100'
+                        : 'text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300'
+                    }`
+              }
+            >
+              {tab.isSos ? (
+                <div className="flex flex-col items-center">
+                  <Icon className="h-5 w-5" />
+                  <span className="mt-0.5 text-[9px] font-black tracking-wider">SOS</span>
+                </div>
+              ) : (
+                <>
+                  <Icon className="h-4.5 w-4.5 mb-1" />
+                  <span>{t(tab.labelKey)}</span>
+                </>
+              )}
+            </NavLink>
+          )
+        })}
       </nav>
 
       <ChatWidget />
     </div>
   )
 }
-
-

@@ -1,14 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  Siren,
+  Volume2,
+  Phone,
+  Navigation,
+  ArrowRight,
+  MapPin
+} from 'lucide-react'
 import { listReports, updateReport } from '../../api/endpoints'
 import PriorityBadge from '../../components/common/PriorityBadge'
 import Badge from '../../components/common/Badge'
 import Button from '../../components/common/Button'
 import Loader from '../../components/common/Loader'
+import LeafletMap, { type MapMarker } from '../../components/map/LeafletMap'
 import { useRealtime } from '../../hooks/useRealtime'
 import { timeAgo, getNavigationUrl } from '../../lib/helpers'
-import type { Report } from '../../types'
+import type { GeoPoint, Report } from '../../types'
 
-// Singleton Audio Context for reliable browser playback
+// Singleton Audio Context for alarm siren
 let globalAudioCtx: AudioContext | null = null
 
 function getAudioContext(): AudioContext | null {
@@ -46,7 +55,7 @@ function playCriticalAlarm() {
 
 export default function LiveSOS() {
   const fetchReports = useCallback(() => listReports({ status: 'pending' }), [])
-  const reports = useRealtime<Report[]>(fetchReports, 4000)
+  const reports = useRealtime<Report[]>(fetchReports, 3000)
   const [audioEnabled, setAudioEnabled] = useState(false)
   const knownRedIdsRef = useRef<Set<string>>(new Set())
   const isFirstLoadRef = useRef(true)
@@ -70,7 +79,6 @@ export default function LiveSOS() {
       return
     }
 
-    // Detect if any new RED report arrived
     const hasNewRedAlert = currentRedReports.some((r) => !knownRedIdsRef.current.has(r.id))
     if (hasNewRedAlert && audioEnabled) {
       playCriticalAlarm()
@@ -83,60 +91,107 @@ export default function LiveSOS() {
     await updateReport(reportId, { status: 'in_progress' })
   }
 
+  // Live Map markers for pending SOS signals
+  const markers = useMemo<MapMarker[]>(() => {
+    if (!reports) return []
+    return reports
+      .filter((r) => r.latitude && r.longitude)
+      .map((r) => ({
+        id: r.id,
+        position: { lat: r.latitude!, lng: r.longitude! },
+        title: `SOS: ${r.type.toUpperCase()} (${r.trackingId})`,
+        subtitle: `${r.description ?? ''} - Reported ${timeAgo(r.createdAt)}`,
+        color: r.priorityLabel === 'RED' ? '#dc2626' : '#f59e0b',
+        isSos: true,
+      }))
+  }, [reports])
+
+  const mapCenter: GeoPoint = useMemo(() => {
+    if (markers.length > 0) return markers[0].position
+    return { lat: 22.5726, lng: 88.3639 }
+  }, [markers])
+
   if (!reports) return <Loader />
 
   return (
-    <div>
+    <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Live Emergency SOS Stream</h1>
-          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" />
-            Active Realtime Incident Queue ({reports.length} pending)
+          <div className="flex items-center gap-2">
+            <Siren className="h-6 w-6 text-red-600 animate-pulse" />
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              Live Emergency SOS Stream
+            </h1>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <span className="inline-block h-2 w-2 rounded-full bg-red-500 animate-ping" />
+            <span>Active Realtime Distress Queue ({reports.length} pending incidents)</span>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           {!audioEnabled ? (
-            <Button variant="outline" size="sm" onClick={enableAudio} className="font-bold">
-              🔊 Enable Siren Alert
+            <Button variant="outline" size="sm" onClick={enableAudio} className="font-bold flex items-center gap-1.5">
+              <Volume2 className="h-4 w-4 text-slate-700 dark:text-slate-300" />
+              <span>Enable Audio Siren</span>
             </Button>
           ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              Siren Active
+            <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 shadow-xs">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Siren Active</span>
             </span>
           )}
         </div>
       </div>
 
-      <div className="mt-4 space-y-3">
+      {/* Realistic Tactical Satellite Map */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
+          <span>Active Distress Map ({markers.length} Geolocated Incidents)</span>
+          <span className="text-[11px] text-slate-400">Layer switcher active (Satellite / Terrain / Streets)</span>
+        </div>
+        <div className="h-72 rounded-2xl overflow-hidden shadow-xs border border-slate-200 dark:border-slate-800">
+          <LeafletMap
+            center={mapCenter}
+            markers={markers}
+            height="100%"
+            autoFit={markers.length > 0}
+          />
+        </div>
+      </div>
+
+      {/* Pending SOS Incident Stream */}
+      <div className="space-y-3">
         {reports.map((r) => (
           <div
             key={r.id}
-            className={`rounded-2xl border bg-white p-5 shadow-xs dark:bg-slate-900 ${
+            className={`rounded-2xl border bg-white p-5 shadow-xs transition dark:bg-slate-900 ${
               r.priorityLabel === 'RED'
-                ? 'border-red-500 ring-1 ring-red-500/20'
-                : r.priorityLabel === 'YELLOW'
-                ? 'border-amber-400'
-                : 'border-emerald-500'
+                ? 'border-l-4 border-l-red-600 border-slate-200 dark:border-slate-800'
+                : 'border-l-4 border-l-amber-500 border-slate-200 dark:border-slate-800'
             }`}
           >
             <div className="flex flex-wrap items-center gap-2">
               <PriorityBadge label={r.priorityLabel} />
-              <span className="font-mono text-xs font-bold text-slate-400 dark:text-slate-500">{r.trackingId}</span>
-              <span className="text-sm font-bold capitalize">{r.type} Emergency</span>
+              <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100">{r.trackingId}</span>
+              <span className="text-xs font-bold capitalize text-slate-800 dark:text-slate-200">{r.type} Emergency</span>
               <Badge value={r.status} />
-              <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">{timeAgo(r.createdAt)}</span>
+              <span className="ml-auto text-xs text-slate-400 mono">{timeAgo(r.createdAt)}</span>
             </div>
 
-            <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">{r.description}</p>
+            <p className="mt-2 text-sm text-slate-800 dark:text-slate-200 font-medium leading-relaxed">{r.description}</p>
             
             <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-              {r.landmark && <div>Location: <strong>{r.landmark}</strong></div>}
+              {r.landmark && (
+                <div className="flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                  <span>Location: <strong className="text-slate-700 dark:text-slate-300">{r.landmark}</strong></span>
+                </div>
+              )}
               {r.reporterPhone && (
-                <div>
-                  Contact: <a href={`tel:${r.reporterPhone}`} className="text-blue-600 underline font-medium">{r.reporterPhone}</a>
+                <div className="flex items-center gap-1">
+                  <Phone className="h-3.5 w-3.5 text-slate-400" />
+                  <span>Contact: <a href={`tel:${r.reporterPhone}`} className="text-slate-900 dark:text-slate-100 underline font-mono font-bold hover:text-emerald-600">{r.reporterPhone}</a></span>
                 </div>
               )}
             </div>
@@ -148,30 +203,33 @@ export default function LiveSOS() {
                     href={getNavigationUrl(r.latitude, r.longitude)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                    className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
                   >
-                    View on Map
+                    <Navigation className="h-3.5 w-3.5" />
+                    <span>Map Directions</span>
                   </a>
                 )}
                 {r.reporterPhone && (
                   <a
                     href={`tel:${r.reporterPhone}`}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-blue-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800"
+                    className="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/50 dark:text-emerald-300 cursor-pointer"
                   >
-                    Call Victim
+                    <Phone className="h-3.5 w-3.5" />
+                    <span>Call Victim</span>
                   </a>
                 )}
               </div>
 
               <div className="flex items-center gap-2">
-                <Button variant="secondary" size="sm" onClick={() => acknowledge(r.id)}>
+                <Button variant="secondary" size="sm" onClick={() => acknowledge(r.id)} className="font-bold">
                   Acknowledge & Triage
                 </Button>
                 <a
-                  href={`#/admin/reports?search=${encodeURIComponent(r.trackingId)}`}
-                  className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700"
+                  href={`#/admin/reports`}
+                  className="inline-flex items-center gap-1 rounded-xl bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
                 >
-                  Dispatch Response →
+                  <span>Dispatch Unit</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
                 </a>
               </div>
             </div>
@@ -187,4 +245,3 @@ export default function LiveSOS() {
     </div>
   )
 }
-

@@ -27,9 +27,9 @@ export const env = {
   host: required('HOST', '0.0.0.0'),
   port: number('PORT', 4000),
 
-  databaseUrl: required('DATABASE_URL'),
+  databaseUrl: required('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/aapdasetu'),
 
-  jwtSecret: required('JWT_SECRET'),
+  jwtSecret: required('JWT_SECRET', 'aapdasetu-dev-jwt-secret-key-32chars-min'),
   jwtExpiresIn: required('JWT_EXPIRES_IN', '12h'),
 
   adminEmail: required('ADMIN_EMAIL', 'admin@aapdasetu.org'),

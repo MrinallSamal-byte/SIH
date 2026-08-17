@@ -1,24 +1,38 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import {
+  Building,
+  MapPin,
+  Navigation,
+  Users,
+  Phone,
+  Search
+} from 'lucide-react'
 import { listShelters } from '../../api/endpoints'
 import Card from '../../components/common/Card'
 import Badge from '../../components/common/Badge'
 import LeafletMap from '../../components/map/LeafletMap'
 import { useLocation } from '../../hooks/useLocation'
+import { useRealtime } from '../../hooks/useRealtime'
+import { useLanguage } from '../../lib/i18n'
 import { haversineKm, getNavigationUrl } from '../../lib/helpers'
 import type { GeoPoint, Shelter } from '../../types'
 import type { MapMarker } from '../../components/map/LeafletMap'
 
-const criticalFacilities = [
-  { key: 'medical_station', label: 'Medical Station' },
-  { key: 'food', label: 'Food Supply' },
-  { key: 'water', label: 'Clean Water' },
-  { key: 'power_generator', label: 'Power Generator' },
-  { key: 'blankets', label: 'Blankets & Beds' },
+const criticalFacilities: { key: string; labelKey: string }[] = [
+  { key: 'medical_station', labelKey: 'shelter.filterMedical' },
+  { key: 'food', labelKey: 'shelter.filterFood' },
+  { key: 'water', labelKey: 'shelter.filterWater' },
+  { key: 'power_generator', labelKey: 'shelter.filterPower' },
 ]
 
 export default function ShelterFinder() {
+  const { t } = useLanguage()
   const { coords, status, accuracy, refresh } = useLocation()
-  const [shelters, setShelters] = useState<Shelter[] | null>(null)
+  
+  // Real-time shelter feed: only fetches active/allowed shelters (not closed)
+  const fetchActiveShelters = useCallback(() => listShelters(undefined, false), [])
+  const shelters = useRealtime<Shelter[]>(fetchActiveShelters, 5000)
+
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedFacility, setSelectedFacility] = useState<string | null>(null)
 
@@ -27,24 +41,23 @@ export default function ShelterFinder() {
     [coords],
   )
 
-  useEffect(() => {
-    listShelters().then(setShelters)
-  }, [])
-
   const filteredAndSorted = useMemo(() => {
-    if (!shelters) return []
-    const toPoint = (s: Shelter): GeoPoint => ({ lat: s.latitude, lng: s.longitude })
+    if (!shelters || !Array.isArray(shelters)) return []
+    const toPoint = (s: Shelter): GeoPoint => ({ lat: s.latitude || 22.5726, lng: s.longitude || 88.3639 })
     
     return shelters
       .filter((s) => {
+        if (!s) return false
+        if (s.status === 'closed') return false
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase().trim()
-          const matchesName = s.name.toLowerCase().includes(q)
+          const matchesName = (s.name || '').toLowerCase().includes(q)
           const matchesAddress = s.address ? s.address.toLowerCase().includes(q) : false
           if (!matchesName && !matchesAddress) return false
         }
         if (selectedFacility) {
-          if (!s.facilities.includes(selectedFacility)) return false
+          const facs = Array.isArray(s.facilities) ? s.facilities : []
+          if (!facs.includes(selectedFacility as any)) return false
         }
         return true
       })
@@ -54,7 +67,13 @@ export default function ShelterFinder() {
       })
   }, [shelters, userPos, searchQuery, selectedFacility])
 
-  const center: GeoPoint = userPos ?? { lat: 22.5726, lng: 88.3639 }
+  const center: GeoPoint = useMemo(() => {
+    if (userPos) return userPos
+    if (filteredAndSorted.length > 0) {
+      return { lat: filteredAndSorted[0].latitude || 22.5726, lng: filteredAndSorted[0].longitude || 88.3639 }
+    }
+    return { lat: 22.5726, lng: 88.3639 }
+  }, [userPos, filteredAndSorted])
 
   const markers = useMemo(() => {
     const list: MapMarker[] = []
@@ -69,12 +88,17 @@ export default function ShelterFinder() {
       })
     }
     for (const s of filteredAndSorted) {
+      if (!s) continue
+      const statusStr = (s.status || 'open').toUpperCase()
+      const occ = s.occupancy ?? 0
+      const cap = s.capacity ?? 100
       list.push({
-        id: s.id,
-        position: { lat: s.latitude, lng: s.longitude },
-        title: s.name,
-        subtitle: `${s.status.toUpperCase()} · Occupancy: ${s.occupancy}/${s.capacity}`,
-        color: s.status === 'open' ? '#10b981' : s.status === 'full' ? '#f59e0b' : '#94a3b8',
+        id: s.id || `shel-${Math.random()}`,
+        position: { lat: s.latitude || 22.5726, lng: s.longitude || 88.3639 },
+        title: s.name || 'Disaster Shelter',
+        subtitle: `${statusStr} · Occupancy: ${occ}/${cap} beds (${s.address ?? ''})`,
+        color: s.status === 'open' ? '#10b981' : '#f59e0b',
+        isShelter: true,
       })
     }
     return list
@@ -97,13 +121,20 @@ export default function ShelterFinder() {
     )
   }
 
+  const shelterCount = Array.isArray(shelters) ? shelters.length : 0
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Nearby Emergency Shelters</h1>
+          <div className="flex items-center gap-2">
+            <Building className="h-6 w-6 text-slate-900 dark:text-slate-100" />
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              {t('shelter.title')}
+            </h1>
+          </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {userPos ? 'Live shelters sorted by nearest distance to your GPS location.' : 'Real-time shelter occupancy, medical availability, and directions.'}
+            {t('shelter.subtitle')}
           </p>
         </div>
 
@@ -111,50 +142,58 @@ export default function ShelterFinder() {
           type="button"
           onClick={refresh}
           disabled={status === 'locating'}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-800 transition hover:bg-blue-100 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-blue-300"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 shadow-xs cursor-pointer"
         >
-          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
-          </svg>
-          {status === 'locating' ? 'Acquiring GPS…' : userPos ? 'Update GPS Location' : 'Detect My Location'}
+          <MapPin className="h-3.5 w-3.5 text-slate-900 dark:text-slate-100" />
+          <span>
+            {status === 'locating'
+              ? t('shelter.locating')
+              : userPos
+              ? t('shelter.updateLocation')
+              : t('shelter.detectLocation')}
+          </span>
         </button>
       </div>
 
       {/* Search Bar & Facility Filter Chips */}
-      <div className="mt-4 space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <input
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search shelters by name, locality, or sector…"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-        />
+      <div className="mt-4 space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('shelter.searchPlaceholder')}
+            className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3.5 py-2 text-sm outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-300"
+          />
+        </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Amenities:</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">
+            {t('shelter.facilities')}:
+          </span>
           <button
             type="button"
             onClick={() => setSelectedFacility(null)}
-            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+            className={`rounded-lg px-3 py-1 text-xs font-semibold transition cursor-pointer ${
               selectedFacility === null
-                ? 'bg-blue-600 text-white'
+                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
                 : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
             }`}
           >
-            All Shelters
+            {t('shelter.allShelters')} ({shelterCount})
           </button>
           {criticalFacilities.map((f) => (
             <button
               key={f.key}
               type="button"
               onClick={() => setSelectedFacility(selectedFacility === f.key ? null : f.key)}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+              className={`rounded-lg px-3 py-1 text-xs font-semibold transition cursor-pointer ${
                 selectedFacility === f.key
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
                   : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
               }`}
             >
-              {f.label}
+              {t(f.labelKey)}
             </button>
           ))}
         </div>
@@ -163,63 +202,72 @@ export default function ShelterFinder() {
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <div className="grid content-start gap-3 md:grid-cols-2">
           {filteredAndSorted.map((s) => {
-            const toPoint = (shelter: Shelter): GeoPoint => ({ lat: shelter.latitude, lng: shelter.longitude })
+            const toPoint = (shelter: Shelter): GeoPoint => ({ lat: shelter.latitude || 22.5726, lng: shelter.longitude || 88.3639 })
             const distance = userPos ? haversineKm(userPos, toPoint(s)) : null
-            const pct = s.capacity ? Math.round((s.occupancy / s.capacity) * 100) : 0
+            const cap = s.capacity || 100
+            const occ = s.occupancy ?? 0
+            const pct = Math.round((occ / cap) * 100)
+            const facilitiesList = Array.isArray(s.facilities) ? s.facilities : []
 
             return (
-              <Card key={s.id} className="flex flex-col rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900">
+              <Card key={s.id} className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="truncate font-bold text-slate-900 dark:text-slate-100">{s.name}</div>
-                    <div className="mt-0.5 line-clamp-2 text-xs leading-snug text-slate-500 dark:text-slate-400">
-                      {s.address}
+                    <div className="truncate font-bold text-slate-900 dark:text-slate-100 text-base">{s.name || 'Emergency Shelter'}</div>
+                    <div className="mt-1 flex items-start gap-1 line-clamp-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                      <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5 text-slate-400" />
+                      <span>{s.address || 'Address on record'}</span>
                     </div>
                   </div>
-                  <Badge value={s.status} />
+                  <Badge value={s.status || 'open'} />
                 </div>
 
-                <div className="mt-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                  <span className="font-semibold text-blue-600 dark:text-blue-400">
-                    {distance !== null ? `${distance.toFixed(1)} km away` : 'Location on file'}
+                <div className="mt-3 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                  <span className="font-semibold text-slate-900 dark:text-slate-100 mono">
+                    {distance !== null ? `${distance.toFixed(1)} ${t('shelter.kmAway')}` : t('common.verified')}
                   </span>
                   {s.contactPhone && (
-                    <a href={`tel:${s.contactPhone}`} className="text-blue-600 underline font-medium">
-                      {s.contactPhone}
+                    <a href={`tel:${s.contactPhone}`} className="flex items-center gap-1 text-slate-700 hover:underline font-medium dark:text-slate-300 mono">
+                      <Phone className="h-3 w-3" />
+                      <span>{s.contactPhone}</span>
                     </a>
                   )}
                 </div>
 
-                <div className="mt-auto pt-3">
-                  <div className="flex justify-between text-xs">
-                    <span>Occupancy {s.occupancy}/{s.capacity}</span>
-                    <span className="font-bold">{pct}% full</span>
+                <div className="mt-auto pt-4">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
+                      <Users className="h-3.5 w-3.5" />
+                      <span>{t('shelter.occupancy')}: {occ}/{cap}</span>
+                    </span>
+                    <span className="font-bold mono">{pct}% {t('shelter.full')}</span>
                   </div>
-                  <div className="mt-1 h-2 w-full rounded bg-slate-100 dark:bg-slate-800">
+                  <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                     <div
-                      className={`h-2 rounded ${pct >= 90 ? 'bg-red-500' : pct >= 60 ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                      style={{ width: `${pct}%` }}
+                      className={`h-2 rounded-full transition-all ${pct >= 90 ? 'bg-red-500' : pct >= 60 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                      style={{ width: `${Math.min(100, pct)}%` }}
                     />
                   </div>
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-1">
-                  {s.facilities.map((f) => (
-                    <span key={f} className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                      {f.replace('_', ' ')}
+                  {facilitiesList.map((f) => (
+                    <span key={f} className="rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 mono">
+                      {String(f).replace(/_/g, ' ')}
                     </span>
                   ))}
                 </div>
 
-                <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-200 pt-3 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400">{s.latitude.toFixed(4)}, {s.longitude.toFixed(4)}</span>
+                <div className="mt-4 flex items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+                  <span className="text-[10px] text-slate-400 mono">{(s.latitude || 22.5726).toFixed(4)}, {(s.longitude || 88.3639).toFixed(4)}</span>
                   <a
-                    href={getNavigationUrl(s.latitude, s.longitude)}
+                    href={getNavigationUrl(s.latitude || 22.5726, s.longitude || 88.3639)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer"
                   >
-                    <span>Get Directions</span>
+                    <Navigation className="h-3 w-3" />
+                    <span>{t('common.directions')}</span>
                   </a>
                 </div>
               </Card>
@@ -227,12 +275,14 @@ export default function ShelterFinder() {
           })}
 
           {filteredAndSorted.length === 0 && (
-            <div className="col-span-2 rounded-xl border border-dashed border-slate-300 p-8 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+            <div className="col-span-2 rounded-2xl border border-dashed border-slate-300 p-12 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
               No shelters matched your search or facility filter criteria.
             </div>
           )}
         </div>
-        <div className="h-[420px] lg:h-auto lg:min-h-[420px] rounded-xl overflow-hidden shadow-sm">
+
+        {/* Realistic Satellite / Terrain / Streets Map */}
+        <div className="h-[460px] lg:h-auto lg:min-h-[500px] rounded-2xl overflow-hidden shadow-xs border border-slate-200 dark:border-slate-800">
           <LeafletMap
             center={center}
             markers={markers}
@@ -244,4 +294,3 @@ export default function ShelterFinder() {
     </div>
   )
 }
-

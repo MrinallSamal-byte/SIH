@@ -1,4 +1,6 @@
 import { Link, NavLink, Navigate, Outlet, useNavigate } from 'react-router-dom'
+import { User, LogOut, ArrowRight } from 'lucide-react'
+import AapdaSetuLogo from '../components/common/AapdaSetuLogo'
 import { useIsVolunteerAuthed, useVolunteerAuth } from '../hooks/useVolunteerAuth'
 
 const links = [
@@ -24,8 +26,8 @@ export default function VolunteerLayout() {
       <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <Link to="/" className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-600 font-bold text-white text-xs">
-              V
+            <Link to="/" className="shrink-0">
+              <AapdaSetuLogo size={32} />
             </Link>
             <div>
               <div className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
@@ -56,24 +58,27 @@ export default function VolunteerLayout() {
             </nav>
 
             {user?.name && (
-              <span className="hidden md:inline text-xs text-slate-500 dark:text-slate-400 font-medium px-2">
-                👤 {user.name}
+              <span className="hidden md:flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium px-2">
+                <User className="h-3.5 w-3.5" />
+                {user.name}
               </span>
             )}
 
             <Link
               to="/"
-              className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+              className="flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
             >
-              Public App →
+              <span>Public App</span>
+              <ArrowRight className="h-3.5 w-3.5" />
             </Link>
 
             <button
               type="button"
               onClick={handleLogout}
-              className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-100 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-900/60"
+              className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-100 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-900/60"
             >
-              Exit
+              <LogOut className="h-3.5 w-3.5" />
+              <span>Exit</span>
             </button>
           </div>
         </div>
@@ -105,5 +110,3 @@ export default function VolunteerLayout() {
     </div>
   )
 }
-
-

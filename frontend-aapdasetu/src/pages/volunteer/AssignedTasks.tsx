@@ -86,7 +86,7 @@ export default function AssignedTasks() {
                 {task.reporterPhone && (
                   <div>
                     Contact:{' '}
-                    <a href={`tel:${task.reporterPhone}`} className="text-blue-600 underline font-bold">
+                    <a href={`tel:${task.reporterPhone}`} className="text-slate-900 dark:text-slate-100 underline font-bold hover:text-emerald-600">
                       {task.reporterPhone}
                     </a>
                   </div>
@@ -103,7 +103,7 @@ export default function AssignedTasks() {
                       href={getNavigationUrl(task.latitude!, task.longitude!)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700"
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700 cursor-pointer"
                     >
                       <span>Start Navigation</span>
                     </a>
@@ -114,7 +114,7 @@ export default function AssignedTasks() {
                   {task.reporterPhone && (
                     <a
                       href={`tel:${task.reporterPhone}`}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100 dark:border-blue-900/40 dark:bg-blue-950/40 dark:text-blue-300"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-xs font-bold text-slate-800 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
                     >
                       <span>Call Contact</span>
                     </a>

@@ -1,10 +1,20 @@
 import { useEffect, useState, useRef } from 'react'
+import {
+  Users,
+  Search,
+  Phone,
+  MapPin,
+  User,
+  Image as ImageIcon,
+  X
+} from 'lucide-react'
 import { createMissingPerson, listMissingPersons } from '../../api/endpoints'
 import { Field, Input } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import Badge from '../../components/common/Badge'
 import Loader from '../../components/common/Loader'
 import { useToast } from '../../components/common/Toast'
+import { useLanguage } from '../../lib/i18n'
 import { compressImage, maskPhone } from '../../lib/helpers'
 import type { MissingPerson } from '../../types'
 
@@ -12,6 +22,7 @@ type Tab = 'registry' | 'report'
 type StatusFilter = 'all' | 'open' | 'matched' | 'resolved'
 
 export default function MissingPersons() {
+  const { t } = useLanguage()
   const [tab, setTab] = useState<Tab>('registry')
   const [persons, setPersons] = useState<MissingPerson[] | null>(null)
   const [search, setSearch] = useState('')
@@ -36,30 +47,35 @@ export default function MissingPersons() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-        Missing Persons & Reunification Registry
-      </h1>
+      <div className="flex items-center gap-2 mb-1">
+        <Users className="h-6 w-6 text-slate-900 dark:text-slate-100" />
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+          {t('missing.title')}
+        </h1>
+      </div>
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-        Public disaster missing persons database. Upload photos to enable visual identification by rescue squads and shelters.
+        {t('missing.subtitle')}
       </p>
 
       <div className="mt-4 flex gap-2">
         <Button variant={tab === 'registry' ? 'primary' : 'outline'} onClick={() => setTab('registry')}>
-          Public Registry ({persons?.length ?? 0})
+          {t('missing.tabRegistry')} ({persons?.length ?? 0})
         </Button>
         <Button variant={tab === 'report' ? 'danger' : 'outline'} onClick={() => setTab('report')}>
-          Register Missing Person
+          {t('missing.tabReport')}
         </Button>
       </div>
 
       {tab === 'registry' && (
         <div className="mt-4 space-y-4">
-          <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex-1">
-              <Input
+          <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:flex-row sm:items-center dark:border-slate-800 dark:bg-slate-900">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by name, location, clothing…"
+                placeholder={t('missing.searchPlaceholder')}
+                className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3.5 py-2 text-sm outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-slate-300"
               />
             </div>
             <div className="flex flex-wrap gap-1">
@@ -70,7 +86,7 @@ export default function MissingPersons() {
                   onClick={() => setFilter(st)}
                   className={`rounded-lg px-2.5 py-1 text-xs font-bold uppercase transition ${
                     filter === st
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
                   }`}
                 >
@@ -89,7 +105,7 @@ export default function MissingPersons() {
               {filteredPersons.map((p) => (
                 <div
                   key={p.id}
-                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
                 >
                   <div className="flex items-start gap-4">
                     {/* Photo thumbnail */}
@@ -105,8 +121,8 @@ export default function MissingPersons() {
                         </span>
                       </button>
                     ) : (
-                      <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-2xl dark:bg-slate-800">
-                        👤
+                      <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+                        <User className="h-8 w-8" />
                       </div>
                     )}
 
@@ -116,7 +132,7 @@ export default function MissingPersons() {
                           <div className="text-base font-bold text-slate-900 dark:text-slate-100">
                             {p.name}
                             {p.age !== undefined && (
-                              <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400">
+                              <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400 mono">
                                 (Age: {p.age})
                               </span>
                             )}
@@ -129,12 +145,13 @@ export default function MissingPersons() {
                       </div>
 
                       <div className="mt-2 space-y-1 text-xs text-slate-600 dark:text-slate-300">
-                        <div>
-                          Last Seen: <strong>{p.lastSeenLocation ?? 'Unknown'}</strong>
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                          <span>{t('missing.lastSeen')}: <strong>{p.lastSeenLocation ?? 'Unknown'}</strong></span>
                         </div>
                         {p.clothes && (
-                          <div>
-                            Appearance: <span className="italic">{p.clothes}</span>
+                          <div className="text-slate-500 italic">
+                            {t('missing.clothes')}: {p.clothes}
                           </div>
                         )}
                       </div>
@@ -143,12 +160,13 @@ export default function MissingPersons() {
 
                   {p.contactPhone && (
                     <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
-                      <span className="text-xs text-slate-500">Contact: {maskPhone(p.contactPhone)}</span>
+                      <span className="text-xs text-slate-500 mono">{t('missing.contact')}: {maskPhone(p.contactPhone)}</span>
                       <a
                         href={`tel:${p.contactPhone}`}
-                        className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-blue-700"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1 text-xs font-bold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
                       >
-                        Contact Relative
+                        <Phone className="h-3 w-3" />
+                        <span>{t('missing.callLead')}</span>
                       </a>
                     </div>
                   )}
@@ -156,7 +174,7 @@ export default function MissingPersons() {
               ))}
 
               {filteredPersons.length === 0 && (
-                <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                <div className="rounded-2xl border border-dashed border-slate-300 p-12 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
                   No missing person records matched your search.
                 </div>
               )}
@@ -180,12 +198,12 @@ export default function MissingPersons() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
           onClick={() => setEnlargedPhoto(null)}
         >
-          <div className="relative max-w-lg overflow-hidden rounded-2xl bg-white p-2 dark:bg-slate-900" onClick={(e) => e.stopPropagation()}>
+          <div className="relative max-w-lg overflow-hidden rounded-2xl bg-white p-3 dark:bg-slate-900 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <img src={enlargedPhoto} alt="Enlarged visual ID" className="max-h-[80vh] w-full rounded-xl object-contain" />
             <button
               type="button"
               onClick={() => setEnlargedPhoto(null)}
-              className="mt-2 w-full rounded-lg bg-slate-200 py-1.5 text-xs font-bold text-slate-800 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-200"
+              className="mt-3 w-full rounded-xl bg-slate-100 py-2 text-xs font-bold text-slate-800 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
             >
               Close Preview
             </button>
@@ -197,6 +215,7 @@ export default function MissingPersons() {
 }
 
 function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) => void }) {
+  const { t } = useLanguage()
   const { toast } = useToast()
   const [name, setName] = useState('')
   const [age, setAge] = useState('')
@@ -260,17 +279,17 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
   }
 
   return (
-    <div className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <Field label="Missing Person Full Name *">
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name of missing person" required />
+    <div className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+      <Field label={`${t('missing.personName')} *`}>
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('missing.personName')} required />
       </Field>
 
       {/* Photo Upload with preview */}
       <div>
-        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-          Photo for Visual Identification (Recommended)
+        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+          {t('missing.uploadPhoto')}
         </label>
-        <div className="mt-1.5 flex items-center gap-3">
+        <div className="flex items-center gap-3">
           {photoDataUrl ? (
             <div className="relative h-16 w-16 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
               <img src={photoDataUrl} alt="Preview" className="h-full w-full object-cover" />
@@ -279,12 +298,12 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
                 onClick={() => setPhotoDataUrl(null)}
                 className="absolute right-0 top-0 rounded-bl bg-red-600 p-0.5 text-[9px] text-white"
               >
-                ✕
+                <X className="h-3 w-3" />
               </button>
             </div>
           ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-xl dark:border-slate-700 dark:bg-slate-800">
-              Photo
+            <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-slate-400 dark:border-slate-700 dark:bg-slate-800">
+              <ImageIcon className="h-6 w-6" />
             </div>
           )}
 
@@ -302,29 +321,29 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
             disabled={compressing}
             onClick={() => fileInputRef.current?.click()}
           >
-            {compressing ? 'Optimizing…' : photoDataUrl ? 'Change Photo' : 'Upload Person Photo'}
+            {compressing ? 'Optimizing…' : photoDataUrl ? 'Change Photo' : t('missing.uploadPhoto')}
           </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Age">
+        <Field label={t('missing.age')}>
           <Input type="number" value={age} onChange={(e) => setAge(e.target.value)} placeholder="e.g. 35" />
         </Field>
-        <Field label="Gender">
+        <Field label={t('missing.gender')}>
           <select
             value={gender}
             onChange={(e) => setGender(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           >
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="other">Other</option>
+            <option value="male">{t('missing.male')}</option>
+            <option value="female">{t('missing.female')}</option>
+            <option value="other">{t('missing.other')}</option>
           </select>
         </Field>
       </div>
 
-      <Field label="Last Seen Location / Landmark *">
+      <Field label={`${t('missing.lastSeen')} *`}>
         <Input
           value={lastSeenLocation}
           onChange={(e) => setLastSeenLocation(e.target.value)}
@@ -333,7 +352,7 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
         />
       </Field>
 
-      <Field label="Clothing & Physical Description">
+      <Field label={t('missing.clothes')}>
         <Input
           value={clothes}
           onChange={(e) => setClothes(e.target.value)}
@@ -341,12 +360,12 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
         />
       </Field>
 
-      <Field label="Your Contact Phone (to report sightings) *">
+      <Field label={`${t('missing.contact')} *`}>
         <Input
           type="tel"
           value={contactPhone}
           onChange={(e) => setContactPhone(e.target.value)}
-          placeholder="10-digit mobile number"
+          placeholder={t('report.phonePlaceholder')}
           required
         />
       </Field>
@@ -357,9 +376,8 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
         disabled={sending || !name.trim() || !lastSeenLocation.trim() || !contactPhone.trim()}
         className="w-full py-3 font-bold"
       >
-        {sending ? 'Registering in Database…' : 'Register Missing Person'}
+        {sending ? t('common.loading') : t('missing.submitReport')}
       </Button>
     </div>
   )
 }
-

@@ -15,7 +15,7 @@ export default function Overview() {
     { label: 'Total reports', value: kpis.totalReports, color: 'text-slate-800 dark:text-slate-200' },
     { label: 'Active RED alerts', value: kpis.activeRedAlerts, color: 'text-red-600' },
     { label: 'Open shelters', value: kpis.openShelters, color: 'text-emerald-600' },
-    { label: 'Available volunteers', value: kpis.availableVolunteers, color: 'text-blue-600' },
+    { label: 'Available volunteers', value: kpis.availableVolunteers, color: 'text-slate-900 dark:text-slate-100' },
     { label: 'Avg response (min)', value: kpis.avgResponseTimeMins, color: 'text-amber-600' },
     { label: 'Open cases', value: kpis.openCases, color: 'text-slate-800 dark:text-slate-200' },
   ]
@@ -74,8 +74,8 @@ function Bar({ label, value, max }: { label: string; value: number; max: number 
         <span>{label}</span>
         <span>{value}</span>
       </div>
-      <div className="mt-1 h-2 rounded bg-slate-100">
-        <div className="h-2 rounded bg-blue-500" style={{ width: `${Math.min(100, (value / max) * 100)}%` }} />
+      <div className="mt-1 h-2 rounded bg-slate-100 dark:bg-slate-800">
+        <div className="h-2 rounded bg-slate-900 dark:bg-slate-100" style={{ width: `${Math.min(100, (value / max) * 100)}%` }} />
       </div>
     </div>
   )

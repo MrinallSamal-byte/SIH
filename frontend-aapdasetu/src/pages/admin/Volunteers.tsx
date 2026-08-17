@@ -34,7 +34,7 @@ export default function Volunteers() {
             <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{v.phone ?? '—'}</div>
             <div className="mt-2 flex flex-wrap gap-1">
               {v.skills.map((s) => (
-                <span key={s} className="rounded bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">
+                <span key={s} className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-800 border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 mono uppercase">
                   {s.replace('_', ' ')}
                 </span>
               ))}

@@ -1,11 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { listAgencies, listReports, listVolunteers, updateReport } from '../../api/endpoints'
+import {
+  FileText,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw
+} from 'lucide-react'
+import { listAgencies, listReports, listVolunteers, updateReport, resetMockDatabase } from '../../api/endpoints'
 import { Field, Input, Select } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
 import PriorityBadge from '../../components/common/PriorityBadge'
 import Badge from '../../components/common/Badge'
 import Loader from '../../components/common/Loader'
+import { useRealtime } from '../../hooks/useRealtime'
 import { useToast } from '../../components/common/Toast'
 import { formatDateTime, haversineKm } from '../../lib/helpers'
 import type { Agency, Report, Volunteer } from '../../types'
@@ -19,14 +27,16 @@ interface DispatchDraft {
 
 export default function Reports() {
   const { toast } = useToast()
-  const [reports, setReports] = useState<Report[] | null>(null)
   const [statusFilter, setStatusFilter] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Report | null>(null)
   const [volunteers, setVolunteers] = useState<Volunteer[]>([])
   const [agencies, setAgencies] = useState<Agency[]>([])
   const [saving, setSaving] = useState(false)
+  const [page, setPage] = useState(1)
+  const pageSize = 20
 
   const [draft, setDraft] = useState<DispatchDraft>({
     volunteerId: '',
@@ -35,24 +45,26 @@ export default function Reports() {
     notes: '',
   })
 
-  const load = useCallback(async () => {
-    setReports(
-      await listReports({
-        status: statusFilter || undefined,
-        priority: priorityFilter || undefined,
-        q: query || undefined,
-      }),
-    )
-  }, [statusFilter, priorityFilter, query])
+  // Hook into real-time updates for reports
+  const fetchReports = useCallback(() => {
+    return listReports({
+      status: statusFilter || undefined,
+      priority: priorityFilter || undefined,
+      type: typeFilter || undefined,
+      q: query || undefined,
+    })
+  }, [statusFilter, priorityFilter, typeFilter, query])
 
-  useEffect(() => {
-    load()
-  }, [load])
+  const reports = useRealtime<Report[]>(fetchReports, 4000)
 
   useEffect(() => {
     listVolunteers('available').then(setVolunteers)
     listAgencies().then(setAgencies)
   }, [])
+
+  useEffect(() => {
+    setPage(1)
+  }, [statusFilter, priorityFilter, typeFilter, query])
 
   useEffect(() => {
     if (selected) {
@@ -69,12 +81,10 @@ export default function Reports() {
   const rankedVolunteers = useMemo(() => {
     if (!selected) return volunteers
     return [...volunteers].sort((a, b) => {
-      // 1. Skill match preference
       const aSkill = a.skills.includes(selected.type as any) ? 1 : 0
       const bSkill = b.skills.includes(selected.type as any) ? 1 : 0
       if (aSkill !== bSkill) return bSkill - aSkill
 
-      // 2. Distance sorting if coordinates exist
       if (selected.latitude && selected.longitude && a.latitude && a.longitude && b.latitude && b.longitude) {
         const distA = haversineKm({ lat: selected.latitude, lng: selected.longitude }, { lat: a.latitude, lng: a.longitude })
         const distB = haversineKm({ lat: selected.latitude, lng: selected.longitude }, { lat: b.latitude, lng: b.longitude })
@@ -94,9 +104,8 @@ export default function Reports() {
         status: overrideStatus || draft.status,
         resolutionNotes: draft.notes || undefined,
       })
-      toast('Incident dispatch successfully updated', 'success')
+      toast('Incident dispatch successfully updated in real time', 'success')
       setSelected(null)
-      load()
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Dispatch failed', 'error')
     } finally {
@@ -104,89 +113,228 @@ export default function Reports() {
     }
   }
 
+  // Pagination slice
+  const totalCount = reports?.length ?? 0
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+  const paginatedReports = useMemo(() => {
+    if (!reports) return []
+    const start = (page - 1) * pageSize
+    return reports.slice(start, start + pageSize)
+  }, [reports, page, pageSize])
+
   if (!reports) return <Loader />
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Incident Reports & Dispatch Control</h1>
-      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Search, filter, triage, and dispatch responders to distress signals.</p>
+    <div className="space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <FileText className="h-6 w-6 text-slate-900 dark:text-slate-100" />
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              Incident Reports & Dispatch Command
+            </h1>
+            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300 mono">
+              {totalCount.toLocaleString()} Total Records
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            Real-time live incident stream across all disaster zones. AI triage scoring, proximity volunteer assignment, and multi-agency dispatch.
+          </p>
+        </div>
 
-      <div className="mt-4 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900 md:grid-cols-4">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={async () => {
+              if (window.confirm('Reset database to 1,000+ realistic disaster records?')) {
+                await resetMockDatabase()
+                toast('Database reset with 1,000+ fresh records!', 'success')
+              }
+            }}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            <span>Reset 1000+ Records</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Filter & Search Bar */}
+      <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900 md:grid-cols-4">
+        <Field label="Emergency Type">
+          <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+            <option value="">All Emergency Types</option>
+            <option value="flood">Flood / Submersion</option>
+            <option value="medical">Critical Medical</option>
+            <option value="fire">Fire / Explosion</option>
+            <option value="earthquake">Building Collapse / Trapped</option>
+            <option value="accident">Transit / Rescue Accident</option>
+            <option value="missing_person">Missing Person</option>
+            <option value="other">Other Hazards</option>
+          </Select>
+        </Field>
+
         <Field label="Status">
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">All Statuses</option>
             <option value="pending">Pending (Unassigned)</option>
-            <option value="in_progress">In Progress</option>
-            <option value="resolved">Resolved</option>
+            <option value="in_progress">In Progress (Dispatched)</option>
+            <option value="resolved">Resolved (Evacuated)</option>
           </Select>
         </Field>
-        <Field label="Priority">
+
+        <Field label="Priority Tier">
           <Select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
             <option value="">All Priorities</option>
-            <option value="RED">RED (Critical Urgency)</option>
-            <option value="YELLOW">YELLOW (High Priority)</option>
-            <option value="GREEN">GREEN (Normal Priority)</option>
+            <option value="RED">RED (Critical Urgency 80-100)</option>
+            <option value="YELLOW">YELLOW (High Priority 50-79)</option>
+            <option value="GREEN">GREEN (Standard Priority 0-49)</option>
           </Select>
         </Field>
-        <Field label="Search">
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Tracking ID, phone, landmark…" />
+
+        <Field label="Search Query">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Tracking ID, name, phone, landmark…"
+              className="w-full rounded-xl border border-slate-300 bg-white pl-8 pr-3 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            />
+          </div>
         </Field>
-        <div className="flex items-end">
-          <Button onClick={load} variant="secondary" className="w-full font-bold">
-            Filter Incidents
-          </Button>
-        </div>
       </div>
 
-      <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900">
+      {/* Incident Reports Table */}
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900">
         <table className="w-full text-left text-sm">
-          <thead className="border-b bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400">
+          <thead className="border-b bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400 mono font-bold">
             <tr>
               <th className="px-4 py-3">Tracking ID</th>
               <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Priority</th>
+              <th className="px-4 py-3">Priority Score</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Location / Landmark</th>
+              <th className="px-4 py-3">Reporter</th>
               <th className="px-4 py-3">Assigned Units</th>
               <th className="px-4 py-3">Reported</th>
-              <th className="px-4 py-3 text-right">Action</th>
+              <th className="px-4 py-3 text-right">Dispatch</th>
             </tr>
           </thead>
-          <tbody>
-            {reports.map((r) => (
-              <tr key={r.id} className="border-b last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                <td className="px-4 py-3 font-mono text-xs font-bold text-slate-800 dark:text-slate-200">{r.trackingId}</td>
-                <td className="px-4 py-3 capitalize font-medium">{r.type}</td>
-                <td className="px-4 py-3"><PriorityBadge label={r.priorityLabel} /></td>
-                <td className="px-4 py-3"><Badge value={r.status} /></td>
-                <td className="px-4 py-3 text-xs">{r.landmark ?? 'GPS Coordinates'}</td>
-                <td className="px-4 py-3 text-xs text-slate-500">
-                  {r.assignedVolunteerName ?? r.assignedAgencyName ?? '—'}
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            {paginatedReports.map((r) => (
+              <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
+                <td className="px-4 py-3 font-mono text-xs font-bold text-slate-900 dark:text-slate-100">
+                  <div className="flex items-center gap-1.5">
+                    {r.source === 'sos' && <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse" />}
+                    <span>{r.trackingId}</span>
+                  </div>
                 </td>
-                <td className="px-4 py-3 text-xs text-slate-400">{formatDateTime(r.createdAt)}</td>
+                <td className="px-4 py-3 capitalize font-bold text-xs text-slate-800 dark:text-slate-200">
+                  {r.type.replace('_', ' ')}
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-1.5">
+                    <PriorityBadge label={r.priorityLabel} />
+                    <span className="mono text-xs font-bold text-slate-600 dark:text-slate-400">
+                      {r.priorityScore}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-4 py-3"><Badge value={r.status} /></td>
+                <td className="px-4 py-3 text-xs max-w-[200px] truncate text-slate-700 dark:text-slate-300">
+                  {r.landmark ?? (r.latitude ? `${r.latitude.toFixed(4)}, ${r.longitude?.toFixed(4)}` : 'GPS Record')}
+                </td>
+                <td className="px-4 py-3 text-xs">
+                  <div className="font-semibold text-slate-800 dark:text-slate-200">{r.reporterName || 'Citizen'}</div>
+                  <div className="mono text-[11px] text-slate-400">{r.reporterPhone || '—'}</div>
+                </td>
+                <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 max-w-[160px] truncate">
+                  {r.assignedVolunteerName ? (
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">{r.assignedVolunteerName}</span>
+                  ) : r.assignedAgencyName ? (
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">{r.assignedAgencyName}</span>
+                  ) : (
+                    <span className="text-amber-600 dark:text-amber-400 font-medium">Unassigned</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-[11px] text-slate-400 mono whitespace-nowrap">
+                  {formatDateTime(r.createdAt)}
+                </td>
                 <td className="px-4 py-3 text-right">
-                  <Button variant="outline" size="sm" onClick={() => setSelected(r)} className="font-semibold">
-                    Dispatch →
-                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => setSelected(r)}
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-800 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
+                  >
+                    <span>Dispatch</span>
+                    <span>→</span>
+                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-        {reports.length === 0 && <div className="p-8 text-center text-sm text-slate-400">No reports matched the specified filters.</div>}
+
+        {totalCount === 0 && (
+          <div className="p-12 text-center text-sm text-slate-400">
+            No incident reports matched your specified filter criteria.
+          </div>
+        )}
+
+        {/* Pagination Bar */}
+        {totalCount > 0 && (
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-400">
+            <div>
+              Showing <strong className="mono">{(page - 1) * pageSize + 1}</strong> to{' '}
+              <strong className="mono">{Math.min(page * pageSize, totalCount)}</strong> of{' '}
+              <strong className="mono">{totalCount.toLocaleString()}</strong> incidents
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+                <span>Prev</span>
+              </button>
+
+              <span className="px-2 font-bold mono">
+                Page {page} / {totalPages}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+              >
+                <span>Next</span>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* Dispatch Modal */}
       {selected && (
-        <Modal open title="Operational Incident Dispatch" onClose={() => setSelected(null)}>
+        <Modal open title="Operational Incident Dispatch & Assignment" onClose={() => setSelected(null)}>
           <div className="space-y-4">
-            <div className="rounded-xl border border-slate-100 bg-slate-50 p-3.5 text-xs dark:border-slate-800 dark:bg-slate-950">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs dark:border-slate-800 dark:bg-slate-950">
               <div className="flex items-center justify-between">
-                <span className="font-mono text-sm font-bold">{selected.trackingId}</span>
+                <span className="font-mono text-base font-bold text-slate-900 dark:text-slate-100">{selected.trackingId}</span>
                 <PriorityBadge label={selected.priorityLabel} />
               </div>
-              <p className="mt-2 text-slate-700 dark:text-slate-300 font-medium">{selected.description}</p>
-              {selected.landmark && <div className="mt-1 text-slate-500">Landmark: {selected.landmark}</div>}
-              {selected.reporterPhone && <div className="mt-1 text-slate-500">Phone: {selected.reporterPhone}</div>}
+              <p className="mt-2 text-slate-800 dark:text-slate-200 font-medium leading-relaxed">{selected.description}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-4 text-slate-500 border-t border-slate-200/60 pt-2 dark:border-slate-800">
+                {selected.landmark && <div>Landmark: <strong className="text-slate-700 dark:text-slate-300">{selected.landmark}</strong></div>}
+                {selected.reporterPhone && <div>Phone: <strong className="text-slate-700 dark:text-slate-300 mono">{selected.reporterPhone}</strong></div>}
+                <div>Type: <strong className="capitalize text-slate-700 dark:text-slate-300">{selected.type}</strong></div>
+              </div>
             </div>
 
             <Field label="Assign Recommended Field Volunteer (Ranked by Proximity & Skill)">
@@ -225,17 +373,17 @@ export default function Reports() {
                 value={draft.status}
                 onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value as Report['status'] }))}
               >
-                <option value="pending">Pending</option>
-                <option value="in_progress">In Progress (Dispatched)</option>
+                <option value="pending">Pending (Unassigned)</option>
+                <option value="in_progress">In Progress (Dispatched / En Route)</option>
                 <option value="resolved">Resolved (Evacuated / Safe)</option>
               </Select>
             </Field>
 
-            <Field label="Resolution / Field Notes">
+            <Field label="Resolution / Field Instructions">
               <Input
                 value={draft.notes}
                 onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
-                placeholder="Enter field instructions or rescue summary notes…"
+                placeholder="Enter dispatch notes, rescue directives, or hospital transfer details…"
               />
             </Field>
 
@@ -258,4 +406,3 @@ export default function Reports() {
     </div>
   )
 }
-

@@ -1,15 +1,19 @@
 import type { GeoPoint } from '../types'
 
-/** Great-circle distance between two points in kilometres (Haversine). */
+const EARTH_RADIUS_KM = 6371
+const DEG_TO_RAD = Math.PI / 180
+
+/** Great-circle distance between two points in kilometres (Haversine). Fast-path early returns for equal coordinates. */
 export function haversineKm(a: GeoPoint, b: GeoPoint): number {
-  const R = 6371
-  const toRad = (deg: number) => (deg * Math.PI) / 180
-  const dLat = toRad(b.lat - a.lat)
-  const dLng = toRad(b.lng - a.lng)
-  const s =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s))
+  if (a.lat === b.lat && a.lng === b.lng) return 0
+  const dLat = (b.lat - a.lat) * DEG_TO_RAD
+  const dLng = (b.lng - a.lng) * DEG_TO_RAD
+  const lat1 = a.lat * DEG_TO_RAD
+  const lat2 = b.lat * DEG_TO_RAD
+  const sinDLat2 = Math.sin(dLat * 0.5)
+  const sinDLng2 = Math.sin(dLng * 0.5)
+  const s = sinDLat2 * sinDLat2 + Math.cos(lat1) * Math.cos(lat2) * sinDLng2 * sinDLng2
+  return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s))
 }
 
 /** Human-friendly tracking id shown to citizens, e.g. SOS-XXXX-AB12CD. */

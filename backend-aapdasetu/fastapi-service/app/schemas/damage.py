@@ -9,6 +9,7 @@ class MetadataPayload(BaseModel):
     exifLatitude: float | None = None
     exifLongitude: float | None = None
     imageHash: str | None = None
+    infrastructureType: str | None = None
 
 
 class DamagePredictRequest(BaseModel):
@@ -30,6 +31,11 @@ class DamagePrediction(BaseModel):
         description="MINOR_DAMAGE | MAJOR_STRUCTURAL_DAMAGE | FULLY_DESTROYED",
     )
     confidence: float = Field(..., ge=0.0, le=1.0)
+    damageScore: float = Field(default=30.0, ge=0.0, le=100.0, description="Quantitative damage score from 0-100 pts")
+    huggingFaceModel: str = Field(
+        default="Divyanshu-Kumar19/aapdasetu-damage-assessment",
+        description="HuggingFace model ID used for inference",
+    )
 
 
 class HealthResponse(BaseModel):

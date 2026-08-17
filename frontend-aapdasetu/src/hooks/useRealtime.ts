@@ -1,8 +1,10 @@
 import { useEffect, useState, useRef } from 'react'
+import { subscribeRealtimeUpdates } from '../lib/realtimeEventBus'
 
 /**
- * Realtime-ish data hook with tab visibility awareness to save mobile battery
- * and reduce backend load when the tab is backgrounded.
+ * Realtime data hook with zero-latency event bus integration and tab visibility awareness.
+ * Re-fetches immediately when any real-time mutation occurs across tabs or locally,
+ * and maintains periodic polling fallback.
  */
 export function useRealtime<T>(fetcher: () => Promise<T>, intervalMs = 5000): T | null {
   const [data, setData] = useState<T | null>(null)
@@ -23,9 +25,13 @@ export function useRealtime<T>(fetcher: () => Promise<T>, intervalMs = 5000): T 
       }
     }
 
+    // 1. Initial fetch
     execute()
+
+    // 2. Periodic polling interval
     const id = setInterval(execute, intervalMs)
 
+    // 3. Tab visibility awareness
     const handleVisibility = () => {
       if (!document.hidden) {
         execute()
@@ -33,13 +39,18 @@ export function useRealtime<T>(fetcher: () => Promise<T>, intervalMs = 5000): T 
     }
     document.addEventListener('visibilitychange', handleVisibility)
 
+    // 4. Instant Real-time Event Bus Subscription (0ms latency!)
+    const unsubscribeBus = subscribeRealtimeUpdates(() => {
+      execute()
+    })
+
     return () => {
       cancelled = true
       clearInterval(id)
       document.removeEventListener('visibilitychange', handleVisibility)
+      unsubscribeBus()
     }
   }, [intervalMs])
 
   return data
 }
-
