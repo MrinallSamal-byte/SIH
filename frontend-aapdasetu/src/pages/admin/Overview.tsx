@@ -59,7 +59,7 @@ export default function Overview() {
           <div className="space-y-3 text-sm">
             <Bar label="Reports being handled" value={kpis.totalReports - kpis.openCases} max={Math.max(kpis.totalReports, 1)} />
             <Bar label="Open / pending" value={kpis.openCases} max={Math.max(kpis.totalReports, 1)} />
-            <Bar label="RED critical" value={kpis.activeRedAlerts} max={Math.max(kpis.activeRedAlerts, 1)} />
+            <Bar label="RED critical" value={kpis.activeRedAlerts} max={Math.max(kpis.totalReports, 1)} />
           </div>
         </Card>
       </div>

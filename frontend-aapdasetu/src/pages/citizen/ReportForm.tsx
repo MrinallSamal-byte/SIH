@@ -4,21 +4,23 @@ import { aiTriage } from '../../api/ai'
 import PriorityBadge from '../../components/common/PriorityBadge'
 import LandmarkPicker from '../../components/map/LandmarkPicker'
 import { useToast } from '../../components/common/Toast'
-import { fileToDataUrl, getCurrentPosition, reverseGeocode } from '../../lib/helpers'
+import { useLanguage } from '../../lib/i18n'
+import { getCurrentPosition, reverseGeocode } from '../../lib/helpers'
 import { useLocation } from '../../hooks/useLocation'
 import type { GeoPoint, IncidentType, MediaPayload, Report, ReportInput } from '../../types'
 
-const emergencyTypeOptions: { value: IncidentType; label: string }[] = [
-  { value: 'flood', label: 'Flood / Water Rising' },
-  { value: 'medical', label: 'Critical Medical Emergency' },
-  { value: 'earthquake', label: 'Building Collapse / Trapped Victims' },
-  { value: 'fire', label: 'Fire / Explosion' },
-  { value: 'accident', label: 'Road / Transit Accident' },
-  { value: 'missing_person', label: 'Missing Person Search' },
-  { value: 'other', label: 'Other Disaster Emergency' },
+const emergencyTypeOptions: { value: IncidentType; labelKey: string }[] = [
+  { value: 'flood', labelKey: 'type.flood' },
+  { value: 'medical', labelKey: 'type.medical' },
+  { value: 'earthquake', labelKey: 'type.earthquake' },
+  { value: 'fire', labelKey: 'type.fire' },
+  { value: 'accident', labelKey: 'type.accident' },
+  { value: 'missing_person', labelKey: 'type.missing_person' },
+  { value: 'other', labelKey: 'type.other' },
 ]
 
 export default function ReportForm() {
+  const { t } = useLanguage()
   const { toast } = useToast()
   const { coords, accuracy, refresh: refreshGps } = useLocation()
 
@@ -155,47 +157,55 @@ export default function ReportForm() {
         }
         reader.readAsDataURL(audioBlob)
         stream.getTracks().forEach((track) => track.stop())
-        setIsRecordingAudio(false)
-        if (timerRef.current) clearInterval(timerRef.current)
       }
 
       recorder.start()
       setIsRecordingAudio(true)
       setAudioSeconds(0)
+
       timerRef.current = setInterval(() => {
         setAudioSeconds((sec) => {
           if (sec >= 30) {
-            recorder.stop()
+            stopAudioRecording()
             return 30
           }
           return sec + 1
         })
       }, 1000)
     } catch {
-      toast('Microphone access denied. You can upload an audio file instead.', 'error')
-      audioInputRef.current?.click()
+      toast('Microphone access denied or not available', 'error')
     }
   }
 
   const stopAudioRecording = () => {
     if (mediaRecorderRef.current && isRecordingAudio) {
       mediaRecorderRef.current.stop()
+      setIsRecordingAudio(false)
+      if (timerRef.current) clearInterval(timerRef.current)
     }
   }
 
-  const handleFiles = async (files: FileList | null) => {
-    if (!files) return
-    const items: MediaPayload[] = []
-    for (const file of Array.from(files).slice(0, 3 - media.length)) {
-      const dataUrl = await fileToDataUrl(file)
-      items.push({
-        kind: file.type.startsWith('video') ? 'video' : file.type.startsWith('audio') ? 'audio' : 'image',
-        name: file.name,
-        mime: file.type,
-        dataUrl,
-      })
-    }
-    setMedia((prev) => [...prev, ...items])
+  const handleFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    Array.from(files).forEach((file) => {
+      const isVideo = file.type.startsWith('video')
+      const isAudio = file.type.startsWith('audio')
+
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const dataUrl = reader.result as string
+        setMedia((prev) => [
+          ...prev,
+          {
+            kind: isVideo ? 'video' : isAudio ? 'audio' : 'image',
+            name: file.name,
+            mime: file.type || (isVideo ? 'video/mp4' : isAudio ? 'audio/webm' : 'image/jpeg'),
+            dataUrl,
+          },
+        ])
+      }
+      reader.readAsDataURL(file)
+    })
   }
 
   const removeMedia = (index: number) => {
@@ -212,7 +222,7 @@ export default function ReportForm() {
 
     const cleanPhone = reporterPhone.replace(/\D/g, '')
     if (!cleanPhone || cleanPhone.length < 10) {
-      toast('Please enter a valid 10-digit mobile number for emergency contact', 'error')
+      toast(t('sos.phoneInvalidError'), 'error')
       return
     }
 
@@ -247,9 +257,11 @@ export default function ReportForm() {
         if (!existingTracked.includes(finalReport.trackingId)) {
           localStorage.setItem('aapdasetu_tracked_reports', JSON.stringify([finalReport.trackingId, ...existingTracked]))
         }
-      } catch {}
+      } catch (err) {
+        void err
+      }
 
-      toast('Emergency incident reported successfully!', 'success')
+      toast(t('report.successTitle'), 'success')
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Submission failed', 'error')
     } finally {
@@ -266,9 +278,9 @@ export default function ReportForm() {
             ✓
           </span>
           <div>
-            <h1 className="text-base font-bold">Incident Registered with Command Center</h1>
+            <h1 className="text-base font-bold">{t('report.successTitle')}</h1>
             <p className="text-xs text-emerald-700 dark:text-emerald-400">
-              Your report is prioritized by the AI triage engine and logged in the rescue dispatch queue.
+              {t('report.successDesc')}
             </p>
           </div>
         </div>
@@ -276,23 +288,23 @@ export default function ReportForm() {
         <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Tracking ID — Save this</div>
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-400">{t('report.saveTrackingId')}</div>
               <div className="mt-0.5 font-mono text-2xl font-bold text-slate-900 dark:text-slate-100">{result.trackingId}</div>
             </div>
             <PriorityBadge label={result.priorityLabel} />
           </div>
           <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-2 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-400">
-            <span>Priority Score: <strong>{result.priorityScore}/100</strong></span>
-            <span>Emergency Type: <strong>{result.type.toUpperCase()}</strong></span>
+            <span>{t('report.priorityScore')} <strong>{result.priorityScore}/100</strong></span>
+            <span>{t('report.emergencyType')} <strong>{t(`type.${result.type}`)}</strong></span>
           </div>
         </div>
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row">
           <a
             href={`#/track?id=${encodeURIComponent(result.trackingId)}`}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-700"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-700 cursor-pointer"
           >
-            <span>Track Live Rescue Status</span>
+            <span>{t('report.trackStatusBtn')}</span>
             <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clipRule="evenodd" />
             </svg>
@@ -300,9 +312,9 @@ export default function ReportForm() {
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
           >
-            New Report
+            {t('report.newReportBtn')}
           </button>
         </div>
       </div>
@@ -313,10 +325,10 @@ export default function ReportForm() {
     <div className="mx-auto max-w-lg">
       <div className="mb-5 text-left">
         <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-          Emergency Report Form
+          {t('report.title')}
         </h1>
         <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-          Fields marked with <span className="text-red-500 font-bold">*</span> are required.
+          {t('report.subtitle')}
         </p>
       </div>
 
@@ -324,21 +336,21 @@ export default function ReportForm() {
         {/* 1. Emergency Type */}
         <div>
           <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
-            Emergency Type <span className="text-red-500">*</span>
+            {t('report.stepType')} <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
               required
-              className="w-full appearance-none rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              className="w-full appearance-none rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 cursor-pointer"
             >
               <option value="" disabled>
-                Select emergency type...
+                {t('report.selectTypePlaceholder')}
               </option>
               {emergencyTypeOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  {opt.label}
+                  {t(opt.labelKey)}
                 </option>
               ))}
             </select>
@@ -353,7 +365,7 @@ export default function ReportForm() {
         {/* 2. GPS Location Card */}
         <div>
           <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
-            GPS Location
+            {t('report.stepGps')}
           </label>
           <div className="rounded-xl border border-slate-300 bg-white p-3.5 dark:border-slate-700 dark:bg-slate-900 shadow-xs space-y-2.5">
             <div className="flex items-center justify-between text-xs">
@@ -361,7 +373,7 @@ export default function ReportForm() {
                 {locatingGps ? (
                   <>
                     <span className="h-2 w-2 rounded-full bg-blue-500 animate-ping" />
-                    <span>Detecting GPS location…</span>
+                    <span>{t('report.detectingGps')}</span>
                   </>
                 ) : gpsError ? (
                   <>
@@ -372,7 +384,7 @@ export default function ReportForm() {
                   <>
                     <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                     <span className="text-emerald-700 dark:text-emerald-400 font-semibold">
-                      GPS Auto-detected {accuracy ? `(±${Math.round(accuracy)}m)` : ''}
+                      {t('report.gpsDetected')} {accuracy ? `(±${Math.round(accuracy)}m)` : ''}
                     </span>
                   </>
                 )}
@@ -384,7 +396,7 @@ export default function ReportForm() {
                 disabled={locatingGps}
                 className="flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 cursor-pointer"
               >
-                <span>Retry GPS</span>
+                <span>{t('report.retryGps')}</span>
               </button>
             </div>
 
@@ -392,7 +404,7 @@ export default function ReportForm() {
               type="text"
               value={gpsAddress}
               onChange={(e) => setGpsAddress(e.target.value)}
-              placeholder="e.g., Near Unit-1 Market, Bhubaneswar"
+              placeholder={t('report.addressPlaceholder')}
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
             />
 
@@ -402,7 +414,7 @@ export default function ReportForm() {
                 onClick={() => setShowMap((s) => !s)}
                 className="font-bold text-blue-600 hover:underline dark:text-blue-400 flex items-center gap-1 cursor-pointer"
               >
-                <span>{showMap ? 'Hide map' : 'Adjust location on interactive map'}</span>
+                <span>{showMap ? t('report.hideMap') : t('report.adjustMap')}</span>
               </button>
             </div>
 
@@ -417,13 +429,13 @@ export default function ReportForm() {
         {/* 3. Your Name */}
         <div>
           <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
-            Your Name <span className="text-red-500">*</span>
+            {t('report.stepName')}
           </label>
           <input
             type="text"
             value={reporterName}
             onChange={(e) => setReporterName(e.target.value)}
-            placeholder="Optional"
+            placeholder={t('report.namePlaceholder')}
             className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           />
         </div>
@@ -431,7 +443,7 @@ export default function ReportForm() {
         {/* 4. Your Phone Number */}
         <div>
           <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
-            Your Phone Number <span className="text-red-500">*</span>
+            {t('report.stepPhone')} <span className="text-red-500">*</span>
           </label>
           <div className="flex rounded-xl border border-slate-300 bg-white overflow-hidden focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 dark:border-slate-700 dark:bg-slate-900">
             <span className="flex items-center justify-center bg-slate-100 px-3.5 text-sm font-bold text-slate-700 border-r border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
@@ -441,7 +453,7 @@ export default function ReportForm() {
               type="tel"
               value={reporterPhone}
               onChange={(e) => setReporterPhone(e.target.value)}
-              placeholder="10-digit mobile number"
+              placeholder={t('report.phonePlaceholder')}
               required
               className="w-full bg-transparent px-3.5 py-2.5 text-sm font-mono text-slate-800 outline-none placeholder-slate-400 dark:text-slate-100"
             />
@@ -452,14 +464,14 @@ export default function ReportForm() {
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-              Video or Voice Recording <span className="text-red-500">*</span>
+              {t('report.stepMedia')} <span className="text-red-500">*</span>
             </label>
             <span className="text-[10px] font-black uppercase tracking-wider text-red-600 dark:text-red-400">
-              REQUIRED
+              {t('report.mediaRequired')}
             </span>
           </div>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2 leading-relaxed">
-            Record up to 30 seconds (optional but recommended) Record a short video or audio proof of the incident.
+            {t('report.mediaNote')}
           </p>
 
           {/* Hidden File Inputs for native camera / mic */}
@@ -487,7 +499,7 @@ export default function ReportForm() {
                 onClick={() => videoInputRef.current?.click()}
                 className="flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white py-2.5 px-3 text-xs font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
               >
-                <span>Record Video</span>
+                <span>{t('report.recordVideo')}</span>
               </button>
 
               {/* Record Audio with Mic API */}
@@ -497,7 +509,7 @@ export default function ReportForm() {
                   onClick={startAudioRecording}
                   className="flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white py-2.5 px-3 text-xs font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
                 >
-                  <span>Record Audio</span>
+                  <span>{t('report.recordAudio')}</span>
                 </button>
               ) : (
                 <button
@@ -506,7 +518,7 @@ export default function ReportForm() {
                   className="flex items-center justify-center gap-2 rounded-xl bg-red-600 py-2.5 px-3 text-xs font-bold text-white shadow-xs transition animate-pulse cursor-pointer"
                 >
                   <span className="h-2 w-2 rounded-full bg-white animate-ping" />
-                  <span>Stop ({audioSeconds}s / 30s)</span>
+                  <span>{t('report.stopAudio')} ({audioSeconds}s / 30s)</span>
                 </button>
               )}
             </div>
@@ -529,7 +541,7 @@ export default function ReportForm() {
                     <button
                       type="button"
                       onClick={() => removeMedia(i)}
-                      className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow-xs"
+                      className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow-xs cursor-pointer"
                     >
                       ×
                     </button>
@@ -543,13 +555,13 @@ export default function ReportForm() {
         {/* 6. Additional Description */}
         <div>
           <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
-            Additional Description
+            {t('report.stepDesc')}
           </label>
           <textarea
             rows={4}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe the emergency in detail..."
+            placeholder={t('report.descPlaceholder')}
             className="w-full rounded-xl border border-slate-300 bg-white p-3.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           />
         </div>
@@ -564,18 +576,16 @@ export default function ReportForm() {
             {sending ? (
               <div className="flex items-center gap-2">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                <span>Dispatching Report…</span>
+                <span>{t('report.dispatching')}</span>
               </div>
             ) : (
-              <>
-                <span>Submit Report</span>
-              </>
+              <span>{t('report.submitBtn')}</span>
             )}
           </button>
 
           {(!selectedType || !reporterPhone.trim()) && (
             <p className="text-center text-[11px] font-medium text-red-500 dark:text-red-400">
-              * Select emergency type and enter mobile number to enable submission
+              {t('report.submitValidationNote')}
             </p>
           )}
         </div>

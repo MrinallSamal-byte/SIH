@@ -9,8 +9,8 @@ import type { Alert } from '../../types'
 interface ServiceCard {
   to: string
   titleKey: string
-  desc: string
-  tag?: string
+  descKey: string
+  tagKey: string
   urgent?: boolean
   icon: 'sos' | 'report' | 'shelter' | 'route' | 'missing' | 'checkin' | 'damage' | 'chat'
 }
@@ -19,58 +19,58 @@ const emergencyServices: ServiceCard[] = [
   {
     to: '/sos',
     titleKey: 'nav.sos',
-    desc: 'Instant GPS distress beacon dispatched immediately to NDRF & State Emergency Operations.',
-    tag: 'Life Threatening',
+    descKey: 'service.sos.desc',
+    tagKey: 'service.sos.tag',
     urgent: true,
     icon: 'sos',
   },
   {
     to: '/report',
     titleKey: 'nav.report',
-    desc: 'Report trapped victims, medical emergencies, food shortages, or infrastructure collapse.',
-    tag: 'Triage & Rescue',
+    descKey: 'service.report.desc',
+    tagKey: 'service.report.tag',
     icon: 'report',
   },
   {
     to: '/shelters',
     titleKey: 'nav.shelters',
-    desc: 'Locate nearest operational relief camps with real-time bed capacity, food, and medical stations.',
-    tag: 'Relief Camps',
+    descKey: 'service.shelters.desc',
+    tagKey: 'service.shelters.tag',
     icon: 'shelter',
   },
   {
     to: '/safe-routes',
     titleKey: 'nav.routes',
-    desc: 'Evacuation corridors dynamically routed around flooded perimeters and blocked highways.',
-    tag: 'Navigation',
+    descKey: 'service.routes.desc',
+    tagKey: 'service.routes.tag',
     icon: 'route',
   },
   {
     to: '/missing-persons',
     titleKey: 'nav.missing',
-    desc: 'Search missing person bulletins or report a missing family member with photo verification.',
-    tag: 'Registry',
+    descKey: 'service.missing.desc',
+    tagKey: 'service.missing.tag',
     icon: 'missing',
   },
   {
     to: '/check-in',
     titleKey: 'nav.checkin',
-    desc: 'Mark yourself and family safe to reassure loved ones and reduce search team overhead.',
-    tag: 'Public Notice',
+    descKey: 'service.checkin.desc',
+    tagKey: 'service.checkin.tag',
     icon: 'checkin',
   },
   {
     to: '/report-damage',
     titleKey: 'nav.damage',
-    desc: 'Submit geotagged structural damage claims for SDRF / NDMA disaster relief compensation.',
-    tag: 'Relief Claims',
+    descKey: 'service.damage.desc',
+    tagKey: 'service.damage.tag',
     icon: 'damage',
   },
   {
     to: '/pfa-chat',
     titleKey: 'nav.pfa',
-    desc: '24/7 intelligent AI companion for real-time disaster survival tactics, medical triage, and trauma support.',
-    tag: 'AI Companion',
+    descKey: 'service.pfa.desc',
+    tagKey: 'service.pfa.tag',
     icon: 'chat',
   },
 ]
@@ -161,7 +161,9 @@ export default function Home() {
     try {
       const stored = JSON.parse(localStorage.getItem('aapdasetu_tracked_reports') || '[]') as string[]
       setRecentTracked(stored.slice(0, 4))
-    } catch {}
+    } catch (err) {
+      void err
+    }
 
     return () => {
       active = false
@@ -178,30 +180,27 @@ export default function Home() {
   return (
     <div className="space-y-6 sm:space-y-8">
       <section className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -right-24 top-0 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
-          <div className="absolute -left-24 bottom-0 h-64 w-64 rounded-full bg-red-500/10 blur-3xl" />
-        </div>
-
         <div className="relative grid gap-4 p-6 sm:p-8 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-3xl border border-slate-200/70 bg-slate-50/70 p-6 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-950/30 sm:p-8">
+        <div className="rounded-3xl border border-slate-200/80 bg-slate-50 p-6 dark:border-slate-800 dark:bg-slate-950 sm:p-8">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-800 dark:border-blue-900/50 dark:bg-blue-950/50 dark:text-blue-300">
+            <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-800 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300">
               <span className="h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
-              National Incident Response System
+              {t('home.hero.badge')}
             </span>
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
-              {activeAlertCount === null ? 'Syncing live alerts' : `${activeAlertCount} active bulletins`}
+            <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+              {activeAlertCount === null
+                ? t('home.hero.syncingBulletins')
+                : t('home.hero.activeBulletins', { count: activeAlertCount })}
             </span>
           </div>
 
           <div className="mt-5 space-y-4">
             <div className="space-y-2">
               <h1 className="max-w-2xl text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-4xl lg:text-5xl">
-                Disaster Response & Triage Command
+                {t('home.hero.title')}
               </h1>
               <p className="max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400 sm:text-base">
-                Report trapped victims without login, trigger 1-tap SOS, locate open relief camps, and follow live evacuation corridors from one clean public entry point.
+                {t('home.hero.subtitle')}
               </p>
             </div>
 
@@ -210,19 +209,19 @@ export default function Home() {
                 to="/sos"
                 className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-5 py-3 text-sm font-black text-white shadow-md transition hover:bg-red-700 active:scale-[0.99]"
               >
-                1-TAP EMERGENCY SOS
+                {t('home.hero.btnSos')}
               </Link>
               <Link
                 to="/report"
-                className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-slate-50 px-5 py-3 text-sm font-bold text-slate-800 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-800 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
               >
-                Submit Incident Report
+                {t('home.hero.btnReport')}
               </Link>
               <Link
                 to="/pfa-chat"
-                className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-800 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-800 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
               >
-                AapdaMitra AI
+                {t('home.hero.btnAapdaMitra')}
               </Link>
             </div>
           </div>
@@ -230,19 +229,19 @@ export default function Home() {
           <dl className="mt-6 grid gap-3 sm:grid-cols-3">
             {[
               {
-                label: 'No login required',
-                value: 'Fast public access',
+                label: t('home.stats.noLogin'),
+                value: t('home.stats.noLoginSub'),
               },
               {
-                label: 'Live bulletin feed',
-                value: activeAlertCount === null ? 'Loading' : `${activeAlertCount} active`,
+                label: t('home.stats.bulletinFeed'),
+                value: activeAlertCount === null ? t('common.loading') : `${activeAlertCount} ${t('home.stats.active')}`,
               },
               {
-                label: 'Immediate routing',
-                value: 'Shelters and safe routes',
+                label: t('home.stats.routing'),
+                value: t('home.stats.routingSub'),
               },
             ].map((item) => (
-              <div key={item.label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/50">
+              <div key={item.label} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
                 <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{item.label}</dt>
                 <dd className="mt-1 text-sm font-bold text-slate-900 dark:text-slate-100">{item.value}</dd>
               </div>
@@ -250,21 +249,21 @@ export default function Home() {
           </dl>
         </div>
 
-        <div className="rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-xs backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/80 sm:p-7">
+        <div className="rounded-3xl border border-slate-200/80 bg-slate-50 p-6 shadow-xs dark:border-slate-800 dark:bg-slate-950 sm:p-7">
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Quick Access
+                {t('home.quick.badge')}
               </div>
               <div className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">
-                Track and escalate fast
+                {t('home.quick.title')}
               </div>
               <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500 dark:text-slate-400">
-                Use a tracking ID to check status, recover recent reports, or jump straight into the command flow.
+                {t('home.quick.subtitle')}
               </p>
             </div>
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
-              Live
+            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+              {t('home.quick.live')}
             </span>
           </div>
 
@@ -273,23 +272,23 @@ export default function Home() {
               type="text"
               value={quickTrackId}
               onChange={(e) => setQuickTrackId(e.target.value)}
-              placeholder="Enter tracking ID"
+              placeholder={t('home.quick.placeholder')}
               className="min-w-0 flex-1 rounded-2xl border border-slate-300 bg-white px-3 py-3 text-sm font-mono text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
             />
             <button
               type="submit"
-              className="shrink-0 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+              className="shrink-0 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 cursor-pointer"
             >
-              Track
+              {t('home.quick.btnTrack')}
             </button>
           </form>
 
           <div className="mt-5 grid gap-2 sm:grid-cols-2">
             {[
-              { label: 'Emergency', number: '112', tone: 'red' },
-              { label: 'Ambulance', number: '108', tone: 'blue' },
-              { label: 'Disaster', number: '1070', tone: 'amber' },
-              { label: 'Fire', number: '101', tone: 'slate' },
+              { label: t('home.quick.emergency'), number: '112', tone: 'red' },
+              { label: t('home.quick.ambulance'), number: '108', tone: 'blue' },
+              { label: t('home.quick.disaster'), number: '1070', tone: 'amber' },
+              { label: t('home.quick.fire'), number: '101', tone: 'slate' },
             ].map((contact) => (
               <a
                 key={contact.number}
@@ -313,7 +312,7 @@ export default function Home() {
           {recentTracked.length > 0 && (
             <div className="mt-5 border-t border-slate-100 pt-4 text-[11px] text-slate-500 dark:border-slate-800">
               <div className="mb-2 font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                Recent Tracking IDs
+                {t('home.quick.recent')}
               </div>
               <div className="flex flex-wrap gap-2">
                 {recentTracked.map((id) => (
@@ -321,7 +320,7 @@ export default function Home() {
                     key={id}
                     type="button"
                     onClick={() => navigate(`/track?id=${id}`)}
-                    className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-[11px] font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
+                    className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-[11px] font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 cursor-pointer"
                   >
                     {id}
                   </button>
@@ -337,17 +336,17 @@ export default function Home() {
       <section>
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Official Warning Bulletins</h2>
+            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">{t('home.bulletins.title')}</h2>
             <span className="rounded-md bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-700 dark:bg-red-950/80 dark:text-red-300 flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
-              Live Feed
+              {t('home.bulletins.live')}
             </span>
           </div>
           <Link
             to="/alerts"
             className="text-xs font-bold text-blue-600 hover:underline dark:text-blue-400"
           >
-            All Bulletins →
+            {t('home.bulletins.all')}
           </Link>
         </div>
 
@@ -359,7 +358,7 @@ export default function Home() {
           </div>
         ) : alerts.length === 0 ? (
           <div className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900">
-            No active critical weather or flood alerts currently in your sector.
+            {t('home.bulletins.empty')}
           </div>
         ) : (
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
@@ -386,11 +385,11 @@ export default function Home() {
       <section>
         <div className="mb-4 flex items-end justify-between gap-3">
           <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Disaster Response & Citizen Services</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Direct incident actions for affected citizens and search & rescue teams.</p>
+            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">{t('home.services.title')}</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('home.services.subtitle')}</p>
           </div>
           <span className="hidden rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400 sm:inline-flex">
-            Structured access
+            {t('home.services.structured')}
           </span>
         </div>
 
@@ -418,14 +417,14 @@ export default function Home() {
                         : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
                     }`}
                   >
-                    {service.tag}
+                    {t(service.tagKey)}
                   </span>
                 </div>
                 <h3 className="mt-3 text-sm font-bold text-slate-900 dark:text-slate-100">
                   {t(service.titleKey)}
                 </h3>
                 <p className="mt-1.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                  {service.desc}
+                  {t(service.descKey)}
                 </p>
               </div>
             </Link>
@@ -435,5 +434,3 @@ export default function Home() {
     </div>
   )
 }
-
-

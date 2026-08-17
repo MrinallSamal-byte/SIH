@@ -5,6 +5,7 @@ import Button from '../../components/common/Button'
 import Badge from '../../components/common/Badge'
 import Loader from '../../components/common/Loader'
 import { useToast } from '../../components/common/Toast'
+import { useLanguage } from '../../lib/i18n'
 import { compressImage, maskPhone } from '../../lib/helpers'
 import type { MissingPerson } from '../../types'
 
@@ -12,6 +13,7 @@ type Tab = 'registry' | 'report'
 type StatusFilter = 'all' | 'open' | 'matched' | 'resolved'
 
 export default function MissingPersons() {
+  const { t } = useLanguage()
   const [tab, setTab] = useState<Tab>('registry')
   const [persons, setPersons] = useState<MissingPerson[] | null>(null)
   const [search, setSearch] = useState('')
@@ -37,18 +39,18 @@ export default function MissingPersons() {
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-        Missing Persons & Reunification Registry
+        {t('missing.title')}
       </h1>
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-        Public disaster missing persons database. Upload photos to enable visual identification by rescue squads and shelters.
+        {t('missing.subtitle')}
       </p>
 
       <div className="mt-4 flex gap-2">
         <Button variant={tab === 'registry' ? 'primary' : 'outline'} onClick={() => setTab('registry')}>
-          Public Registry ({persons?.length ?? 0})
+          {t('missing.tabRegistry')} ({persons?.length ?? 0})
         </Button>
         <Button variant={tab === 'report' ? 'danger' : 'outline'} onClick={() => setTab('report')}>
-          Register Missing Person
+          {t('missing.tabRegister')}
         </Button>
       </div>
 
@@ -59,7 +61,7 @@ export default function MissingPersons() {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by name, location, clothing…"
+                placeholder={t('missing.searchPlaceholder')}
               />
             </div>
             <div className="flex flex-wrap gap-1">
@@ -68,13 +70,13 @@ export default function MissingPersons() {
                   key={st}
                   type="button"
                   onClick={() => setFilter(st)}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-bold uppercase transition ${
+                  className={`rounded-lg px-2.5 py-1 text-xs font-bold uppercase transition cursor-pointer ${
                     filter === st
                       ? 'bg-blue-600 text-white'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
                   }`}
                 >
-                  {st}
+                  {t(`missing.filter${st.charAt(0).toUpperCase() + st.slice(1)}`)}
                 </button>
               ))}
             </div>
@@ -97,7 +99,7 @@ export default function MissingPersons() {
                       <button
                         type="button"
                         onClick={() => setEnlargedPhoto(p.photoUrl ?? null)}
-                        className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800"
+                        className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800 cursor-pointer"
                       >
                         <img src={p.photoUrl} alt={p.name} className="h-full w-full object-cover transition" />
                         <span className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition group-hover:opacity-100 text-[10px] font-bold text-white">
@@ -117,12 +119,12 @@ export default function MissingPersons() {
                             {p.name}
                             {p.age !== undefined && (
                               <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400">
-                                (Age: {p.age})
+                                ({t('missing.age')} {p.age})
                               </span>
                             )}
                           </div>
                           <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                            Gender: <strong className="capitalize">{p.gender || 'Not specified'}</strong>
+                            {t('missing.gender')} <strong className="capitalize">{p.gender ? t(`common.${p.gender}`) : '—'}</strong>
                           </div>
                         </div>
                         <Badge value={p.status} />
@@ -130,11 +132,11 @@ export default function MissingPersons() {
 
                       <div className="mt-2 space-y-1 text-xs text-slate-600 dark:text-slate-300">
                         <div>
-                          Last Seen: <strong>{p.lastSeenLocation ?? 'Unknown'}</strong>
+                          {t('missing.lastSeen')} <strong>{p.lastSeenLocation ?? 'Unknown'}</strong>
                         </div>
                         {p.clothes && (
                           <div>
-                            Appearance: <span className="italic">{p.clothes}</span>
+                            {t('missing.clothing')} <span className="italic">{p.clothes}</span>
                           </div>
                         )}
                       </div>
@@ -143,12 +145,12 @@ export default function MissingPersons() {
 
                   {p.contactPhone && (
                     <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
-                      <span className="text-xs text-slate-500">Contact: {maskPhone(p.contactPhone)}</span>
+                      <span className="text-xs text-slate-500">{t('common.phone')}: {maskPhone(p.contactPhone)}</span>
                       <a
                         href={`tel:${p.contactPhone}`}
-                        className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-blue-700"
+                        className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-blue-700 cursor-pointer"
                       >
-                        Contact Relative
+                        {t('missing.contactBtn')}
                       </a>
                     </div>
                   )}
@@ -157,7 +159,7 @@ export default function MissingPersons() {
 
               {filteredPersons.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                  No missing person records matched your search.
+                  {t('missing.noneFound')}
                 </div>
               )}
             </div>
@@ -185,9 +187,9 @@ export default function MissingPersons() {
             <button
               type="button"
               onClick={() => setEnlargedPhoto(null)}
-              className="mt-2 w-full rounded-lg bg-slate-200 py-1.5 text-xs font-bold text-slate-800 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-200"
+              className="mt-2 w-full rounded-lg bg-slate-200 py-1.5 text-xs font-bold text-slate-800 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
             >
-              Close Preview
+              {t('common.close')}
             </button>
           </div>
         </div>
@@ -197,6 +199,7 @@ export default function MissingPersons() {
 }
 
 function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) => void }) {
+  const { t } = useLanguage()
   const { toast } = useToast()
   const [name, setName] = useState('')
   const [age, setAge] = useState('')
@@ -217,7 +220,7 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
     try {
       const compressed = await compressImage(file, 800, 0.75)
       setPhotoDataUrl(compressed)
-      toast('Photo attached and optimized for disaster upload')
+      toast('Photo attached and optimized')
     } catch {
       toast('Could not process photo', 'error')
     } finally {
@@ -235,7 +238,7 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
       return
     }
     if (!contactPhone.trim() || contactPhone.replace(/\D/g, '').length < 10) {
-      toast('Please provide a valid 10-digit contact phone number', 'error')
+      toast(t('sos.phoneInvalidError'), 'error')
       return
     }
 
@@ -250,7 +253,7 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
         contactPhone: contactPhone.trim(),
         photoUrl: photoDataUrl || undefined,
       })
-      toast('Missing person registered in system')
+      toast(t('missing.successTitle'))
       onSubmitted(person)
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Submission failed', 'error')
@@ -261,14 +264,14 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
 
   return (
     <div className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <Field label="Missing Person Full Name *">
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name of missing person" required />
+      <Field label={t('missing.formName')}>
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('missing.formNamePlaceholder')} required />
       </Field>
 
       {/* Photo Upload with preview */}
       <div>
         <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-          Photo for Visual Identification (Recommended)
+          {t('missing.formPhoto')}
         </label>
         <div className="mt-1.5 flex items-center gap-3">
           {photoDataUrl ? (
@@ -277,14 +280,14 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
               <button
                 type="button"
                 onClick={() => setPhotoDataUrl(null)}
-                className="absolute right-0 top-0 rounded-bl bg-red-600 p-0.5 text-[9px] text-white"
+                className="absolute right-0 top-0 rounded-bl bg-red-600 p-0.5 text-[9px] text-white cursor-pointer"
               >
                 ✕
               </button>
             </div>
           ) : (
             <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-xl dark:border-slate-700 dark:bg-slate-800">
-              Photo
+              📷
             </div>
           )}
 
@@ -301,52 +304,53 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
             size="sm"
             disabled={compressing}
             onClick={() => fileInputRef.current?.click()}
+            className="cursor-pointer"
           >
-            {compressing ? 'Optimizing…' : photoDataUrl ? 'Change Photo' : 'Upload Person Photo'}
+            {compressing ? t('common.loading') : photoDataUrl ? t('missing.uploadPhoto') : t('missing.uploadPhoto')}
           </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Age">
-          <Input type="number" value={age} onChange={(e) => setAge(e.target.value)} placeholder="e.g. 35" />
+        <Field label={t('missing.formAge')}>
+          <Input type="number" value={age} onChange={(e) => setAge(e.target.value)} placeholder={t('missing.formAgePlaceholder')} />
         </Field>
-        <Field label="Gender">
+        <Field label={t('missing.formGender')}>
           <select
             value={gender}
             onChange={(e) => setGender(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 cursor-pointer"
           >
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="other">Other</option>
+            <option value="male">{t('common.male')}</option>
+            <option value="female">{t('common.female')}</option>
+            <option value="other">{t('common.other')}</option>
           </select>
         </Field>
       </div>
 
-      <Field label="Last Seen Location / Landmark *">
+      <Field label={t('missing.formLastSeen')}>
         <Input
           value={lastSeenLocation}
           onChange={(e) => setLastSeenLocation(e.target.value)}
-          placeholder="e.g. Near Salt Lake Karunamoyee Bus Stand"
+          placeholder={t('missing.formLastSeenPlaceholder')}
           required
         />
       </Field>
 
-      <Field label="Clothing & Physical Description">
+      <Field label={t('missing.formClothes')}>
         <Input
           value={clothes}
           onChange={(e) => setClothes(e.target.value)}
-          placeholder="e.g. Blue shirt, black jeans, wears spectacles"
+          placeholder={t('missing.formClothesPlaceholder')}
         />
       </Field>
 
-      <Field label="Your Contact Phone (to report sightings) *">
+      <Field label={t('missing.formPhone')}>
         <Input
           type="tel"
           value={contactPhone}
           onChange={(e) => setContactPhone(e.target.value)}
-          placeholder="10-digit mobile number"
+          placeholder={t('missing.formPhonePlaceholder')}
           required
         />
       </Field>
@@ -355,11 +359,10 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
         variant="danger"
         onClick={submit}
         disabled={sending || !name.trim() || !lastSeenLocation.trim() || !contactPhone.trim()}
-        className="w-full py-3 font-bold"
+        className="w-full py-3 font-bold cursor-pointer"
       >
-        {sending ? 'Registering in Database…' : 'Register Missing Person'}
+        {sending ? t('common.loading') : t('missing.submitBtn')}
       </Button>
     </div>
   )
 }
-

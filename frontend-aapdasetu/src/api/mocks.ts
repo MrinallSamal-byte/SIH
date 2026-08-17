@@ -35,7 +35,10 @@ function loadLocal<T>(key: string, fallback: T): T {
 function saveLocal<T>(key: string, val: T): void {
   try {
     localStorage.setItem(key, JSON.stringify(val))
-  } catch {}
+  } catch (err) {
+    // Ignore localStorage quota errors in private browsing
+    void err
+  }
 }
 
 const STORAGE_KEY_REPORTS = 'aapdasetu_mock_reports'

@@ -70,8 +70,8 @@ export default function Reports() {
     if (!selected) return volunteers
     return [...volunteers].sort((a, b) => {
       // 1. Skill match preference
-      const aSkill = a.skills.includes(selected.type as any) ? 1 : 0
-      const bSkill = b.skills.includes(selected.type as any) ? 1 : 0
+      const aSkill = (a.skills as string[]).includes(selected.type) ? 1 : 0
+      const bSkill = (b.skills as string[]).includes(selected.type) ? 1 : 0
       if (aSkill !== bSkill) return bSkill - aSkill
 
       // 2. Distance sorting if coordinates exist

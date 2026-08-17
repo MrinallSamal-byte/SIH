@@ -4,9 +4,11 @@ import Badge from '../../components/common/Badge'
 import Loader from '../../components/common/Loader'
 import { useRealtime } from '../../hooks/useRealtime'
 import { timeAgo } from '../../lib/helpers'
+import { useLanguage } from '../../lib/i18n'
 import type { Alert } from '../../types'
 
 export default function Alerts() {
+  const { t } = useLanguage()
   const fetchAlerts = useCallback(() => listAlerts(), [])
   const alerts = useRealtime<Alert[]>(fetchAlerts, 8000)
   const [filter, setFilter] = useState<string>('all')
@@ -20,9 +22,9 @@ export default function Alerts() {
     <div className="mx-auto max-w-3xl space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Public Warning Bulletins</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t('alerts.title')}</h1>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Real-time emergency broadcasts from NDMA, SDMA, and National Incident Command.
+            {t('alerts.subtitle')}
           </p>
         </div>
 
@@ -32,13 +34,13 @@ export default function Alerts() {
             <button
               key={sev}
               onClick={() => setFilter(sev)}
-              className={`rounded-md px-2.5 py-1 text-xs font-semibold capitalize transition ${
+              className={`rounded-md px-2.5 py-1 text-xs font-semibold capitalize transition cursor-pointer ${
                 filter === sev
                   ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
                   : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
             >
-              {sev}
+              {t(`alerts.${sev}`)}
             </button>
           ))}
         </div>
@@ -70,7 +72,7 @@ export default function Alerts() {
 
             {a.region && (
               <div className="mt-3 flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                <span>📍 Affected Region:</span>
+                <span>📍 {t('alerts.affectedRegion')}</span>
                 <span className="font-semibold text-slate-700 dark:text-slate-300">{a.region}</span>
               </div>
             )}
@@ -79,11 +81,10 @@ export default function Alerts() {
 
         {alerts && filtered.length === 0 && (
           <div className="rounded-2xl border border-dashed border-slate-200 p-10 text-center text-xs text-slate-400 dark:border-slate-800">
-            No active emergency alerts in this category.
+            {t('alerts.noneFound')}
           </div>
         )}
       </div>
     </div>
   )
 }
-

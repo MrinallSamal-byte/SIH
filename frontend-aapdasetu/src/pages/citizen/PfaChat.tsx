@@ -6,20 +6,20 @@ import { useLanguage } from '../../lib/i18n'
 import { getCurrentPosition } from '../../lib/helpers'
 import type { PfaChatMessage } from '../../types'
 
-const promptShortcuts = [
-  '🌊 Water entering house / Flooding',
-  '🩸 First aid for severe bleeding',
-  '🧘 Panic / Help me calm down',
-  '🏚️ Trapped under debris / collapse',
-  '❤️ Chest pain / Heart attack advice',
-  '⚡ Electric hazard & flood safety',
-  '🐍 Snakebite emergency protocol',
-  '🔥 Fire evacuation tactics',
+const shortcutKeys = [
+  'chat.shortcut.flood',
+  'chat.shortcut.bleeding',
+  'chat.shortcut.panic',
+  'chat.shortcut.trapped',
+  'chat.shortcut.chestPain',
+  'chat.shortcut.electric',
+  'chat.shortcut.snakebite',
+  'chat.shortcut.fire',
 ]
 
 export default function PfaChatPage() {
   const { toast } = useToast()
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const [messages, setMessages] = useState<PfaChatMessage[]>([])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
@@ -29,19 +29,21 @@ export default function PfaChatPage() {
   const [submittingCallback, setSubmittingCallback] = useState<number | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
+  // Initialize or update greeting when language changes (if user has not sent user messages)
   useEffect(() => {
-    if (messages.length === 0) {
-      setMessages([
-        {
-          id: 'pfa-init',
-          role: 'bot',
-          content:
-            t('chat.greeting') ||
-            'Namaste! I am AapdaMitra AI (आपदामित्र), your 24/7 intelligent disaster survival, triage, and crisis companion. How can I help you and your family right now?',
-        },
-      ])
-    }
-  }, [messages.length, t])
+    setMessages((prev) => {
+      if (prev.length === 0 || (prev.length === 1 && prev[0].id === 'pfa-init')) {
+        return [
+          {
+            id: 'pfa-init',
+            role: 'bot',
+            content: t('chat.greeting'),
+          },
+        ]
+      }
+      return prev
+    })
+  }, [lang, t])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -102,7 +104,7 @@ export default function PfaChatPage() {
     const phone = (callbackPhones[msgIndex] || '').trim()
     const clean = phone.replace(/\D/g, '')
     if (clean.length < 10) {
-      toast('Please enter a valid 10-digit mobile number', 'error')
+      toast(t('sos.phoneInvalidError'), 'error')
       return
     }
 
@@ -114,7 +116,10 @@ export default function PfaChatPage() {
         const pos = await getCurrentPosition(false, 3000)
         lat = pos.coords.latitude
         lng = pos.coords.longitude
-      } catch {}
+      } catch (err) {
+        // Fallback coordinates used
+        void err
+      }
 
       const report = await createReport({
         type: 'other',
@@ -122,7 +127,7 @@ export default function PfaChatPage() {
         reporterPhone: phone,
         description: `AapdaMitra AI Critical Rescue Request: ${userPromptText.slice(0, 120)}`,
         location: { lat, lng },
-        landmark: 'AapdaMitra AI Mental Health & First-Aid Emergency Escalation',
+        landmark: 'AapdaMitra AI Emergency Escalation',
       })
 
       setMessages((prev) =>
@@ -138,7 +143,7 @@ export default function PfaChatPage() {
         )
       )
 
-      toast('Urgent rescue callback requested! Responders notified.', 'success')
+      toast(t('chat.callbackSuccess'), 'success')
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Failed to request callback', 'error')
     } finally {
@@ -156,14 +161,14 @@ export default function PfaChatPage() {
           </div>
           <div>
             <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <span>AapdaMitra AI</span>
+              <span>{t('chat.title')}</span>
               <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 flex items-center gap-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                24/7 Active
+                24/7
               </span>
             </h1>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              24/7 intelligent disaster survival guidance, emergency first-aid & trauma support.
+              {t('chat.subtitle')}
             </p>
           </div>
         </div>
@@ -171,13 +176,13 @@ export default function PfaChatPage() {
         <button
           type="button"
           onClick={() => setBreathingActive((b) => !b)}
-          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
             breathingActive
               ? 'bg-emerald-600 text-white'
               : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
           }`}
         >
-          {breathingActive ? 'Stop Breath Coach' : '🧘 4-4-4 Box Breathing'}
+          {breathingActive ? t('common.close') : `🧘 ${t('chat.breathingTitle')}`}
         </button>
       </div>
 
@@ -185,14 +190,14 @@ export default function PfaChatPage() {
       {breathingActive && (
         <div className="flex items-center justify-center gap-4 border-x border-slate-200 bg-slate-100 py-3 dark:border-slate-800 dark:bg-slate-900">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 font-bold text-white text-xs dark:bg-slate-100 dark:text-slate-900">
-            {breathPhase === 'Inhale' ? 'IN' : breathPhase === 'Hold' ? 'HOLD' : 'OUT'}
+            {breathPhase === 'Inhale' ? t('chat.inhale') : breathPhase === 'Hold' ? t('chat.hold') : t('chat.exhale')}
           </div>
           <div>
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Guided 4-Second Box Breathing
+              {t('chat.breathingTitle')}
             </div>
             <div className="text-sm font-bold text-slate-900 dark:text-slate-100">
-              {breathPhase.toUpperCase()} NOW
+              {breathPhase === 'Inhale' ? t('chat.inhale') : breathPhase === 'Hold' ? t('chat.hold') : t('chat.exhale')}
             </div>
           </div>
         </div>
@@ -225,17 +230,14 @@ export default function PfaChatPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5 dark:border-slate-800">
                     <div>
                       <span className="text-xs font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
-                        Emergency Helpline
+                        {t('chat.criticalBannerTitle')}
                       </span>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Direct toll-free connection to medical & rescue ambulance dispatch
-                      </p>
                     </div>
                     <a
                       href={`tel:${m.helpline || '108'}`}
                       className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-red-700"
                     >
-                      Call {m.helpline || '108'}
+                      {t('banner.ambulance')} {m.helpline || '108'}
                     </a>
                   </div>
 
@@ -243,12 +245,12 @@ export default function PfaChatPage() {
                   {!m.callbackSubmitted ? (
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
-                        Enter your mobile number — rescue teams will reach out to you as soon as possible:
+                        {t('chat.callbackPlaceholder')}:
                       </label>
                       <div className="flex gap-2">
                         <input
                           type="tel"
-                          placeholder="Enter 10-digit mobile number"
+                          placeholder={t('sos.phonePlaceholder')}
                           value={callbackPhones[i] || ''}
                           onChange={(e) =>
                             setCallbackPhones((prev) => ({ ...prev, [i]: e.target.value }))
@@ -259,23 +261,23 @@ export default function PfaChatPage() {
                           type="button"
                           onClick={() => handleEmergencyCallback(i, m.content)}
                           disabled={submittingCallback === i}
-                          className="shrink-0 rounded-xl bg-red-600 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-md transition hover:bg-red-700 disabled:opacity-50"
+                          className="shrink-0 rounded-xl bg-red-600 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-md transition hover:bg-red-700 disabled:opacity-50 cursor-pointer"
                         >
-                          {submittingCallback === i ? 'Dispatching…' : 'Reach Me Out'}
+                          {submittingCallback === i ? t('common.loading') : t('chat.requestCallbackBtn')}
                         </button>
                       </div>
                     </div>
                   ) : (
                     <div className="rounded-xl bg-emerald-50 p-3 text-xs text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-900">
-                      <div className="font-bold text-sm">✓ Urgent Priority Rescue Callback Dispatched!</div>
+                      <div className="font-bold text-sm">{t('chat.callbackSuccess')}</div>
                       <div className="mt-1 text-slate-700 dark:text-slate-300">
-                        Tracking ID: <strong className="font-mono text-slate-900 dark:text-slate-100">{m.trackingId}</strong> (Contact: {m.submittedPhone})
+                        {t('sos.trackingIdLabel')}: <strong className="font-mono text-slate-900 dark:text-slate-100">{m.trackingId}</strong> ({t('common.phone')}: {m.submittedPhone})
                       </div>
                       <a
                         href={`#/track?id=${m.trackingId}`}
                         className="mt-2 inline-flex items-center gap-1 font-bold text-blue-600 underline hover:text-blue-800 dark:text-blue-400"
                       >
-                        <span>Track Live Incident Response Status</span>
+                        <span>{t('sos.trackStatusBtn')}</span>
                         <span>→</span>
                       </a>
                     </div>
@@ -289,7 +291,7 @@ export default function PfaChatPage() {
         {busy && (
           <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 italic">
             <span className="h-2 w-2 animate-bounce rounded-full bg-blue-500" />
-            <span>Preparing response…</span>
+            <span>{t('common.loading')}</span>
           </div>
         )}
         <div ref={bottomRef} />
@@ -298,16 +300,19 @@ export default function PfaChatPage() {
       {/* Suggested Quick Shortcuts */}
       <div className="border-x border-slate-200 bg-white px-4 py-2 dark:border-slate-800 dark:bg-slate-900">
         <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
-          {promptShortcuts.map((ps) => (
-            <button
-              key={ps}
-              type="button"
-              onClick={() => send(ps)}
-              className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-            >
-              {ps}
-            </button>
-          ))}
+          {shortcutKeys.map((key) => {
+            const label = t(key)
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => send(label)}
+                className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 cursor-pointer"
+              >
+                {label}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -317,16 +322,16 @@ export default function PfaChatPage() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && send()}
-          placeholder="Describe your situation (e.g. 'water rising fast', 'someone is bleeding', 'feeling anxious')…"
+          placeholder={t('chat.placeholder')}
           className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
         />
         <button
           type="button"
           onClick={() => send()}
           disabled={busy || !input.trim()}
-          className="shrink-0 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-blue-700 disabled:opacity-50"
+          className="shrink-0 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
         >
-          Send
+          {t('common.send')}
         </button>
       </div>
     </div>

@@ -5,18 +5,20 @@ import Badge from '../../components/common/Badge'
 import LeafletMap from '../../components/map/LeafletMap'
 import { useLocation } from '../../hooks/useLocation'
 import { haversineKm, getNavigationUrl } from '../../lib/helpers'
+import { useLanguage } from '../../lib/i18n'
 import type { GeoPoint, Shelter } from '../../types'
 import type { MapMarker } from '../../components/map/LeafletMap'
 
-const criticalFacilities = [
-  { key: 'medical_station', label: 'Medical Station' },
-  { key: 'food', label: 'Food Supply' },
-  { key: 'water', label: 'Clean Water' },
-  { key: 'power_generator', label: 'Power Generator' },
-  { key: 'blankets', label: 'Blankets & Beds' },
+const criticalFacilities: { key: string; labelKey: string }[] = [
+  { key: 'medical_station', labelKey: 'shelters.medical' },
+  { key: 'food', labelKey: 'shelters.food' },
+  { key: 'water', labelKey: 'shelters.water' },
+  { key: 'power_generator', labelKey: 'shelters.generator' },
+  { key: 'blankets', labelKey: 'shelters.blankets' },
 ]
 
 export default function ShelterFinder() {
+  const { t } = useLanguage()
   const { coords, status, accuracy, refresh } = useLocation()
   const [shelters, setShelters] = useState<Shelter[] | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -62,8 +64,8 @@ export default function ShelterFinder() {
       list.push({
         id: 'you',
         position: userPos,
-        title: 'You are here',
-        subtitle: accuracy ? `GPS Accuracy ±${Math.round(accuracy)}m` : 'Current location',
+        title: t('routes.youAreHere'),
+        subtitle: accuracy ? `GPS ±${Math.round(accuracy)}m` : t('common.location'),
         color: '#3b82f6',
         isSos: true,
       })
@@ -73,12 +75,12 @@ export default function ShelterFinder() {
         id: s.id,
         position: { lat: s.latitude, lng: s.longitude },
         title: s.name,
-        subtitle: `${s.status.toUpperCase()} · Occupancy: ${s.occupancy}/${s.capacity}`,
+        subtitle: `${t(`shelters.status${s.status === 'open' ? 'Open' : s.status === 'full' ? 'Full' : 'Closed'}`)} · ${t('shelters.occupancy')}: ${s.occupancy}/${s.capacity}`,
         color: s.status === 'open' ? '#10b981' : s.status === 'full' ? '#f59e0b' : '#94a3b8',
       })
     }
     return list
-  }, [filteredAndSorted, userPos, accuracy])
+  }, [filteredAndSorted, userPos, accuracy, t])
 
   if (!shelters) {
     return (
@@ -101,9 +103,9 @@ export default function ShelterFinder() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Nearby Emergency Shelters</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{t('shelters.title')}</h1>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {userPos ? 'Live shelters sorted by nearest distance to your GPS location.' : 'Real-time shelter occupancy, medical availability, and directions.'}
+            {t('shelters.subtitle')}
           </p>
         </div>
 
@@ -111,13 +113,13 @@ export default function ShelterFinder() {
           type="button"
           onClick={refresh}
           disabled={status === 'locating'}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-800 transition hover:bg-blue-100 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-blue-300"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-800 transition hover:bg-blue-100 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-blue-300 cursor-pointer"
         >
           <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
           </svg>
-          {status === 'locating' ? 'Acquiring GPS…' : userPos ? 'Update GPS Location' : 'Detect My Location'}
+          {status === 'locating' ? t('routes.acquiringGps') : userPos ? t('routes.updateGps') : t('routes.detectGps')}
         </button>
       </div>
 
@@ -126,35 +128,35 @@ export default function ShelterFinder() {
         <input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search shelters by name, locality, or sector…"
+          placeholder={t('shelters.searchPlaceholder')}
           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
         />
 
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Amenities:</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{t('common.details')}:</span>
           <button
             type="button"
             onClick={() => setSelectedFacility(null)}
-            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+            className={`rounded-full px-3 py-1 text-xs font-semibold transition cursor-pointer ${
               selectedFacility === null
                 ? 'bg-blue-600 text-white'
                 : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
             }`}
           >
-            All Shelters
+            {t('shelters.allFacilities')}
           </button>
           {criticalFacilities.map((f) => (
             <button
               key={f.key}
               type="button"
               onClick={() => setSelectedFacility(selectedFacility === f.key ? null : f.key)}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition cursor-pointer ${
                 selectedFacility === f.key
                   ? 'bg-blue-600 text-white'
                   : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
               }`}
             >
-              {f.label}
+              {t(f.labelKey)}
             </button>
           ))}
         </div>
@@ -181,7 +183,7 @@ export default function ShelterFinder() {
 
                 <div className="mt-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                   <span className="font-semibold text-blue-600 dark:text-blue-400">
-                    {distance !== null ? `${distance.toFixed(1)} km away` : 'Location on file'}
+                    {distance !== null ? `${distance.toFixed(1)} ${t('common.km')}` : t('common.location')}
                   </span>
                   {s.contactPhone && (
                     <a href={`tel:${s.contactPhone}`} className="text-blue-600 underline font-medium">
@@ -192,8 +194,8 @@ export default function ShelterFinder() {
 
                 <div className="mt-auto pt-3">
                   <div className="flex justify-between text-xs">
-                    <span>Occupancy {s.occupancy}/{s.capacity}</span>
-                    <span className="font-bold">{pct}% full</span>
+                    <span>{t('shelters.occupancy')} {s.occupancy}/{s.capacity}</span>
+                    <span className="font-bold">{pct}%</span>
                   </div>
                   <div className="mt-1 h-2 w-full rounded bg-slate-100 dark:bg-slate-800">
                     <div
@@ -217,9 +219,9 @@ export default function ShelterFinder() {
                     href={getNavigationUrl(s.latitude, s.longitude)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700"
+                    className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700 cursor-pointer"
                   >
-                    <span>Get Directions</span>
+                    <span>{t('shelters.getDirections')}</span>
                   </a>
                 </div>
               </Card>
@@ -228,7 +230,7 @@ export default function ShelterFinder() {
 
           {filteredAndSorted.length === 0 && (
             <div className="col-span-2 rounded-xl border border-dashed border-slate-300 p-8 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-              No shelters matched your search or facility filter criteria.
+              {t('shelters.noneFound')}
             </div>
           )}
         </div>
@@ -244,4 +246,3 @@ export default function ShelterFinder() {
     </div>
   )
 }
-

@@ -5,12 +5,14 @@ import Button from '../../components/common/Button'
 import Badge from '../../components/common/Badge'
 import Loader from '../../components/common/Loader'
 import { useToast } from '../../components/common/Toast'
+import { useLanguage } from '../../lib/i18n'
 import { getCurrentPosition, formatDateTime, maskPhone } from '../../lib/helpers'
 import type { CheckinStatus, SafetyCheckin } from '../../types'
 
 type ActiveTab = 'checkin' | 'search'
 
 export default function SafetyCheckinPage() {
+  const { t } = useLanguage()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState<ActiveTab>('checkin')
 
@@ -55,8 +57,8 @@ export default function SafetyCheckinPage() {
     }
 
     if (!phone.trim() || !validatePhone(phone.trim())) {
-      setPhoneError('Please enter a valid 10-digit mobile number.')
-      toast('Valid phone number is required', 'error')
+      setPhoneError(t('sos.phoneInvalidError'))
+      toast(t('sos.phoneInvalidError'), 'error')
       return
     }
 
@@ -79,7 +81,7 @@ export default function SafetyCheckinPage() {
       }
       const saved = await createSafetyCheckin(input)
       setConfirm(saved)
-      toast('Safety status recorded successfully')
+      toast(t('checkin.successTitle'))
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Check-in failed', 'error')
     } finally {
@@ -97,12 +99,11 @@ export default function SafetyCheckinPage() {
     )
   })
 
-
   return (
     <div className="mx-auto max-w-xl">
-      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Disaster Safety Check-in</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{t('checkin.title')}</h1>
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-        Let family, relatives, and disaster authorities know your current status and location.
+        {t('checkin.subtitle')}
       </p>
 
       {/* Tabs */}
@@ -110,14 +111,16 @@ export default function SafetyCheckinPage() {
         <Button
           variant={activeTab === 'checkin' ? 'primary' : 'outline'}
           onClick={() => setActiveTab('checkin')}
+          className="cursor-pointer"
         >
-          My Safety Check-in
+          {t('checkin.tabCheckin')}
         </Button>
         <Button
           variant={activeTab === 'search' ? 'primary' : 'outline'}
           onClick={() => setActiveTab('search')}
+          className="cursor-pointer"
         >
-          Search Family / Friends
+          {t('checkin.tabSearch')}
         </Button>
       </div>
 
@@ -126,15 +129,15 @@ export default function SafetyCheckinPage() {
           {confirm ? (
             <div className="mt-5 space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/40">
               <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
-                ✓ Status Recorded
+                ✓ {t('checkin.successTitle')}
               </div>
               <h2 className="text-xl font-bold text-emerald-900 dark:text-emerald-100">
-                {confirm.status === 'safe' ? 'You are Marked as SAFE' : 'Assistance Request Logged'}
+                {confirm.status === 'safe' ? t('checkin.statusSafe') : t('checkin.statusHelp')}
               </h2>
               <p className="text-xs text-slate-600 dark:text-slate-300">
-                Your family, relatives, and rescue teams can now verify your status in the public registry.
+                {t('checkin.successDesc')}
                 {confirm.locationName && (
-                  <span className="block mt-1 font-semibold">Location: {confirm.locationName}</span>
+                  <span className="block mt-1 font-semibold">{t('common.location')}: {confirm.locationName}</span>
                 )}
               </p>
 
@@ -148,14 +151,16 @@ export default function SafetyCheckinPage() {
                     setLocationName('')
                     setNotes('')
                   }}
+                  className="cursor-pointer"
                 >
-                  New Check-in
+                  {t('report.newReportBtn')}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => setActiveTab('search')}
+                  className="cursor-pointer"
                 >
-                  View Public Registry
+                  {t('checkin.tabSearch')}
                 </Button>
               </div>
             </div>
@@ -164,31 +169,31 @@ export default function SafetyCheckinPage() {
               <div className="flex gap-2">
                 <Button
                   variant={status === 'safe' ? 'primary' : 'outline'}
-                  className="flex-1 font-bold"
+                  className="flex-1 font-bold cursor-pointer"
                   onClick={() => setStatus('safe')}
                 >
-                  I am Safe
+                  {t('checkin.statusSafe')}
                 </Button>
                 <Button
                   variant={status === 'need_assistance' ? 'danger' : 'outline'}
-                  className="flex-1 font-bold"
+                  className="flex-1 font-bold cursor-pointer"
                   onClick={() => setStatus('need_assistance')}
                 >
-                  Need Assistance
+                  {t('checkin.statusHelp')}
                 </Button>
               </div>
 
-              <Field label="Your Full Name *">
+              <Field label={t('checkin.fullName')}>
                 <Input
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
-                  placeholder="e.g. Ramesh Chandra Sen"
+                  placeholder={t('checkin.fullNamePlaceholder')}
                 />
               </Field>
 
               <div>
-                <Field label="Mobile Number (for family lookup) *">
+                <Field label={t('checkin.phone')}>
                   <Input
                     type="tel"
                     value={phone}
@@ -197,7 +202,7 @@ export default function SafetyCheckinPage() {
                       if (phoneError) setPhoneError(null)
                     }}
                     required
-                    placeholder="10-digit mobile number"
+                    placeholder={t('checkin.phonePlaceholder')}
                   />
                 </Field>
                 {phoneError && (
@@ -205,30 +210,30 @@ export default function SafetyCheckinPage() {
                 )}
               </div>
 
-              <Field label="Current Location / Shelter Name">
+              <Field label={t('checkin.location')}>
                 <Input
                   value={locationName}
                   onChange={(e) => setLocationName(e.target.value)}
-                  placeholder="e.g. Salt Lake Sector V Shelter or At Home"
+                  placeholder={t('checkin.locationPlaceholder')}
                 />
               </Field>
 
-              <Field label="Additional Message / Notes for Family (optional)">
+              <Field label={t('checkin.notesLabel')}>
                 <Textarea
                   rows={3}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="e.g. With 3 family members, power is on, have food/water."
+                  placeholder={t('checkin.notesPlaceholder')}
                 />
               </Field>
 
               <Button
-                className="w-full py-3 font-bold"
+                className="w-full py-3 font-bold cursor-pointer"
                 variant={status === 'safe' ? 'primary' : 'danger'}
                 onClick={submit}
                 disabled={sending || !fullName.trim() || !phone.trim()}
               >
-                {sending ? 'Recording Check-in…' : 'Submit Safety Check-in'}
+                {sending ? t('common.loading') : t('checkin.submitBtn')}
               </Button>
             </div>
           )}
@@ -238,11 +243,11 @@ export default function SafetyCheckinPage() {
       {activeTab === 'search' && (
         <div className="mt-4 space-y-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <Field label="Search by Name, Phone Number, or Location">
+            <Field label={t('checkin.tabSearch')}>
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Type name or 10-digit phone number…"
+                placeholder={t('checkin.searchPlaceholder')}
                 autoFocus
               />
             </Field>
@@ -286,14 +291,14 @@ export default function SafetyCheckinPage() {
                   )}
 
                   <div className="mt-2 text-[11px] text-slate-400">
-                    Checked in {formatDateTime(item.createdAt)}
+                    {t('checkin.postedAt')} {formatDateTime(item.createdAt)}
                   </div>
                 </div>
               ))}
 
               {filteredCheckins.length === 0 && (
                 <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                  No check-in records matched your search query.
+                  {t('checkin.noneFound')}
                 </div>
               )}
             </div>

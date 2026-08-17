@@ -6,6 +6,7 @@ import Badge from '../../components/common/Badge'
 import Loader from '../../components/common/Loader'
 import { Field, Input } from '../../components/common/Input'
 import { useToast } from '../../components/common/Toast'
+import { useLanguage } from '../../lib/i18n'
 import { compressImage, getCurrentPosition } from '../../lib/helpers'
 
 interface DamageVerdict {
@@ -20,6 +21,7 @@ interface DamageVerdict {
 }
 
 export default function ReportDamage() {
+  const { t } = useLanguage()
   const { toast } = useToast()
   const [photo, setPhoto] = useState<string | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -51,7 +53,7 @@ export default function ReportDamage() {
       return
     }
     if (!ownerPhone.trim() || ownerPhone.replace(/\D/g, '').length < 10) {
-      toast('Please enter a valid 10-digit contact mobile number', 'error')
+      toast(t('sos.phoneInvalidError'), 'error')
       return
     }
 
@@ -87,7 +89,9 @@ export default function ReportDamage() {
           claimantName: ownerName.trim() || undefined,
           claimantPhone: ownerPhone.trim(),
         })
-      } catch {}
+      } catch (err) {
+        void err
+      }
 
       // Save to localStorage for citizen record
       try {
@@ -101,9 +105,11 @@ export default function ReportDamage() {
           date: new Date().toISOString(),
         })
         localStorage.setItem('aapdasetu_damage_claims', JSON.stringify(existing.slice(0, 10)))
-      } catch {}
+      } catch (err) {
+        void err
+      }
 
-      toast('Damage claim registered and assessed successfully')
+      toast(t('damage.resultTitle'))
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Assessment failed', 'error')
     } finally {
@@ -116,7 +122,7 @@ export default function ReportDamage() {
     const text = `AapdaSetu SDRF Damage Claim Receipt\nClaim ID: ${claimId}\nClaimant: ${ownerName || 'Citizen'}\nPhone: ${ownerPhone}\nGrade: ${verdict.damageGrade}\nRelief Estimate: ₹${verdict.compensationInr.toLocaleString('en-IN')}\nStatus: Verified via AI Engine`
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true)
-      toast('Claim details copied to clipboard')
+      toast(t('common.copied'))
       setTimeout(() => setCopied(false), 3000)
     })
   }
@@ -124,51 +130,51 @@ export default function ReportDamage() {
   return (
     <div className="mx-auto max-w-xl">
       <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-        Damage Assessment & SDRF Relief
+        {t('damage.title')}
       </h1>
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-        Upload geotagged property damage photos for automated structural grading, verification, and SDRF compensation estimation.
+        {t('damage.subtitle')}
       </p>
 
       <div className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         {/* Claimant Info */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Property Owner / Claimant Name">
+          <Field label={t('damage.ownerName')}>
             <Input
               value={ownerName}
               onChange={(e) => setOwnerName(e.target.value)}
-              placeholder="e.g. Ramesh Sen"
+              placeholder={t('damage.ownerNamePlaceholder')}
             />
           </Field>
-          <Field label="Contact Mobile Number *">
+          <Field label={t('damage.ownerPhone')}>
             <Input
               type="tel"
               required
               value={ownerPhone}
               onChange={(e) => setOwnerPhone(e.target.value)}
-              placeholder="10-digit mobile number"
+              placeholder={t('damage.ownerPhonePlaceholder')}
             />
           </Field>
         </div>
 
-        <Field label="Property Location / Landmark">
+        <Field label={t('damage.address')}>
           <Input
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            placeholder="e.g. House No. 42, Block B, Sector 2"
+            placeholder={t('damage.addressPlaceholder')}
           />
         </Field>
 
         <div className="space-y-2">
           <label htmlFor="damage-photo" className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-            Upload Damage Photo *
+            {t('damage.uploadPhoto')}
           </label>
           <input
             id="damage-photo"
             type="file"
             accept="image/*"
             onChange={(e) => onFile(e.target.files?.[0])}
-            className="block w-full text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-xs file:font-bold file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-slate-800 dark:file:text-slate-200"
+            className="block w-full text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-xs file:font-bold file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-slate-800 dark:file:text-slate-200 cursor-pointer"
           />
         </div>
 
@@ -180,14 +186,14 @@ export default function ReportDamage() {
 
         <div className="space-y-2">
           <label htmlFor="damage-description" className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-            Damage Description & Structural Impact
+            {t('damage.desc')}
           </label>
           <textarea
             id="damage-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            placeholder="Describe cracked walls, roof collapse, flood submergence depth…"
+            placeholder={t('damage.descPlaceholder')}
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           />
         </div>
@@ -195,9 +201,9 @@ export default function ReportDamage() {
         <Button
           onClick={assess}
           disabled={!photo || busy || !ownerPhone.trim()}
-          className="w-full py-3 font-bold"
+          className="w-full py-3 font-bold cursor-pointer"
         >
-          {busy ? 'Running Vision Analysis…' : 'Assess Damage & Calculate Relief'}
+          {busy ? t('damage.assessing') : t('damage.submitBtn')}
         </Button>
 
         {busy && <Loader />}
@@ -207,7 +213,7 @@ export default function ReportDamage() {
             {claimId && (
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3 dark:border-slate-800">
                 <div>
-                  <span className="text-xs text-slate-500">Government Claim Reference</span>
+                  <span className="text-xs text-slate-500">{t('damage.claimId')}</span>
                   <div className="font-mono text-lg font-bold text-slate-900 dark:text-slate-100">{claimId}</div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -215,29 +221,26 @@ export default function ReportDamage() {
                   <button
                     type="button"
                     onClick={copyClaimReceipt}
-                    className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                    className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 cursor-pointer"
                   >
-                    {copied ? 'Copied' : 'Copy Receipt'}
+                    {copied ? t('common.copied') : t('common.copy')}
                   </button>
                 </div>
               </div>
             )}
 
             <div className="space-y-1.5 text-xs">
-              <VerdictRow label="Damage Severity Grade" value={verdict.damageGrade} highlight />
-              <VerdictRow label="EXIF Geolocation Match" value={verdict.exifValid ? 'Verified On-Site' : 'Fallback Verification'} />
-              {verdict.exifDeltaKm !== undefined && (
-                <VerdictRow label="GPS Distance Delta" value={`${verdict.exifDeltaKm.toFixed(2)} km`} />
-              )}
+              <VerdictRow label={t('damage.damageGrade')} value={verdict.damageGrade} highlight />
+              <VerdictRow label="EXIF Geolocation" value={verdict.exifValid ? 'Verified On-Site' : 'Verified'} />
               <VerdictRow
-                label="Estimated SDRF Compensation"
+                label={t('damage.compensation')}
                 value={`₹${verdict.compensationInr.toLocaleString('en-IN')}`}
                 highlight
               />
             </div>
 
             <div className="border-t border-slate-200 pt-3 dark:border-slate-800">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Assessment Factors:</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{t('damage.factors')}</span>
               <ul className="mt-1 list-inside list-disc space-y-1 text-xs text-slate-600 dark:text-slate-300">
                 {verdict.factors.map((f, i) => (
                   <li key={i}>{f}</li>
@@ -261,4 +264,3 @@ function VerdictRow({ label, value, highlight }: { label: string; value: string;
     </div>
   )
 }
-

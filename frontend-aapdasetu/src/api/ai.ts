@@ -100,7 +100,7 @@ function cleanAiOutput(rawText: string): string {
   // Strip <think>...</think> reasoning tags if present
   let text = rawText.replace(/<think>[\s\S]*?<\/think>/gi, '')
   text = text.replace(/```(?:json)?/gi, '')
-  text = text.replace(/[\*_`~]/g, '')
+  text = text.replace(/[*_`~]/g, '')
   text = text.replace(/^\s*[-•*]+\s+/gm, '')
   text = text.replace(/\p{Extended_Pictographic}|\p{Emoji_Presentation}|\u200d/gu, '')
   text = text.replace(/[ \t]{2,}/g, ' ')

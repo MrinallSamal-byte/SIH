@@ -22,56 +22,6 @@ const navItems: NavLinkItem[] = [
   { to: '/check-in', labelKey: 'nav.checkin' },
 ]
 
-// Bottom navigation items for mobile thumb reach
-const mobileBottomTabs = [
-  {
-    to: '/',
-    label: 'Home',
-    icon: (
-      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-      </svg>
-    ),
-  },
-  {
-    to: '/report',
-    label: 'Report',
-    icon: (
-      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-      </svg>
-    ),
-  },
-  {
-    to: '/sos',
-    label: '1-TAP SOS',
-    isSos: true,
-    icon: (
-      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6 17h12M7.5 17V9.75a4.5 4.5 0 0 1 9 0V17m-12 0h14a1 1 0 0 0 1-1v-1a1 1 0 0 0-1-1H5.5a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1Zm5.25 2.75h1.5" />
-      </svg>
-    ),
-  },
-  {
-    to: '/track',
-    label: 'Track',
-    icon: (
-      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-      </svg>
-    ),
-  },
-  {
-    to: '/shelters',
-    label: 'Shelters',
-    icon: (
-      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21m0 0h4.5V3.545M12.75 21h7.5V10.75M2.25 21h1.5m18 0h-18M2.25 9l4.5-1.636M18.75 3l-1.5.545m0 6.205 3 1" />
-      </svg>
-    ),
-  },
-]
-
 export default function MainLayout() {
   const { t, lang, setLang } = useLanguage()
   const { theme, toggleTheme } = useTheme()
@@ -96,15 +46,64 @@ export default function MainLayout() {
     }
   }, [])
 
+  const mobileBottomTabs = [
+    {
+      to: '/',
+      labelKey: 'nav.home',
+      icon: (
+        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+        </svg>
+      ),
+    },
+    {
+      to: '/report',
+      labelKey: 'nav.report',
+      icon: (
+        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+      ),
+    },
+    {
+      to: '/sos',
+      labelKey: 'nav.sos',
+      isSos: true,
+      icon: (
+        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 17h12M7.5 17V9.75a4.5 4.5 0 0 1 9 0V17m-12 0h14a1 1 0 0 0 1-1v-1a1 1 0 0 0-1-1H5.5a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1Zm5.25 2.75h1.5" />
+        </svg>
+      ),
+    },
+    {
+      to: '/track',
+      labelKey: 'nav.track',
+      icon: (
+        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+        </svg>
+      ),
+    },
+    {
+      to: '/shelters',
+      labelKey: 'nav.shelters',
+      icon: (
+        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21m0 0h4.5V3.545M12.75 21h7.5V10.75M2.25 21h1.5m18 0h-18M2.25 9l4.5-1.636M18.75 3l-1.5.545m0 6.205 3 1" />
+        </svg>
+      ),
+    },
+  ]
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       {/* Offline Ambient Banner */}
       {isOffline && (
         <div className="bg-amber-600 px-4 py-2 text-center text-xs font-bold text-white shadow-sm flex items-center justify-center gap-2">
           <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-white/40 text-[10px] font-black leading-none">!</span>
-          <span>Offline Mode Active — Incident submissions will automatically queue and sync once reconnected.</span>
+          <span>{t('banner.offlineMsg')}</span>
           <a href="tel:112" className="ml-2 underline font-extrabold text-amber-100 hover:text-white">
-            Call 112 Offline
+            {t('banner.call112')}
           </a>
         </div>
       )}
@@ -115,21 +114,21 @@ export default function MainLayout() {
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="flex items-center gap-1.5 font-bold text-red-600 dark:text-red-400">
               <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse" />
-              National Emergency: <a href="tel:112" className="underline font-black text-sm">112</a>
+              {t('banner.nationalEmergency')} <a href="tel:112" className="underline font-black text-sm">112</a>
             </span>
             <span className="text-slate-300 dark:text-slate-700">|</span>
             <span className="flex items-center gap-1">
-              Ambulance: <a href="tel:108" className="hover:text-slate-900 dark:hover:text-slate-200 font-bold">108</a>
+              {t('banner.ambulance')} <a href="tel:108" className="hover:text-slate-900 dark:hover:text-slate-200 font-bold">108</a>
             </span>
             <span className="hidden sm:inline text-slate-300 dark:text-slate-700">|</span>
             <span className="hidden sm:inline">
-              Disaster Helpline: <a href="tel:1078" className="hover:text-slate-900 dark:hover:text-slate-200 font-medium">1078</a>
+              {t('banner.disasterHelpline')} <a href="tel:1078" className="hover:text-slate-900 dark:hover:text-slate-200 font-medium">1078</a>
             </span>
           </div>
 
           <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="hidden xs:inline">NDRF / SDRF Command Active</span>
+            <span className="hidden xs:inline">{t('banner.commandActive')}</span>
           </div>
         </div>
       </div>
@@ -140,14 +139,14 @@ export default function MainLayout() {
           {/* Logo / Brand */}
           <Link to="/" className="flex items-center gap-2.5 no-underline">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white font-black text-sm shadow-xs">
-              आ
+              {lang === 'hi' ? 'आ' : lang === 'or' ? 'ଆ' : 'A'}
             </div>
             <div>
               <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">
                 {t('app.name')}
               </span>
               <span className="hidden sm:inline-block ml-2 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                ICS Network
+                {t('banner.icsNetwork')}
               </span>
             </div>
           </Link>
@@ -183,7 +182,7 @@ export default function MainLayout() {
             <select
               value={lang}
               onChange={(e) => setLang(e.target.value as typeof lang)}
-              className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+              className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 cursor-pointer"
               aria-label="Language selector"
             >
               {LANGUAGES.map((l) => (
@@ -196,7 +195,7 @@ export default function MainLayout() {
             <button
               type="button"
               onClick={toggleTheme}
-              className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+              className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 cursor-pointer"
               aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             >
               {theme === 'dark' ? (
@@ -214,7 +213,7 @@ export default function MainLayout() {
             <button
               type="button"
               onClick={() => setMobileMenuOpen((o) => !o)}
-              className="rounded-lg border border-slate-200 p-1.5 text-slate-700 md:hidden dark:border-slate-700 dark:text-slate-300"
+              className="rounded-lg border border-slate-200 p-1.5 text-slate-700 md:hidden dark:border-slate-700 dark:text-slate-300 cursor-pointer"
               aria-label="Open mobile menu"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -229,35 +228,35 @@ export default function MainLayout() {
           <nav className="border-t border-slate-100 bg-white px-4 py-3 md:hidden dark:border-slate-800 dark:bg-slate-950">
             <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
               <Link to="/safe-routes" className="rounded-lg border border-slate-100 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-900">
-                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">Route</span>
-                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">Evacuation Routes</span>
+                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">{t('drawer.routesBadge')}</span>
+                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">{t('drawer.routes')}</span>
               </Link>
               <Link to="/missing-persons" className="rounded-lg border border-slate-100 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-900">
-                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">Find</span>
-                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">Missing Persons</span>
+                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">{t('drawer.missingBadge')}</span>
+                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">{t('drawer.missing')}</span>
               </Link>
               <Link to="/check-in" className="rounded-lg border border-slate-100 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-900">
-                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">Safe</span>
-                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">Safe Check-In</span>
+                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">{t('drawer.checkinBadge')}</span>
+                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">{t('drawer.checkin')}</span>
               </Link>
               <Link to="/alerts" className="rounded-lg border border-slate-100 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-900">
-                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">Warn</span>
-                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">Public Warnings</span>
+                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">{t('drawer.alertsBadge')}</span>
+                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">{t('drawer.alerts')}</span>
               </Link>
               <Link to="/report-damage" className="col-span-2 rounded-lg border border-slate-100 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-900">
-                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">Damage</span>
-                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">SDRF Property Damage Assessment</span>
+                <span className="mb-2 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">{t('drawer.damageBadge')}</span>
+                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">{t('drawer.damage')}</span>
               </Link>
               <Link to="/pfa-chat" className="col-span-2 rounded-lg border border-blue-100 bg-blue-50 p-2.5 text-blue-800 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-300 font-bold">
-                <span className="mb-2 inline-flex rounded-full bg-blue-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-blue-900 dark:bg-blue-900 dark:text-blue-100">AI</span>
-                <span className="block text-sm font-semibold">AapdaMitra AI Crisis Lifeline</span>
+                <span className="mb-2 inline-flex rounded-full bg-blue-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-blue-900 dark:bg-blue-900 dark:text-blue-100">{t('drawer.pfaBadge')}</span>
+                <span className="block text-sm font-semibold">{t('drawer.pfa')}</span>
               </Link>
             </div>
           </nav>
         )}
       </header>
 
-      {/* Main Container — with bottom padding on mobile so fixed bottom bar doesn't obscure content */}
+      {/* Main Container */}
       <main className="mx-auto flex-1 w-full max-w-7xl px-4 py-6 pb-24 md:pb-8">
         <div key={location.pathname} className="animate-page-enter">
           <Outlet />
@@ -268,21 +267,21 @@ export default function MainLayout() {
       <footer className="border-t border-slate-200 bg-white py-6 pb-24 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400 md:pb-6">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 sm:flex-row">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-800 dark:text-slate-200">AapdaSetu</span>
-            <span>National Incident Command & Disaster Response.</span>
+            <span className="font-bold text-slate-800 dark:text-slate-200">{t('app.name')}</span>
+            <span>{t('footer.tagline')}</span>
           </div>
 
           <div className="flex items-center gap-4">
             <a href="tel:112" className="font-bold text-red-600 hover:underline dark:text-red-400">
-              Emergency: 112
+              {t('footer.emergency')}
             </a>
             <span className="text-slate-300 dark:text-slate-700">|</span>
-            <span>© {year} AapdaSetu</span>
+            <span>© {year} {t('app.name')}</span>
           </div>
         </div>
       </footer>
 
-      {/* Fixed Mobile Bottom Action Bar (Thumb Reach Zone) */}
+      {/* Fixed Mobile Bottom Action Bar */}
       <nav
         className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-slate-200 bg-white/95 py-2 px-1 backdrop-blur-md md:hidden dark:border-slate-800 dark:bg-slate-950/95"
         aria-label="Mobile Navigation"
@@ -313,7 +312,7 @@ export default function MainLayout() {
             ) : (
               <>
                 <span className="mb-0.5">{tab.icon}</span>
-                <span>{tab.label}</span>
+                <span>{t(tab.labelKey)}</span>
               </>
             )}
           </NavLink>
@@ -324,5 +323,3 @@ export default function MainLayout() {
     </div>
   )
 }
-
-

@@ -6,9 +6,18 @@ import { useLanguage } from '../lib/i18n'
 import { getCurrentPosition } from '../lib/helpers'
 import type { PfaChatMessage } from '../types'
 
+const widgetShortcutKeys = [
+  'chat.shortcut.flood',
+  'chat.shortcut.bleeding',
+  'chat.shortcut.panic',
+  'chat.shortcut.chestPain',
+  'chat.shortcut.electric',
+  'chat.shortcut.snakebite',
+]
+
 export default function ChatWidget() {
   const { toast } = useToast()
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const [open, setOpen] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [messages, setMessages] = useState<PfaChatMessage[]>([])
@@ -19,16 +28,21 @@ export default function ChatWidget() {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (open && messages.length === 0) {
-      setMessages([
-        {
-          id: 'msg-init',
-          role: 'bot',
-          content: t('chat.greeting') || 'Hello, I am your AapdaSetu AI Disaster Companion. How can I help you right now?',
-        },
-      ])
+    if (open) {
+      setMessages((prev) => {
+        if (prev.length === 0 || (prev.length === 1 && prev[0].id === 'msg-init')) {
+          return [
+            {
+              id: 'msg-init',
+              role: 'bot',
+              content: t('chat.greeting'),
+            },
+          ]
+        }
+        return prev
+      })
     }
-  }, [open, messages.length, t])
+  }, [open, t, lang])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -72,7 +86,7 @@ export default function ChatWidget() {
     const phone = (callbackPhones[msgIndex] || '').trim()
     const clean = phone.replace(/\D/g, '')
     if (clean.length < 10) {
-      toast('Please enter a valid 10-digit mobile number', 'error')
+      toast(t('sos.phoneInvalidError'), 'error')
       return
     }
 
@@ -84,13 +98,16 @@ export default function ChatWidget() {
         const pos = await getCurrentPosition(false, 3000)
         lat = pos.coords.latitude
         lng = pos.coords.longitude
-      } catch {}
+      } catch (err) {
+        // Fallback coordinates used
+        void err
+      }
 
       const report = await createReport({
         type: 'other',
         isOneTapSos: true,
         reporterPhone: phone,
-        description: `AapdaMitra AI Critical Distress Callback: ${userPromptText.slice(0, 120)}`,
+        description: `AapdaMitra AI Distress Callback: ${userPromptText.slice(0, 120)}`,
         location: { lat, lng },
         landmark: 'AapdaMitra AI Emergency Escalation',
       })
@@ -108,7 +125,7 @@ export default function ChatWidget() {
         )
       )
 
-      toast('Urgent rescue callback requested! Responders notified.', 'success')
+      toast(t('chat.callbackSuccess'), 'success')
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Failed to request callback', 'error')
     } finally {
@@ -130,19 +147,19 @@ export default function ChatWidget() {
               </span>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <h2 className="text-xs font-bold truncate text-white">AapdaMitra AI</h2>
+                  <h2 className="text-xs font-bold truncate text-white">{t('chat.title')}</h2>
                   <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold text-emerald-300 flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Online
+                    24/7
                   </span>
                 </div>
-                <p className="truncate text-[10px] text-slate-400">24/7 Intelligent Crisis & Survival Companion</p>
+                <p className="truncate text-[10px] text-slate-400">{t('chat.subtitle')}</p>
               </div>
             </div>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="shrink-0 rounded-md p-1 text-slate-400 transition hover:bg-slate-800 hover:text-white"
+              className="shrink-0 rounded-md p-1 text-slate-400 transition hover:bg-slate-800 hover:text-white cursor-pointer"
               aria-label={t('common.close')}
             >
               <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -177,13 +194,13 @@ export default function ChatWidget() {
                     <div className="mt-3 space-y-2 rounded-xl border border-red-200 bg-white p-3 dark:border-red-900/50 dark:bg-slate-900">
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
-                          🚨 Emergency Helpline
+                          🚨 {t('chat.criticalBannerTitle')}
                         </span>
                         <a
                           href={`tel:${m.helpline || '108'}`}
                           className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-xs hover:bg-red-700"
                         >
-                          📞 Call {m.helpline || '108'}
+                          📞 {m.helpline || '108'}
                         </a>
                       </div>
 
@@ -191,12 +208,12 @@ export default function ChatWidget() {
                       {!m.callbackSubmitted ? (
                         <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
                           <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                            Enter mobile number — emergency teams will reach you immediately:
+                            {t('chat.callbackPlaceholder')}:
                           </label>
                           <div className="flex gap-1.5">
                             <input
                               type="tel"
-                              placeholder="10-digit mobile number"
+                              placeholder={t('sos.phonePlaceholder')}
                               value={callbackPhones[i] || ''}
                               onChange={(e) =>
                                 setCallbackPhones((prev) => ({ ...prev, [i]: e.target.value }))
@@ -207,23 +224,23 @@ export default function ChatWidget() {
                               type="button"
                               onClick={() => handleEmergencyCallback(i, m.content)}
                               disabled={submittingCallback === i}
-                              className="shrink-0 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-red-700 disabled:opacity-50"
+                              className="shrink-0 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-red-700 disabled:opacity-50 cursor-pointer"
                             >
-                              {submittingCallback === i ? 'Alerting…' : 'Reach Me'}
+                              {submittingCallback === i ? t('common.loading') : t('chat.requestCallbackBtn')}
                             </button>
                           </div>
                         </div>
                       ) : (
                         <div className="rounded-lg bg-emerald-50 p-2.5 text-[11px] text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50">
-                          <div className="font-bold">✓ Priority Dispatch Alert Created!</div>
+                          <div className="font-bold">✓ {t('chat.callbackSuccess')}</div>
                           <div className="mt-0.5">
-                            Tracking ID: <strong>{m.trackingId}</strong> ({m.submittedPhone})
+                            {t('sos.trackingIdLabel')}: <strong>{m.trackingId}</strong> ({m.submittedPhone})
                           </div>
                           <a
                             href={`#/track?id=${m.trackingId}`}
                             className="mt-1 inline-block font-bold text-blue-600 underline dark:text-blue-400"
                           >
-                            Track Live Response Status →
+                            {t('sos.trackStatusBtn')} →
                           </a>
                         </div>
                       )}
@@ -235,7 +252,7 @@ export default function ChatWidget() {
             {busy && (
               <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 italic">
                 <span className="h-2 w-2 animate-bounce rounded-full bg-blue-500" />
-                <span>AapdaMitra AI is thinking…</span>
+                <span>{t('common.loading')}</span>
               </div>
             )}
             <div ref={bottomRef} />
@@ -243,18 +260,19 @@ export default function ChatWidget() {
 
           {/* Quick Shortcuts */}
           <div className="flex gap-1.5 overflow-x-auto border-t border-slate-200 bg-white px-3 py-1.5 dark:border-slate-800 dark:bg-slate-900 [scrollbar-width:none]">
-            {['🌊 Water entering house', '🩸 Bleeding wound', '🧘 Help me breathe', '❤️ Chest pain', '⚡ Electric hazard', '🐍 Snakebite protocol'].map(
-              (prompt) => (
+            {widgetShortcutKeys.map((key) => {
+              const label = t(key)
+              return (
                 <button
-                  key={prompt}
+                  key={key}
                   type="button"
-                  onClick={() => send(prompt)}
-                  className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  onClick={() => send(label)}
+                  className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 cursor-pointer"
                 >
-                  {prompt}
+                  {label}
                 </button>
               )
-            )}
+            })}
           </div>
 
           {/* Input Bar */}
@@ -263,14 +281,14 @@ export default function ChatWidget() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && send()}
-              placeholder="Ask AapdaMitra AI (e.g. 'water rising', 'how to treat burn')…"
+              placeholder={t('chat.placeholder')}
               className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2 text-xs sm:text-sm focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
             <button
               type="button"
               onClick={() => send()}
               disabled={busy || !input.trim()}
-              className="shrink-0 rounded-xl bg-blue-600 px-3.5 py-2 text-xs sm:text-sm font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
+              className="shrink-0 rounded-xl bg-blue-600 px-3.5 py-2 text-xs sm:text-sm font-bold text-white transition hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
             >
               {t('common.send')}
             </button>
@@ -284,22 +302,22 @@ export default function ChatWidget() {
           <button
             type="button"
             onClick={() => setDismissed(true)}
-            className="rounded-full border border-slate-200 bg-white p-1 text-slate-400 shadow-sm transition hover:text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:hover:text-slate-200"
+            className="rounded-full border border-slate-200 bg-white p-1 text-slate-400 shadow-sm transition hover:text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:hover:text-slate-200 cursor-pointer"
             aria-label={t('common.close')}
             title={t('common.close')}
           >
             <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+              <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06-1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
             </svg>
           </button>
         )}
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-4 py-2.5 text-xs font-bold text-white shadow-lg transition hover:bg-slate-800 dark:border-slate-200 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+          className="flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-4 py-2.5 text-xs font-bold text-white shadow-lg transition hover:bg-slate-800 dark:border-slate-200 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer"
         >
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 font-bold text-[11px] text-white">🤖</span>
-          <span>{open ? t('common.close') : 'AapdaMitra AI Companion'}</span>
+          <span>{open ? t('common.close') : t('chat.launcherBtn')}</span>
         </button>
       </div>
     </div>
