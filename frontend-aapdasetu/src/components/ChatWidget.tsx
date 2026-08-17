@@ -137,21 +137,32 @@ export default function ChatWidget() {
   }
 
   return (
-    <aside aria-label="AapdaMitra AI Assistant" className="fixed bottom-4 right-4 z-40">
-      {/* Floating Toggle Button */}
+    <aside
+      aria-label="AapdaMitra AI Assistant"
+      className="fixed bottom-20 right-4 sm:bottom-20 sm:right-6 md:bottom-6 md:right-6 z-50"
+    >
+      {/* Circular Floating Toggle Button */}
       {!open && (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="group flex items-center gap-2.5 rounded-full border border-slate-700 bg-slate-900 px-4 py-3 text-white shadow-2xl transition hover:bg-slate-800 active:scale-95 dark:border-slate-300 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer"
-          aria-label="Open AapdaMitra AI assistant"
-        >
-          <div className="relative">
-            <Bot className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
-          </div>
-          <span className="text-xs font-bold tracking-tight">AapdaMitra AI</span>
-        </button>
+        <div className="relative group">
+          {/* Ambient Glowing Aura */}
+          <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-amber-500 via-rose-500 to-orange-500 opacity-70 blur-md transition-all duration-300 group-hover:opacity-100 group-hover:blur-lg animate-pulse" />
+
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-label="Open AapdaMitra AI assistant"
+            title="Ask AapdaMitra AI"
+            className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-600 text-white shadow-xl shadow-orange-500/30 ring-2 ring-white/70 transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer dark:ring-slate-900/80"
+          >
+            <Bot className="h-7 w-7 text-white drop-shadow-md transition-transform duration-300 group-hover:rotate-6" />
+
+            {/* Live Indicator Ping Dot */}
+            <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
+            </span>
+          </button>
+        </div>
       )}
 
       {/* Floating Chat Modal */}
@@ -159,7 +170,7 @@ export default function ChatWidget() {
         <div
           role="dialog"
           aria-label="AapdaMitra AI Disaster Support"
-          className="flex h-[530px] w-[92vw] max-w-[400px] flex-col overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+          className="flex h-[520px] max-h-[calc(100vh-110px)] w-[calc(100vw-28px)] sm:w-[380px] max-w-[400px] flex-col overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-3 text-white">
