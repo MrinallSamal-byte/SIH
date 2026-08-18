@@ -32,6 +32,14 @@ Post-disaster building damage classifier for the **AapdaSetu** platform. Given a
 
 Part of the **AapdaSetu** project (Smart India Hackathon).
 
+## Live Deployment
+
+The service is deployed on Render: **[https://aapdasetu-damage-api.onrender.com](https://aapdasetu-damage-api.onrender.com)**
+
+- Interactive demo UI: [/](https://aapdasetu-damage-api.onrender.com/) · API docs (Swagger): [/docs](https://aapdasetu-damage-api.onrender.com/docs) · Health check: [/health](https://aapdasetu-damage-api.onrender.com/health)
+- Production inference runs on **ONNX Runtime** (torch-free, fits Render's 512 MB free tier); weights are pulled from Hugging Face on boot.
+- Free-tier instances sleep after ~15 min idle — the first request after a pause takes a few seconds to cold-start.
+
 ## Run the Interactive Demo
 
 ```bash
@@ -46,6 +54,8 @@ python run.py
 
 Then open **http://localhost:8000** — the demo app (`demo/index.html`) lets you upload a disaster photo and see the damage grade, compensation amount, EXIF fraud checks and duplicate detection live. Raw API docs are at `http://localhost:8000/docs`.
 
+End-to-end API check (service running): `python tests/smoke_test.py`
+
 ## Model Details
 
 | | |
@@ -54,7 +64,9 @@ Then open **http://localhost:8000** — the demo app (`demo/index.html`) lets yo
 | **Input** | 224×224 RGB image |
 | **Preprocessing** | `Resize(256) → CenterCrop(224) → ToTensor → Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])` |
 | **Classes** | `MINOR`, `MAJOR`, `DESTROYED` |
-| **Checkpoint** | `best.pt` (~97 MB, PyTorch dict — keys: `model_state`, `class_to_idx`, `classes`, `epoch`, `val_acc`, `val_loss`, `optim_state`) |
+| **Checkpoint** | `best.pt` (~270 MB, PyTorch dict — keys: `model_state`, `class_to_idx`, `classes`, `epoch`, `val_acc`, `val_loss`, `optim_state`) |
+| **ONNX export** | `best.onnx` (~94 MB, opset 17, softmax baked in, dynamic batch) — produced by `training/export_onnx.py`, parity verified by `training/verify_onnx.py` (max abs diff ≈ 6e-8) |
+| **Inference backend** | Dual: PyTorch locally (with 5-crop TTA) · ONNX Runtime in production |
 
 ## Training Recipe
 
@@ -128,6 +140,9 @@ Download the checkpoint with:
 ```bash
 hf download Divyanshu-Kumar19/aapdasetu-damage-assessment best.pt --local-dir ./checkpoints
 ```
+
+> Production deployments use `best.onnx` instead — same repo on Hugging Face, loaded via
+> `onnxruntime` with input name `image` and output `scores` (see `app/damage_classifier.py`).
 
 ## Intended Use
 

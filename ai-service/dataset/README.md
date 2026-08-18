@@ -1,5 +1,9 @@
 # Dataset Guide — AapdaSetu Damage Classifier
 
+> The final training dataset (2,400 labelled images) is hosted on Hugging Face:
+> **[Divyanshu-Kumar19/aapdasetu-damage-dataset](https://huggingface.co/datasets/Divyanshu-Kumar19/aapdasetu-damage-dataset)**.
+> This guide covers collecting/organising images and the local training workflow.
+
 ## Folder structure you must create
 
 Place your photos into exactly this layout before running `prepare_dataset.py`:
@@ -96,19 +100,23 @@ Original files are never modified.
 # Step 2 — Split into train/val/test
 python training/prepare_dataset.py
 
-# Step 3 (optional but recommended) — Find best hyperparameters
-python training/tune_hyperparams.py --trials 30
-
-# Step 4 — Train the model
+# Step 3 — Train the model
 python training/train.py
 
-# Step 5 — Evaluate on test set, generate all plots
+# Step 4 — Evaluate on test set, generate all plots
 python training/evaluate.py
+
+# Step 5 (optional) — Hyperparameter search (script kept in the personal/local copy)
+# python training/tune_hyperparams.py --trials 30
 
 # Step 6 — Test on a single photo
 python training/test_single.py --image my_photo.jpg --visualize
 
-# Step 7 — Start the API server
+# Step 7 (optional) — Export for production (ONNX) and verify parity
+python training/export_onnx.py
+python training/verify_onnx.py
+
+# Step 8 — Start the API server
 python run.py
 ```
 
