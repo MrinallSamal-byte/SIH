@@ -1,4 +1,4 @@
-# CPU-only torch/torchvision — installed from PyTorch's index BEFORE the main
-# requirements so pip never pulls the multi-GB CUDA wheels.
-torch==2.5.1+cpu
-torchvision==0.20.1+cpu
+# Intentionally empty — deployment uses onnxruntime (see requirements-deploy.txt).
+# This file only exists so the Render build command
+#   pip install -r requirements-torch-cpu.txt --index-url https://download.pytorch.org/whl/cpu
+# remains valid without pulling multi-GB CUDA wheels.

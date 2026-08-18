@@ -3,30 +3,32 @@ bootstrap.py
 ============
 Render.com startup script.
 
-The trained checkpoint (best.pt) is intentionally NOT stored in this GitHub
-repo — it lives on Hugging Face:
+The trained model is intentionally NOT stored in this GitHub repo — it lives
+on Hugging Face:
     https://huggingface.co/Divyanshu-Kumar19/aapdasetu-damage-assessment
 
-This script downloads it on boot if missing, then launches uvicorn.
+On boot we download the ONNX export (best.onnx, ~94 MB) which runs on
+onnxruntime — small enough for Render's 512 MB free tier (PyTorch got OOM-killed).
+Then launches uvicorn.
 """
 import os
 import subprocess
 import sys
 from pathlib import Path
 
-CKPT = Path("checkpoints/best.pt")
+from huggingface_hub import hf_hub_download
+
+ONNX = Path("checkpoints/best.onnx")
+MAPPING = Path("checkpoints/class_mapping.json")
 HF_REPO = "Divyanshu-Kumar19/aapdasetu-damage-assessment"
 
 
 def main() -> None:
-    if not CKPT.is_file():
-        from huggingface_hub import hf_hub_download
-
-        print(f"[bootstrap] Downloading best.pt from HF repo {HF_REPO} ...")
-        hf_hub_download(HF_REPO, "best.pt", local_dir="checkpoints")
-        print(f"[bootstrap] Checkpoint ready at {CKPT}")
-    else:
-        print(f"[bootstrap] Checkpoint already present at {CKPT}")
+    for local, fname in ((ONNX, "best.onnx"), (MAPPING, "class_mapping.json")):
+        if not local.is_file():
+            print(f"[bootstrap] Downloading {fname} from HF repo {HF_REPO} ...")
+            hf_hub_download(HF_REPO, fname, local_dir="checkpoints")
+        print(f"[bootstrap] Ready: {local}")
 
     port = os.getenv("PORT", "8000")
     subprocess.run(

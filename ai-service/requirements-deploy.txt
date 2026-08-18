@@ -1,5 +1,7 @@
 # Deployment (Render.com) — inference-only dependencies.
-# torch/torchvision are installed separately in render.yaml to control build size.
+# No PyTorch here: the model runs as ONNX via onnxruntime (~5x less RAM,
+# fits Render's 512 MB free tier). requirements-torch-cpu.txt is kept empty
+# so the Render build command stays valid.
 
 fastapi==0.115.5
 uvicorn[standard]==0.32.1
@@ -12,3 +14,4 @@ numpy==2.1.3
 pydantic==2.10.3
 pydantic-settings==2.6.1
 huggingface_hub>=0.25
+onnxruntime>=1.19
