@@ -79,4 +79,110 @@ describe('scoreCandidate (deterministic V1 missing-person matching)', () => {
     const b = scoreCandidate(source, candidate({}));
     expect(a).toEqual(b);
   });
+
+  describe('edge cases and null/undefined handling', () => {
+    it('handles candidate with null properties safely', () => {
+      const nullCand = candidate({
+        name: null,
+        age: null,
+        description: null,
+        latitude: null,
+        longitude: null,
+      });
+
+      const result = scoreCandidate(source, nullCand);
+
+      expect(result).toBeDefined();
+      expect(typeof result.score).toBe('number');
+      expect(result.score).toBeGreaterThanOrEqual(0);
+      const factorNames = result.reasons.map((r) => r.factor);
+      expect(factorNames).not.toContain('name_exact');
+      expect(factorNames).not.toContain('name_partial');
+      expect(factorNames).not.toContain('age_exact');
+      expect(factorNames).not.toContain('age_near');
+      expect(factorNames).not.toContain('description_exact');
+      expect(factorNames).not.toContain('description_keywords');
+      expect(factorNames).not.toContain('proximity');
+      expect(factorNames).toContain('recency');
+    });
+
+    it('handles source with null properties safely', () => {
+      const nullSource: MatchSource = {
+        missingPersonName: null,
+        missingPersonAge: null,
+        missingPersonDesc: null,
+        latitude: 20.27,
+        longitude: 85.83,
+        createdAt: new Date('2026-08-01T10:00:00Z'),
+      };
+
+      const result = scoreCandidate(nullSource, candidate({}));
+
+      expect(result).toBeDefined();
+      expect(typeof result.score).toBe('number');
+      const factorNames = result.reasons.map((r) => r.factor);
+      expect(factorNames).not.toContain('name_exact');
+      expect(factorNames).not.toContain('age_exact');
+      expect(factorNames).not.toContain('description_exact');
+      expect(factorNames).toContain('proximity');
+      expect(factorNames).toContain('recency');
+    });
+
+    it('handles empty and whitespace-only strings gracefully', () => {
+      const emptySource: MatchSource = {
+        missingPersonName: '   ',
+        missingPersonAge: null,
+        missingPersonDesc: '',
+        latitude: 20.27,
+        longitude: 85.83,
+        createdAt: new Date('2026-08-01T10:00:00Z'),
+      };
+
+      const emptyCand = candidate({
+        name: '',
+        description: '   ',
+      });
+
+      const result = scoreCandidate(emptySource, emptyCand);
+      const factorNames = result.reasons.map((r) => r.factor);
+      expect(factorNames).not.toContain('name_exact');
+      expect(factorNames).not.toContain('description_exact');
+      expect(factorNames).not.toContain('description_keywords');
+    });
+
+    it('handles age boundary conditions correctly', () => {
+      // Age exact
+      const exactResult = scoreCandidate(
+        { ...source, missingPersonAge: 10 },
+        candidate({ age: 10 })
+      );
+      expect(exactResult.reasons.map((r) => r.factor)).toContain('age_exact');
+
+      // Age near (within 3 years difference)
+      const nearResult = scoreCandidate(
+        { ...source, missingPersonAge: 10 },
+        candidate({ age: 13 })
+      );
+      expect(nearResult.reasons.map((r) => r.factor)).toContain('age_near');
+
+      // Age far (more than 3 years difference)
+      const farResult = scoreCandidate(
+        { ...source, missingPersonAge: 10 },
+        candidate({ age: 14 })
+      );
+      const farFactors = farResult.reasons.map((r) => r.factor);
+      expect(farFactors).not.toContain('age_exact');
+      expect(farFactors).not.toContain('age_near');
+    });
+
+    it('handles distance beyond proximity threshold (> 50 km)', () => {
+      const farLocationCand = candidate({
+        latitude: 21.5,
+        longitude: 87.0,
+      });
+
+      const result = scoreCandidate(source, farLocationCand);
+      expect(result.reasons.map((r) => r.factor)).not.toContain('proximity');
+    });
+  });
 });
