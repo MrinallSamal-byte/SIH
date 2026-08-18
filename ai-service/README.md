@@ -75,7 +75,7 @@ Held-out test set (244 images), with TTA:
 | MINOR | 0.977 | 0.977 | 0.977 | 86 |
 | **Overall accuracy** | | | | **98.36%** |
 
-Full metrics: [`eval_report.json`](eval_report.json) · Confusion matrix: [`confusion_matrix.png`](confusion_matrix.png) · ROC curves: [`roc_curves.png`](roc_curves.png) · Training curves: [`training_curves.png`](training_curves.png) · Misclassified samples: [`misclassified.png`](misclassified.png) · Training history: [`history.json`](history.json) · Split leak audit: [`leak_check.json`](leak_check.json)
+JSON reports in this repo: [`checkpoints/eval_report.json`](checkpoints/eval_report.json) · [`checkpoints/history.json`](checkpoints/history.json) · [`checkpoints/leak_check.json`](checkpoints/leak_check.json). Visuals (confusion matrix, ROC curves, training curves, confidence distribution, misclassified samples) are on the [Hugging Face repo](https://huggingface.co/Divyanshu-Kumar19/aapdasetu-damage-assessment).
 
 ## Quick Start — Loading `best.pt` for Inference
 
@@ -137,17 +137,18 @@ hf download Divyanshu-Kumar19/aapdasetu-damage-assessment best.pt --local-dir ./
 
 ## Files in This Repository
 
-| File | Description |
+| Path | Description |
 |---|---|
-| `best.pt` | Trained model checkpoint (state dict + metadata) |
-| `eval_report.json` | Per-class precision / recall / F1 on the test set |
-| `confusion_matrix.png` | Confusion matrix visualization |
-| `roc_curves.png` | One-vs-rest ROC curves |
-| `training_curves.png` | Train/val loss & accuracy curves |
-| `confidence_distribution.png` | Prediction confidence distribution |
-| `misclassified.png` | Test samples the model got wrong |
-| `history.json` | Per-epoch training history |
-| `leak_check.json` | Train/val/test split leak audit |
+| `app/` | FastAPI service — damage classifier, EXIF validator, pHash dedup |
+| `training/` | Training + evaluation pipeline (ResNet50, TTA, leak check) |
+| `demo/` | Interactive demo UI served at `/` |
+| `checkpoints/` | Evaluation reports (JSON); weights + plots on HF |
+| `dataset/` | Dataset card + split manifest (images on HF) |
+| `bootstrap.py` | Render.com startup — downloads ONNX model from HF |
+| `render.yaml` | Render Blueprint reference config |
+
+Model weights (`best.pt`, `best.onnx`), class mapping and evaluation plots live on
+[Hugging Face](https://huggingface.co/Divyanshu-Kumar19/aapdasetu-damage-assessment).
 
 ## License
 
