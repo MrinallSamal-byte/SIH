@@ -140,7 +140,8 @@ hf download Divyanshu-Kumar19/aapdasetu-damage-assessment best.pt --local-dir ./
 | Path | Description |
 |---|---|
 | `app/` | FastAPI service — damage classifier, EXIF validator, pHash dedup |
-| `training/` | Training + evaluation pipeline (ResNet50, TTA, leak check) |
+| `training/` | Training + evaluation pipeline (ResNet50, TTA, leak check, ONNX export) |
+| `tests/` | End-to-end API smoke test |
 | `demo/` | Interactive demo UI served at `/` |
 | `checkpoints/` | Evaluation reports (JSON); weights + plots on HF |
 | `dataset/` | Dataset card + split manifest (images on HF) |

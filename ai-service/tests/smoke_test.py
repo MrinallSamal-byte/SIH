@@ -13,7 +13,8 @@ except Exception:
     pass
 
 BASE = "http://localhost:8000"
-TEST_DIR = Path("dataset/raw")
+ROOT = Path(__file__).resolve().parent.parent
+TEST_DIR = ROOT / "dataset" / "raw"
 
 def pick_one(cls: str) -> Path:
     files = sorted((TEST_DIR / cls).iterdir())

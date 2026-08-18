@@ -106,7 +106,7 @@ python run.py                     # starts on http://localhost:8000
 - API docs (Swagger): **http://localhost:8000/docs**
 - Health check: `GET /health`
 - First request loads the model (~15 s), then ~1 s per image. ~2 GB RAM on CPU.
-- Quick end-to-end test (with server running): `python smoke_test.py`
+- Quick end-to-end test (with server running): `python tests/smoke_test.py`
 - Test one image from CLI: `python training/test_single.py <path>`
 
 ### Demo tip for presentations
