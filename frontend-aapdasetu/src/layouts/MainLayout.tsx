@@ -92,7 +92,7 @@ export default function MainLayout() {
   }, [])
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 dark:bg-black dark:text-white">
       {/* Offline Ambient Banner */}
       {isOffline && (
         <div className="bg-amber-600 px-4 py-2 text-center text-xs font-bold text-white shadow-sm flex items-center justify-center gap-2">
@@ -105,7 +105,7 @@ export default function MainLayout() {
       )}
 
       {/* Top Emergency Hotlines Banner */}
-      <div className="border-b border-slate-200 bg-white px-4 py-1.5 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+      <div className="border-b border-slate-200 bg-white px-4 py-1.5 text-xs text-slate-600 dark:border-slate-800 dark:bg-zinc-950 dark:text-slate-300">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="flex items-center gap-1.5 font-bold text-red-600 dark:text-red-400">
@@ -114,11 +114,11 @@ export default function MainLayout() {
             </span>
             <span className="text-slate-300 dark:text-slate-700">|</span>
             <span className="flex items-center gap-1">
-              {t('header.ambulance')}: <a href="tel:108" className="hover:text-slate-900 dark:hover:text-slate-200 font-bold mono">108</a>
+              {t('header.ambulance')}: <a href="tel:108" className="hover:text-slate-900 dark:hover:text-white font-bold mono">108</a>
             </span>
             <span className="hidden sm:inline text-slate-300 dark:text-slate-700">|</span>
             <span className="hidden sm:inline">
-              {t('header.disasterHelpline')}: <a href="tel:1070" className="hover:text-slate-900 dark:hover:text-slate-200 font-medium mono">1070</a>
+              {t('header.disasterHelpline')}: <a href="tel:1070" className="hover:text-slate-900 dark:hover:text-white font-medium mono">1070</a>
             </span>
           </div>
 
@@ -130,16 +130,16 @@ export default function MainLayout() {
       </div>
 
       {/* Main Navigation Header */}
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-950/90">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-black/90">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
           {/* Logo / Brand */}
           <Link to="/" className="flex items-center gap-2.5 font-bold tracking-tight group">
             <AapdaSetuLogo size={34} />
             <div className="flex flex-col">
-              <span className="text-base font-extrabold leading-none text-slate-900 dark:text-slate-100 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+              <span className="text-base font-extrabold leading-none text-slate-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
                 {t('app.name')}
               </span>
-              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 tracking-wider mono uppercase mt-0.5">
+              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-400 tracking-wider mono uppercase mt-0.5">
                 ICS NETWORK
               </span>
             </div>
@@ -263,13 +263,13 @@ export default function MainLayout() {
       </main>
 
       {/* Minimal Clean Footer */}
-      <footer className="border-t border-slate-200 bg-white py-8 pb-24 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400 md:pb-8">
+      <footer className="border-t border-slate-200 bg-white py-8 pb-24 text-xs text-slate-500 dark:border-slate-800 dark:bg-black dark:text-slate-400 md:pb-8">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row">
           <div className="flex items-center gap-2">
             <AapdaSetuLogo size={20} />
-            <span className="font-bold text-slate-900 dark:text-slate-100">{t('app.name')}</span>
+            <span className="font-bold text-slate-900 dark:text-white">{t('app.name')}</span>
             <span>—</span>
-            <span>{t('app.tagline')}</span>
+            <span className="dark:text-slate-300">{t('app.tagline')}</span>
           </div>
 
           <div className="flex items-center gap-4">
@@ -278,14 +278,14 @@ export default function MainLayout() {
               {t('header.nationalEmergency')}: 112
             </a>
             <span className="text-slate-300 dark:text-slate-700">|</span>
-            <span className="mono">© {year} AapdaSetu</span>
+            <span className="mono dark:text-slate-400">© {year} AapdaSetu</span>
           </div>
         </div>
       </footer>
 
       {/* Fixed Mobile Bottom Action Bar */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-slate-200 bg-white/95 py-2 px-1 backdrop-blur-md md:hidden dark:border-slate-800 dark:bg-slate-950/95"
+        className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-slate-200 bg-white/95 py-2 px-1 backdrop-blur-md md:hidden dark:border-slate-800 dark:bg-black/95"
         aria-label="Mobile Navigation"
       >
         {mobileBottomTabs.map((tab) => {

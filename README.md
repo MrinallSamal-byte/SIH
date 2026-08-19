@@ -136,39 +136,52 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    InputPayload["Incident Payload:\nCategory, Description, Demographics, Landmark, Media Transcripts"] --> BaseScore["Initialize Base Priority: S = 30 Points"]
+    InputPayload["Incident Payload:<br/>Category, Description, Demographics, Landmark, Media Transcripts"] --> BaseScore["Initialize Base Priority: S = 30 Points"]
 
     BaseScore --> TypeWeight{"Stage 1: Disaster Category Weight (W_type)"}
-    TypeWeight -->|Earthquake / Building Collapse| +25pts["+25 Points"]
-    TypeWeight -->|Fire / Explosion| +20pts["+20 Points"]
-    TypeWeight -->|Flood / Water Rising| +18pts["+18 Points"]
-    TypeWeight -->|Critical Medical / Cardiac| +18pts["+18 Points"]
-    TypeWeight -->|Missing Person Search| +15pts["+15 Points"]
-    TypeWeight -->|Transit / Road Accident| +12pts["+12 Points"]
-    TypeWeight -->|Other / General| +5pts["+5 Points"]
+    TypeWeight -->|Earthquake / Building Collapse| W1["+25 Points"]
+    TypeWeight -->|Fire / Explosion| W2["+20 Points"]
+    TypeWeight -->|Flood / Water Rising| W3["+18 Points"]
+    TypeWeight -->|Critical Medical / Cardiac| W4["+18 Points"]
+    TypeWeight -->|Missing Person Search| W5["+15 Points"]
+    TypeWeight -->|Transit / Road Accident| W6["+12 Points"]
+    TypeWeight -->|Other / General| W7["+5 Points"]
 
-    +25pts & +20pts & +18pts & +15pts & +12pts & +5pts --> NLPMatrix{"Stage 2: Multi-Lingual NLP Keyword Matrix (W_nlp)"}
+    W1 --> NLPMatrix
+    W2 --> NLPMatrix
+    W3 --> NLPMatrix
+    W4 --> NLPMatrix
+    W5 --> NLPMatrix
+    W6 --> NLPMatrix
+    W7 --> NLPMatrix
+
+    NLPMatrix{"Stage 2: Multi-Lingual NLP Keyword Matrix (W_nlp)"}
 
     subgraph Keywords["Multi-Lingual Keyword Scanning (EN / HI / BN / OR)"]
-        K1["'drowning', 'trapped', 'submerged', 'roof collapsed', 'ଛାତ ଉପରେ', 'ଫସି ରହିଛି', 'डूब रहे हैं'"] -->|+30 Pts Each (Max +40)| Acc[Accumulator]
-        K2["'severe bleeding', 'infant', 'cardiac', 'explosion', 'heart attack', 'ରକ୍ତସ୍ରାବ'"] -->|+25 Pts Each| Acc
-        K3["'water rising fast', 'unconscious', 'child', 'snakebite', 'electrocution', 'ବିଦ୍ୟୁତ'"] -->|+20 Pts Each| Acc
-        K4["'elderly', 'senior citizen', 'diabetic', 'asthma', 'no food/water', 'ବୟସ୍କ'"] -->|+15 Pts Each| Acc
+        K1["Critical: drowning, trapped, submerged, roof collapsed"] -->|"+30 Pts Each (Max +40)"| Acc["Accumulator"]
+        K2["Severe: severe bleeding, infant, cardiac, explosion"] -->|"+25 Pts Each"| Acc
+        K3["Moderate: water rising fast, unconscious, snakebite"] -->|"+20 Pts Each"| Acc
+        K4["Vulnerable: elderly, senior citizen, diabetic, asthma"] -->|"+15 Pts Each"| Acc
     end
 
     NLPMatrix --> Keywords
     Acc --> DemoCheck{"Stage 3: Demographic Multipliers (W_demo)"}
 
-    DemoCheck -->|Infant / Child <= 12 yrs| +Age1["+20 to +25 Points"]
-    DemoCheck -->|Senior Citizen >= 60 yrs| +Age2["+20 Points"]
-    DemoCheck -->|Pregnancy / Chronic Illness| +Med["+20 to +30 Points"]
+    DemoCheck -->|Child 12 yrs or younger| Age1["+20 to +25 Points"]
+    DemoCheck -->|Senior Citizen 60 yrs or older| Age2["+20 Points"]
+    DemoCheck -->|Pregnancy / Chronic Illness| Med["+20 to +30 Points"]
 
-    +Age1 & +Age2 & +Med & DemoCheck --> Normalizer["Score Normalizer: Clamp between [1, 100]"]
+    Age1 --> Normalizer
+    Age2 --> Normalizer
+    Med --> Normalizer
+    DemoCheck --> Normalizer
+
+    Normalizer["Score Normalizer: Clamp between 1 and 100"]
 
     Normalizer --> BadgeClass{"Stage 4: Priority Badge Classification"}
-    BadgeClass -->|Score >= 80| RED["🔴 RED / CRITICAL ALERT\n- Command Center Siren Active\n- Immediate Boat / Heli / Ambulance Dispatch"]
-    BadgeClass -->|50 <= Score < 80| YELLOW["🟡 YELLOW / URGENT\n- High Priority Dispatch Queue\n- Field Volunteer Mobilization"]
-    BadgeClass -->|Score < 50| GREEN["🟢 GREEN / ADVISORY\n- Standard Queue\n- Scheduled Relief Supply Distribution"]
+    BadgeClass -->|Score 80 to 100| RED["RED / CRITICAL ALERT<br/>- Command Center Siren Active<br/>- Immediate Boat / Heli / Ambulance Dispatch"]
+    BadgeClass -->|Score 50 to 79| YELLOW["YELLOW / URGENT<br/>- High Priority Dispatch Queue<br/>- Field Volunteer Mobilization"]
+    BadgeClass -->|Score below 50| GREEN["GREEN / ADVISORY<br/>- Standard Queue<br/>- Scheduled Relief Supply Distribution"]
 ```
 
 ---
