@@ -10,7 +10,7 @@ import { aiSatelliteFloodMap } from '../../api/ai'
 import { listShelters } from '../../api/endpoints'
 import Loader from '../../components/common/Loader'
 import LeafletMap from '../../components/map/LeafletMap'
-import { useLocation } from '../../hooks/useLocation'
+import { useGeoLocation } from '../../hooks/useLocation'
 import { useLanguage } from '../../lib/i18n'
 import { getNavigationUrl } from '../../lib/helpers'
 import type { FloodGeoJson, GeoPoint, Shelter } from '../../types'
@@ -29,13 +29,19 @@ function haversineKm(a: GeoPoint, b: GeoPoint): number {
   return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(s))
 }
 
-function routeLengthKm(points: GeoPoint[]): number {
+function routeLengthKm(points?: GeoPoint[]): number {
+  if (!points || points.length <= 1) return 0
   let total = 0
-  for (let i = 1; i < points.length; i++) total += haversineKm(points[i - 1], points[i])
+  for (let i = 1; i < points.length; i++) {
+    if (points[i - 1] && points[i]) {
+      total += haversineKm(points[i - 1], points[i])
+    }
+  }
   return total
 }
 
 function segmentsIntersect(a: GeoPoint, b: GeoPoint, c: GeoPoint, d: GeoPoint): boolean {
+  if (!a || !b || !c || !d) return false
   const ccw = (p: GeoPoint, q: GeoPoint, r: GeoPoint) =>
     (q.lat - p.lat) * (r.lng - p.lng) - (q.lng - p.lng) * (r.lat - p.lat)
   const o1 = ccw(a, b, c)
@@ -48,16 +54,18 @@ function segmentsIntersect(a: GeoPoint, b: GeoPoint, c: GeoPoint, d: GeoPoint): 
   )
 }
 
-function lineCrossesPolygon(a: GeoPoint, b: GeoPoint, polygon: GeoPoint[]): boolean {
+function lineCrossesPolygon(a: GeoPoint, b: GeoPoint, polygon?: GeoPoint[]): boolean {
+  if (!polygon || polygon.length < 3) return false
   for (let i = 0; i < polygon.length; i++) {
     const c = polygon[i]
     const d = polygon[(i + 1) % polygon.length]
-    if (segmentsIntersect(a, b, c, d)) return true
+    if (c && d && segmentsIntersect(a, b, c, d)) return true
   }
   return false
 }
 
 function distToSegment(p: GeoPoint, a: GeoPoint, b: GeoPoint): number {
+  if (!p || !a || !b) return 0
   const dLng = b.lng - a.lng
   const dLat = b.lat - a.lat
   const lenSq = dLng * dLng + dLat * dLat
@@ -68,28 +76,35 @@ function distToSegment(p: GeoPoint, a: GeoPoint, b: GeoPoint): number {
 
 /** Direct (fastest) path: straight line origin -> shelter. */
 function buildFastestRoute(from: GeoPoint, to: GeoPoint): GeoPoint[] {
+  if (!from || !to) return []
   return [from, to]
 }
 
 /** Safe path: detours around flood zones with a 300-meter outward clearance buffer. */
-function buildSafeRoute(from: GeoPoint, to: GeoPoint, polygons: GeoPoint[][]): GeoPoint[] {
-  const crossing = polygons.filter((poly) => lineCrossesPolygon(from, to, poly))
+function buildSafeRoute(from: GeoPoint, to: GeoPoint, polygons?: GeoPoint[][]): GeoPoint[] {
+  if (!from || !to) return []
+  const safePolys = (polygons ?? []).filter((p) => p && p.length >= 3)
+  const crossing = safePolys.filter((poly) => lineCrossesPolygon(from, to, poly))
   if (crossing.length === 0) return [from, to]
 
   const waypoints = crossing
     .map((poly) => {
-      const centerLat = poly.reduce((acc, p) => acc + p.lat, 0) / poly.length
-      const centerLng = poly.reduce((acc, p) => acc + p.lng, 0) / poly.length
+      if (!poly || poly.length === 0) return null
+      const centerLat = poly.reduce((acc, p) => acc + (p?.lat ?? 0), 0) / poly.length
+      const centerLng = poly.reduce((acc, p) => acc + (p?.lng ?? 0), 0) / poly.length
 
       let best = poly[0]
       let bestDist = -1
       for (const v of poly) {
+        if (!v) continue
         const d = distToSegment(v, from, to)
         if (d > bestDist) {
           bestDist = d
           best = v
         }
       }
+
+      if (!best) return null
 
       const offsetLat = best.lat >= centerLat ? 0.003 : -0.003
       const offsetLng = best.lng >= centerLng ? 0.003 : -0.003
@@ -103,6 +118,7 @@ function buildSafeRoute(from: GeoPoint, to: GeoPoint, polygons: GeoPoint[][]): G
         t: (bufferedPoint.lng - from.lng) * (to.lng - from.lng) + (bufferedPoint.lat - from.lat) * (to.lat - from.lat),
       }
     })
+    .filter((w): w is { point: GeoPoint; t: number } => Boolean(w && w.point))
     .sort((x, y) => x.t - y.t)
     .map((w) => w.point)
 
@@ -110,13 +126,14 @@ function buildSafeRoute(from: GeoPoint, to: GeoPoint, polygons: GeoPoint[][]): G
 }
 
 function formatEta(minutes: number): string {
+  if (!minutes || isNaN(minutes) || minutes < 0) return '0 min'
   if (minutes < 60) return `${Math.max(1, Math.round(minutes))} min`
   return `${Math.floor(minutes / 60)} hr ${Math.round(minutes % 60)} min`
 }
 
 export default function SafeRoutes() {
   const { t } = useLanguage()
-  const { coords, status, accuracy, refresh } = useLocation()
+  const { coords, status, accuracy, refresh } = useGeoLocation()
   const [flood, setFlood] = useState<FloodGeoJson | null>(null)
   const [shelters, setShelters] = useState<Shelter[] | null>(null)
   const [destinationId, setDestinationId] = useState<string>('')
@@ -127,8 +144,13 @@ export default function SafeRoutes() {
   )
 
   useEffect(() => {
-    aiSatelliteFloodMap({ district: 'North 24 Parganas' }).then(setFlood)
-    listShelters('open').then(setShelters)
+    aiSatelliteFloodMap({ district: 'North 24 Parganas' })
+      .then((res) => setFlood(res || { type: 'FeatureCollection', features: [] }))
+      .catch(() => setFlood({ type: 'FeatureCollection', features: [] }))
+
+    listShelters('open')
+      .then((res) => setShelters(res || []))
+      .catch(() => setShelters([]))
   }, [])
 
   useEffect(() => {
@@ -136,19 +158,23 @@ export default function SafeRoutes() {
   }, [shelters])
 
   const polygonPaths = useMemo<GeoPoint[][]>(() => {
-    if (!flood) return []
-    return flood.features.map((f) =>
-      f.geometry.coordinates[0].map(([lng, lat]) => ({ lat, lng }) as GeoPoint),
-    )
+    if (!flood || !Array.isArray(flood.features)) return []
+    return flood.features
+      .filter((f) => f && f.geometry && Array.isArray(f.geometry.coordinates) && f.geometry.coordinates.length > 0)
+      .map((f) =>
+        (f.geometry.coordinates[0] ?? []).map(([lng, lat]) => ({ lat, lng }) as GeoPoint),
+      )
   }, [flood])
 
   const polygons = useMemo(() => {
-    if (!flood) return []
-    return flood.features.map((f, i) => ({
-      id: `flood-${i}`,
-      points: polygonPaths[i],
-      label: `${f.properties.hazard_type} — ${f.properties.severity}${f.properties.water_depth_est_meters ? ` (~${f.properties.water_depth_est_meters}m water)` : ''}`,
-    }))
+    if (!flood || !Array.isArray(flood.features)) return []
+    return flood.features
+      .filter((f) => f && f.properties)
+      .map((f, i) => ({
+        id: `flood-${i}`,
+        points: polygonPaths[i] ?? [],
+        label: `${f.properties.hazard_type || 'Flood Inundation'} — ${f.properties.severity || 'Critical'}${f.properties.water_depth_est_meters ? ` (~${f.properties.water_depth_est_meters}m water)` : ''}`,
+      }))
   }, [flood, polygonPaths])
 
   const shelterMarkers = useMemo(
@@ -157,7 +183,7 @@ export default function SafeRoutes() {
         id: s.id,
         position: { lat: s.latitude, lng: s.longitude } as GeoPoint,
         title: s.name,
-        subtitle: `${s.status} · Occupancy: ${s.occupancy}/${s.capacity}`,
+        subtitle: `${s.status || 'open'} · Occupancy: ${s.occupancy || 0}/${s.capacity || 0}`,
         color: '#10b981',
       })),
     [shelters],
@@ -184,7 +210,7 @@ export default function SafeRoutes() {
   )
 
   const destination = useMemo(
-    () => (shelters ?? []).find((s) => s.id === destinationId) ?? null,
+    () => (shelters ?? []).find((s) => s.id === destinationId) ?? (shelters?.[0] ?? null),
     [shelters, destinationId],
   )
 
@@ -206,7 +232,7 @@ export default function SafeRoutes() {
       {
         id: 'fastest',
         label: 'Direct route',
-        points: fastestRoute,
+        points: fastestRoute ?? [],
         color: '#f59e0b',
         dashed: false,
         hazard: 'May cross flooded zones',
@@ -215,7 +241,7 @@ export default function SafeRoutes() {
       {
         id: 'safe',
         label: 'Safe detour route (Recommended)',
-        points: safeRoute,
+        points: safeRoute ?? [],
         color: '#10b981',
         dashed: true,
         hazard: 'Safely avoids inundation zones (300m clearance)',

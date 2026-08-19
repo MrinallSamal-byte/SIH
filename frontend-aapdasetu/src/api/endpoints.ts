@@ -7,6 +7,8 @@ import type {
   AuditLog,
   BroadcastPayload,
   DamageAssessmentReport,
+  DamageGrade,
+  DamageInfrastructureType,
   MissingPerson,
   OverviewKPIs,
   Report,
@@ -544,8 +546,15 @@ export function listDamageAssessments(filters?: {
   district?: string
   q?: string
 }): Promise<DamageAssessmentReport[]> {
+  const query = new URLSearchParams()
+  if (filters?.infrastructureType) query.set('infrastructureType', filters.infrastructureType)
+  if (filters?.damageGrade) query.set('damageGrade', filters.damageGrade)
+  if (filters?.district) query.set('district', filters.district)
+  if (filters?.q) query.set('q', filters.q)
+  const qs = query.toString() ? `?${query.toString()}` : ''
+
   return withMockFallback(
-    () => apiCall<DamageAssessmentReport[]>('GET', '/api/v1/damage-assessments', filters),
+    () => apiCall<DamageAssessmentReport[]>('GET', `/api/v1/damage-assessments${qs}`),
     () => mocks.listDamageAssessments(filters),
   )
 }
@@ -560,9 +569,9 @@ export function createDamageAssessment(input: {
   estimatedLossInr: number
   claimantName?: string
   claimantPhone: string
-  infrastructureType?: string
+  infrastructureType?: DamageInfrastructureType
   photoUrl?: string
-  damageGrade?: string
+  damageGrade?: DamageGrade
   damageScore?: number
   confidence?: number
   district?: string
@@ -577,9 +586,9 @@ export function createDamageAssessment(input: {
         longitude: input.longitude,
         claimantName: input.claimantName,
         claimantPhone: input.claimantPhone,
-        infrastructureType: (input.infrastructureType as any) || 'broken_home',
+        infrastructureType: input.infrastructureType || 'broken_home',
         photoUrl: input.photoUrl,
-        damageGrade: (input.damageGrade as any) || 'MAJOR',
+        damageGrade: input.damageGrade || 'MAJOR',
         damageScore: input.damageScore || 75.0,
         confidence: input.confidence || 98.36,
         compensationInr: input.estimatedLossInr || 47550,

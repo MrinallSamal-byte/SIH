@@ -16,7 +16,7 @@ import {
 import AapdaSetuLogo from '../components/common/AapdaSetuLogo'
 import ErrorBoundary from '../components/common/ErrorBoundary'
 import ChatWidget from '../components/ChatWidget'
-import { LANGUAGES, useLanguage } from '../lib/i18n'
+import { LANGUAGES, useLanguage, type Language } from '../lib/i18n'
 import { useTheme } from '../lib/theme'
 
 interface NavLinkItem {
@@ -177,7 +177,7 @@ export default function MainLayout() {
               <select
                 aria-label="Language selector"
                 value={lang}
-                onChange={(e) => setLang(e.target.value as any)}
+                onChange={(e) => setLang(e.target.value as Language)}
                 className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-800 outline-none transition hover:bg-slate-100 focus:border-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 cursor-pointer"
               >
                 {LANGUAGES.map((l) => (

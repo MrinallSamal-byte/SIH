@@ -38,6 +38,7 @@ const adminViews: AdminView[] = [
   { to: '/admin/alerts', label: 'Broadcast Alerts', icon: Megaphone },
   { to: '/admin/analytics', label: 'Predictive & Intel', icon: TrendingUp },
   { to: '/admin/safety-checkins', label: 'Safety Registry', icon: ShieldCheck },
+  { to: '/admin/audit', label: 'Security Audit Log', icon: FileText },
   { to: '/admin/settings', label: 'System Settings', icon: Settings },
 ]
 

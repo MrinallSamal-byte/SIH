@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   FileSpreadsheet,
   Building,
@@ -50,14 +50,14 @@ export default function DamageAssessment() {
   const [selectedReport, setSelectedReport] = useState<DamageAssessmentReport | null>(null)
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 22.5726, lng: 88.3639 })
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const data = await listDamageAssessments()
       setItems(data)
     } catch {
       toast('Failed to load damage assessments', 'error')
     }
-  }
+  }, [toast])
 
   useEffect(() => {
     loadData()
@@ -68,22 +68,23 @@ export default function DamageAssessment() {
       }
     })
     return () => unsub()
-  }, [])
+  }, [loadData])
 
   // Filtered dataset
   const filtered = useMemo(() => {
     return items.filter((item) => {
+      if (!item) return false
       if (infraFilter !== 'all' && item.infrastructureType !== infraFilter) return false
       if (gradeFilter !== 'all' && item.damageGrade !== gradeFilter) return false
       if (districtFilter !== 'all' && item.district !== districtFilter) return false
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim()
         const match =
-          item.claimId.toLowerCase().includes(q) ||
+          (item.claimId || '').toLowerCase().includes(q) ||
           (item.claimantName && item.claimantName.toLowerCase().includes(q)) ||
-          item.claimantPhone.includes(q) ||
-          item.propertyAddress.toLowerCase().includes(q) ||
-          item.district.toLowerCase().includes(q)
+          (item.claimantPhone || '').includes(q) ||
+          (item.propertyAddress || '').toLowerCase().includes(q) ||
+          (item.district || '').toLowerCase().includes(q)
         if (!match) return false
       }
       return true

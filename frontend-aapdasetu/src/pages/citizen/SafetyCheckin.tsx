@@ -12,7 +12,8 @@ import Badge from '../../components/common/Badge'
 import Loader from '../../components/common/Loader'
 import { useToast } from '../../components/common/Toast'
 import { useLanguage } from '../../lib/i18n'
-import { getCurrentPosition, formatDateTime, maskPhone } from '../../lib/helpers'
+import { formatDateTime, maskPhone } from '../../lib/helpers'
+import { useGeoLocation } from '../../hooks/useLocation'
 import type { CheckinStatus, SafetyCheckin } from '../../types'
 
 type ActiveTab = 'checkin' | 'search'
@@ -20,6 +21,7 @@ type ActiveTab = 'checkin' | 'search'
 export default function SafetyCheckinPage() {
   const { t } = useLanguage()
   const { toast } = useToast()
+  const { coords } = useGeoLocation()
   const [activeTab, setActiveTab] = useState<ActiveTab>('checkin')
 
   // Checkin form state
@@ -77,13 +79,8 @@ export default function SafetyCheckinPage() {
         status,
         locationName: locationName.trim() || undefined,
         notes: notes.trim() || undefined,
-      }
-      try {
-        const pos = await getCurrentPosition()
-        input.latitude = pos.coords.latitude
-        input.longitude = pos.coords.longitude
-      } catch {
-        // optional
+        latitude: coords?.latitude,
+        longitude: coords?.longitude,
       }
       const saved = await createSafetyCheckin(input)
       setConfirm(saved)

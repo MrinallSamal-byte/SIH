@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { broadcastAlert } from '../../api/endpoints'
 import { Field, Input, Textarea } from '../../components/common/Input'
 import Button from '../../components/common/Button'
@@ -99,7 +100,7 @@ export default function Communications() {
         <div className="rounded-lg bg-amber-50 p-3 text-xs text-amber-700">
           <Badge value="server-side" /> Twilio SID/Auth + WhatsApp token/phone-number-id are consumed by the Express
           backend (<code>POST /api/communications/broadcast</code>). Configure them in the{' '}
-          <a href="#/admin/settings" className="underline">Settings</a> view — never in the browser bundle.
+          <Link to="/admin/settings" className="underline font-semibold">Settings</Link> view — never in the browser bundle.
         </div>
 
         <Button variant="danger" onClick={send} disabled={sending || !title.trim() || !body.trim() || channels.length === 0}>

@@ -84,18 +84,59 @@ export function compressImage(file: File, maxWidth = 1200, quality = 0.75): Prom
 }
 
 /** Browser geolocation helper with configurable accuracy and timeout. */
-export function getCurrentPosition(enableHighAccuracy = true, timeout = 8000): Promise<GeolocationPosition> {
+export function getCurrentPosition(enableHighAccuracy = true, timeout = 12000): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
-    if (!('geolocation' in navigator)) {
+    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
       reject(new Error('Geolocation not supported'))
       return
     }
     navigator.geolocation.getCurrentPosition(resolve, reject, {
       enableHighAccuracy,
       timeout,
-      maximumAge: enableHighAccuracy ? 5000 : 30000,
+      maximumAge: enableHighAccuracy ? 5000 : 60000,
     })
   })
+}
+
+/** Fetch approximate coordinates via IP geolocation as a secondary fallback when browser GPS is blocked/unavailable. */
+export async function getIpGeolocation(): Promise<{ lat: number; lng: number; city?: string; district?: string } | null> {
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 4000)
+    const res = await fetch('https://ipapi.co/json/', { signal: controller.signal })
+    clearTimeout(timer)
+    if (!res.ok) return null
+    const data = await res.json()
+    if (data.latitude && data.longitude) {
+      return {
+        lat: Number(data.latitude),
+        lng: Number(data.longitude),
+        city: data.city,
+        district: data.region,
+      }
+    }
+  } catch {
+    // Secondary endpoint
+    try {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 3500)
+      const res2 = await fetch('https://ipwho.is/', { signal: controller.signal })
+      clearTimeout(timer)
+      if (!res2.ok) return null
+      const data2 = await res2.json()
+      if (data2.success && data2.latitude && data2.longitude) {
+        return {
+          lat: Number(data2.latitude),
+          lng: Number(data2.longitude),
+          city: data2.city,
+          district: data2.region,
+        }
+      }
+    } catch {
+      // Fallback
+    }
+  }
+  return null
 }
 
 /** Reverse-geocode a coordinate to a human-readable address with safe error handling and fallback. */

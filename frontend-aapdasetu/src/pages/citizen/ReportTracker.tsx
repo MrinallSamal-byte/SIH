@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   Search,
@@ -28,53 +28,64 @@ export default function ReportTracker() {
   const [error, setError] = useState<string | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [recentTracked, setRecentTracked] = useState<string[]>([])
+  const lastSearchedRef = useRef<string>('')
 
   // Load recent tracked reports from localStorage
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('aapdasetu_tracked_reports') || '[]') as string[]
       setRecentTracked(stored)
-    } catch {}
+    } catch {
+      // Storage unavailable
+    }
   }, [])
 
-  const lookup = useCallback(async (idToSearch?: string) => {
-    const id = (idToSearch ?? trackingId).trim()
-    if (!id) return
+  const lookup = useCallback(
+    async (idToSearch?: string) => {
+      const id = (idToSearch !== undefined ? idToSearch : trackingId).trim()
+      if (!id) return
 
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await getReport(id)
-      setReport(res)
-
-      // Save to recent tracked
+      setLoading(true)
+      setError(null)
       try {
-        const stored = JSON.parse(localStorage.getItem('aapdasetu_tracked_reports') || '[]') as string[]
-        if (!stored.includes(res.trackingId)) {
-          const updated = [res.trackingId, ...stored].slice(0, 8)
-          localStorage.setItem('aapdasetu_tracked_reports', JSON.stringify(updated))
-          setRecentTracked(updated)
+        const res = await getReport(id)
+        setReport(res)
+        lastSearchedRef.current = res.trackingId
+
+        // Save to recent tracked
+        try {
+          const stored = JSON.parse(localStorage.getItem('aapdasetu_tracked_reports') || '[]') as string[]
+          if (!stored.includes(res.trackingId)) {
+            const updated = [res.trackingId, ...stored].slice(0, 8)
+            localStorage.setItem('aapdasetu_tracked_reports', JSON.stringify(updated))
+            setRecentTracked(updated)
+          }
+        } catch {
+          // Storage unavailable
         }
-      } catch {}
 
-      // Update URL query param without full page reload
-      setSearchParams({ id: res.trackingId })
-    } catch {
-      setError(`Incident "${id}" not found. Please verify the tracking ID code.`)
-      setReport(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [trackingId, setSearchParams])
+        // Update URL query param without triggering re-render loop
+        if (searchParams.get('id') !== res.trackingId) {
+          setSearchParams({ id: res.trackingId }, { replace: true })
+        }
+      } catch {
+        setError(`Incident "${id}" not found. Please verify the tracking ID code.`)
+        setReport(null)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [trackingId, searchParams, setSearchParams]
+  )
 
-  // Auto-search on mount if query param exists
+  // Auto-search on mount or when query param changes from external navigation
+  const queryParamId = searchParams.get('id')?.trim() || ''
   useEffect(() => {
-    const queryId = searchParams.get('id')
-    if (queryId) {
-      setTrackingId(queryId)
-      lookup(queryId)
+    if (queryParamId && queryParamId !== lastSearchedRef.current) {
+      setTrackingId(queryParamId)
+      lookup(queryParamId)
     }
-  }, [searchParams, lookup])
+  }, [queryParamId, lookup])
 
   // Auto-refresh polling every 5 seconds when incident is active
   useEffect(() => {
@@ -82,7 +93,9 @@ export default function ReportTracker() {
 
     const interval = setInterval(() => {
       if (report.trackingId) {
-        getReport(report.trackingId).then((updated) => setReport(updated)).catch(() => {})
+        getReport(report.trackingId)
+          .then((updated) => setReport(updated))
+          .catch(() => {})
       }
     }, 5000)
 

@@ -15,8 +15,10 @@ import type {
   ReportInput,
   SafetyCheckin,
   Shelter,
+  ShelterStatus,
   TriageResult,
   Volunteer,
+  VolunteerStatus,
 } from '../types'
 import { computeTriage } from '../lib/triage'
 import { generateTrackingId } from '../lib/helpers'
@@ -49,7 +51,7 @@ function saveLocal<T>(key: string, val: T): void {
   }
 }
 
-const STORAGE_VERSION = 'v4'
+const STORAGE_VERSION = 'v5'
 const STORAGE_KEY_VERSION = 'aapdasetu_data_version'
 const STORAGE_KEY_REPORTS = `aapdasetu_mock_reports_${STORAGE_VERSION}`
 const STORAGE_KEY_SHELTERS = `aapdasetu_mock_shelters_${STORAGE_VERSION}`
@@ -69,29 +71,57 @@ if (typeof window !== 'undefined') {
 }
 
 // -----------------------------------------------------------------------------
-// 1000+ REALISTIC SECTOR RECORDS GENERATOR
+// 1000s OF REALISTIC MULTI-SECTOR DATA GENERATORS
 // -----------------------------------------------------------------------------
 
 const DISASTER_SECTORS = [
-  { city: 'Kolkata - Salt Lake', lat: 22.5726, lng: 88.3639 },
-  { city: 'Kolkata - New Town', lat: 22.579, lng: 88.378 },
-  { city: 'Kolkata - Bidhannagar', lat: 22.567, lng: 88.401 },
-  { city: 'Kolkata - Howrah', lat: 22.5958, lng: 88.2636 },
-  { city: 'Kolkata - Dum Dum', lat: 22.642, lng: 88.396 },
-  { city: 'North 24 Parganas - Barasat', lat: 22.723, lng: 88.481 },
-  { city: 'Sundarbans Coastal', lat: 22.185, lng: 88.752 },
-  { city: 'Bhubaneswar - Central', lat: 20.2961, lng: 85.8245 },
-  { city: 'Bhubaneswar - Kalinga Nagar', lat: 20.2934, lng: 85.817 },
-  { city: 'Bhubaneswar - Patia', lat: 20.355, lng: 85.818 },
-  { city: 'Bhubaneswar - Rasulgarh', lat: 20.301, lng: 85.865 },
-  { city: 'Cuttack - Badambadi', lat: 20.4625, lng: 85.883 },
-  { city: 'Puri - Coastal Relief', lat: 19.8135, lng: 85.8312 },
-  { city: 'Patna - Ganga Belt', lat: 25.5941, lng: 85.1376 },
-  { city: 'Guwahati - Brahmaputra', lat: 26.1445, lng: 91.7362 },
+  { city: 'Kolkata - Salt Lake Sector V', district: 'Kolkata', state: 'West Bengal', lat: 22.5726, lng: 88.3639 },
+  { city: 'Kolkata - New Town Action Area 1', district: 'Kolkata', state: 'West Bengal', lat: 22.579, lng: 88.378 },
+  { city: 'Kolkata - Bidhannagar Stadium', district: 'Kolkata', state: 'West Bengal', lat: 22.567, lng: 88.401 },
+  { city: 'Kolkata - Howrah Station & Shibpur', district: 'Howrah', state: 'West Bengal', lat: 22.5958, lng: 88.2636 },
+  { city: 'Kolkata - Dum Dum Cantonment', district: 'North 24 Parganas', state: 'West Bengal', lat: 22.642, lng: 88.396 },
+  { city: 'Kolkata - Alipore & Kalighat', district: 'Kolkata', state: 'West Bengal', lat: 22.528, lng: 88.334 },
+  { city: 'Kolkata - Behala & Taratala', district: 'Kolkata', state: 'West Bengal', lat: 22.498, lng: 88.315 },
+  { city: 'Kolkata - Jadavpur & Garia', district: 'Kolkata', state: 'West Bengal', lat: 22.492, lng: 88.371 },
+  { city: 'North 24 Parganas - Barasat High Road', district: 'North 24 Parganas', state: 'West Bengal', lat: 22.723, lng: 88.481 },
+  { city: 'North 24 Parganas - Basirhat Border', district: 'North 24 Parganas', state: 'West Bengal', lat: 22.658, lng: 88.892 },
+  { city: 'South 24 Parganas - Canning Sub-Division', district: 'South 24 Parganas', state: 'West Bengal', lat: 22.312, lng: 88.658 },
+  { city: 'South 24 Parganas - Diamond Harbour', district: 'South 24 Parganas', state: 'West Bengal', lat: 22.198, lng: 88.201 },
+  { city: 'Sundarbans - Gosaba Delta Coastal', district: 'Sundarbans Coastal', state: 'West Bengal', lat: 22.185, lng: 88.752 },
+  { city: 'Sundarbans - Sagar Island & Bakkhali', district: 'Sundarbans Coastal', state: 'West Bengal', lat: 21.642, lng: 88.082 },
+  { city: 'Hooghly - Chinsurah Riverfront', district: 'Hooghly', state: 'West Bengal', lat: 22.902, lng: 88.396 },
+  { city: 'Hooghly - Serampore Industrial', district: 'Hooghly', state: 'West Bengal', lat: 22.751, lng: 88.342 },
+  { city: 'Paschim Medinipur - Kharagpur Hub', district: 'Paschim Medinipur', state: 'West Bengal', lat: 22.341, lng: 87.321 },
+  { city: 'Purba Medinipur - Digha Cyclone Coast', district: 'Purba Medinipur', state: 'West Bengal', lat: 21.626, lng: 87.507 },
+  { city: 'Burdwan - Asansol Mining Belt', district: 'Paschim Bardhaman', state: 'West Bengal', lat: 23.688, lng: 86.966 },
+  { city: 'Burdwan - Durgapur Barrage Zone', district: 'Paschim Bardhaman', state: 'West Bengal', lat: 23.520, lng: 87.311 },
+  { city: 'Bhubaneswar - Central Secretariate', district: 'Khordha', state: 'Odisha', lat: 20.2961, lng: 85.8245 },
+  { city: 'Bhubaneswar - Kalinga Nagar Sector 4', district: 'Khordha', state: 'Odisha', lat: 20.2934, lng: 85.817 },
+  { city: 'Bhubaneswar - Patia Infocity', district: 'Khordha', state: 'Odisha', lat: 20.355, lng: 85.818 },
+  { city: 'Bhubaneswar - Rasulgarh Highway', district: 'Khordha', state: 'Odisha', lat: 20.301, lng: 85.865 },
+  { city: 'Cuttack - Badambadi & Mahanadi', district: 'Cuttack', state: 'Odisha', lat: 20.4625, lng: 85.883 },
+  { city: 'Cuttack - CDA Sector 6', district: 'Cuttack', state: 'Odisha', lat: 20.485, lng: 85.845 },
+  { city: 'Puri - Coastal Relief & Grand Road', district: 'Puri', state: 'Odisha', lat: 19.8135, lng: 85.8312 },
+  { city: 'Balasore - Coastal Cyclone Belt', district: 'Balasore', state: 'Odisha', lat: 21.493, lng: 86.932 },
+  { city: 'Patna - Ganga River Belt', district: 'Patna', state: 'Bihar', lat: 25.5941, lng: 85.1376 },
+  { city: 'Guwahati - Brahmaputra Inundation', district: 'Kamrup Metropolitan', state: 'Assam', lat: 26.1445, lng: 91.7362 },
+  { city: 'Siliguri - Mahananda River Basin', district: 'Darjeeling', state: 'West Bengal', lat: 26.727, lng: 88.395 },
 ]
 
-const FIRST_NAMES = ['Aarav', 'Priya', 'Rahul', 'Sneha', 'Ramesh', 'Sunita', 'Amit', 'Ananya', 'Mohammed', 'Fatima', 'Bikram', 'Rojalin', 'Subhash', 'Deepa', 'Manoj', 'Kavita', 'Sanjay', 'Pooja', 'Tanmay', 'Meenakshi', 'Arjun', 'Ipsita', 'Debabrata', 'Padmini', 'Alok', 'Rinki']
-const LAST_NAMES = ['Das', 'Mohanty', 'Sharma', 'Patel', 'Sen', 'Banerjee', 'Ghosh', 'Chatterjee', 'Sahoo', 'Behera', 'Patnaik', 'Nayak', 'Mishra', 'Rout', 'Bose', 'Gupta', 'Singh', 'Ali', 'Khan', 'Roy', 'Dutta', 'Panda', 'Swain', 'Jena']
+const FIRST_NAMES = [
+  'Aarav', 'Priya', 'Rahul', 'Sneha', 'Ramesh', 'Sunita', 'Amit', 'Ananya', 'Mohammed', 'Fatima',
+  'Bikram', 'Rojalin', 'Subhash', 'Deepa', 'Manoj', 'Kavita', 'Sanjay', 'Pooja', 'Tanmay', 'Meenakshi',
+  'Arjun', 'Ipsita', 'Debabrata', 'Padmini', 'Alok', 'Rinki', 'Siddharth', 'Shreya', 'Vikram', 'Rupa',
+  'Kunal', 'Swati', 'Rajesh', 'Neelam', 'Sourav', 'Aparna', 'Manas', 'Suchitra', 'Tushar', 'Geeta',
+  'Devendra', 'Nandini', 'Prabhat', 'Kalyani', 'Naveen', 'Sharmila', 'Ashok', 'Kusum', 'Hemant', 'Radha'
+]
+
+const LAST_NAMES = [
+  'Das', 'Mohanty', 'Sharma', 'Patel', 'Sen', 'Banerjee', 'Ghosh', 'Chatterjee', 'Sahoo', 'Behera',
+  'Patnaik', 'Nayak', 'Mishra', 'Rout', 'Bose', 'Gupta', 'Singh', 'Ali', 'Khan', 'Roy',
+  'Dutta', 'Panda', 'Swain', 'Jena', 'Mukherjee', 'Chakraborty', 'Samal', 'Majumdar', 'Barman', 'Kundu',
+  'Bhowmik', 'Ganguly', 'Choudhury', 'Pradhan', 'Tripathy', 'Bastia', 'Padhi', 'Bhattacharya', 'Sarkar', 'Hossain'
+]
 
 const EMERGENCY_TEMPLATES: Array<{
   type: Report['type']
@@ -111,6 +141,9 @@ const EMERGENCY_TEMPLATES: Array<{
       'Water level rising 1 foot every 30 mins, need immediate evacuation boat.',
       'Submerged ground floor apartment, elderly heart patient without electricity or food.',
       'Embankment breach near canal, water gushing into low-lying residential sector.',
+      'River overflowed banks, 12 families taking shelter on school terrace.',
+      'Rapid tidal surge inundated 30 huts, livestock stranded in deep mud.',
+      'Culvert collapsed under flood pressure, entire village cut off from main road.',
     ],
   },
   {
@@ -124,6 +157,9 @@ const EMERGENCY_TEMPLATES: Array<{
       'Elderly patient with acute respiratory distress, oxygen cylinder exhausted.',
       'Snakebite in flood water, patient losing consciousness, anti-venom required urgently.',
       'Diabetic coma victim, emergency insulin and IV fluids needed.',
+      'Severe hypothermia and fracture after being swept by water current.',
+      'Burn injuries from exploded cooking gas burner during storm evacuation.',
+      'Infant suffering from severe dehydration and high fever in waterlogged sector.',
     ],
   },
   {
@@ -135,6 +171,8 @@ const EMERGENCY_TEMPLATES: Array<{
       'LPG cylinder blast in flooded residential complex, smoke spreading to upper floors.',
       'Electrical short circuit ignited roof thatch, 3 people trapped in back room.',
       'Transformer explosion near relief shelter, active flames blocking exit gate.',
+      'Fire broke out in warehouse containing emergency food supplies.',
+      'Commercial building top floor caught fire due to lightning strike.',
     ],
   },
   {
@@ -146,6 +184,8 @@ const EMERGENCY_TEMPLATES: Array<{
       '2-story building partially collapsed, acoustic tapping heard from beneath concrete slab.',
       'Stairwell caved in, 8 occupants trapped on 3rd floor balcony.',
       'Boundary wall collapse crushed parked vehicles and trapped pedestrian.',
+      'Old heritage building facade collapsed onto market lane, structural debris blocking street.',
+      'Cracks wider than 4 inches opened in multi-story residential apartment.',
     ],
   },
   {
@@ -157,6 +197,8 @@ const EMERGENCY_TEMPLATES: Array<{
       '8-year-old child got separated during mass evacuation near bus stand.',
       'Elderly man with dementia went missing after leaving relief camp at 4 PM.',
       'Family member was walking through flood water and has not returned for 3 hours.',
+      'Teenager separated from rescue boat convoy during heavy rain.',
+      'Fisherman boat did not return to jetty after cyclone warning siren.',
     ],
   },
   {
@@ -168,6 +210,8 @@ const EMERGENCY_TEMPLATES: Array<{
       'Rescue tractor overturned in waterlogged ditch, driver has leg fracture.',
       'Relief supply truck collided with fallen banyan tree, driver trapped inside cabin.',
       'Civilian evacuation boat engine failed in strong river current.',
+      'Ambulance wheel stuck in collapsed asphalt hole on highway.',
+      'Two relief supply vans collided near bypass intersection due to zero visibility.',
     ],
   },
   {
@@ -179,14 +223,18 @@ const EMERGENCY_TEMPLATES: Array<{
       'Fallen power lines hanging in knee-deep water across main road.',
       'Community clean water pipeline broken, 40 families need drinking water packets.',
       'Relief camp requesting baby milk formula and sanitary supplies.',
+      'Large banyan tree uprooted blocking school evacuation route.',
+      'Mobile communication tower battery exhausted, entire ward without cell signal.',
+      'Stagnant flood water causing foul odor and mosquito breeding near camp.',
     ],
   },
 ]
 
-function generate1000Reports(): Report[] {
+// 1. GENERATE 1,500+ REPORTS
+function generate1500Reports(): Report[] {
   const list: Report[] = []
 
-  // 1. Seed live demo reports first
+  // Seed primary demo reports
   list.push(
     {
       id: 'rep-live-001',
@@ -217,8 +265,10 @@ function generate1000Reports(): Report[] {
       description: 'Pregnant woman in labor, surrounded by 4ft water. Rapid boat ambulance required.',
       reporterName: 'Mohammed Ali',
       reporterPhone: '+91-9123456780',
+      assignedVolunteerId: 'vol-001',
       assignedVolunteerName: 'Rahul Sharma',
-      assignedAgencyName: 'NDRF 2nd Battalion',
+      assignedAgencyId: 'agency-001',
+      assignedAgencyName: 'NDRF 2nd Battalion Command',
       source: 'sos',
       createdAt: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
     },
@@ -235,8 +285,10 @@ function generate1000Reports(): Report[] {
       description: 'Building wall collapsed on ground floor, 2 persons trapped under debris.',
       reporterName: 'Bikram Das',
       reporterPhone: '+91-9437123456',
+      assignedVolunteerId: 'vol-002',
       assignedVolunteerName: 'Priya Singh',
-      assignedAgencyName: 'Odisha Fire & Disaster Response',
+      assignedAgencyId: 'agency-002',
+      assignedAgencyName: 'State Disaster Response Force (SDRF)',
       source: 'sos',
       createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
     },
@@ -253,31 +305,39 @@ function generate1000Reports(): Report[] {
       description: 'Elderly man separated during cyclone evacuation. Reunited at Shelter #02.',
       reporterName: 'Suresh Bose',
       reporterPhone: '+91-9988776655',
+      assignedVolunteerId: 'vol-001',
       assignedVolunteerName: 'Rahul Sharma',
-      assignedAgencyName: 'Red Cross India',
+      assignedAgencyId: 'agency-005',
+      assignedAgencyName: 'Red Cross Disaster Relief Mission',
       resolutionNotes: 'Citizen located and safely escorted back to family.',
       source: 'form',
       createdAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
     }
   )
 
-  // 2. Generate 1,020 realistic randomized reports across disaster zones
-  for (let i = 1; i <= 1020; i++) {
+  // Generate 1,520 realistic randomized reports across disaster zones
+  for (let i = 1; i <= 1520; i++) {
     const tmpl = EMERGENCY_TEMPLATES[i % EMERGENCY_TEMPLATES.length]
     const sector = DISASTER_SECTORS[i % DISASTER_SECTORS.length]
     const fName = FIRST_NAMES[i % FIRST_NAMES.length]
     const lName = LAST_NAMES[(i * 3) % LAST_NAMES.length]
     const desc = tmpl.descriptions[i % tmpl.descriptions.length]
 
-    const lat = sector.lat + Math.sin(i * 12.34) * 0.04
-    const lng = sector.lng + Math.cos(i * 56.78) * 0.04
+    const lat = sector.lat + Math.sin(i * 12.34) * 0.035
+    const lng = sector.lng + Math.cos(i * 56.78) * 0.035
 
     const score = Math.floor(tmpl.scoreMin + ((i * 7) % (tmpl.scoreMax - tmpl.scoreMin + 1)))
     const status: Report['status'] = i % 7 === 0 ? 'resolved' : i % 3 === 0 ? 'in_progress' : 'pending'
 
-    const timeAgoMs = 1000 * 60 * (i * 14 + (i % 60))
+    const timeAgoMs = 1000 * 60 * (i * 9 + (i % 45))
     const createdAt = new Date(Date.now() - timeAgoMs).toISOString()
     const trackingHex = ((i * 16807 + 12345) % 0xffffff).toString(16).toUpperCase().padStart(6, '0')
+
+    const assignedVolId = `vol-${(((i * 7) % 500) + 1).toString().padStart(3, '0')}`
+    const assignedVolName = `${FIRST_NAMES[(i + 3) % FIRST_NAMES.length]} ${LAST_NAMES[(i + 5) % LAST_NAMES.length]}`
+    const agencyNum = (i % 25) + 1
+    const assignedAgencyId = `agency-${agencyNum.toString().padStart(3, '0')}`
+    const assignedAgencyName = agencyNum <= 16 ? `NDRF ${agencyNum}th Battalion` : `State SDRF Quick Response Unit #${agencyNum - 16}`
 
     list.push({
       id: `rep-gen-${i.toString().padStart(4, '0')}`,
@@ -292,9 +352,11 @@ function generate1000Reports(): Report[] {
       description: `${desc} [Triage Urgency: ${score}/100]`,
       reporterName: `${fName} ${lName}`,
       reporterPhone: `+91-9${(100000000 + ((i * 987654) % 899999999)).toString()}`,
-      assignedVolunteerName: status !== 'pending' ? FIRST_NAMES[(i + 2) % FIRST_NAMES.length] + ' ' + LAST_NAMES[(i + 2) % LAST_NAMES.length] : undefined,
-      assignedAgencyName: status !== 'pending' ? (i % 2 === 0 ? 'NDRF Response Force' : 'State Disaster Emergency Team') : undefined,
-      resolutionNotes: status === 'resolved' ? 'Evacuation completed successfully. Safe in relief camp.' : undefined,
+      assignedVolunteerId: status !== 'pending' ? assignedVolId : undefined,
+      assignedVolunteerName: status !== 'pending' ? assignedVolName : undefined,
+      assignedAgencyId: status !== 'pending' ? assignedAgencyId : undefined,
+      assignedAgencyName: status !== 'pending' ? assignedAgencyName : undefined,
+      resolutionNotes: status === 'resolved' ? 'Evacuation completed successfully. Citizen safe in relief camp.' : undefined,
       source: i % 2 === 0 ? 'sos' : 'form',
       createdAt,
     })
@@ -303,341 +365,364 @@ function generate1000Reports(): Report[] {
   return list
 }
 
-const initialShelters: Shelter[] = [
-  {
-    id: 'shel-001',
-    name: 'Sector V Community Relief Center',
-    address: 'Block EP & GP, Sector V, Salt Lake, Kolkata',
-    latitude: 22.574,
-    longitude: 88.365,
-    capacity: 500,
-    occupancy: 210,
-    facilities: ['food', 'water', 'medical_station', 'power_generator'],
-    contactPhone: '+91-33-23570001',
-    status: 'open',
-  },
-  {
-    id: 'shel-002',
-    name: 'New Town Higher Secondary Shelter',
-    address: 'Action Area 1, New Town, Kolkata',
-    latitude: 22.579,
-    longitude: 88.378,
-    capacity: 350,
-    occupancy: 340,
-    facilities: ['food', 'water', 'power_generator'],
-    contactPhone: '+91-33-23570002',
-    status: 'full',
-  },
-  {
-    id: 'shel-003',
-    name: 'Bidhannagar Central Stadium Relief Camp',
-    address: 'Salt Lake Stadium Complex, Bidhannagar',
-    latitude: 22.567,
-    longitude: 88.401,
-    capacity: 1200,
-    occupancy: 450,
-    facilities: ['food', 'water', 'medical_station', 'power_generator'],
-    contactPhone: '+91-33-23570003',
-    status: 'open',
-  },
-  {
-    id: 'shel-004',
-    name: 'Janata Maidan Disaster Emergency Camp',
-    address: 'Janata Maidan, Jayadev Vihar, Bhubaneswar',
-    latitude: 20.2961,
-    longitude: 85.8245,
-    capacity: 800,
-    occupancy: 310,
-    facilities: ['food', 'water', 'medical_station', 'power_generator'],
-    contactPhone: '+91-674-2531101',
-    status: 'open',
-  },
-  {
-    id: 'shel-005',
-    name: 'Kalinga Stadium Evacuation Center',
-    address: 'Kalinga Stadium, Bhubaneswar',
-    latitude: 20.2934,
-    longitude: 85.817,
-    capacity: 1000,
-    occupancy: 150,
-    facilities: ['food', 'water', 'medical_station', 'power_generator'],
-    contactPhone: '+91-674-2531102',
-    status: 'open',
-  },
-  {
-    id: 'shel-006',
-    name: 'Howrah District Indoor Stadium Shelter',
-    address: 'Howrah Station Road, Howrah',
-    latitude: 22.5958,
-    longitude: 88.2636,
-    capacity: 600,
-    occupancy: 420,
-    facilities: ['food', 'water', 'medical_station'],
-    contactPhone: '+91-33-26601004',
-    status: 'open',
-  },
-  {
-    id: 'shel-007',
-    name: 'Barasat Sub-Divisional Hospital Relief Wing',
-    address: 'Barasat High Road, North 24 Parganas',
-    latitude: 22.723,
-    longitude: 88.481,
-    capacity: 400,
-    occupancy: 395,
-    facilities: ['medical_station', 'water', 'power_generator'],
-    contactPhone: '+91-33-25841005',
-    status: 'full',
-  },
-  {
-    id: 'shel-008',
-    name: 'Sundarbans Coastal Cyclone Shelter #04',
-    address: 'Gosaba Ferry Ghat, Sundarbans',
-    latitude: 22.185,
-    longitude: 88.752,
-    capacity: 450,
-    occupancy: 120,
-    facilities: ['food', 'water', 'medical_station', 'power_generator'],
-    contactPhone: '+91-3218-230008',
-    status: 'open',
-  },
-]
+// 2. GENERATE 250+ SHELTERS
+function generate250Shelters(): Shelter[] {
+  const list: Shelter[] = []
+  const SHELTER_TYPES = [
+    'Community Relief Center',
+    'Higher Secondary Model School',
+    'Indoor Sports Stadium Camp',
+    'Multi-Purpose Cyclone Shelter',
+    'College Campus Evacuation Wing',
+    'Sub-Divisional Hospital Relief Ward',
+    'Municipal Town Hall Disaster Hub',
+    'Youth Hostel & Sports Complex',
+  ]
 
-const initialVolunteers: Volunteer[] = [
-  { id: 'vol-001', name: 'Rahul Sharma', phone: '+91-9876500001', skills: ['medical', 'search_rescue'], latitude: 22.573, longitude: 88.364, status: 'on_duty' },
-  { id: 'vol-002', name: 'Priya Singh', phone: '+91-9876500002', skills: ['medical', 'logistics'], latitude: 22.578, longitude: 88.375, status: 'available' },
-  { id: 'vol-003', name: 'Bikram Nayak', phone: '+91-9876500003', skills: ['driving', 'search_rescue'], latitude: 20.296, longitude: 85.824, status: 'available' },
-  { id: 'vol-004', name: 'Sunita Behera', phone: '+91-9876500004', skills: ['medical'], latitude: 20.291, longitude: 85.815, status: 'on_duty' },
-  { id: 'vol-005', name: 'Debabrata Ghosh', phone: '+91-9876500005', skills: ['driving', 'logistics'], latitude: 22.595, longitude: 88.263, status: 'available' },
-  { id: 'vol-006', name: 'Arjun Patnaik', phone: '+91-9876500006', skills: ['search_rescue'], latitude: 20.355, longitude: 85.818, status: 'offline' },
-]
+  for (let i = 0; i < 260; i++) {
+    const sector = DISASTER_SECTORS[i % DISASTER_SECTORS.length]
+    const sType = SHELTER_TYPES[i % SHELTER_TYPES.length]
+    const id = `shel-${(i + 1).toString().padStart(3, '0')}`
 
-const initialAgencies: Agency[] = [
-  { id: 'agency-001', name: 'NDRF 2nd Battalion Command', type: 'ndrf', contactPhone: '+91-33-23241100', jurisdiction: 'Eastern Sector & Gangetic Coast' },
-  { id: 'agency-002', name: 'State Disaster Response Force (SDRF)', type: 'ndrf', contactPhone: '+91-674-2531000', jurisdiction: 'State Rapid Response' },
-  { id: 'agency-003', name: 'National Fire & Rescue Services', type: 'fire_department', contactPhone: '101', jurisdiction: 'Urban & Industrial Zones' },
-  { id: 'agency-004', name: 'Emergency Medical Ambulance Network', type: 'hospital', contactPhone: '108', jurisdiction: 'Advanced Life Support' },
-  { id: 'agency-005', name: 'Red Cross Disaster Relief Mission', type: 'ngo', contactPhone: '+91-11-23716441', jurisdiction: 'Humanitarian Shelter Aid' },
-]
+    const latJitter = Math.sin(i * 9.17) * 0.025
+    const lngJitter = Math.cos(i * 8.33) * 0.025
 
-const initialAlerts: Alert[] = [
-  {
-    id: 'alert-001',
-    title: 'Extreme Inundation Warning — High River Discharge',
-    message: 'Continuous heavy rainfall has caused rapid river swelling. Low-lying sectors should immediately move to designated multi-story relief shelters.',
-    severity: 'critical',
-    channel: 'all',
-    region: 'Kolkata, North 24 Parganas, Howrah',
-    createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-  },
-  {
-    id: 'alert-002',
-    title: 'Severe Weather Bulletin: Wind Gusts up to 85 km/h',
-    message: 'Avoid standing near high-voltage electrical lines, old trees, or tin roofs. Stay indoors on high ground.',
-    severity: 'warning',
-    channel: 'all',
-    region: 'Coastal Districts & Delta Zone',
-    createdAt: new Date(Date.now() - 1000 * 60 * 65).toISOString(),
-  },
-  {
-    id: 'alert-003',
-    title: 'Relief Shelters Operational with Free Food & Medical Aid',
-    message: 'All 8 primary relief camps in Bidhannagar, New Town, and Bhubaneswar are equipped with power generators, clean water, and 24/7 doctors.',
-    severity: 'info',
-    channel: 'public',
-    region: 'All Municipal Sectors',
-    createdAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-  },
-]
+    const cap = Math.floor(150 + ((i * 73) % 2850))
+    const occPercent = (i * 19) % 100
+    const occ = Math.floor((cap * occPercent) / 100)
 
-const initialCheckins: SafetyCheckin[] = [
-  { id: 'chk-001', fullName: 'Anita Banerjee', phone: '+91-9876543211', locationName: 'Sector V Community Hall', notes: 'Safe with 3 kids and parents. Camp has food and medical aid.', status: 'safe', createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
-  { id: 'chk-002', fullName: 'Manoj Kumar Sahoo', phone: '+91-9437100022', locationName: 'Janata Maidan Camp', notes: 'Evacuated from low area. Power on.', status: 'safe', createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString() },
-  { id: 'chk-003', fullName: 'Sanjay Gupta', phone: '+91-9123400033', locationName: 'At Home 2nd Floor', notes: 'Water in ground floor, but we have supplies for 3 days.', status: 'safe', createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString() },
-]
+    const status: ShelterStatus = occ >= cap * 0.95 ? 'full' : i % 18 === 0 ? 'closed' : 'open'
 
-const initialMissing: MissingPerson[] = [
-  { id: 'mp-001', name: 'Rohan Sen', age: 11, gender: 'male', lastSeenLocation: 'Near New Town Axis Mall', clothes: 'Yellow T-shirt, black shorts', contactPhone: '+91-9876543210', status: 'open' },
-  { id: 'mp-002', name: 'Gopal Chandra Das', age: 74, gender: 'male', lastSeenLocation: 'Bidhannagar Bus Terminus', clothes: 'White dhoti-kurta, wooden cane', contactPhone: '+91-9988776655', status: 'open' },
-]
+    const facSet: string[] = ['food', 'water']
+    if (i % 2 === 0) facSet.push('medical_station')
+    if (i % 3 === 0 || cap > 600) facSet.push('power_generator')
 
-const initialDamageReports: DamageAssessmentReport[] = [
-  {
-    id: 'dmg-001',
-    claimId: 'SDRF-2026-N24P-8921',
-    claimantName: 'Sourav Ganguly',
-    claimantPhone: '+91-9830012345',
-    infrastructureType: 'broken_home',
-    propertyAddress: 'Holding 42/B, Barasat Main Road, Ward 7',
-    district: 'North 24 Parganas',
-    latitude: 22.723,
-    longitude: 88.481,
-    damageGrade: 'DESTROYED',
-    damageScore: 96.5,
-    confidence: 98.4,
-    compensationInr: 95100,
-    verified: true,
-    status: 'approved',
-    factors: ['Load-bearing brick pillar fracture > 40mm', 'Complete roof truss collapse', 'Severe foundation washout'],
-    huggingFaceModel: 'Divyanshu-Kumar19/aapdasetu-damage-assessment',
-    createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-  },
-  {
-    id: 'dmg-002',
-    claimId: 'SDRF-2026-HOW-4112',
-    claimantName: 'Debabrata Mukherjee',
-    claimantPhone: '+91-9831122334',
-    infrastructureType: 'gov_pipeline',
-    propertyAddress: 'Near Public Health Engineering Water Pump Station, Shibpur',
-    district: 'Howrah',
-    latitude: 22.583,
-    longitude: 88.305,
-    damageGrade: 'MAJOR',
-    damageScore: 78.0,
-    confidence: 97.8,
-    compensationInr: 47550,
-    verified: true,
-    status: 'approved',
-    factors: ['Main drinking water distribution pipe ruptured (600mm dia)', 'Water contamination risk in 4 blocks', 'High pressure leakage'],
-    huggingFaceModel: 'Divyanshu-Kumar19/aapdasetu-damage-assessment',
-    createdAt: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
-  },
-  {
-    id: 'dmg-003',
-    claimId: 'SDRF-2026-SUN-1092',
-    claimantName: 'Manmatha Mondal',
-    claimantPhone: '+91-9733001122',
-    infrastructureType: 'broken_home',
-    propertyAddress: 'Village Gosaba, Near River Embankment',
-    district: 'Sundarbans Coastal',
-    latitude: 22.165,
-    longitude: 88.805,
-    damageGrade: 'DESTROYED',
-    damageScore: 98.2,
-    confidence: 99.1,
-    compensationInr: 95100,
-    verified: true,
-    status: 'approved',
-    factors: ['Tidal surge washed away ground floor structures', 'Complete wall collapse', 'Mudbrick foundation disintegration'],
-    huggingFaceModel: 'Divyanshu-Kumar19/aapdasetu-damage-assessment',
-    createdAt: new Date(Date.now() - 1000 * 60 * 130).toISOString(),
-  },
-  {
-    id: 'dmg-004',
-    claimId: 'SDRF-2026-KOL-7781',
-    claimantName: 'Aparna Sen',
-    claimantPhone: '+91-9830554433',
-    infrastructureType: 'road_bridge',
-    propertyAddress: 'Eastern Metropolitan Bypass Culvert Connector',
-    district: 'Kolkata',
-    latitude: 22.535,
-    longitude: 88.398,
-    damageGrade: 'MAJOR',
-    damageScore: 82.5,
-    confidence: 98.2,
-    compensationInr: 47550,
-    verified: true,
-    status: 'pending_review',
-    factors: ['Culvert approach road washed away', 'Sub-base soil erosion > 2.5m', 'Vehicular movement halted'],
-    huggingFaceModel: 'Divyanshu-Kumar19/aapdasetu-damage-assessment',
-    createdAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-  },
-  {
-    id: 'dmg-005',
-    claimId: 'SDRF-2026-S24P-3319',
-    claimantName: 'Subhas Chandra Bera',
-    claimantPhone: '+91-9434112200',
-    infrastructureType: 'electrical_power',
-    propertyAddress: 'Canning 33kV Sub-Station Feeder Grid',
-    district: 'South 24 Parganas',
-    latitude: 22.312,
-    longitude: 88.658,
-    damageGrade: 'DESTROYED',
-    damageScore: 94.0,
-    confidence: 98.9,
-    compensationInr: 95100,
-    verified: true,
-    status: 'approved',
-    factors: ['3 High-tension transmission towers snapped', 'Transformer oil tank submerged and exploded'],
-    huggingFaceModel: 'Divyanshu-Kumar19/aapdasetu-damage-assessment',
-    createdAt: new Date(Date.now() - 1000 * 60 * 220).toISOString(),
-  },
-  {
-    id: 'dmg-006',
-    claimId: 'SDRF-2026-N24P-9903',
-    claimantName: 'Kabir Hossain',
-    claimantPhone: '+91-9836110022',
-    infrastructureType: 'broken_home',
-    propertyAddress: 'Basirhat Ward 3, Near Taki Ghat Road',
-    district: 'North 24 Parganas',
-    latitude: 22.658,
-    longitude: 88.892,
-    damageGrade: 'DESTROYED',
-    damageScore: 95.0,
-    confidence: 98.5,
-    compensationInr: 95100,
-    verified: true,
-    status: 'approved',
-    factors: ['Boundary wall collapsed on residential room', 'Roof slab cracked through center'],
-    huggingFaceModel: 'Divyanshu-Kumar19/aapdasetu-damage-assessment',
-    createdAt: new Date(Date.now() - 1000 * 60 * 300).toISOString(),
-  },
-  {
-    id: 'dmg-007',
-    claimId: 'SDRF-2026-HGL-2201',
-    claimantName: 'Prabhat Roy',
-    claimantPhone: '+91-9832445566',
-    infrastructureType: 'gov_pipeline',
-    propertyAddress: 'Chinsurah Municipal Water Line Grid 4',
-    district: 'Hooghly',
-    latitude: 22.902,
-    longitude: 88.396,
-    damageGrade: 'MAJOR',
-    damageScore: 74.0,
-    confidence: 97.5,
-    compensationInr: 47550,
-    verified: true,
-    status: 'pending_review',
-    factors: ['Underground drainage pipeline cracked from soil subsidence', 'Street flooding with sludge'],
-    huggingFaceModel: 'Divyanshu-Kumar19/aapdasetu-damage-assessment',
-    createdAt: new Date(Date.now() - 1000 * 60 * 360).toISOString(),
-  },
-  {
-    id: 'dmg-008',
-    claimId: 'SDRF-2026-KOL-5541',
-    claimantName: 'Rameshwar Lal',
-    claimantPhone: '+91-9830887766',
-    infrastructureType: 'commercial_public',
-    propertyAddress: 'Sector V RDB Boulevard Market Ground Floor',
-    district: 'Kolkata',
-    latitude: 22.581,
-    longitude: 88.428,
-    damageGrade: 'MINOR',
-    damageScore: 32.0,
-    confidence: 98.1,
-    compensationInr: 9800,
-    verified: true,
-    status: 'approved',
-    factors: ['Ground floor water ingress 0.4m', 'Shutter distortion', 'Minor interior wall moisture degradation'],
-    huggingFaceModel: 'Divyanshu-Kumar19/aapdasetu-damage-assessment',
-    createdAt: new Date(Date.now() - 1000 * 60 * 420).toISOString(),
-  },
-]
+    list.push({
+      id,
+      name: `${sector.city} — ${sType} #${(i % 20) + 1}`,
+      address: `Sector ${(i % 15) + 1}, ${sector.city}, ${sector.district}, ${sector.state}`,
+      latitude: Number((sector.lat + latJitter).toFixed(4)),
+      longitude: Number((sector.lng + lngJitter).toFixed(4)),
+      capacity: cap,
+      occupancy: occ,
+      facilities: facSet,
+      contactPhone: `+91-${sector.lat > 22 ? '33' : '674'}-${(23570000 + (i % 9999)).toString()}`,
+      status,
+    })
+  }
+  return list
+}
+
+// 3. GENERATE 500+ VOLUNTEERS
+function generate500Volunteers(): Volunteer[] {
+  const list: Volunteer[] = []
+  const SKILL_POOLS = [
+    ['medical', 'search_rescue'],
+    ['medical', 'logistics'],
+    ['driving', 'search_rescue'],
+    ['driving', 'logistics'],
+    ['search_rescue'],
+    ['medical'],
+    ['logistics', 'shelter_management'],
+    ['heavy_machinery', 'search_rescue'],
+  ]
+
+  for (let i = 0; i < 520; i++) {
+    const sector = DISASTER_SECTORS[i % DISASTER_SECTORS.length]
+    const fName = FIRST_NAMES[i % FIRST_NAMES.length]
+    const lName = LAST_NAMES[(i * 4) % LAST_NAMES.length]
+    const id = `vol-${(i + 1).toString().padStart(3, '0')}`
+
+    const latJitter = Math.sin(i * 11.23) * 0.03
+    const lngJitter = Math.cos(i * 13.45) * 0.03
+
+    const status: VolunteerStatus = i % 4 === 0 ? 'on_duty' : i % 7 === 0 ? 'offline' : 'available'
+    const skills = SKILL_POOLS[i % SKILL_POOLS.length]
+
+    list.push({
+      id,
+      name: `${fName} ${lName}`,
+      phone: `+91-9${(800000000 + ((i * 654321) % 199999999)).toString()}`,
+      skills,
+      latitude: Number((sector.lat + latJitter).toFixed(4)),
+      longitude: Number((sector.lng + lngJitter).toFixed(4)),
+      status,
+    })
+  }
+  return list
+}
+
+// 4. GENERATE 100+ AGENCIES
+function generate100Agencies(): Agency[] {
+  const list: Agency[] = []
+
+  for (let i = 1; i <= 110; i++) {
+    const sector = DISASTER_SECTORS[i % DISASTER_SECTORS.length]
+    const id = `agency-${i.toString().padStart(3, '0')}`
+
+    let name = ''
+    let type = 'ndrf'
+    let jurisdiction = `${sector.district} Sector & Surroundings`
+
+    if (i <= 16) {
+      name = `NDRF ${i}th Battalion National Command`
+      type = 'ndrf'
+      jurisdiction = 'National Rapid Response & Flood Special Forces'
+    } else if (i <= 40) {
+      name = `State Disaster Response Force (SDRF) Unit #${i - 16}`
+      type = 'ndrf'
+      jurisdiction = `${sector.state} State Rapid Action Team`
+    } else if (i <= 65) {
+      name = `${sector.city} Emergency Fire & Rescue Division`
+      type = 'fire_department'
+      jurisdiction = 'Urban, Industrial & Flood Extraction'
+    } else if (i <= 90) {
+      name = `${sector.district} Mobile ICU Ambulance ALS Fleet #${i - 65}`
+      type = 'hospital'
+      jurisdiction = 'Emergency Trauma & Critical Medical Transit'
+    } else {
+      name = `Red Cross & Civil Defence Mission #${i - 90}`
+      type = 'ngo'
+      jurisdiction = 'Humanitarian Aid, Nutrition & Family Reunification'
+    }
+
+    list.push({
+      id,
+      name,
+      type,
+      contactPhone: i % 2 === 0 ? `+91-33-2324${(1000 + i).toString()}` : `108`,
+      contactEmail: `command.${id}@aapdasetu.gov.in`,
+      jurisdiction,
+      latitude: sector.lat,
+      longitude: sector.lng,
+    })
+  }
+  return list
+}
+
+// 5. GENERATE 800+ SAFETY CHECK-INS
+function generate800Checkins(): SafetyCheckin[] {
+  const list: SafetyCheckin[] = []
+
+  for (let i = 1; i <= 820; i++) {
+    const sector = DISASTER_SECTORS[i % DISASTER_SECTORS.length]
+    const fName = FIRST_NAMES[i % FIRST_NAMES.length]
+    const lName = LAST_NAMES[(i * 5) % LAST_NAMES.length]
+    const id = `chk-${i.toString().padStart(4, '0')}`
+
+    const isSafe = i % 12 !== 0
+    const familyCount = (i % 5) + 1
+    const timeAgoMs = 1000 * 60 * (i * 8 + (i % 30))
+
+    const note = isSafe
+      ? `Safe with ${familyCount} family members at Sector ${(i % 12) + 1} camp. Food and clean water provided.`
+      : `Evacuated to upper roof floor, need drinking water packets for ${familyCount} persons.`
+
+    list.push({
+      id,
+      fullName: `${fName} ${lName}`,
+      phone: `+91-9${(700000000 + ((i * 456789) % 299999999)).toString()}`,
+      status: isSafe ? 'safe' : 'need_assistance',
+      locationName: `${sector.city} Emergency Shelter #${(i % 15) + 1}`,
+      latitude: sector.lat,
+      longitude: sector.lng,
+      notes: note,
+      createdAt: new Date(Date.now() - timeAgoMs).toISOString(),
+    })
+  }
+  return list
+}
+
+// 6. GENERATE 300+ MISSING PERSONS
+function generate300MissingPersons(): MissingPerson[] {
+  const list: MissingPerson[] = []
+  const CLOTHES_LIST = [
+    'Yellow T-shirt, blue jeans, black sports shoes',
+    'White cotton kurta-pyjama, wooden cane, reading glasses',
+    'School uniform (Navy blue sweater, white shirt, black shoes)',
+    'Red printed saree, silver bangles, black umbrella',
+    'Green rain jacket, grey track pants, brown sandals',
+    'Checked cotton shirt, khaki trousers, wristwatch',
+    'Floral dress, pink school backpack, red hair ribbon',
+  ]
+
+  for (let i = 1; i <= 320; i++) {
+    const sector = DISASTER_SECTORS[i % DISASTER_SECTORS.length]
+    const fName = FIRST_NAMES[i % FIRST_NAMES.length]
+    const lName = LAST_NAMES[(i * 3) % LAST_NAMES.length]
+    const id = `mp-${i.toString().padStart(4, '0')}`
+
+    const age = Math.floor(4 + ((i * 17) % 76))
+    const gender = i % 2 === 0 ? 'male' : 'female'
+    const clothes = CLOTHES_LIST[i % CLOTHES_LIST.length]
+    const status: MissingPerson['status'] = i % 5 === 0 ? 'resolved' : i % 7 === 0 ? 'matched' : 'open'
+    const timeAgoMs = 1000 * 60 * (i * 15 + (i % 60))
+
+    list.push({
+      id,
+      name: `${fName} ${lName}`,
+      age,
+      gender,
+      clothes,
+      lastSeenLocation: `${sector.city}, Near Landmark Gate ${(i % 9) + 1}`,
+      lastSeenAt: new Date(Date.now() - timeAgoMs).toISOString(),
+      contactPhone: `+91-9${(850000000 + ((i * 321654) % 149999999)).toString()}`,
+      status,
+    })
+  }
+  return list
+}
+
+// 7. GENERATE 600+ AI DAMAGE ASSESSMENTS
+function generate600DamageAssessments(): DamageAssessmentReport[] {
+  const list: DamageAssessmentReport[] = []
+  const INFRA_TYPES: DamageInfrastructureType[] = [
+    'broken_home',
+    'gov_pipeline',
+    'road_bridge',
+    'electrical_power',
+    'commercial_public',
+    'agricultural',
+  ]
+
+  for (let i = 1; i <= 620; i++) {
+    const sector = DISASTER_SECTORS[i % DISASTER_SECTORS.length]
+    const fName = FIRST_NAMES[i % FIRST_NAMES.length]
+    const lName = LAST_NAMES[(i * 2) % LAST_NAMES.length]
+    const id = `dmg-${i.toString().padStart(4, '0')}`
+    const infra = INFRA_TYPES[i % INFRA_TYPES.length]
+
+    const distCode = sector.district.substring(0, 4).toUpperCase().replace(/\s+/g, '')
+    const claimId = `SDRF-2026-${distCode}-${(1000 + i).toString()}`
+
+    const grade: DamageGrade = i % 3 === 0 ? 'DESTROYED' : i % 2 === 0 ? 'MAJOR' : 'MINOR'
+    const score = grade === 'DESTROYED' ? 92 + (i % 7) : grade === 'MAJOR' ? 70 + (i % 16) : 25 + (i % 18)
+    const comp = grade === 'DESTROYED' ? 95100 : grade === 'MAJOR' ? 47550 : 9800
+    const status: DamageAssessmentReport['status'] = i % 10 === 0 ? 'flagged_fraud' : i % 3 === 0 ? 'pending_review' : 'approved'
+
+    const lat = sector.lat + Math.sin(i * 14.5) * 0.03
+    const lng = sector.lng + Math.cos(i * 16.7) * 0.03
+    const timeAgoMs = 1000 * 60 * (i * 12 + (i % 40))
+
+    const factors =
+      grade === 'DESTROYED'
+        ? ['Structural load-bearing wall shattered > 45mm', 'Roof truss collapsed under inundation load', 'Foundation scour > 2.2m']
+        : grade === 'MAJOR'
+        ? ['Main distribution line ruptured', 'Severe plaster & masonry delamination', 'Hazard perimeter required']
+        : ['Minor exterior brickwork hairline fissure', 'Surface water staining', 'Structural integrity intact']
+
+    list.push({
+      id,
+      claimId,
+      claimantName: `${fName} ${lName}`,
+      claimantPhone: `+91-9${(900000000 + ((i * 789123) % 99999999)).toString()}`,
+      infrastructureType: infra,
+      propertyAddress: `Plot ${(i % 100) + 1}, Main Road, ${sector.city}`,
+      district: sector.district,
+      latitude: Number(lat.toFixed(4)),
+      longitude: Number(lng.toFixed(4)),
+      damageGrade: grade,
+      damageScore: score,
+      confidence: Number((97.5 + ((i % 24) / 10)).toFixed(1)),
+      compensationInr: comp,
+      verified: status === 'approved',
+      status,
+      factors,
+      huggingFaceModel: 'Divyanshu-Kumar19/aapdasetu-damage-assessment',
+      createdAt: new Date(Date.now() - timeAgoMs).toISOString(),
+    })
+  }
+  return list
+}
+
+// 8. GENERATE 150+ EMERGENCY ALERTS
+function generate150Alerts(): Alert[] {
+  const list: Alert[] = []
+  const ALERT_TYPES = [
+    { title: 'Critical Flash Flood & Inundation Siren', severity: 'critical' as const, template: 'River water level breached danger mark by 1.8m. Immediate multi-story evacuation active.' },
+    { title: 'Severe Cyclonic Storm Bulletin & Wind Hazard', severity: 'warning' as const, template: 'Wind gusts exceeding 90 km/h predicted. Stay away from loose structures, tin sheds, and power lines.' },
+    { title: 'Dam Spillway Discharge & Sluice Gate Alert', severity: 'warning' as const, template: 'Water discharge increased to 85,000 cusecs. Downstream riverbank settlements must move to high ground.' },
+    { title: 'Emergency Relief Camps Operational with Free Medical Care', severity: 'info' as const, template: 'Designated shelters equipped with 24/7 doctors, diesel generators, hot meals, and purified drinking water.' },
+    { title: 'Clean Water Tanker & Food Distribution Schedule', severity: 'info' as const, template: 'Municipal emergency water tankers arriving at designated sector relief hubs between 8 AM and 6 PM.' },
+  ]
+
+  for (let i = 1; i <= 160; i++) {
+    const sector = DISASTER_SECTORS[i % DISASTER_SECTORS.length]
+    const tmpl = ALERT_TYPES[i % ALERT_TYPES.length]
+    const id = `alert-${i.toString().padStart(4, '0')}`
+    const timeAgoMs = 1000 * 60 * (i * 20 + (i % 50))
+
+    list.push({
+      id,
+      title: `${tmpl.title} — ${sector.district}`,
+      message: `${tmpl.template} Affected sectors: ${sector.city} and surrounding wards. Emergency Helpline: 1070 / 112.`,
+      severity: tmpl.severity,
+      channel: i % 3 === 0 ? 'all' : 'public',
+      region: `${sector.district}, ${sector.state}`,
+      createdAt: new Date(Date.now() - timeAgoMs).toISOString(),
+    })
+  }
+  return list
+}
+
+// 9. GENERATE 1,000+ AUDIT LOGS
+function generate1000AuditLogs(): AuditLog[] {
+  const list: AuditLog[] = []
+  const ADMIN_EMAILS = [
+    'admin@aapdasetu.org',
+    'commander.ndrf@aapdasetu.gov.in',
+    'duty.officer@sdrf.gov.in',
+    'triage.lead@aapdasetu.org',
+    'district.collector@disaster.gov.in',
+  ]
+
+  const ACTIONS = [
+    { action: 'INCIDENT_TRIAGE_OVERRIDE', entityType: 'REPORT' },
+    { action: 'VOLUNTEER_DISPATCH_AUTHORIZED', entityType: 'VOLUNTEER' },
+    { action: 'SHELTER_CAPACITY_OVERRIDE', entityType: 'SHELTER' },
+    { action: 'AI_DAMAGE_CLAIM_APPROVED', entityType: 'DAMAGE_CLAIM' },
+    { action: 'EMERGENCY_BROADCAST_TRIGGERED', entityType: 'BROADCAST' },
+    { action: 'INCIDENT_RESOLVED_IN_FIELD', entityType: 'REPORT' },
+    { action: 'GEOSPATIAL_SURVEILLANCE_UPDATE', entityType: 'SYSTEM' },
+    { action: 'AGENCY_RESCUE_CONVOY_DEPLOYED', entityType: 'AGENCY' },
+  ]
+
+  for (let i = 1; i <= 1050; i++) {
+    const act = ACTIONS[i % ACTIONS.length]
+    const email = ADMIN_EMAILS[i % ADMIN_EMAILS.length]
+    const id = `aud-${(1000 + i).toString()}`
+    const timeAgoMs = 1000 * 60 * (i * 6 + (i % 25))
+
+    list.push({
+      id,
+      adminEmail: email,
+      action: act.action,
+      entityType: act.entityType,
+      entityId: `ent-${((i * 13) % 1500 + 1).toString()}`,
+      details: {
+        sector: DISASTER_SECTORS[i % DISASTER_SECTORS.length].city,
+        statusCode: 200,
+        latencyMs: 14 + (i % 80),
+      },
+      createdAt: new Date(Date.now() - timeAgoMs).toISOString(),
+    })
+  }
+  return list
+}
 
 // -----------------------------------------------------------------------------
-// PERSISTENT DATA CONTAINERS
+// PERSISTENT DATA CONTAINERS (1000s OF RECORDS ACROSS CITIZEN, ADMIN & VOLUNTEER)
 // -----------------------------------------------------------------------------
 
-let reportsStore: Report[] = loadLocal<Report[]>(STORAGE_KEY_REPORTS, generate1000Reports)
-let sheltersStore: Shelter[] = loadLocal<Shelter[]>(STORAGE_KEY_SHELTERS, () => initialShelters)
-let volunteersStore: Volunteer[] = loadLocal<Volunteer[]>(STORAGE_KEY_VOLUNTEERS, () => initialVolunteers)
-let agenciesStore: Agency[] = loadLocal<Agency[]>(STORAGE_KEY_AGENCIES, () => initialAgencies)
-let alertsStore: Alert[] = loadLocal<Alert[]>(STORAGE_KEY_ALERTS, () => initialAlerts)
-let checkinsStore: SafetyCheckin[] = loadLocal<SafetyCheckin[]>(STORAGE_KEY_CHECKINS, () => initialCheckins)
-let missingStore: MissingPerson[] = loadLocal<MissingPerson[]>(STORAGE_KEY_MISSING, () => initialMissing)
-let damageStore: DamageAssessmentReport[] = loadLocal<DamageAssessmentReport[]>(STORAGE_KEY_DAMAGE, () => initialDamageReports)
-let auditStore: AuditLog[] = loadLocal<AuditLog[]>(STORAGE_KEY_AUDIT, () => [
-  { id: 'aud-001', adminEmail: 'admin@aapdasetu.org', action: 'SYSTEM_BOOTSTRAP', entityType: 'SYSTEM', details: { msg: 'Incident command network initialized' }, createdAt: new Date().toISOString() },
-])
+let reportsStore: Report[] = loadLocal<Report[]>(STORAGE_KEY_REPORTS, generate1500Reports)
+let sheltersStore: Shelter[] = loadLocal<Shelter[]>(STORAGE_KEY_SHELTERS, generate250Shelters)
+let volunteersStore: Volunteer[] = loadLocal<Volunteer[]>(STORAGE_KEY_VOLUNTEERS, generate500Volunteers)
+let agenciesStore: Agency[] = loadLocal<Agency[]>(STORAGE_KEY_AGENCIES, generate100Agencies)
+let alertsStore: Alert[] = loadLocal<Alert[]>(STORAGE_KEY_ALERTS, generate150Alerts)
+let checkinsStore: SafetyCheckin[] = loadLocal<SafetyCheckin[]>(STORAGE_KEY_CHECKINS, generate800Checkins)
+let missingStore: MissingPerson[] = loadLocal<MissingPerson[]>(STORAGE_KEY_MISSING, generate300MissingPersons)
+let damageStore: DamageAssessmentReport[] = loadLocal<DamageAssessmentReport[]>(STORAGE_KEY_DAMAGE, generate600DamageAssessments)
+let auditStore: AuditLog[] = loadLocal<AuditLog[]>(STORAGE_KEY_AUDIT, generate1000AuditLogs)
 
 // -----------------------------------------------------------------------------
 // PUBLIC MOCKS INTERFACE
@@ -664,8 +749,63 @@ export const mocks = {
   },
 
   getReport(trackingId: string): Report | undefined {
-    const clean = trackingId.toUpperCase().trim()
-    return reportsStore.find((r) => r.trackingId.toUpperCase() === clean || r.id === clean)
+    if (!trackingId || typeof trackingId !== 'string') return undefined
+    const raw = trackingId.trim()
+    if (!raw) return undefined
+    const upper = raw.toUpperCase()
+    const lower = raw.toLowerCase()
+
+    // 1. Direct match in reportsStore (trackingId, id, case-insensitive)
+    const rep = reportsStore.find(
+      (r) =>
+        r.trackingId?.toUpperCase() === upper ||
+        r.id?.toLowerCase() === lower ||
+        r.id?.toUpperCase() === upper ||
+        r.trackingId?.toLowerCase() === lower
+    )
+    if (rep) return rep
+
+    // 2. Lookup in damage assessment store (if user enters an SDRF claim ID or dmg- ID)
+    const dmg = damageStore.find(
+      (d) =>
+        d.claimId?.toUpperCase() === upper ||
+        d.id?.toLowerCase() === lower ||
+        d.id?.toUpperCase() === upper ||
+        d.claimId?.toLowerCase() === lower
+    )
+    if (dmg) {
+      return {
+        id: dmg.id,
+        trackingId: dmg.claimId,
+        type: 'other',
+        status: dmg.status === 'approved' ? 'resolved' : 'in_progress',
+        priorityScore: Math.round(dmg.damageScore || 75),
+        priorityLabel: dmg.damageGrade === 'DESTROYED' ? 'RED' : dmg.damageGrade === 'MAJOR' ? 'YELLOW' : 'GREEN',
+        latitude: dmg.latitude,
+        longitude: dmg.longitude,
+        landmark: dmg.propertyAddress || `${dmg.district} District`,
+        description: `SDRF Relief Claim for ${dmg.infrastructureType?.replace('_', ' ').toUpperCase() || 'Property'} — Estimated Relief: ₹${(dmg.compensationInr || 0).toLocaleString('en-IN')}`,
+        reporterName: dmg.claimantName,
+        reporterPhone: dmg.claimantPhone,
+        assignedAgencyName: 'State Disaster Response Force (SDRF)',
+        assignedVolunteerName: 'Damage Verification Officer',
+        resolutionNotes: `Claim Status: ${dmg.status?.toUpperCase() || 'UNDER REVIEW'}. Verified AI Grade: ${dmg.damageGrade} (${dmg.damageScore}/100).`,
+        createdAt: dmg.createdAt,
+      }
+    }
+
+    // 3. Fallback sanitized alphanumeric match (e.g. spaces/dashes variations)
+    const alphanumeric = upper.replace(/[^A-Z0-9]/g, '')
+    if (alphanumeric.length >= 4) {
+      const looseMatch = reportsStore.find((r) => {
+        const rClean = r.trackingId?.replace(/[^A-Z0-9]/g, '') || ''
+        const rIdClean = r.id?.replace(/[^A-Z0-9]/g, '') || ''
+        return rClean.includes(alphanumeric) || alphanumeric.includes(rClean) || rIdClean.includes(alphanumeric)
+      })
+      if (looseMatch) return looseMatch
+    }
+
+    return undefined
   },
 
   createReport(input: ReportInput): Report {
@@ -960,45 +1100,274 @@ export const mocks = {
   },
 
   aiPfaChat(message: string, victimName?: string): PfaChatResponse {
-    const isEmergency = /trapped|water|bleeding|fire|collapse|help|dying|roof|chest|फंसा|डूब|खून|रक्त|আটকে|ଡୁବି|ଫସି/i.test(message)
-    const lower = message.toLowerCase().trim()
-    const isHindi = /नमस्ते|हेलो|भाई|bhaiya|bhai|kya|hai|madad|bachao|kaise|salam/i.test(lower)
-    const isBengali = /নমস্কার|হ্যালো|দাদা|bhai|kemon|acho|sahajjo|bachao|ki|hoyeche/i.test(lower)
-    const isOdia = /ନମସ୍କାର|ଭାଇ|ସାହାଯ୍ୟ|କଣ/i.test(lower)
-    const isGreeting = /^(hi|hello|hey|namaste|hello bhaiya|bhaiya|namaskar|helo|hlo|pranam)[\s!.]*$/i.test(lower) || lower.length < 15
+    const raw = message.trim()
+    let lower = raw.toLowerCase()
+
+    // Collapse repeating letters (e.g. cuuuted -> cuted, helppp -> help, drownnn -> drown)
+    const collapsed = lower.replace(/([a-z])\1{2,}/g, '$1$1')
+
+    // Normalize common Indian and global disaster/medical slang and typos
+    const normalized = collapsed
+      .replace(/\b(cuuted|cuted|cutted|cuting|cutt|kati|kat|kaat|kat gaya|ungli kat|haath kat)\b/g, 'cut')
+      .replace(/\b(drowing|drownig|drownd|drown|drowning|doob|dub|paani me doob)\b/g, 'drowning')
+      .replace(/\b(bliding|blead|bleding|blod|blodd|bloody|bleeding|khoon)\b/g, 'bleeding')
+      .replace(/\b(hart|hartatak|attak|heartattack|heartatak|chestpain|chaati me dard)\b/g, 'cardiac')
+      .replace(/\b(snak|snakbite|snk|saap|saanp|dasa)\b/g, 'snake')
+      .replace(/\b(burnn|burnt|burned|jal gaya|jala|jal)\b/g, 'burn')
+      .replace(/\b(fractur|toota|tuta|tut gaya|haddi)\b/g, 'fracture')
+      .replace(/\b(chok|chokin|choking|gala ghut|saans band)\b/g, 'choking')
+      .replace(/\b(shalter|sheltar|sheltr|camp|ashray|shibir)\b/g, 'shelter')
+      .replace(/\b(traack|trak|trac|traaking)\b/g, 'track')
+
+    // Include both original lower and normalized in matching
+    lower = `${lower} ${normalized}`
+
+    // Detect language preference
+    const isHindi = /[\u0900-\u097F]/u.test(raw) || /\b(namaste|kya|hai|madad|bachao|kaise|salam|dard|chot|pani|khana|aag|paani|chhat|sanp|saap|bijli|ghayal|kat|doob|haath|pair|ungli)\b/i.test(lower)
+    const isBengali = /[\u0980-\u09FF]/u.test(raw) || /\b(nomoshkar|kemon|acho|sahajjo|bachao|ki|hoyeche|rokto|agoon|jol|bhasha|ashroy|ghot|hath|pa|ungul)\b/i.test(lower)
+    const isOdia = /[\u0B00-\u0B7F]/u.test(raw) || /\b(namaskar|sahajya|pana|kia|asustha|niyan|banya|khyata|hatha|goda)\b/i.test(lower)
 
     let reply = ''
-    if (isEmergency) {
+    let isCritical = false
+    let dangerLevel: 'CRITICAL' | 'MODERATE' | 'LOW' = 'LOW'
+    let exerciseType: string | undefined = undefined
+
+    // 1. Drowning / Water Rescue / Sinking / Swallowed Water
+    if (/\b(drowning|drown|sinking|swimming|swept away|deep water|current pulling|water in lungs|पानी में डूब|ডুব|ବୁଡ଼ିବା)\b/i.test(lower)) {
+      isCritical = true
+      dangerLevel = 'CRITICAL'
       if (isHindi) {
-        reply = 'शांत रहें। तुरंत सुरक्षित और ऊंचे स्थान पर जाएं। 112 या 108 पर संपर्क करें, हमारी आपदा राहत टीम को सतर्क कर दिया गया है।'
+        reply = '1. तुरंत पीठ के बल लेटकर तैरें (Float करें - सिर पीछे झुकाएं, नाक-मुंह पानी से ऊपर रखें)। 2. किसी भी तैरने वाली वस्तु (प्लास्टिक बोतल, केन, लकड़ी, टायर) को पकड़ें। 3. बहाव के खिलाफ न लड़ें, ऊर्जा बचाएं और मदद के लिए आवाज दें। तुरंत 112 पर कॉल करें।'
       } else if (isBengali) {
-        reply = 'শান্ত থাকুন। অবিলম্বে উঁচু স্থানে আশ্রয় নিন। ১১২ বা ১০৮ নম্বরে যোগাযোগ করুন, উদ্ধারকারী দলকে বার্তা পাঠানো হয়েছে।'
+        reply = '১. চিৎ হয়ে ভেসে থাকুন (মাথা পিছনে রাখুন, নাক ও মুখ জলের উপরে রাখুন)। ২. ভাসমান কোনো বস্তু (বোতল, কাঠ, ক্যান) শক্ত করে ধরুন। ৩. স্রোতের বিরুদ্ধে সাঁতার কাটবেন না, সাহায্য না আসা পর্যন্ত ভেসে থাকুন। অবিলম্বে ১১২ নম্বরে কল করুন।'
       } else if (isOdia) {
-        reply = 'ଧୈର୍ଯ୍ୟ ରଖନ୍ତୁ। ତୁରନ୍ତ ନିରାପଦ ସ୍ଥାନକୁ ଯାଆନ୍ତୁ। ୧୧୨ ରେ ଯୋଗାଯୋଗ କରନ୍ତୁ, ଉଦ୍ଧାରକାରୀ ଦଳ ନିକଟରେ ଅଛନ୍ତି।'
+        reply = '୧. ପିଠି ଆଡ଼କୁ ଭାସି ରୁହନ୍ତୁ (ମୁଣ୍ଡ ପଛକୁ ରଖନ୍ତୁ, ନାକ-ମୁହଁ ପାଣି ଉପରେ ରଖନ୍ତୁ)। ୨. ଯେକୌଣସି ଭାସୁଥିବା ବସ୍ତୁକୁ ଧରି ରଖନ୍ତୁ। ୩. ପାଣି ସୁଅ ବିରୁଦ୍ଧରେ ନ ଲଢ଼ି ତୁରନ୍ତ ୧୧୨ କୁ କଲ୍ କରନ୍ତୁ।'
       } else {
-        reply = 'Stay calm. Move to high ground immediately, conserve your battery, and call 112 or 108. Disaster rescue units have been alerted.'
+        reply = '1. Roll onto your back and FLOAT immediately (tilt your head back, keep chin up and mouth/nose above water, breathe slowly). 2. Grab onto any floating item (jerrycan, thermocol, tree branch, tyre). 3. Do not fight current; conserve energy and shout for rescue. Emergency teams are alerted (Call 112).'
       }
-    } else if (isGreeting) {
+    }
+    // 2. Severe Bleeding / Cut / Hand Cut / Hemorrhage / Wound / Laceration
+    else if (/\b(cut|cuuted|cutted|bleed|bleeding|blood|hemorrhage|wound|lacerat|sever|amputat|chot|khoon|घाव|खून|चोट|রক্ত|ক্ষত|କ୍ଷତ)\b/i.test(lower)) {
+      isCritical = true
+      dangerLevel = 'CRITICAL'
       if (isHindi) {
-        reply = 'नमस्ते! मैं आपदामित्र AI हूँ। बताएं कि आपको क्या आपातकालीन सहायता या सुरक्षा मार्गदर्शन चाहिए?'
+        reply = '1. साफ कपड़े या पट्टी से घाव/कटे हुए हिस्से पर 5 से 10 मिनट तक लगातार तेज दबाव बनाए रखें। 2. घायल हाथ या पैर को दिल के स्तर से ऊपर उठाएं। 3. कपड़ा भीगने पर हटाएं नहीं, उसके ऊपर और कपड़ा लगाकर कसें। तुरंत 108 पर संपर्क करें।'
       } else if (isBengali) {
-        reply = 'নমস্কার! আমি আপদামিত্র AI। জরুরি নির্দেশিকা বা দুর্যোগ সহায়তার জন্য জানান কিভাবে সাহায্য করতে পারি?'
+        reply = '১. পরিষ্কার কাপড় বা গজ দিয়ে কাটা ক্ষতস্থানে ৫-১০ মিনিট সরাসরি শক্ত চাপ দিয়ে রাখুন। ২. কাটা অংশটি হৃদপিণ্ডের উপরে তুলে রাখুন। ৩. রক্তপাত দ্রুত বন্ধ না হলে অবিলম্বে ১০৮ নম্বরে অ্যাম্বুলেন্স ডাকুন।'
       } else if (isOdia) {
-        reply = 'ନମସ୍କାର! ମୁଁ ଆପଦାମିତ୍ର AI। ଜରୁରୀକାଳୀନ ସୂଚନା ବା ବିପର୍ଯ୍ୟୟ ସହାୟତା ପାଇଁ ପଚାରନ୍ତୁ।'
+        reply = '୧. ସଫା କପଡ଼ା ବା ପଟିରେ କ୍ଷତ ସ୍ଥାନକୁ ୫-୧୦ ମିନିଟ୍ ଟାଣ କରି ଚାପି ଧରନ୍ତୁ। ୨. ଆହତ ଅଙ୍ଗକୁ ଛାତି ଉଚ୍ଚତାଠାରୁ ଉପରକୁ ଟେକି ରଖନ୍ତୁ। ୩. ରକ୍ତସ୍ରାବ ବନ୍ଦ ନ ହେଲେ ତୁରନ୍ତ ୧୦୮ କୁ କଲ୍ କରନ୍ତୁ।'
       } else {
-        reply = 'Namaste! I am AapdaMitra AI. Tell me what emergency guidance or disaster assistance you need.'
+        reply = '1. Apply firm, direct pressure on the cut using a clean cloth or sterile gauze for 5–10 minutes continuously without lifting. 2. Elevate the injured hand or limb above heart level. 3. If bleeding does not stop or is pulsing, maintain tight pressure and call 108 / 112 immediately.'
       }
-    } else {
-      reply = `I am with you ${victimName && victimName !== 'Friend' ? victimName : ''}. Take a slow deep breath (4 seconds in, 4 seconds out). Relief teams and shelter networks are active in your sector.`
+    }
+    // 3. CPR / Cardiac / Unconscious / Heart Attack / Pulse
+    else if (/\b(cpr|cardiac|heart attack|unconscious|fainted|pulse|chest pain|behos|बेहोश|हार्ट अटैक|অজ্ঞান|ଚେତାଶୂନ୍ୟ)\b/i.test(lower)) {
+      isCritical = true
+      dangerLevel = 'CRITICAL'
+      if (isHindi) {
+        reply = '1. तुरंत 108 / 112 पर कॉल करें। 2. मरीज को सपाट जमीन पर पीठ के बल लिटाएं। 3. छाती के केंद्र पर दोनों हाथ रखकर 2 इंच गहरा और तेज दबाव दें (100-120 प्रति मिनट)। सांस न चलने तक लगातार सीपीआर जारी रखें।'
+      } else if (isBengali) {
+        reply = '১. অবিলম্বে ১০৮ বা ১১২ এ কল করুন। ২. রোগীকে সমান শক্ত মেঝেতে শোয়ান। ৩. বুকের মাঝখানে হাত রেখে জোরে ও দ্রুত চাপ দিন (মিনিটে ১০০-১২০ বার)। জরুরি সাহায্য না পৌঁছানো পর্যন্ত সিপিআর চালিয়ে যান।'
+      } else if (isOdia) {
+        reply = '୧. ତୁରନ୍ତ ୧୦୮ କିମ୍ବା ୧୧୨ କୁ କଲ୍ କରନ୍ତୁ। ୨. ରୋଗୀଙ୍କୁ ସମତଳ ଚଟାଣରେ ଶୁଆନ୍ତୁ। ୩. ଛାତି ମଝିରେ ଦୁଇ ହାତ ରଖି ଜୋରରେ ଓ ଶୀଘ୍ର ଚାପ ଦିଅନ୍ତୁ (ମିନିଟରେ ୧୦୦-୧୨୦ ଥର)।'
+      } else {
+        reply = '1. Call 108 / 112 immediately. 2. Lay patient on their back on a firm surface. 3. Place both hands in the center of the chest and push hard & fast (100–120 compressions/min, 2 inches deep). Continue Hands-Only CPR until paramedics arrive.'
+      }
+    }
+    // 4. Snakebite / Poisonous bite
+    else if (/\b(snake|snakebite|cobra|viper|venom|poison|सांप|साँप|সাপ|ସାପ)\b/i.test(lower)) {
+      isCritical = true
+      dangerLevel = 'CRITICAL'
+      if (isHindi) {
+        reply = '1. मरीज को पूरी तरह शांत और स्थिर रखें। 2. काटे गए अंग को दिल के स्तर से नीचे रखें। 3. घाव पर चीरा न लगाएं, मुंह से जहर न चूसें और न ही बर्फ लगाएं। तुरंत नजदीकी अस्पताल में एंटी-वेनम के लिए जाएं (कॉल 108)।'
+      } else {
+        reply = '1. Keep victim completely still and calm; immobilize the bitten limb below heart level. 2. Do NOT cut, burn, tourniquet, or suck the venom. 3. Rush to the nearest hospital for anti-venom immediately (Call 108).'
+      }
+    }
+    // 5. Burns / Scalds / Chemical Burn
+    else if (/\b(burn|burns|burnt|scalding|blister|जलना|जला|আগুনে পোড়া|ପୋଡ଼ିଯିବା)\b/i.test(lower)) {
+      dangerLevel = 'MODERATE'
+      if (isHindi) {
+        reply = '1. जले हुए स्थान पर 10-20 मिनट तक सामान्य ठंडा नल का पानी डालें। 2. बर्फ, टूथपेस्ट, तेल या हल्दी बिल्कुल न लगाएं। 3. फफोले न फोड़ें और साफ सूती कपड़े से ढंककर रखें। गंभीर जलने पर 108 पर कॉल करें।'
+      } else {
+        reply = '1. Immediately cool the burn under gentle, running cool tap water for 10–20 minutes. 2. Do NOT apply ice, toothpaste, butter, or oil. 3. Cover loosely with a clean, dry cloth or cling wrap. Call 108 if blisters form.'
+      }
+    }
+    // 6. Fracture / Broken Bone / Sprain / Dislocation
+    else if (/\b(fracture|broken bone|sprain|dislocat|हड्डी टूटना|हड्डी|হাড় ভাঙা|ହାଡ଼ ଭାଙ୍ଗିବା)\b/i.test(lower)) {
+      dangerLevel = 'MODERATE'
+      if (isHindi) {
+        reply = '1. टूटी हुई हड्डी को सीधा करने की कोशिश न करें। 2. लकड़ी के तख्ते या मुड़ी हुई मैगजीन और कपड़े से अंग को स्थिर (Splint) करें। 3. सूजन कम करने के लिए कपड़े में लपेटकर बर्फ लगाएं। तुरंत अस्पताल ले जाएं।'
+      } else {
+        reply = '1. Do not try to realign or push bones back. 2. Immobilize the limb using a rigid splint (wood, rolled newspaper) tied above and below the injury with cloth strips. 3. Apply ice wrapped in cloth to reduce swelling. Call 108.'
+      }
+    }
+    // 7. Choking / Airway Obstruction / Cannot breathe
+    else if (/\b(chok|choking|airway|gagging|asphyxiat|गला घुट|दम बंद|ଗଳା ଲାଗିବା)\b/i.test(lower)) {
+      isCritical = true
+      dangerLevel = 'CRITICAL'
+      if (isHindi) {
+        reply = '1. व्यक्ति की पीठ पर दोनों कंधों के बीच 5 बार जोर से हथेली से मारें (Back blows)। 2. राहत न मिलने पर नाभि के ठीक ऊपर दोनों हाथ रखकर 5 बार अंदर और ऊपर की ओर तेज झटका दें (Heimlich maneuver)।'
+      } else {
+        reply = '1. Deliver 5 firm back blows between shoulder blades with heel of hand. 2. If object is not cleared, perform 5 quick abdominal thrusts (Heimlich Maneuver) inwards and upwards above navel. Alternate 5 back blows + 5 thrusts until airway clears.'
+      }
+    }
+    // 8. Flood / Rising Water / Roof Trapped / Submerged
+    else if (/\b(flood|water level|submerged|sinking|roof|inundat|water inside|बाढ़|पानी भर|ডুব|বন্যা|ବନ୍ୟା)\b/i.test(lower)) {
+      isCritical = true
+      dangerLevel = 'CRITICAL'
+      if (isHindi) {
+        reply = '1. तत्काल छत या ऊंचे सुरक्षित स्थान पर जाएं। 2. घर की मुख्य बिजली स्विच और गैस सिलेंडर बंद कर दें। 3. बहते पानी में न चलें और न गाड़ी चलाएं। तुरंत 112 डायल करें या 1-Tap SOS दबाएं।'
+      } else {
+        reply = '1. Move immediately to highest available floor or reinforced rooftop. 2. Disconnect main electrical breaker and LPG cylinder valves. 3. Do NOT walk or drive into moving floodwaters. Dial 112 or trigger 1-Tap SOS for NDRF boat rescue.'
+      }
+    }
+    // 9. Earthquake / Tremors / Building Shaking
+    else if (/\b(earthquake|tremor|quake|aftershock|भूकंप|ভূমিকম্প|ଭୂମିକମ୍ପ)\b/i.test(lower)) {
+      dangerLevel = 'MODERATE'
+      if (isHindi) {
+        reply = '1. DROP (झुकें), COVER (मजबूत मेज के नीचे सिर ढंकें), HOLD ON (मेज को मजबूती से पकड़े रहें)। 2. खिड़कियों, कांच और भारी अलमारियों से दूर रहें। 3. झटके रुकने के बाद सीढ़ियों से खुले मैदान में जाएं (लिफ्ट का उपयोग न करें)।'
+      } else {
+        reply = '1. DROP to hands and knees. 2. Take COVER under a sturdy table/desk and protect your head/neck. 3. HOLD ON until shaking stops. Stay away from glass windows and exterior walls. Use stairs, never elevators.'
+      }
+    }
+    // 10. Fire / Smoke / Gas Leak
+    else if (/\b(fire|smoke|flame|gas leak|cylinder|आग|धुआं|আগুন|ଧୂଆଁ|ନିଆଁ)\b/i.test(lower)) {
+      isCritical = true
+      dangerLevel = 'CRITICAL'
+      if (isHindi) {
+        reply = '1. धुएं से बचने के लिए फर्श पर झुककर रेंगें (Crawl low)। 2. नाक-मुंह पर गीला कपड़ा रखें। 3. कपड़ों में आग लगने पर रुकें, जमीन पर गिरें और लुढ़कें (Stop, Drop & Roll)। तुरंत 101 या 112 पर कॉल करें।'
+      } else {
+        reply = '1. Stay low and crawl beneath smoke; cover nose and mouth with a damp cloth. 2. Touch doors with the back of your hand before opening—if hot, do not open. 3. If clothes catch fire: STOP, DROP, and ROLL. Call Fire Service (101 / 112).'
+      }
+    }
+    // 11. Electrocution / Live Wire
+    else if (/\b(electroc|electric|shock|live wire|बिजली का झटका|বিদ্যুৎ স্পৃষ্ট|କରେଣ୍ଟ)\b/i.test(lower)) {
+      isCritical = true
+      dangerLevel = 'CRITICAL'
+      if (isHindi) {
+        reply = '1. पीड़ित को सीधे हाथों से न छुएं। 2. तुरंत मुख्य बिजली स्विच बंद करें या सूखी लकड़ी/प्लास्टिक से तार हटाएं। 3. सांस की जांच करें और तुरंत 108 पर कॉल करें।'
+      } else {
+        reply = '1. Do NOT touch the victim with bare hands. 2. Turn off the main electrical breaker immediately or use a dry wooden stick to separate the wire. 3. Check responsiveness and call 108 for ambulance.'
+      }
+    }
+    // 12. Heatstroke / Dehydration / Sunstroke
+    else if (/\b(heatstroke|heat stroke|sunstroke|dehydrat|loo|लू|গরম লাগা)\b/i.test(lower)) {
+      dangerLevel = 'MODERATE'
+      if (isHindi) {
+        reply = '1. व्यक्ति को तुरंत छायादार और ठंडे स्थान पर ले जाएं। 2. कपड़े ढीले करें और माथे, गर्दन तथा बगलों में गीला कपड़ा लगाएं। 3. यदि होश में हो, तो ओआरएस (ORS) या ठंडा पानी पिलाएं। 108 पर कॉल करें।'
+      } else {
+        reply = '1. Move person to a cool, shaded area immediately. 2. Loosen tight clothing and apply cool, wet cloths to neck, armpits, and groin. 3. Provide sips of cool water or ORS solution if conscious. Call 108.'
+      }
+    }
+    // 13. Water Purification / Safe Drinking Water
+    else if (/\b(purif|drinking water|clean water|boil|water safe|chlorine|पीने का पानी|पानी साफ|জল ফিল্টার)\b/i.test(lower)) {
+      if (isHindi) {
+        reply = '1. पानी को कम से कम 1 मिनट तक पूरी तरह उबालें। 2. यदि उबालना संभव न हो, तो प्रति लीटर पानी में 3-4 बूंद क्लोरीन लिक्विड या 1 क्लोरीन टैबलेट डालकर 30 मिनट तक रखें। बाढ़ का गंदा पानी सीधे न पिएं।'
+      } else {
+        reply = '1. Boil water vigorously for at least 1 full minute before drinking. 2. If boiling is not possible, add 3-4 drops of unscented household chlorine bleach or 1 purification tablet per litre and wait 30 minutes before consuming.'
+      }
+    }
+    // 14. Find Shelters / Relief Camps / Food Rations
+    else if (/\b(shelter|relief camp|food|ration|stay|bed|hungry|राहत शिविर|खाना|राशन|রিলিফ ক্যাম্প|ଶିବିର)\b/i.test(lower)) {
+      if (isHindi) {
+        reply = '1. निकटतम सरकारी राहत शिविर, भोजन और बिस्तर की लाइव क्षमता देखने के लिए ऊपर "Find Shelters" टैब पर जाएं। 2. वहां आपको जीपीएस नेविगेशन और राहत केंद्र के फोन नंबर मिल जाएंगे।'
+      } else {
+        reply = '1. Open the "Find Shelters" tab in AapdaSetu to view live capacity, food supply status, and turn-by-turn GPS directions to the nearest verified disaster relief camp.'
+      }
+    }
+    // 15. Damage Claim / Compensation / SDRF
+    else if (/\b(damage|claim|compensation|sdrf|relief fund|मुआवजा|नुकसान|क्षतिपूर्ती|ক্ষতিপূরণ)\b/i.test(lower)) {
+      if (isHindi) {
+        reply = '1. संपत्ति के नुकसान की भरपाई और SDRF क्लेम के लिए "Damage Assessment" टैब पर जाएं। 2. प्रभावित घर, खेत या दुकान की फोटो अपलोड करें; AI तुरंत नुकसान का स्कोर और अनुमानित राहत राशि तय करेगा।'
+      } else {
+        reply = '1. Visit the "Damage Assessment" tab to upload geotagged photos of damaged infrastructure. 2. Our AI ResNet-50 model computes the damage score and SDRF compensation entitlement automatically.'
+      }
+    }
+    // 16. Missing Person Lookup / Report
+    else if (/\b(missing|lost person|lost|find family|find person|लापता|गुमशुदा|নিখোঁজ|ନିଖୋଜ)\b/i.test(lower)) {
+      if (isHindi) {
+        reply = '1. लापता व्यक्ति की रिपोर्ट दर्ज करने या खोजने के लिए "Missing Persons" टैब पर जाएं। 2. नाम, फोटो और अंतिम स्थान दर्ज करें, हमारा सिस्टम राहत शिविरों में चेहरे की पहचान (AI matching) से खोजेगा।'
+      } else {
+        reply = '1. Go to the "Missing Persons" registry tab to report or search for family members. 2. Upload photos and details to enable cross-camp facial matching across emergency shelters.'
+      }
+    }
+    // 17. Track Incident / Tracking ID
+    else if (/\b(track|tracking id|status of report|where is help|स्थिति|ट्रैक)\b/i.test(lower)) {
+      if (isHindi) {
+        reply = '1. अपने रिपोर्ट या SOS की लाइव स्थिति जानने के लिए "Track Report" टैब में अपनी ट्रैकिंग आईडी (जैसे SOS-XXXX) दर्ज करें। वहां आपको तैनात स्वयंसेवक और दूरी का मैप दिखेगा।'
+      } else {
+        reply = '1. Enter your Tracking ID (e.g. SOS-...) in the "Track Report" page to view real-time response telemetry, assigned NDRF units, and arrival estimates on the live map.'
+      }
+    }
+    // 18. Help / Save Me / Emergency Distress Call
+    else if (/\b(help|helpp|save me|bachao|madad|danger|emergency|khatra|sahajjo|sahajya)\b/i.test(lower)) {
+      isCritical = true
+      dangerLevel = 'CRITICAL'
+      if (isHindi) {
+        reply = 'मैं आपकी सहायता के लिए तैयार हूँ। 1. सीधे खतरे में तुरंत 112 या 108 पर कॉल करें। 2. बताएं कि आप कहां हैं और क्या सहायता चाहिए (चोट, बाढ़, आग, या भोजन)। 3. आप ऊपर 1-Tap SOS बटन दबाकर भी तुरंत रेस्क्यू बुला सकते हैं।'
+      } else {
+        reply = 'I am here with you. 1. If you are in immediate life-threatening danger, call 112 or 108 right now. 2. Tell me your situation: are you injured, drowning/trapped in flood, facing fire, or needing shelter? 3. You can also trigger the 1-Tap SOS button to transmit GPS telemetry to NDRF.'
+      }
+    }
+    // 19. Emergency Phone Numbers / Helpline
+    else if (/\b(number|helpline|phone|contact|कॉल|नंबर|হেল্পলাইন|ହେଲ୍ପଲାଇନ)\b/i.test(lower)) {
+      reply = 'Emergency Hotlines: 112 (National Emergency), 108 (Ambulance), 101 (Fire), 1070 (State Disaster Management Authority), 1078 (NDMA Emergency Helpline).'
+    }
+    // 20. Panic / Anxiety / Scared / Shivering / Mental Stress
+    else if (/\b(panic|scared|afraid|fear|anxious|anxiety|breathe|shivering|nervous|डर|घबराहट|चिंता|ভয়|ଡର)\b/i.test(lower)) {
+      dangerLevel = 'MODERATE'
+      exerciseType = '4-4-4_BOX_BREATHING'
+      if (isHindi) {
+        reply = 'शांत रहें। स्क्रीन पर दिखाए जा रहे 4-4-4 ब्रीदिंग चक्र का पालन करें: 4 सेकंड गहरी सांस अंदर लें, 4 सेकंड रोकें, 4 सेकंड में धीरे-धीरे बाहर छोड़ें। बचाव दल सक्रिय हैं, आप सुरक्षित रहेंगे।'
+      } else {
+        reply = 'Take a slow, deep breath with me. Follow the 4-4-4 breathing cycle on screen: Inhale for 4s, hold for 4s, exhale slowly for 4s. Emergency response teams and relief resources are actively deployed in your area.'
+      }
+    }
+    // 21. Greetings / Initial Inquiries
+    else if (/^(hi|hello|hey|namaste|hello bhaiya|bhaiya|namaskar|helo|hlo|pranam|hola|kya hal|good morning|good evening)[\s!.]*$/i.test(raw)) {
+      if (isHindi) {
+        reply = 'नमस्ते! मैं आपदामित्र AI हूँ। बताएं कि आपको क्या आपातकालीन चिकित्सा, आपदा सुरक्षा, भोजन/आश्रय या राहत सहायता चाहिए?'
+      } else if (isBengali) {
+        reply = 'নমস্কার! আমি আপদামিত্র AI। জরুরি চিকিৎসা, আশ্রয়, বা দুর্যোগ সুরক্ষার জন্য কীভাবে সাহায্য করতে পারি জানান।'
+      } else if (isOdia) {
+        reply = 'ନମସ୍କାର! ମୁଁ ଆପଦାମିତ୍ର AI। ଜରୁରୀକାଳୀନ ଚିକିତ୍ସା, ଆଶ୍ରୟ ବା ବିପର୍ଯ୍ୟୟ ସହାୟତା ପାଇଁ ପଚାରନ୍ତୁ।'
+      } else {
+        reply = 'Namaste! I am AapdaMitra AI, your 24/7 disaster survival, triage, and crisis companion. Tell me what emergency, first-aid, or relief assistance you need right now.'
+      }
+    }
+    // 22. Specific Injury Parts or Dynamic Context
+    else if (/\b(hand|finger|leg|arm|foot|head|eye|stomach|back|shoulder|chest|neck|haath|pair|ungli|sar|aankh)\b/i.test(lower)) {
+      dangerLevel = 'MODERATE'
+      if (isHindi) {
+        reply = '1. घायल हिस्से को स्थिर रखें और अधिक न हिलाएं। 2. यदि खून बह रहा है तो साफ कपड़े से तेज दबाव दें। 3. सूजन या दर्द में कपड़े में बर्फ लपेटकर लगाएं। सहायता के लिए 108 या 112 पर कॉल करें।'
+      } else {
+        reply = '1. Keep the injured area supported and immobilized. 2. If bleeding, apply firm pressure with a clean cloth. 3. If bruised or painful, apply cold compress wrapped in cloth. In severe pain or deformity, call 108.'
+      }
+    }
+    // 23. Dynamic Fallback
+    else {
+      if (isHindi) {
+        reply = `मैं आपकी सहायता के लिए तैयार हूँ ${victimName && victimName !== 'Friend' ? victimName : ''}। कृपया अपनी स्थिति का विवरण दें (जैसे: चोट, पानी का स्तर, आग, या राहत सामग्री)। आपातकाल में तुरंत 112 या 108 पर संपर्क करें।`
+      } else if (isBengali) {
+        reply = 'আমি আপনার পাশে আছি। আপনার কি ধরনের সহায়তা প্রয়োজন বিস্তারিত লিখুন (যেমন: আঘাত, বন্যা, আশ্রয় বা ওষুধ)। জরুরি পরিস্থিতিতে ১১২ বা ১০৮ নম্বরে যোগাযোগ করুন।'
+      } else if (isOdia) {
+        reply = 'ମୁଁ ଆପଣଙ୍କ ସହାୟତା ପାଇଁ ପ୍ରସ୍ତୁତ। ଆପଣଙ୍କ ସମସ୍ୟା ବିଷୟରେ ଜଣାନ୍ତୁ। ଜରୁରୀକାଳୀନ ପରିସ୍ଥିତିରେ ୧୧୨ କୁ କଲ୍ କରନ୍ତୁ।'
+      } else {
+        reply = `I am here with you ${victimName && victimName !== 'Friend' ? victimName : ''}. Please tell me your specific emergency, injury, flood level, or relief requirement so I can provide precise step-by-step guidance. In life-threatening danger, call 112 or 108 immediately.`
+      }
     }
 
     return {
       reply,
-      isCritical: isEmergency,
+      exerciseType,
+      isCritical,
+      dangerLevel,
+      helpline: isCritical ? '112' : dangerLevel === 'MODERATE' ? '108' : undefined,
       safetyChecklist: [
-        'Stay on highest accessible level (do not enter closed attics)',
-        'Turn off main electricity switch if water enters building',
-        'National Emergency Helpline: 112 | Ambulance: 108',
+        'Stay in a safe location on the highest accessible floor',
+        'Conserve mobile phone battery for emergency coordination',
+        'National Emergency Hotline: 112 | Ambulance: 108',
       ],
     }
   },
@@ -1156,19 +1525,17 @@ export const mocks = {
     }
   },
 
-  // ---- Reset Mock Data to Fresh 1000+ Records ----
+  // ---- Reset Mock Data to Fresh 1000s of Records ----
   resetData(): void {
-    reportsStore = generate1000Reports()
-    sheltersStore = [...initialShelters]
-    volunteersStore = [...initialVolunteers]
-    agenciesStore = [...initialAgencies]
-    alertsStore = [...initialAlerts]
-    checkinsStore = [...initialCheckins]
-    missingStore = [...initialMissing]
-    damageStore = [...initialDamageReports]
-    auditStore = [
-      { id: `aud-${Date.now()}`, adminEmail: 'admin@aapdasetu.org', action: 'DATABASE_RESET', entityType: 'SYSTEM', details: { count: reportsStore.length }, createdAt: new Date().toISOString() },
-    ]
+    reportsStore = generate1500Reports()
+    sheltersStore = generate250Shelters()
+    volunteersStore = generate500Volunteers()
+    agenciesStore = generate100Agencies()
+    alertsStore = generate150Alerts()
+    checkinsStore = generate800Checkins()
+    missingStore = generate300MissingPersons()
+    damageStore = generate600DamageAssessments()
+    auditStore = generate1000AuditLogs()
 
     saveLocal(STORAGE_KEY_REPORTS, reportsStore)
     saveLocal(STORAGE_KEY_SHELTERS, sheltersStore)

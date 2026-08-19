@@ -260,9 +260,12 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
 
     setSending(true)
     try {
+      const parsedAge = age.trim() ? parseInt(age.trim(), 10) : undefined
+      const validAge = parsedAge !== undefined && !isNaN(parsedAge) && parsedAge >= 0 ? parsedAge : undefined
+
       const person = await createMissingPerson({
         name: name.trim(),
-        age: age ? Number(age) : undefined,
+        age: validAge,
         gender,
         lastSeenLocation: lastSeenLocation.trim(),
         clothes: clothes.trim() || undefined,

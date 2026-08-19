@@ -81,8 +81,10 @@ export default function Reports() {
   const rankedVolunteers = useMemo(() => {
     if (!selected) return volunteers
     return [...volunteers].sort((a, b) => {
-      const aSkill = a.skills.includes(selected.type as any) ? 1 : 0
-      const bSkill = b.skills.includes(selected.type as any) ? 1 : 0
+      const aSkills = Array.isArray(a.skills) ? a.skills : []
+      const bSkills = Array.isArray(b.skills) ? b.skills : []
+      const aSkill = aSkills.includes(selected.type) ? 1 : 0
+      const bSkill = bSkills.includes(selected.type) ? 1 : 0
       if (aSkill !== bSkill) return bSkill - aSkill
 
       if (selected.latitude && selected.longitude && a.latitude && a.longitude && b.latitude && b.longitude) {

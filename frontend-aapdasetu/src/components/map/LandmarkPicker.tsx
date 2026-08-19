@@ -144,10 +144,11 @@ export default function LandmarkPicker({
           <TileLayer
             attribution='&copy; <a href="https://carto.com/">CARTO</a>'
             url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+            subdomains="abcd"
           />
           <MapInteractions onPick={onChange} />
           {view && <Recenter target={view.target} zoom={view.zoom} />}
-          {value && (
+          {value && typeof value.lat === 'number' && typeof value.lng === 'number' && (
             <Marker
               position={[value.lat, value.lng]}
               icon={pickIcon()}

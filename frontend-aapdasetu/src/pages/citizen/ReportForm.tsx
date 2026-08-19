@@ -19,7 +19,7 @@ import LandmarkPicker from '../../components/map/LandmarkPicker'
 import { useToast } from '../../components/common/Toast'
 import { fileToDataUrl, getCurrentPosition, reverseGeocode } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
-import { useLocation } from '../../hooks/useLocation'
+import { useGeoLocation } from '../../hooks/useLocation'
 import type { GeoPoint, IncidentType, MediaPayload, Report, ReportInput } from '../../types'
 
 const emergencyTypeOptions: { value: IncidentType; key: string }[] = [
@@ -35,7 +35,7 @@ const emergencyTypeOptions: { value: IncidentType; key: string }[] = [
 export default function ReportForm() {
   const { t } = useLanguage()
   const { toast } = useToast()
-  const { coords, accuracy, refresh: refreshGps } = useLocation()
+  const { coords, accuracy, refresh: refreshGps } = useGeoLocation()
 
   const [selectedType, setSelectedType] = useState<string>('')
   const [gpsAddress, setGpsAddress] = useState<string>('')
@@ -60,66 +60,42 @@ export default function ReportForm() {
   const videoInputRef = useRef<HTMLInputElement>(null)
   const audioInputRef = useRef<HTMLInputElement>(null)
 
-  // Auto-detect and reverse-geocode GPS on mount
+  // Auto-detect and reverse-geocode coords on change
   useEffect(() => {
-    let active = true
-    const initLocation = async () => {
-      setLocatingGps(true)
-      try {
-        const pos = await getCurrentPosition(false, 4000)
-        if (!active) return
-        const point: GeoPoint = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-        setCustomPoint(point)
-        setGpsError(null)
-        try {
-          const addr = await reverseGeocode(point)
-          if (active) {
-            setGpsAddress(addr ?? `${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
-          }
-        } catch {
-          if (active) setGpsAddress(`${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
-        }
-      } catch {
-        if (!active) return
-        setGpsError('User denied Geolocation')
-        // Leave empty so citizen can enter their actual address or pick on map
-      } finally {
-        if (active) setLocatingGps(false)
-      }
-    }
-    initLocation()
-    return () => {
-      active = false
-    }
-  }, [])
-
-  // Sync coords from useLocation hook if updated
-  useEffect(() => {
-    if (coords && !gpsAddress) {
-      setCustomPoint({ lat: coords.latitude, lng: coords.longitude })
+    if (coords && (!customPoint || !gpsAddress)) {
+      const point: GeoPoint = { lat: coords.latitude, lng: coords.longitude }
+      setCustomPoint(point)
       setGpsError(null)
-      reverseGeocode({ lat: coords.latitude, lng: coords.longitude })
+      reverseGeocode(point)
         .then((addr) => {
           if (addr) setGpsAddress(addr)
+          else setGpsAddress(`${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
         })
-        .catch(() => {})
+        .catch(() => {
+          setGpsAddress(`${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
+        })
     }
-  }, [coords, gpsAddress])
+  }, [coords, customPoint, gpsAddress])
 
   const handleRetryGps = async () => {
     setLocatingGps(true)
     setGpsError(null)
     try {
       refreshGps()
-      const pos = await getCurrentPosition(false, 4000)
+      const pos = await getCurrentPosition(true, 8000)
       const point: GeoPoint = { lat: pos.coords.latitude, lng: pos.coords.longitude }
       setCustomPoint(point)
       const addr = await reverseGeocode(point)
       setGpsAddress(addr ?? `${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
       toast('GPS location locked successfully!', 'success')
     } catch {
-      setGpsError('User denied Geolocation')
-      toast('GPS signal blocked. Please type your location/landmark manually.', 'error')
+      if (coords) {
+        setCustomPoint({ lat: coords.latitude, lng: coords.longitude })
+        toast('Using regional / IP estimated location.', 'info')
+      } else {
+        setGpsError('Location unavailable. Type your area or pick on map.')
+        toast('Location unavailable. Please pick on map or enter manually.', 'info')
+      }
     } finally {
       setLocatingGps(false)
     }
@@ -262,7 +238,9 @@ export default function ReportForm() {
         if (!existingTracked.includes(finalReport.trackingId)) {
           localStorage.setItem('aapdasetu_tracked_reports', JSON.stringify([finalReport.trackingId, ...existingTracked]))
         }
-      } catch {}
+      } catch {
+        // Storage unavailable
+      }
 
       toast('Emergency incident reported successfully!', 'success')
     } catch (err) {

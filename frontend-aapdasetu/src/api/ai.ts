@@ -21,21 +21,24 @@ const OPENROUTER_API_KEY =
   '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'
 
 export const OPENROUTER_FREE_MODELS = [
-  'google/gemma-2-9b-it:free',
-  'mistralai/mistral-7b-instruct:free',
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'qwen/qwen-2.5-72b-instruct:free',
+  'nvidia/nemotron-3-nano-30b-a3b:free',
+  'google/gemma-4-31b-it:free',
+  'google/gemma-4-26b-a4b-it:free',
+  'nvidia/nemotron-nano-9b-v2:free',
+  'openai/gpt-oss-20b:free',
+  'liquid/lfm-2.5-2.6b:free',
+  'z-ai/glm-5.2:free',
 ] as const
 
-const AAPDAMITRA_SYSTEM_PROMPT = `You are AapdaMitra AI (आपदामित्र), an official emergency disaster survival assistant.
+const AAPDAMITRA_SYSTEM_PROMPT = `You are AapdaMitra AI (आपदामित्र), the official AI disaster survival assistant and crisis first-aid expert for AapdaSetu.
 
 STRICT OPERATIONAL DIRECTIVE:
-1. GIVE ONLY THE DIRECT ANSWER TO THE USER.
-2. MAXIMUM 2 SHORT, CLEAR SENTENCES OR 2 NUMBERED ACTION POINTS.
-3. NEVER output thinking process, internal monologue, rule explanations, or preambles like "Okay, the user is...".
-4. NEVER use asterisks (*, **, ***), decorative markdown, or emojis.
-5. If medical/emergency: tell immediate life-saving physical steps first.
-6. Reply in the exact same language as the user (English, Hindi, Bengali, Odia, etc.).`
+1. Give a direct, practical, and highly relevant answer to the user's specific emergency, first-aid, or disaster question.
+2. Provide 2 to 4 concise, numbered life-saving action points or direct guidance.
+3. NEVER output internal monologue, reasoning tags, meta-thinking, or preambles like "The user is asking...".
+4. If there is injury or danger: provide immediate physical first-aid steps, then mention helpline 112 / 108.
+5. Respond in the EXACT language and script used by the user (English, Hindi, Bengali, Odia, Hinglish, etc.).
+6. Keep answers actionable, empathetic, and specific to the problem.`
 
 interface ChatHistoryItem {
   role: 'user' | 'bot' | 'assistant' | 'system'
@@ -133,9 +136,9 @@ export function cleanAiOutput(rawText: string): string {
 
   // 3. Remove thinking process headers or internal commentary
   text = text.replace(/^(?:Here(?:'s| is) (?:a |the )?thinking process:?|Thinking Process:?|Reasoning:?)[\s\S]*?(?=\n\n\n|\n[A-Z]|$)/gmi, '')
-  text = text.replace(/^(?:Okay,\s*the\s*user\s*is[\s\S]*?(?=\n\n|\n[A-Z\u0900-\u097F\u0980-\u09FF]|$))/gmi, '')
-  text = text.replace(/^(?:Looking\s*at\s*the\s*history[\s\S]*?(?=\n\n|\n[A-Z\u0900-\u097F\u0980-\u09FF]|$))/gmi, '')
-  text = text.replace(/^(?:According\s*to\s*my\s*instructions[\s\S]*?(?=\n\n|\n[A-Z\u0900-\u097F\u0980-\u09FF]|$))/gmi, '')
+  text = text.replace(/^(?:Okay,\s*the\s*user\s*is[\s\S]*?(?=\n\n|\n[A-Z\p{sc=Devanagari}\p{sc=Bengali}]|$))/gmiu, '')
+  text = text.replace(/^(?:Looking\s*at\s*the\s*history[\s\S]*?(?=\n\n|\n[A-Z\p{sc=Devanagari}\p{sc=Bengali}]|$))/gmiu, '')
+  text = text.replace(/^(?:According\s*to\s*my\s*instructions[\s\S]*?(?=\n\n|\n[A-Z\p{sc=Devanagari}\p{sc=Bengali}]|$))/gmiu, '')
 
   // 4. Remove rule echo lines e.g. "• Rule 1: ...", "1. Analyze User Input: ...", "• Since it's..."
   text = text.replace(/^\s*(?:\d+\.\s*(?:Analyze|Check Rules|Determine|Evaluate|Reasoning)|•\s*(?:Rule\s*\d+:|Reply in|Give ONLY|No thinking|Since it's|It's a|I need to)).*$/gmi, '')
@@ -149,7 +152,9 @@ export function cleanAiOutput(rawText: string): string {
       else if (parsed.reply) text = parsed.reply
       else if (parsed.text) text = parsed.text
       else if (parsed.response) text = parsed.response
-    } catch {}
+    } catch {
+      // Not valid JSON payload, keep text as is
+    }
   }
 
   // 6. Remove markdown formatting, backticks, hashtags
@@ -201,8 +206,8 @@ async function callOpenRouter(
         body: JSON.stringify({
           model,
           messages: openRouterMessages,
-          temperature: 0.1,
-          max_tokens: 120,
+          temperature: 0.4,
+          max_tokens: 220,
         }),
       })
 

@@ -110,7 +110,9 @@ export default function Home() {
     try {
       const stored = JSON.parse(localStorage.getItem('aapdasetu_tracked_reports') || '[]') as string[]
       setRecentTracked(stored.slice(0, 4))
-    } catch {}
+    } catch {
+      // Storage unavailable or corrupted
+    }
 
     return () => {
       active = false

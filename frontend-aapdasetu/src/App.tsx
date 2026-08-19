@@ -31,6 +31,7 @@ const Agencies = lazy(() => import('./pages/admin/Agencies'))
 const Communications = lazy(() => import('./pages/admin/Communications'))
 const Analytics = lazy(() => import('./pages/admin/Analytics'))
 const AuditLogs = lazy(() => import('./pages/admin/AuditLogs'))
+const SafetyRegistry = lazy(() => import('./pages/admin/SafetyRegistry'))
 const Settings = lazy(() => import('./pages/admin/Settings'))
 
 const VolunteerLogin = lazy(() => import('./pages/volunteer/Login'))
@@ -82,7 +83,8 @@ export default function App() {
             <Route path="alerts" element={<Communications />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="audit" element={<AuditLogs />} />
-            <Route path="safety-checkins" element={<AuditLogs />} />
+            <Route path="safety-checkins" element={<SafetyRegistry />} />
+            <Route path="safety-registry" element={<SafetyRegistry />} />
             <Route path="settings" element={<Settings />} />
           </Route>
 

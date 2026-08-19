@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   FileSpreadsheet,
   Copy,
   Home,
-  Droplets,
-  Route,
-  Zap,
-  Building,
-  Cpu,
+  Store,
+  Wheat,
+  Warehouse,
+  Flame,
   ShieldCheck,
-  ExternalLink
+  ExternalLink,
+  Cpu
 } from 'lucide-react'
 import { aiDamageAssessment, type DamageVerdict } from '../../api/ai'
 import { createDamageAssessment } from '../../api/endpoints'
@@ -18,8 +18,9 @@ import Badge from '../../components/common/Badge'
 import Loader from '../../components/common/Loader'
 import { Field, Input } from '../../components/common/Input'
 import { useToast } from '../../components/common/Toast'
-import { compressImage, getCurrentPosition } from '../../lib/helpers'
+import { compressImage } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
+import { useGeoLocation } from '../../hooks/useLocation'
 import type { DamageInfrastructureType } from '../../types'
 
 const INFRASTRUCTURE_CATEGORIES: Array<{
@@ -28,48 +29,19 @@ const INFRASTRUCTURE_CATEGORIES: Array<{
   icon: typeof Home
   desc: string
 }> = [
-  {
-    id: 'broken_home',
-    label: 'Broken Home / Residential',
-    icon: Home,
-    desc: 'Cracked walls, collapsed roofs, flood inundation',
-  },
-  {
-    id: 'gov_pipeline',
-    label: 'Gov Water / Gas Pipeline',
-    icon: Droplets,
-    desc: 'Burst mains, ruptured pipelines, sewage breaches',
-  },
-  {
-    id: 'road_bridge',
-    label: 'Road, Culvert & Bridge',
-    icon: Route,
-    desc: 'Washed-out roads, collapsed culverts, crater fissures',
-  },
-  {
-    id: 'electrical_power',
-    label: 'Power Grid & Electrical',
-    icon: Zap,
-    desc: 'Snapped poles, transformer explosion, fallen lines',
-  },
-  {
-    id: 'commercial_public',
-    label: 'Public / Commercial Building',
-    icon: Building,
-    desc: 'Hospital wings, schools, government offices',
-  },
+  { id: 'broken_home', label: 'Residential Home', icon: Home, desc: 'Roofs collapsed, walls cracked, flood inundation' },
+  { id: 'commercial_public', label: 'Commercial / Public', icon: Store, desc: 'Storefront damaged, inventory flooded or public building' },
+  { id: 'agricultural', label: 'Agricultural Crops', icon: Wheat, desc: 'Farmland submerged, topsoil eroded, crop failure' },
+  { id: 'road_bridge', label: 'Bridge & Road', icon: Warehouse, desc: 'Culvert washed away, road split or submerged' },
+  { id: 'electrical_power', label: 'Power Grid & Utility', icon: Flame, desc: 'Transformer fallen, cables severed, poles broken' },
 ]
 
 const DISTRICT_LIST = [
   'North 24 Parganas',
   'South 24 Parganas',
-  'Sundarbans Coastal',
-  'Kolkata',
+  'East Midnapore',
   'Howrah',
-  'Hooghly',
-  'East Medinipur',
-  'West Medinipur',
-  'Nadia',
+  'Kolkata',
   'Cuttack',
   'Puri',
   'Bhubaneswar',
@@ -78,6 +50,7 @@ const DISTRICT_LIST = [
 export default function ReportDamage() {
   const { t } = useLanguage()
   const { toast } = useToast()
+  const { coords: geoCoords } = useGeoLocation()
   const [infraType, setInfraType] = useState<DamageInfrastructureType>('broken_home')
   const [district, setDistrict] = useState('North 24 Parganas')
   const [photo, setPhoto] = useState<string | null>(null)
@@ -90,13 +63,7 @@ export default function ReportDamage() {
   const [verdict, setVerdict] = useState<DamageVerdict | null>(null)
   const [claimId, setClaimId] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null)
-
-  useEffect(() => {
-    getCurrentPosition(false, 3000)
-      .then((pos) => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }))
-      .catch(() => setCoords({ lat: 22.5726, lng: 88.3639 }))
-  }, [])
+  const coords = geoCoords ? { lat: geoCoords.latitude, lng: geoCoords.longitude } : { lat: 22.5726, lng: 88.3639 }
 
   const onFile = async (file: File | undefined) => {
     if (!file) return
@@ -147,7 +114,9 @@ export default function ReportDamage() {
         if (!stored.includes(saved.claimId)) {
           localStorage.setItem('aapdasetu_damage_claims', JSON.stringify([saved.claimId, ...stored]))
         }
-      } catch {}
+      } catch {
+        // Storage unavailable
+      }
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Damage assessment failed', 'error')
     } finally {

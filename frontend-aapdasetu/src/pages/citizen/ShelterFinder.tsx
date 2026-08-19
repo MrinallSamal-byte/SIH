@@ -11,7 +11,7 @@ import { listShelters } from '../../api/endpoints'
 import Card from '../../components/common/Card'
 import Badge from '../../components/common/Badge'
 import LeafletMap from '../../components/map/LeafletMap'
-import { useLocation } from '../../hooks/useLocation'
+import { useGeoLocation } from '../../hooks/useLocation'
 import { useRealtime } from '../../hooks/useRealtime'
 import { useLanguage } from '../../lib/i18n'
 import { haversineKm, getNavigationUrl } from '../../lib/helpers'
@@ -27,7 +27,7 @@ const criticalFacilities: { key: string; labelKey: string }[] = [
 
 export default function ShelterFinder() {
   const { t } = useLanguage()
-  const { coords, status, accuracy, refresh } = useLocation()
+  const { coords, status, accuracy, refresh } = useGeoLocation()
   
   // Real-time shelter feed: only fetches active/allowed shelters (not closed)
   const fetchActiveShelters = useCallback(() => listShelters(undefined, false), [])
@@ -57,7 +57,7 @@ export default function ShelterFinder() {
         }
         if (selectedFacility) {
           const facs = Array.isArray(s.facilities) ? s.facilities : []
-          if (!facs.includes(selectedFacility as any)) return false
+          if (!facs.includes(selectedFacility)) return false
         }
         return true
       })

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useEffect, useRef, useState } from 'react'
 import {
   Bot,
@@ -12,7 +13,7 @@ import { aiPfaChat, cleanAiOutput } from '../api/ai'
 import { createReport } from '../api/endpoints'
 import { useToast } from './common/Toast'
 import { useLanguage } from '../lib/i18n'
-import { getCurrentPosition } from '../lib/helpers'
+import { useGeoLocation } from '../hooks/useLocation'
 import type { PfaChatMessage } from '../types'
 
 export function openChatWidget() {
@@ -24,6 +25,7 @@ export function openChatWidget() {
 export default function ChatWidget() {
   const { toast } = useToast()
   const { t } = useLanguage()
+  const { coords } = useGeoLocation()
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<PfaChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -39,14 +41,19 @@ export default function ChatWidget() {
   }, [])
 
   useEffect(() => {
-    if (open && (messages.length === 0 || (messages.length === 1 && messages[0].id === 'msg-init'))) {
-      setMessages([
-        {
-          id: 'msg-init',
-          role: 'bot',
-          content: t('chat.greeting') || 'Namaste! I am AapdaMitra AI. Tell me what emergency, injury, or safety assistance you need.',
-        },
-      ])
+    if (open) {
+      setMessages((prev) => {
+        if (prev.length === 0 || (prev.length === 1 && prev[0].id === 'msg-init')) {
+          return [
+            {
+              id: 'msg-init',
+              role: 'bot',
+              content: t('chat.greeting') || 'Namaste! I am AapdaMitra AI. Tell me what emergency, injury, or safety assistance you need.',
+            },
+          ]
+        }
+        return prev
+      })
     }
   }, [open, t])
 
@@ -99,13 +106,8 @@ export default function ChatWidget() {
 
     setSubmittingCallback(msgIndex)
     try {
-      let lat = 22.5726
-      let lng = 88.3639
-      try {
-        const pos = await getCurrentPosition(false, 3000)
-        lat = pos.coords.latitude
-        lng = pos.coords.longitude
-      } catch {}
+      const lat = coords?.latitude ?? 22.5726
+      const lng = coords?.longitude ?? 88.3639
 
       const report = await createReport({
         type: 'other',

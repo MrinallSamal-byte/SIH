@@ -64,7 +64,9 @@ if (typeof window !== 'undefined') {
             console.error('Realtime listener error:', err)
           }
         })
-      } catch {}
+      } catch {
+        // Ignore malformed storage event payloads
+      }
     }
   })
 }
@@ -92,12 +94,16 @@ export function emitRealtimeUpdate(type: RealtimeEventType, entityId?: string, p
   // 2. Broadcast to other tabs via BroadcastChannel
   try {
     broadcastChannel?.postMessage(event)
-  } catch {}
+  } catch {
+    // BroadcastChannel posting may fail if closed or structured clone unsupported
+  }
 
   // 3. Fallback via localStorage storage event
   try {
     localStorage.setItem('aapdasetu_realtime_storage_event', JSON.stringify(event))
-  } catch {}
+  } catch {
+    // Storage quota or privacy mode may block localStorage write
+  }
 }
 
 /**

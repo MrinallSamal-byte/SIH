@@ -37,7 +37,7 @@ const MAP_LAYERS: Record<
     name: string
     url: string
     attribution: string
-    subdomains?: string[]
+    subdomains: string | string[]
     overlayUrl?: string
     overlayAttribution?: string
   }
@@ -46,6 +46,7 @@ const MAP_LAYERS: Record<
     name: 'Satellite',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+    subdomains: 'abc',
     overlayUrl: 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
     overlayAttribution: 'Labels &copy; Esri',
   },
@@ -53,18 +54,19 @@ const MAP_LAYERS: Record<
     name: 'Streets',
     url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: ['a', 'b', 'c', 'd'],
+    subdomains: 'abcd',
   },
   terrain: {
     name: 'Terrain',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
     attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community',
+    subdomains: 'abc',
   },
   dark: {
     name: 'Tactical Dark',
     url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: ['a', 'b', 'c', 'd'],
+    subdomains: 'abcd',
   },
 }
 
@@ -115,48 +117,64 @@ function markerIcon(color: string, isSos = false, isShelter = false) {
 function MapController({
   center,
   zoom,
-  markers,
-  polygons,
-  polylines,
+  markers = [],
+  polygons = [],
+  polylines = [],
   autoFit = false,
 }: {
   center: GeoPoint
   zoom?: number
-  markers: MapMarker[]
-  polygons: MapPolygon[]
-  polylines: MapPolyline[]
+  markers?: MapMarker[]
+  polygons?: MapPolygon[]
+  polylines?: MapPolyline[]
   autoFit?: boolean
 }) {
   const map = useMap()
   const hasFittedRef = useRef(false)
-  const lastCenterRef = useRef(`${center.lat.toFixed(4)},${center.lng.toFixed(4)}`)
+  const lastCenterRef = useRef(`${center?.lat?.toFixed(4) ?? '0'},${center?.lng?.toFixed(4) ?? '0'}`)
 
   // 1. Fit bounds on mount or when points change
   useEffect(() => {
-    if ((!hasFittedRef.current || autoFit) && (markers.length > 0 || polygons.length > 0 || polylines.length > 0)) {
+    const safeMarkers = markers ?? []
+    const safePolygons = polygons ?? []
+    const safePolylines = polylines ?? []
+
+    if (
+      (!hasFittedRef.current || autoFit) &&
+      (safeMarkers.length > 0 || safePolygons.length > 0 || safePolylines.length > 0)
+    ) {
       const points: GeoPoint[] = [
-        ...markers.map((m) => m.position),
-        ...polygons.flatMap((p) => p.points),
-        ...polylines.flatMap((p) => p.points),
+        ...safeMarkers.map((m) => m?.position).filter((p): p is GeoPoint => Boolean(p && typeof p.lat === 'number' && typeof p.lng === 'number')),
+        ...safePolygons.flatMap((p) => p?.points ?? []).filter((p): p is GeoPoint => Boolean(p && typeof p.lat === 'number' && typeof p.lng === 'number')),
+        ...safePolylines.flatMap((p) => p?.points ?? []).filter((p): p is GeoPoint => Boolean(p && typeof p.lat === 'number' && typeof p.lng === 'number')),
       ]
       if (points.length > 1) {
-        map.fitBounds(
-          points.map((pt) => [pt.lat, pt.lng] as [number, number]),
-          { padding: [40, 40], maxZoom: 15 },
-        )
-        hasFittedRef.current = true
+        try {
+          map.fitBounds(
+            points.map((pt) => [pt.lat, pt.lng] as [number, number]),
+            { padding: [40, 40], maxZoom: 15 },
+          )
+          hasFittedRef.current = true
+        } catch {
+          // fitBounds may fail if bounds are zero-area or map is unmounted
+        }
       }
     }
   }, [map, markers, polygons, polylines, autoFit])
 
   // 2. Recenter smoothly
   useEffect(() => {
+    if (!center || typeof center.lat !== 'number' || typeof center.lng !== 'number') return
     const key = `${center.lat.toFixed(4)},${center.lng.toFixed(4)}`
     if (key !== lastCenterRef.current) {
       lastCenterRef.current = key
-      map.setView([center.lat, center.lng], zoom ?? map.getZoom(), { animate: true })
+      try {
+        map.setView([center.lat, center.lng], zoom ?? map.getZoom(), { animate: true })
+      } catch {
+        // setView may fail if map instance is unmounting
+      }
     }
-  }, [map, center.lat, center.lng, zoom])
+  }, [map, center, zoom])
 
   return null
 }
@@ -184,7 +202,9 @@ export default function LeafletMap({
     try {
       const saved = localStorage.getItem('aapdasetu_map_layer') as MapLayerMode
       if (saved && MAP_LAYERS[saved]) return saved
-    } catch {}
+    } catch {
+      // Storage unavailable
+    }
     return defaultLayer
   })
 
@@ -195,7 +215,9 @@ export default function LeafletMap({
     setShowLayerMenu(false)
     try {
       localStorage.setItem('aapdasetu_map_layer', mode)
-    } catch {}
+    } catch {
+      // Storage unavailable
+    }
   }
 
   const currentLayer = MAP_LAYERS[layerMode]
@@ -281,7 +303,7 @@ export default function LeafletMap({
           key={layerMode}
           attribution={currentLayer.attribution}
           url={currentLayer.url}
-          subdomains={currentLayer.subdomains}
+          subdomains={currentLayer.subdomains || 'abc'}
           maxZoom={19}
         />
 
@@ -291,6 +313,7 @@ export default function LeafletMap({
             key={`${layerMode}-overlay`}
             attribution={currentLayer.overlayAttribution ?? ''}
             url={currentLayer.overlayUrl}
+            subdomains="abc"
             maxZoom={19}
           />
         )}
@@ -305,60 +328,72 @@ export default function LeafletMap({
         />
 
         {/* Hazard Polygons */}
-        {polygons.map((p) => (
-          <Polygon
-            key={p.id}
-            pathOptions={{
-              color: p.color ?? '#dc2626',
-              fillColor: p.color ?? '#dc2626',
-              fillOpacity: 0.38,
-              weight: 2,
-            }}
-            positions={p.points.map((pt) => [pt.lat, pt.lng] as [number, number])}
-          >
-            {p.label && (
-              <Popup>
-                <div className="text-xs font-bold text-slate-900 p-1">{p.label}</div>
-              </Popup>
-            )}
-          </Polygon>
-        ))}
+        {(polygons ?? [])
+          .filter((p) => p && Array.isArray(p.points) && p.points.length >= 3)
+          .map((p) => (
+            <Polygon
+              key={p.id}
+              pathOptions={{
+                color: p.color ?? '#dc2626',
+                fillColor: p.color ?? '#dc2626',
+                fillOpacity: 0.38,
+                weight: 2,
+              }}
+              positions={p.points.map((pt) => [pt.lat, pt.lng] as [number, number])}
+            >
+              {p.label && (
+                <Popup>
+                  <div className="text-xs font-bold text-slate-900 p-1">{p.label}</div>
+                </Popup>
+              )}
+            </Polygon>
+          ))}
 
         {/* Routes Polylines */}
-        {polylines.map((p) => (
-          <Polyline
-            key={p.id}
-            pathOptions={{
-              color: p.color ?? '#3b82f6',
-              weight: 4.5,
-              opacity: 0.95,
-              dashArray: p.dashed ? '6 6' : undefined,
-            }}
-            positions={p.points.map((pt) => [pt.lat, pt.lng] as [number, number])}
-          >
-            {p.label && (
-              <Popup>
-                <div className="text-xs font-bold text-slate-900 p-1">{p.label}</div>
-              </Popup>
-            )}
-          </Polyline>
-        ))}
+        {(polylines ?? [])
+          .filter((p) => p && Array.isArray(p.points) && p.points.length >= 2)
+          .map((p) => (
+            <Polyline
+              key={p.id}
+              pathOptions={{
+                color: p.color ?? '#3b82f6',
+                weight: 4.5,
+                opacity: 0.95,
+                dashArray: p.dashed ? '6 6' : undefined,
+              }}
+              positions={p.points.map((pt) => [pt.lat, pt.lng] as [number, number])}
+            >
+              {p.label && (
+                <Popup>
+                  <div className="text-xs font-bold text-slate-900 p-1">{p.label}</div>
+                </Popup>
+              )}
+            </Polyline>
+          ))}
 
         {/* Interactive Markers */}
-        {markers.map((m) => (
-          <Marker
-            key={m.id}
-            position={[m.position.lat, m.position.lng]}
-            icon={markerIcon(m.color ?? '#3b82f6', m.isSos, m.isShelter)}
-          >
-            <Popup>
-              <div className="p-1">
-                <div className="text-sm font-bold text-slate-900">{m.title}</div>
-                {m.subtitle && <div className="mt-0.5 text-xs text-slate-600 leading-tight">{m.subtitle}</div>}
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        {(markers ?? [])
+          .filter(
+            (m) =>
+              m &&
+              m.position &&
+              typeof m.position.lat === 'number' &&
+              typeof m.position.lng === 'number',
+          )
+          .map((m) => (
+            <Marker
+              key={m.id}
+              position={[m.position.lat, m.position.lng]}
+              icon={markerIcon(m.color ?? '#3b82f6', m.isSos, m.isShelter)}
+            >
+              <Popup>
+                <div className="p-1">
+                  <div className="text-sm font-bold text-slate-900">{m.title}</div>
+                  {m.subtitle && <div className="mt-0.5 text-xs text-slate-600 leading-tight">{m.subtitle}</div>}
+                </div>
+              </Popup>
+            </Marker>
+          ))}
       </MapContainer>
     </div>
   )

@@ -3,11 +3,12 @@ import { createSafetyCheckin, listVolunteers, updateVolunteer } from '../../api/
 import { Field, Input } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
-import { getCurrentPosition } from '../../lib/helpers'
+import { useGeoLocation } from '../../hooks/useLocation'
 import type { Volunteer } from '../../types'
 
 export default function CheckIn() {
   const { toast } = useToast()
+  const { coords } = useGeoLocation()
   const [volunteer, setVolunteer] = useState<Volunteer | null>(null)
   const [notes, setNotes] = useState('')
   const [sending, setSending] = useState(false)
@@ -28,13 +29,8 @@ export default function CheckIn() {
         phone: volunteer?.phone,
         status: 'safe',
         notes,
-      }
-      try {
-        const pos = await getCurrentPosition()
-        input.latitude = pos.coords.latitude
-        input.longitude = pos.coords.longitude
-      } catch {
-        // optional
+        latitude: coords?.latitude,
+        longitude: coords?.longitude,
       }
       await createSafetyCheckin(input)
       if (volunteer && volunteer.status !== 'available') {
