@@ -150,3 +150,18 @@
     @apply w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm placeholder:text-slate-400 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-slate-200 dark:focus:ring-slate-200;
   }
 }
+
+/* Clean Map Controls - Hide cluttered attribution banners & links on all maps */
+.leaflet-control-attribution {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.leaflet-container {
+  font-family: inherit;
+}

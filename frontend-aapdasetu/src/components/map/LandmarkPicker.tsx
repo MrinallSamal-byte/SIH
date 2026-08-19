@@ -139,10 +139,11 @@ export default function LandmarkPicker({
         <MapContainer
           center={[center.lat, center.lng]}
           zoom={value ? 16 : view ? view.zoom : 13}
+          attributionControl={false}
           style={{ height, width: '100%' }}
         >
           <TileLayer
-            attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+            attribution=""
             url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
             subdomains="abcd"
           />

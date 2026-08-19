@@ -35,15 +35,14 @@ const emergencyTypeOptions: { value: IncidentType; key: string }[] = [
 export default function ReportForm() {
   const { t } = useLanguage()
   const { toast } = useToast()
-  const { coords, accuracy, refresh: refreshGps } = useGeoLocation()
+  const { coords, address: detectedAddress, accuracy, refresh: refreshGps } = useGeoLocation()
 
   const [selectedType, setSelectedType] = useState<string>('')
-  const [gpsAddress, setGpsAddress] = useState<string>('')
+  const [gpsAddress, setGpsAddress] = useState<string>(detectedAddress || '')
   const [customPoint, setCustomPoint] = useState<GeoPoint | null>(null)
   const [showMap, setShowMap] = useState(false)
   const [locatingGps, setLocatingGps] = useState(false)
   const [gpsError, setGpsError] = useState<string | null>(null)
-
   const [reporterName, setReporterName] = useState('')
   const [reporterPhone, setReporterPhone] = useState('')
   const [description, setDescription] = useState('')
@@ -60,6 +59,13 @@ export default function ReportForm() {
   const videoInputRef = useRef<HTMLInputElement>(null)
   const audioInputRef = useRef<HTMLInputElement>(null)
 
+  // Sync detected address and coordinates from context
+  useEffect(() => {
+    if (detectedAddress && !gpsAddress) {
+      setGpsAddress(detectedAddress)
+    }
+  }, [detectedAddress, gpsAddress])
+
   // Auto-detect and reverse-geocode coords on change
   useEffect(() => {
     if (coords && (!customPoint || !gpsAddress)) {
@@ -69,10 +75,10 @@ export default function ReportForm() {
       reverseGeocode(point)
         .then((addr) => {
           if (addr) setGpsAddress(addr)
-          else setGpsAddress(`${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
+          else if (!gpsAddress) setGpsAddress(`${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
         })
         .catch(() => {
-          setGpsAddress(`${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
+          if (!gpsAddress) setGpsAddress(`${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
         })
     }
   }, [coords, customPoint, gpsAddress])

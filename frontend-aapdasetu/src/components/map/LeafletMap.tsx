@@ -296,12 +296,13 @@ export default function LeafletMap({
       <MapContainer
         center={[center.lat, center.lng]}
         zoom={zoom}
+        attributionControl={false}
         style={{ height: '100%', width: '100%', zIndex: 1 }}
       >
         {/* Base Layer */}
         <TileLayer
           key={layerMode}
-          attribution={currentLayer.attribution}
+          attribution=""
           url={currentLayer.url}
           subdomains={currentLayer.subdomains || 'abc'}
           maxZoom={19}
@@ -311,7 +312,7 @@ export default function LeafletMap({
         {currentLayer.overlayUrl && (
           <TileLayer
             key={`${layerMode}-overlay`}
-            attribution={currentLayer.overlayAttribution ?? ''}
+            attribution=""
             url={currentLayer.overlayUrl}
             subdomains="abc"
             maxZoom={19}

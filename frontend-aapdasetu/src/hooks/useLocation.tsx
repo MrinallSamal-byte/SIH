@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { getCurrentPosition, getIpGeolocation } from '../lib/helpers'
+import { getCurrentPosition, getIpGeolocation, reverseGeocode } from '../lib/helpers'
 import type { GeoPoint } from '../types'
 
 export type LocationStatus = 'idle' | 'locating' | 'granted' | 'fallback' | 'denied' | 'error'
@@ -18,15 +18,19 @@ export interface GeoLocationCoordinatesLike {
 
 export interface LocationValue {
   coords: GeoLocationCoordinatesLike | null
+  address: string | null
   status: LocationStatus
   accuracy: number | null
   source: LocationSource
   isFallback: boolean
   refresh: () => void
-  setManualLocation: (point: GeoPoint) => void
+  setManualLocation: (point: GeoPoint, customAddress?: string) => void
+  setAddress: (addr: string) => void
 }
 
 const STORAGE_KEY_LOCATION = 'aapdasetu_last_coords'
+const STORAGE_KEY_ADDRESS = 'aapdasetu_last_address'
+
 const DEFAULT_FALLBACK_LOCATION: GeoLocationCoordinatesLike = {
   latitude: 22.5726,
   longitude: 88.3639,
@@ -60,26 +64,49 @@ function getStoredLocation(): GeoLocationCoordinatesLike | null {
   return null
 }
 
+function getStoredAddress(): string | null {
+  try {
+    return localStorage.getItem(STORAGE_KEY_ADDRESS)
+  } catch {
+    return null
+  }
+}
+
 const defaultLocationValue: LocationValue = {
   coords: getStoredLocation() || DEFAULT_FALLBACK_LOCATION,
+  address: getStoredAddress() || 'Bhubaneswar, Odisha',
   status: 'idle',
   accuracy: 100,
   source: getStoredLocation() ? 'cached' : 'default',
   isFallback: true,
   refresh: () => {},
   setManualLocation: () => {},
+  setAddress: () => {},
 }
 
 const LocationContext = createContext<LocationValue>(defaultLocationValue)
 
 export function GeoLocationProvider({ children }: { children: ReactNode }) {
   const initialCached = useMemo(() => getStoredLocation(), [])
+  const initialAddress = useMemo(() => getStoredAddress(), [])
   const [coords, setCoords] = useState<GeoLocationCoordinatesLike | null>(
     initialCached || DEFAULT_FALLBACK_LOCATION
+  )
+  const [address, setAddressState] = useState<string | null>(
+    initialAddress || 'Bhubaneswar, Odisha'
   )
   const [status, setStatus] = useState<LocationStatus>(initialCached ? 'fallback' : 'idle')
   const [accuracy, setAccuracy] = useState<number | null>(initialCached?.accuracy ?? null)
   const [source, setSource] = useState<LocationSource>(initialCached ? 'cached' : 'default')
+
+  const setAddress = useCallback((addr: string) => {
+    setAddressState(addr)
+    try {
+      localStorage.setItem(STORAGE_KEY_ADDRESS, addr)
+    } catch {
+      // Storage unavailable
+    }
+  }, [])
 
   const saveLocation = useCallback((c: GeoLocationCoordinatesLike, src: LocationSource) => {
     setCoords(c)
@@ -93,9 +120,23 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
     } catch {
       // Storage unavailable
     }
+
+    // Auto reverse geocode
+    reverseGeocode({ lat: c.latitude, lng: c.longitude })
+      .then((addr) => {
+        if (addr) {
+          setAddressState(addr)
+          try {
+            localStorage.setItem(STORAGE_KEY_ADDRESS, addr)
+          } catch {
+            // Storage unavailable
+          }
+        }
+      })
+      .catch(() => {})
   }, [])
 
-  const setManualLocation = useCallback((point: GeoPoint) => {
+  const setManualLocation = useCallback((point: GeoPoint, customAddress?: string) => {
     const manualCoords: GeoLocationCoordinatesLike = {
       latitude: point.lat,
       longitude: point.lng,
@@ -107,7 +148,14 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
     }
     saveLocation(manualCoords, 'manual')
     setStatus('granted')
-  }, [saveLocation])
+    if (customAddress) {
+      setAddress(customAddress)
+    } else {
+      reverseGeocode(point).then((addr) => {
+        if (addr) setAddress(addr)
+      })
+    }
+  }, [saveLocation, setAddress])
 
   const detect = useCallback(() => {
     setStatus('locating')
@@ -128,6 +176,10 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
           }
           saveLocation(ipCoords, 'ip')
           setStatus(isDenied ? 'denied' : 'fallback')
+          if (ipGeo.city || ipGeo.district) {
+            const locName = [ipGeo.city, ipGeo.district].filter(Boolean).join(', ')
+            setAddress(locName)
+          }
           return
         }
       } catch {
@@ -179,7 +231,7 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
     return () => {
       navigator.geolocation.clearWatch(watchId)
     }
-  }, [saveLocation])
+  }, [saveLocation, setAddress])
 
   useEffect(() => {
     const cleanup = detect()
@@ -191,14 +243,16 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
   const value = useMemo<LocationValue>(
     () => ({
       coords,
+      address,
       status,
       accuracy,
       source,
       isFallback: source !== 'gps',
       refresh: detect,
       setManualLocation,
+      setAddress,
     }),
-    [coords, status, accuracy, source, detect, setManualLocation],
+    [coords, address, status, accuracy, source, detect, setManualLocation, setAddress],
   )
 
   return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>

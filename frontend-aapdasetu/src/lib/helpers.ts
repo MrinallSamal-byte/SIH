@@ -139,17 +139,42 @@ export async function getIpGeolocation(): Promise<{ lat: number; lng: number; ci
   return null
 }
 
-/** Reverse-geocode a coordinate to a human-readable address with safe error handling and fallback. */
+/** Reverse-geocode a coordinate to a human-readable, concise address with safe error handling and fallback. */
 export async function reverseGeocode(point: GeoPoint): Promise<string | null> {
   try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 4500)
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&lat=${point.lat}&lon=${point.lng}`
     const res = await fetch(url, {
+      signal: controller.signal,
       headers: {
         Accept: 'application/json',
       },
     })
+    clearTimeout(timer)
     if (!res.ok) return null
-    const data: { display_name?: string } = await res.json()
+    const data = await res.json()
+    if (data.address) {
+      const parts: string[] = []
+      const a = data.address
+      if (a.amenity || a.building) parts.push(a.amenity || a.building)
+      if (a.road || a.pedestrian) parts.push(a.road || a.pedestrian)
+      if (a.neighbourhood && !parts.includes(a.neighbourhood)) parts.push(a.neighbourhood)
+      if (a.suburb && !parts.includes(a.suburb) && !parts.some((p) => p.includes(a.suburb))) parts.push(a.suburb)
+      const city = a.city || a.town || a.village || a.municipality || a.city_district || a.county
+      if (city) {
+        const cleanCity = city.replace(/ Municipal Corporation|\(M\.Corp\.\)|Zone/gi, '').trim()
+        if (!parts.includes(cleanCity)) parts.push(cleanCity)
+      }
+      if (a.state_district && !parts.includes(a.state_district) && a.state_district !== a.city) {
+        parts.push(a.state_district)
+      }
+      if (a.state && !parts.includes(a.state)) parts.push(a.state)
+      
+      if (parts.length > 0) {
+        return parts.slice(0, 4).join(', ')
+      }
+    }
     return data.display_name ?? null
   } catch {
     return null
@@ -168,11 +193,15 @@ export function generateEmergencySms(options: {
   name?: string
   type?: string
   phone?: string
+  address?: string
+  landmark?: string
 }): string {
   const parts = ['EMERGENCY SOS']
   if (options.type) parts.push(`TYPE:${options.type.toUpperCase()}`)
   if (options.name) parts.push(`NAME:${options.name}`)
   if (options.phone) parts.push(`PHONE:${options.phone}`)
+  if (options.address) parts.push(`LOC:${options.address}`)
+  if (options.landmark) parts.push(`NEAR:${options.landmark}`)
   if (options.lat && options.lng) {
     parts.push(`GPS:${options.lat.toFixed(5)},${options.lng.toFixed(5)}`)
     parts.push(`MAPS:https://maps.google.com/?q=${options.lat},${options.lng}`)
