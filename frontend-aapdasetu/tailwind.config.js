@@ -5,7 +5,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Poppins', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Google Sans', 'Open Sans', 'Noto Sans Devanagari', 'Noto Sans Oriya', 'system-ui', '-apple-system', 'sans-serif'],
       },
       colors: {
         red: {

@@ -229,7 +229,7 @@ export default function LeafletMap({
         <button
           type="button"
           onClick={() => setShowLayerMenu((o) => !o)}
-          className="flex items-center gap-1.5 rounded-xl border border-slate-300/80 bg-white/95 px-3 py-1.5 text-xs font-bold text-slate-800 shadow-md backdrop-blur-md transition hover:bg-white dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-100 cursor-pointer"
+          className="flex items-center gap-1.5 rounded-xl border border-slate-300/80 bg-white/95 px-3 py-1.5 text-xs font-bold text-slate-800 shadow-md backdrop-blur-md transition hover:bg-white dark:border-white/[0.1] dark:bg-slate-900/95 dark:text-slate-100 cursor-pointer"
           title="Change Map View"
         >
           <Layers className="h-3.5 w-3.5 text-slate-900 dark:text-slate-100" />
@@ -237,7 +237,7 @@ export default function LeafletMap({
         </button>
 
         {showLayerMenu && (
-          <div className="mt-1.5 flex flex-col gap-1 rounded-xl border border-slate-200 bg-white/95 p-1.5 shadow-xl backdrop-blur-md dark:border-slate-700 dark:bg-slate-900/95">
+          <div className="mt-1.5 flex flex-col gap-1 rounded-xl border border-slate-200 bg-white/95 p-1.5 shadow-xl backdrop-blur-md dark:border-white/[0.1] dark:bg-slate-900/95">
             <button
               type="button"
               onClick={() => selectLayer('satellite')}

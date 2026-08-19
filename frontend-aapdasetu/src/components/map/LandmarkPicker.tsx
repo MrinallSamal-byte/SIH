@@ -103,7 +103,7 @@ export default function LandmarkPicker({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && runSearch()}
             placeholder="Search place name (e.g. Salt Lake Stadium, New Town)"
-            className="w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3.5 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            className="w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3.5 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-white/[0.1] dark:bg-slate-900 dark:text-slate-100"
           />
         </div>
         <button
@@ -119,7 +119,7 @@ export default function LandmarkPicker({
       {error && <p className="mb-2 text-xs font-medium text-red-600 dark:text-red-400">{error}</p>}
 
       {results && results.length > 0 && (
-        <ul className="absolute left-0 right-0 top-12 z-[1000] max-h-44 space-y-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+        <ul className="absolute left-0 right-0 top-12 z-[1000] max-h-44 space-y-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-white/[0.1] dark:bg-slate-900">
           {results.map((r, i) => (
             <li key={i}>
               <button

@@ -22,15 +22,15 @@ export default function VolunteerLayout() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+    <div className="min-h-screen flex flex-col bg-slate-50 text-zinc-800 dark:bg-slate-950 dark:text-slate-100">
+      <header className="border-b border-zinc-200/80 bg-white dark:border-slate-800 dark:bg-zinc-800">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <Link to="/" className="shrink-0">
               <AapdaSetuLogo size={32} />
             </Link>
             <div>
-              <div className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              <div className="text-sm font-bold tracking-tight text-zinc-800 dark:text-slate-100">
                 AapdaSetu Volunteer Force
               </div>
               <div className="text-[10px] text-slate-400">Field Responders & Medical Volunteers</div>
@@ -47,8 +47,8 @@ export default function VolunteerLayout() {
                   className={({ isActive }) =>
                     `rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                       isActive
-                        ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                        : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+                        ? 'bg-zinc-800 text-white dark:bg-slate-100 dark:text-zinc-800'
+                        : 'text-zinc-500 hover:bg-zinc-100 dark:text-slate-400 dark:hover:bg-zinc-700'
                     }`
                   }
                 >
@@ -66,7 +66,7 @@ export default function VolunteerLayout() {
 
             <Link
               to="/"
-              className="flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+              className="flex items-center gap-1 rounded-lg border border-zinc-200/80 px-2.5 py-1 text-xs font-medium text-slate-500 hover:bg-zinc-100 dark:border-white/[0.1] dark:text-slate-400 dark:hover:bg-zinc-700"
             >
               <span>Public App</span>
               <ArrowRight className="h-3.5 w-3.5" />
@@ -93,8 +93,8 @@ export default function VolunteerLayout() {
               className={({ isActive }) =>
                 `flex-1 text-center rounded-md px-2 py-1 text-xs font-semibold ${
                   isActive
-                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                    : 'text-slate-600 dark:text-slate-400'
+                    ? 'bg-zinc-800 text-white dark:bg-slate-100 dark:text-zinc-800'
+                    : 'text-zinc-500 dark:text-slate-400'
                 }`
               }
             >

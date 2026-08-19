@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
 import {
   FileText,
   MapPin,
@@ -11,7 +10,8 @@ import {
   ArrowRight,
   User,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Copy
 } from 'lucide-react'
 import { createReport } from '../../api/endpoints'
 import { aiTriage } from '../../api/ai'
@@ -50,6 +50,7 @@ export default function ReportForm() {
   const [media, setMedia] = useState<MediaPayload[]>([])
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState<Report | null>(null)
+  const [copied, setCopied] = useState(false)
 
   // Voice/Video recording state
   const [isRecordingAudio, setIsRecordingAudio] = useState(false)
@@ -260,7 +261,7 @@ export default function ReportForm() {
   // Confirmation View
   if (result) {
     return (
-      <div className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+      <div className="mx-auto max-w-2xl rounded-2xl border border-zinc-200/80 bg-white p-4 sm:p-6 shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
         <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 p-4 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/60">
           <CheckCircle2 className="h-8 w-8 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <div>
@@ -271,39 +272,84 @@ export default function ReportForm() {
           </div>
         </div>
 
-        <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950">
+        <div className="mt-5 rounded-2xl border border-zinc-200/80 bg-[#f4f4f5] p-5 dark:border-white/[0.08] dark:bg-[#151515]">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">Tracking ID — Save this</div>
-              <div className="mt-0.5 font-mono text-2xl font-bold text-slate-900 dark:text-slate-100">{result.trackingId}</div>
+              <div className="mt-0.5 font-mono text-2xl font-bold text-zinc-800 dark:text-slate-300">{result.trackingId}</div>
             </div>
             <PriorityBadge label={result.priorityLabel} />
           </div>
-          <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-2 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-400">
+          <div className="mt-3 flex items-center justify-between border-t border-zinc-200/80 pt-2 text-xs text-zinc-500 dark:border-white/[0.08] dark:text-slate-400">
             <span>Priority Score: <strong>{result.priorityScore}/100</strong></span>
             <span>Type: <strong className="mono">{result.type.toUpperCase()}</strong></span>
           </div>
         </div>
 
-        <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
-          <Link
-            to={`/track?id=${encodeURIComponent(result.trackingId)}`}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 py-3.5 text-sm font-bold text-white shadow-xs hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer"
+        {/* Copyable Report Summary */}
+        <div className="mt-4 rounded-xl border border-zinc-200/80 bg-white p-4 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">
+              Report Summary — Copy & Share
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                const reportText = [
+                  `AapdaSetu Incident Report`,
+                  `━━━━━━━━━━━━━━━━━━`,
+                  `Tracking ID: ${result.trackingId}`,
+                  `Priority: ${result.priorityLabel} (${result.priorityScore}/100)`,
+                  `Type: ${result.type.toUpperCase()}`,
+                  `Contact: ${result.reporterPhone}`,
+                  `Name: ${result.reporterName || 'N/A'}`,
+                  `Location: ${gpsAddress || 'N/A'}`,
+                  customPoint ? `GPS: ${customPoint.lat.toFixed(4)}°N, ${customPoint.lng.toFixed(4)}°E` : '',
+                  `Description: ${description || 'N/A'}`,
+                  `Time: ${new Date().toLocaleString()}`,
+                  `━━━━━━━━━━━━━━━━━━`,
+                  `Track: ${window.location.origin}/track?id=${result.trackingId}`,
+                ].filter(Boolean).join('\n')
+                navigator.clipboard.writeText(reportText).then(() => {
+                  setCopied(true)
+                  toast('Full report copied to clipboard')
+                  setTimeout(() => setCopied(false), 3000)
+                })
+              }}
+              className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-bold text-zinc-600 transition hover:bg-zinc-100 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 cursor-pointer"
+            >
+              <Copy className="h-3 w-3" />
+              <span>{copied ? 'Copied!' : 'Copy All'}</span>
+            </button>
+          </div>
+          <pre className="overflow-x-auto rounded-lg bg-[#f4f4f5] p-3 text-[11px] leading-relaxed text-zinc-700 mono dark:bg-[#151515] dark:text-slate-400">
+{`AapdaSetu Incident Report
+━━━━━━━━━━━━━━━━━━
+Tracking ID: ${result.trackingId}
+Priority: ${result.priorityLabel} (${result.priorityScore}/100)
+Type: ${result.type.toUpperCase()}
+Contact: ${result.reporterPhone}
+Name: ${result.reporterName || 'N/A'}
+Location: ${gpsAddress || 'N/A'}${customPoint ? `\nGPS: ${customPoint.lat.toFixed(4)}°N, ${customPoint.lng.toFixed(4)}°E` : ''}
+Description: ${description || 'N/A'}
+Time: ${new Date().toLocaleString()}
+━━━━━━━━━━━━━━━━━━
+Track: ${typeof window !== 'undefined' ? window.location.origin : ''}/track?id=${result.trackingId}`}
+          </pre>
+        </div>
+
+        <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
+          <a
+            href={`#/track?id=${encodeURIComponent(result.trackingId)}`}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-zinc-800 py-3.5 text-sm font-bold text-white shadow-xs hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
           >
             <span>Track Live Rescue Status</span>
             <ArrowRight className="h-4 w-4" />
-          </Link>
+          </a>
           <button
             type="button"
-            onClick={() => {
-              setResult(null)
-              setSelectedType('')
-              setDescription('')
-              setMedia([])
-              setReporterName('')
-              setReporterPhone('')
-            }}
-            className="rounded-xl border border-slate-300 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
+            onClick={() => window.location.reload()}
+            className="rounded-xl border border-zinc-200 bg-white px-5 py-3.5 text-sm font-bold text-zinc-600 hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200"
           >
             New Report
           </button>
@@ -313,11 +359,11 @@ export default function ReportForm() {
   }
 
   return (
-    <div className="mx-auto max-w-lg">
+    <div className="mx-auto max-w-3xl">
       <div className="mb-6 text-left">
         <div className="flex items-center gap-2 mb-1">
-          <FileText className="h-6 w-6 text-slate-900 dark:text-slate-100" />
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+          <FileText className="h-6 w-6 text-zinc-800 dark:text-slate-300" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-800 dark:text-slate-300 tracking-tight">
             {t('report.pageTitle')}
           </h1>
         </div>
@@ -329,7 +375,7 @@ export default function ReportForm() {
       <form onSubmit={handleSubmit} className="space-y-5 text-left">
         {/* 1. Emergency Type */}
         <div>
-          <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 mono uppercase">
+          <label className="block text-xs font-bold text-zinc-700 dark:text-slate-200 mb-1.5 mono uppercase">
             {t('report.categoryLabel')}
           </label>
           <div className="relative">
@@ -337,7 +383,7 @@ export default function ReportForm() {
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
               required
-              className="w-full appearance-none rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-slate-300"
+              className="w-full appearance-none rounded-xl border border-zinc-200 bg-white px-3.5 py-3 text-sm font-medium text-zinc-700 outline-none transition focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-slate-300 dark:focus:border-slate-500"
             >
               <option value="" disabled>
                 {t('report.selectTypePlaceholder')}
@@ -358,15 +404,15 @@ export default function ReportForm() {
 
         {/* 2. GPS Location Card */}
         <div>
-          <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 mono uppercase">
+          <label className="block text-xs font-bold text-zinc-700 dark:text-slate-200 mb-1.5 mono uppercase">
             {t('report.gpsTitle')}
           </label>
-          <div className="rounded-2xl border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900 shadow-xs space-y-3">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-white/[0.1] dark:bg-[#1a1a1a] shadow-xs space-y-3">
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
                 {locatingGps ? (
                   <>
-                    <span className="h-2 w-2 rounded-full bg-slate-900 dark:bg-slate-100 animate-ping" />
+                    <span className="h-2 w-2 rounded-full bg-zinc-800 dark:bg-slate-100 animate-ping" />
                     <span>{t('report.gpsDetecting')}</span>
                   </>
                 ) : gpsError ? (
@@ -388,7 +434,7 @@ export default function ReportForm() {
                 type="button"
                 onClick={handleRetryGps}
                 disabled={locatingGps}
-                className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer"
+                className="inline-flex items-center gap-1 text-xs font-bold text-zinc-500 hover:text-zinc-800 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer"
               >
                 <RefreshCw className="h-3 w-3" />
                 <span>{t('report.gpsRetry')}</span>
@@ -402,7 +448,7 @@ export default function ReportForm() {
                 value={gpsAddress}
                 onChange={(e) => setGpsAddress(e.target.value)}
                 placeholder={t('report.gpsPlaceholder')}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3.5 py-2.5 text-sm text-slate-800 outline-none transition focus:border-slate-900 focus:bg-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                className="w-full rounded-xl border border-zinc-200/80 bg-[#f4f4f5] pl-10 pr-3.5 py-2.5 text-sm text-zinc-700 outline-none transition focus:border-zinc-500 focus:bg-white dark:border-white/[0.08] dark:bg-[#151515] dark:text-slate-300"
               />
             </div>
 
@@ -410,7 +456,7 @@ export default function ReportForm() {
               <button
                 type="button"
                 onClick={() => setShowMap((s) => !s)}
-                className="font-bold text-slate-900 hover:underline dark:text-slate-100 flex items-center gap-1 cursor-pointer"
+                className="font-bold text-zinc-800 hover:underline dark:text-slate-300 flex items-center gap-1 cursor-pointer"
               >
                 <span>{showMap ? t('report.hideMap') : t('report.adjustMap')}</span>
               </button>
@@ -426,7 +472,7 @@ export default function ReportForm() {
 
         {/* 3. Your Name */}
         <div>
-          <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 mono uppercase">
+          <label className="block text-xs font-bold text-zinc-700 dark:text-slate-200 mb-1.5 mono uppercase">
             {t('report.nameLabel')}
           </label>
           <div className="relative">
@@ -436,18 +482,18 @@ export default function ReportForm() {
               value={reporterName}
               onChange={(e) => setReporterName(e.target.value)}
               placeholder={t('report.namePlaceholder')}
-              className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-slate-300"
+              className="w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-3.5 py-2.5 text-sm text-zinc-700 placeholder-slate-400 outline-none transition focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-slate-300 dark:focus:border-slate-500"
             />
           </div>
         </div>
 
         {/* 4. Your Phone Number */}
         <div>
-          <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 mono uppercase">
+          <label className="block text-xs font-bold text-zinc-700 dark:text-slate-200 mb-1.5 mono uppercase">
             {t('report.phoneLabel')}
           </label>
-          <div className="flex rounded-xl border border-slate-300 bg-white overflow-hidden focus-within:border-slate-900 dark:border-slate-700 dark:bg-slate-900">
-            <span className="flex items-center justify-center bg-slate-100 px-3.5 text-xs font-bold text-slate-700 border-r border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 mono">
+          <div className="flex rounded-xl border border-zinc-200 bg-white overflow-hidden focus-within:border-slate-900 dark:border-white/[0.1] dark:bg-[#1a1a1a]">
+            <span className="flex items-center justify-center bg-slate-100 px-3.5 text-xs font-bold text-zinc-600 border-r border-zinc-200/80 dark:bg-[#222222] dark:text-slate-300 dark:border-white/[0.1] mono">
               +91
             </span>
             <input
@@ -456,7 +502,7 @@ export default function ReportForm() {
               onChange={(e) => setReporterPhone(e.target.value)}
               placeholder={t('report.phonePlaceholder')}
               required
-              className="w-full bg-transparent px-3.5 py-2.5 text-sm font-mono text-slate-800 outline-none placeholder-slate-400 dark:text-slate-100"
+              className="w-full bg-transparent px-3.5 py-2.5 text-sm font-mono text-zinc-700 outline-none placeholder-slate-400 dark:text-slate-300"
             />
           </div>
         </div>
@@ -464,7 +510,7 @@ export default function ReportForm() {
         {/* 5. Video or Voice Proof Upload */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-bold text-slate-800 dark:text-slate-200 mono uppercase">
+            <label className="text-xs font-bold text-zinc-700 dark:text-slate-200 mono uppercase">
               {t('report.mediaTitle')}
             </label>
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">
@@ -491,12 +537,12 @@ export default function ReportForm() {
             className="hidden"
           />
 
-          <div className="rounded-2xl border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900 shadow-xs space-y-3">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-white/[0.1] dark:bg-[#1a1a1a] shadow-xs space-y-3">
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => videoInputRef.current?.click()}
-                className="flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white py-2.5 px-3 text-xs font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
+                className="flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white py-2.5 px-3 text-xs font-bold text-zinc-600 shadow-xs transition hover:bg-zinc-50 hover:border-slate-400 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200 cursor-pointer"
               >
                 <Camera className="h-4 w-4" />
                 <span>{t('report.uploadMedia')}</span>
@@ -506,7 +552,7 @@ export default function ReportForm() {
                 <button
                   type="button"
                   onClick={startAudioRecording}
-                  className="flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white py-2.5 px-3 text-xs font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
+                  className="flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white py-2.5 px-3 text-xs font-bold text-zinc-600 shadow-xs transition hover:bg-zinc-50 hover:border-slate-400 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200 cursor-pointer"
                 >
                   <Mic className="h-4 w-4" />
                   <span>{t('report.recordVoice')}</span>
@@ -525,9 +571,9 @@ export default function ReportForm() {
 
             {/* Attached Media List */}
             {media.length > 0 && (
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-white/[0.08]">
                 {media.map((m, i) => (
-                  <div key={i} className="relative rounded-lg border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-950">
+                  <div key={i} className="relative rounded-lg border border-zinc-200/80 bg-[#f4f4f5] p-2 dark:border-white/[0.08] dark:bg-[#151515]">
                     {m.kind === 'image' && m.dataUrl && (
                       <img src={m.dataUrl} alt={m.name} className="h-16 w-full object-cover rounded-md mb-1" />
                     )}
@@ -537,7 +583,7 @@ export default function ReportForm() {
                     {m.kind === 'audio' && m.dataUrl && (
                       <audio src={m.dataUrl} className="w-full mb-1" controls />
                     )}
-                    <div className="truncate text-[10px] font-semibold text-slate-700 dark:text-slate-300">{m.name}</div>
+                    <div className="truncate text-[10px] font-semibold text-zinc-600 dark:text-slate-300">{m.name}</div>
                     <button
                       type="button"
                       onClick={() => removeMedia(i)}
@@ -554,7 +600,7 @@ export default function ReportForm() {
 
         {/* 6. Description */}
         <div>
-          <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 mono uppercase">
+          <label className="block text-xs font-bold text-zinc-700 dark:text-slate-200 mb-1.5 mono uppercase">
             {t('report.descLabel')}
           </label>
           <textarea
@@ -562,7 +608,7 @@ export default function ReportForm() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder={t('report.descPlaceholder')}
-            className="w-full rounded-2xl border border-slate-300 bg-white p-3.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-slate-300"
+            className="w-full rounded-2xl border border-zinc-200 bg-white p-3.5 text-sm text-zinc-700 placeholder-slate-400 outline-none transition focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-slate-300 dark:focus:border-slate-500"
           />
         </div>
 
@@ -571,7 +617,7 @@ export default function ReportForm() {
           <button
             type="submit"
             disabled={sending || !selectedType || !reporterPhone.trim()}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-4 text-base font-bold text-white shadow-md transition hover:bg-slate-800 active:scale-[0.98] disabled:bg-slate-200 disabled:text-slate-400 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white dark:disabled:bg-slate-800 dark:disabled:text-slate-600 cursor-pointer"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-800 py-4 text-base font-bold text-white shadow-md transition hover:bg-zinc-700 active:scale-[0.98] disabled:bg-slate-200 disabled:text-slate-400 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white dark:disabled:bg-slate-800 dark:disabled:text-zinc-500 cursor-pointer"
           >
             {sending ? (
               <div className="flex items-center gap-2">

@@ -150,7 +150,7 @@ export default function SafetyRegistry() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search check-ins by citizen name, phone, locality, or notes…"
-            className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3.5 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3.5 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-white/[0.1] dark:bg-slate-950 dark:text-slate-100"
           />
         </div>
 
@@ -216,7 +216,7 @@ export default function SafetyRegistry() {
                   {c.phone ? (
                     <a
                       href={`tel:${c.phone}`}
-                      className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200"
                     >
                       <Phone className="h-3 w-3" />
                       <span>Contact</span>
@@ -224,7 +224,7 @@ export default function SafetyRegistry() {
                   ) : (
                     <button
                       onClick={() => setSelectedCheckin(c)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
                     >
                       Inspect
                     </button>
