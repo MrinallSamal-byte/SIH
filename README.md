@@ -51,7 +51,53 @@ During major natural catastrophes (cyclones, flash floods, earthquakes, industri
 
 ## 🏗️ Master System Architecture & Flow Diagrams
 
-### 1. Global Multi-Tier System Architecture
+### 1. Complete Website Workflow & User Journey
+
+```mermaid
+flowchart TD
+    classDef citizen fill:#eff6ff,stroke:#3b82f6,stroke-width:2px,color:#1e3a8a;
+    classDef triage fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#78350f;
+    classDef volunteer fill:#f0fdf4,stroke:#10b981,stroke-width:2px,color:#064e3b;
+    classDef admin fill:#fef2f2,stroke:#ef4444,stroke-width:2px,color:#7f1d1d;
+    classDef pfa fill:#faf5ff,stroke:#a855f7,stroke-width:2px,color:#581c87;
+
+    subgraph Citizen["1. 📱 Citizen / Public User Actions"]
+        A["🌐 AapdaSetu Portal"]:::citizen
+        A --> B1["🚨 1-Tap Emergency SOS\n(Instant GPS distress)"]:::citizen
+        A --> B2["📋 Report Incident\n(Voice, Video, Text)"]:::citizen
+        A --> B3["🗺️ Safe Evacuation Routes\n(Hazard-avoidance GIS)"]:::citizen
+        A --> B4["🏕️ Find Nearest Shelters\n(Capacity & Amenities)"]:::citizen
+        A --> B5["🔍 Missing Persons\n(Search & Register Cases)"]:::citizen
+        A --> B6["🏠 Property Damage Claims\n(Photo upload for compensation)"]:::citizen
+        A --> B7["🤖 AapdaMitra AI Assistant\n(PFA chat & Grounding)"]:::pfa
+    end
+
+    subgraph AI["2. 🧠 AI Processing & Triage Engine"]
+        B1 & B2 --> C1["⚡ Multi-Factor Urgency Triage\n(Priority: RED / YELLOW / GREEN)"]:::triage
+        B6 --> C2["👁️ ResNet-50 Vision Analysis\n(Damage Grade & Grant Estimate)"]:::triage
+        B3 --> C3["🛰️ Sentinel-1 Satellite GIS\n(Flood Inundation Layers)"]:::triage
+        B7 --> C4["💬 Psychological First Aid (PFA)\n(Box Breathing & Callbacks)"]:::pfa
+    end
+
+    subgraph Admin["3. 🚨 Command Center / Admin Operations"]
+        C1 & C2 --> D1["🎛️ Realtime Command Dashboard\n(Live SOS Sirens & GIS Pins)"]:::admin
+        D1 --> D2["📢 Broadcast Emergency Alerts\n(SMS, WhatsApp, Web Feed)"]:::admin
+        D1 --> D3["🤝 Proximity Unit Dispatch\n(Assign closest Volunteers / NDRF)"]:::admin
+        D1 --> D4["💰 Approve SDRF Claims\n(Verify damage compensation)"]:::admin
+    end
+
+    subgraph Volunteer["4. 🧑‍🚒 Field Responder / Volunteer Actions"]
+        D3 --> E1["📲 Receive Task Alert\n(Skill match & GPS coords)"]:::volunteer
+        E1 --> E2["🧭 Turn-by-Turn Route\n(Navigate to disaster site)"]:::volunteer
+        E2 --> E3["✅ Execute Relief & Update Status\n(On-Scene ➔ Resolved)"]:::volunteer
+    end
+
+    E3 -->|Realtime Status Update| F["📡 Live Tracking Stream\n(Citizens view rescue milestone progress)"]:::citizen
+```
+
+---
+
+### 2. Global Multi-Tier System Architecture
 
 ```mermaid
 graph TB
@@ -105,7 +151,7 @@ graph TB
 
 ---
 
-### 2. End-to-End Emergency SOS & Multi-Agency Dispatch Flow
+### 3. End-to-End Emergency SOS & Multi-Agency Dispatch Flow
 
 ```mermaid
 sequenceDiagram
@@ -132,7 +178,7 @@ sequenceDiagram
 
 ---
 
-### 3. Multi-Factor AI Urgency Triage Pipeline
+### 4. Multi-Factor AI Urgency Triage Pipeline
 
 ```mermaid
 flowchart TD
