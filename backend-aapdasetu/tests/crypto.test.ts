@@ -16,4 +16,10 @@ describe('password hashing (scrypt)', () => {
   it('produces unique salts', () => {
     expect(hashPassword('same')).not.toBe(hashPassword('same'));
   });
+
+  it('safely handles dummy hash verification for non-existent users', () => {
+    const dummyHash =
+      'scrypt$16384$8$1$00000000000000000000000000000000$00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
+    expect(verifyPassword('anyPassword', dummyHash)).toBe(false);
+  });
 });

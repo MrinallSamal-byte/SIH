@@ -23,10 +23,19 @@ export async function bootstrapAdminUser(input: {
   return { created: true };
 }
 
+// Dummy scrypt hash used to prevent user enumeration via timing side-channels
+const DUMMY_HASH =
+  'scrypt$16384$8$1$00000000000000000000000000000000$00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
+
 export async function loginAdmin(input: { email: string; password: string }) {
   const email = input.email.trim().toLowerCase();
   const admin = await prisma.adminUser.findUnique({ where: { email } });
-  if (!admin || !verifyPassword(input.password, admin.passwordHash)) {
+
+  // Security: always execute verifyPassword to prevent email enumeration via timing side-channels
+  const passwordHash = admin ? admin.passwordHash : DUMMY_HASH;
+  const isValidPassword = verifyPassword(input.password, passwordHash);
+
+  if (!admin || !isValidPassword) {
     await writeAuditLog({
       adminEmail: email,
       action: 'LOGIN_FAILED',
