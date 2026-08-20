@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import {
   FileText,
   MapPin,
@@ -285,17 +286,24 @@ export default function ReportForm() {
         </div>
 
         <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
-          <a
-            href={`#/track?id=${encodeURIComponent(result.trackingId)}`}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 py-3.5 text-sm font-bold text-white shadow-xs hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+          <Link
+            to={`/track?id=${encodeURIComponent(result.trackingId)}`}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 py-3.5 text-sm font-bold text-white shadow-xs hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer"
           >
             <span>Track Live Rescue Status</span>
             <ArrowRight className="h-4 w-4" />
-          </a>
+          </Link>
           <button
             type="button"
-            onClick={() => window.location.reload()}
-            className="rounded-xl border border-slate-300 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            onClick={() => {
+              setResult(null)
+              setSelectedType('')
+              setDescription('')
+              setMedia([])
+              setReporterName('')
+              setReporterPhone('')
+            }}
+            className="rounded-xl border border-slate-300 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
           >
             New Report
           </button>

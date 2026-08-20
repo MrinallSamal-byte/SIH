@@ -135,6 +135,16 @@ export default function PfaChatPage() {
         landmark: 'AapdaMitra AI Mental Health & First-Aid Emergency Escalation',
       })
 
+      // Store in local tracking history
+      try {
+        const existingTracked = JSON.parse(localStorage.getItem('aapdasetu_tracked_reports') || '[]') as string[]
+        if (!existingTracked.includes(report.trackingId)) {
+          localStorage.setItem('aapdasetu_tracked_reports', JSON.stringify([report.trackingId, ...existingTracked]))
+        }
+      } catch {
+        // Storage unavailable
+      }
+
       setMessages((prev) =>
         prev.map((m, i) =>
           i === msgIndex

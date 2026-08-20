@@ -117,6 +117,16 @@ export default function ChatWidget() {
         location: { lat, lng },
       })
 
+      // Store in local tracking history
+      try {
+        const existingTracked = JSON.parse(localStorage.getItem('aapdasetu_tracked_reports') || '[]') as string[]
+        if (!existingTracked.includes(report.trackingId)) {
+          localStorage.setItem('aapdasetu_tracked_reports', JSON.stringify([report.trackingId, ...existingTracked]))
+        }
+      } catch {
+        // Storage unavailable
+      }
+
       setMessages((prev) =>
         prev.map((msg, idx) =>
           idx === msgIndex

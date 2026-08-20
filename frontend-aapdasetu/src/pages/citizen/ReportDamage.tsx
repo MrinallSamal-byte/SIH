@@ -345,7 +345,7 @@ export default function ReportDamage() {
               <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
                 <div className="text-[10px] uppercase font-bold text-slate-500 mono">{t('damage.score')}</div>
                 <div className="text-lg font-bold font-mono text-red-600 dark:text-red-400">
-                  {verdict.damageScore} / 100
+                  {verdict.damageScore ?? 0} / 100
                 </div>
                 <div className="text-[10px] text-slate-400">Severity Points</div>
               </div>
@@ -359,15 +359,15 @@ export default function ReportDamage() {
                     ? 'text-amber-600 dark:text-amber-400'
                     : 'text-emerald-600 dark:text-emerald-400'
                 }`}>
-                  {verdict.damageGrade}
+                  {verdict.damageGrade || 'EVALUATED'}
                 </div>
-                <div className="text-[10px] text-slate-400">{verdict.confidence}% Confidence</div>
+                <div className="text-[10px] text-slate-400">{verdict.confidence ?? 0}% Confidence</div>
               </div>
 
               <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
                 <div className="text-[10px] uppercase font-bold text-slate-500 mono">{t('damage.compensation')}</div>
                 <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                  ₹{verdict.compensationInr.toLocaleString('en-IN')}
+                  ₹{(verdict.compensationInr ?? 0).toLocaleString('en-IN')}
                 </div>
                 <div className="text-[10px] text-slate-400">Gov Compensation</div>
               </div>
@@ -387,7 +387,7 @@ export default function ReportDamage() {
                 ResNet-50 Structural Observations:
               </span>
               <ul className="mt-1.5 list-inside list-disc space-y-1 text-xs text-slate-600 dark:text-slate-300">
-                {verdict.factors.map((f, i) => (
+                {(verdict.factors ?? []).map((f, i) => (
                   <li key={i}>{f}</li>
                 ))}
               </ul>

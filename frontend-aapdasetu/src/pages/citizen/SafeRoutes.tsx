@@ -179,13 +179,16 @@ export default function SafeRoutes() {
 
   const shelterMarkers = useMemo(
     () =>
-      (shelters ?? []).map((s) => ({
-        id: s.id,
-        position: { lat: s.latitude, lng: s.longitude } as GeoPoint,
-        title: s.name,
-        subtitle: `${s.status || 'open'} · Occupancy: ${s.occupancy || 0}/${s.capacity || 0}`,
-        color: '#10b981',
-      })),
+      (shelters ?? [])
+        .filter((s) => typeof s.latitude === 'number' && typeof s.longitude === 'number')
+        .map((s) => ({
+          id: s.id,
+          position: { lat: s.latitude, lng: s.longitude } as GeoPoint,
+          title: s.name,
+          subtitle: `${s.status || 'open'} · Occupancy: ${s.occupancy || 0}/${s.capacity || 0}`,
+          color: '#10b981',
+          isShelter: true,
+        })),
     [shelters],
   )
 
@@ -215,13 +218,16 @@ export default function SafeRoutes() {
   )
 
   const fastestRoute = useMemo<GeoPoint[]>(
-    () => (destination ? buildFastestRoute(origin, { lat: destination.latitude, lng: destination.longitude }) : []),
+    () =>
+      destination && typeof destination.latitude === 'number' && typeof destination.longitude === 'number'
+        ? buildFastestRoute(origin, { lat: destination.latitude, lng: destination.longitude })
+        : [],
     [origin, destination],
   )
 
   const safeRoute = useMemo<GeoPoint[]>(
     () =>
-      destination
+      destination && typeof destination.latitude === 'number' && typeof destination.longitude === 'number'
         ? buildSafeRoute(origin, { lat: destination.latitude, lng: destination.longitude }, polygonPaths)
         : [],
     [origin, destination, polygonPaths],

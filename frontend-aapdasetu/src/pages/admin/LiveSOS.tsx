@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Siren,
   Volume2,
@@ -224,13 +225,13 @@ export default function LiveSOS() {
                 <Button variant="secondary" size="sm" onClick={() => acknowledge(r.id)} className="font-bold">
                   Acknowledge & Triage
                 </Button>
-                <a
-                  href={`#/admin/reports`}
-                  className="inline-flex items-center gap-1 rounded-xl bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+                <Link
+                  to="/admin/reports"
+                  className="inline-flex items-center gap-1 rounded-xl bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer"
                 >
                   <span>Dispatch Unit</span>
                   <ArrowRight className="h-3.5 w-3.5" />
-                </a>
+                </Link>
               </div>
             </div>
           </div>

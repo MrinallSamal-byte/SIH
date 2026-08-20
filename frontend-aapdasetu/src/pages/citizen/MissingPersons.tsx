@@ -331,7 +331,7 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
 
       <div className="grid grid-cols-2 gap-4">
         <Field label={t('missing.age')}>
-          <Input type="number" value={age} onChange={(e) => setAge(e.target.value)} placeholder="e.g. 35" />
+          <Input type="number" min="0" max="120" value={age} onChange={(e) => setAge(e.target.value)} placeholder="e.g. 35" />
         </Field>
         <Field label={t('missing.gender')}>
           <select
