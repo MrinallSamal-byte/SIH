@@ -79,16 +79,37 @@
   #dropzone .icon { font-size: 40px; }
   #dropzone p { color: var(--muted); margin-top: 10px; font-size: 14px; }
   #dropzone .hint { font-size: 12px; margin-top: 4px; }
-  #preview { margin-top: 16px; display: none; }
-  #preview img {
-    width: 100%;
-    max-height: 300px;
-    object-fit: contain;
-    border-radius: var(--radius);
+  #previews {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 10px;
+  }
+  .thumb {
+    position: relative;
     border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
     background: #000;
   }
-  #filename { font-size: 13px; color: var(--muted); margin-top: 8px; text-align: center; }
+  .thumb img { width: 100%; height: 90px; object-fit: cover; display: block; }
+  .thumb .name {
+    font-size: 10px; color: var(--muted);
+    padding: 4px 6px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .thumb .rm {
+    position: absolute; top: 4px; right: 4px;
+    width: 20px; height: 20px;
+    border: none; border-radius: 50%;
+    background: rgba(239,68,68,.9); color: #fff;
+    font-size: 12px; line-height: 20px;
+    cursor: pointer;
+  }
+  .thumb .status-dot {
+    position: absolute; top: 4px; left: 4px;
+    font-size: 12px;
+  }
 
   /* Form */
   .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
@@ -127,6 +148,43 @@
   #results { display: none; }
   #placeholder { text-align: center; color: var(--muted); padding: 60px 0; }
   #placeholder .icon { font-size: 48px; margin-bottom: 12px; }
+
+  /* Multi-image result cards */
+  .img-result {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 14px;
+    background: var(--panel2);
+  }
+  .img-result .head {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 10px;
+  }
+  .img-result .head img {
+    width: 64px; height: 48px; object-fit: cover;
+    border-radius: 8px; border: 1px solid var(--border);
+  }
+  .img-result .head .meta { flex: 1; min-width: 0; }
+  .img-result .head .fname {
+    font-size: 13px; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .grade-chip {
+    display: inline-block;
+    font-size: 13px; font-weight: 800; letter-spacing: 1px;
+    padding: 3px 10px; border-radius: 8px;
+  }
+  .final-verdict {
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    text-align: center;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+  }
+  .final-verdict .big { font-size: 24px; font-weight: 800; letter-spacing: 1px; }
+  .final-verdict .sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
 
   .grade-banner {
     border-radius: var(--radius);
@@ -215,7 +273,7 @@
   <div class="logo">🛡️</div>
   <div>
     <h1>AapdaSetu — AI Damage Assessment</h1>
-    <p>Upload a disaster photo → EXIF fraud check · duplicate detection · ResNet50 damage grading · compensation</p>
+    <p>Upload up to 4 disaster photos → EXIF fraud check · duplicate detection · ResNet50 damage grading · compensation</p>
   </div>
 </header>
 
@@ -227,15 +285,12 @@
 
     <div id="dropzone">
       <div class="icon">📷</div>
-      <p><strong>Drop a damage photo here</strong> or click to browse</p>
-      <p class="hint">JPEG / PNG · original camera photos carry GPS EXIF</p>
+      <p><strong>Drop up to 4 damage photos here</strong> or click to browse</p>
+      <p class="hint" id="dzHint">JPEG / PNG · 0 / 4 selected · original camera photos carry GPS EXIF</p>
     </div>
-    <input type="file" id="fileInput" accept="image/*" hidden>
+    <input type="file" id="fileInput" accept="image/*" multiple hidden>
 
-    <div id="preview">
-      <img id="previewImg" alt="preview">
-      <div id="filename"></div>
-    </div>
+    <div id="previews"></div>
 
     <div class="fields">
       <div class="field">
@@ -268,52 +323,18 @@
 
     <div id="placeholder">
       <div class="icon">🏚️</div>
-      <p>Upload a photo and press <strong>Assess Damage</strong>.<br>Results will appear here.</p>
+      <p>Upload up to 4 photos and press <strong>Assess Damage</strong>.<br>Results will appear here.</p>
     </div>
 
     <div class="spinner" id="spinner"></div>
     <div id="loading-text">Loading model & running pipeline… first request takes a few seconds</div>
 
     <div id="results">
-      <div class="grade-banner" id="gradeBanner">
-        <div class="grade" id="gradeText"></div>
-        <div class="conf" id="confText"></div>
+      <div class="final-verdict" id="finalVerdict">
+        <div class="big" id="finalGrade"></div>
+        <div class="sub" id="finalSub"></div>
       </div>
-
-      <div class="row">
-        <span class="k">Compensation (NDRF/SDRF)</span>
-        <span class="v money" id="compensation"></span>
-      </div>
-      <div class="row">
-        <span class="k">Property type</span>
-        <span class="v" id="ptypeOut"></span>
-      </div>
-
-      <div class="section">
-        <h3>Class scores</h3>
-        <div id="bars"></div>
-      </div>
-
-      <div class="section">
-        <h3>Fraud checks</h3>
-        <div class="flags" id="flags"></div>
-      </div>
-
-      <div class="section">
-        <h3>EXIF evidence</h3>
-        <div class="row"><span class="k">GPS in photo</span><span class="v" id="exifGps"></span></div>
-        <div class="row"><span class="k">GPS verified (≤ 500 m)</span><span class="v" id="gpsOk"></span></div>
-        <div class="row"><span class="k">Photo taken at</span><span class="v" id="exifTime"></span></div>
-        <div class="row"><span class="k">After disaster cutoff</span><span class="v" id="timeOk"></span></div>
-        <div class="row"><span class="k">Camera</span><span class="v" id="camera"></span></div>
-        <div class="row"><span class="k">pHash</span><span class="v" id="phash" style="font-family:monospace"></span></div>
-        <div class="row"><span class="k">Duplicate photo?</span><span class="v" id="dup"></span></div>
-      </div>
-
-      <div class="section">
-        <h3>AI description</h3>
-        <p style="font-size:14px; color:var(--muted)" id="desc"></p>
-      </div>
+      <div id="perImage"></div>
     </div>
   </div>
 </div>
@@ -321,14 +342,16 @@
 <div class="toast" id="toast"></div>
 
 <script>
+const MAX_IMAGES = 4;
+const SEVERITY = { MINOR: 0, MAJOR: 1, DESTROYED: 2 };
+
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
-const preview = document.getElementById('preview');
-const previewImg = document.getElementById('previewImg');
-const filenameEl = document.getElementById('filename');
+const previews = document.getElementById('previews');
+const dzHint = document.getElementById('dzHint');
 const assessBtn = document.getElementById('assess');
 
-let selectedFile = null;
+let selectedFiles = [];
 
 dropzone.addEventListener('click', () => fileInput.click());
 dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
@@ -336,17 +359,37 @@ dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
 dropzone.addEventListener('drop', e => {
   e.preventDefault();
   dropzone.classList.remove('drag');
-  if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+  addFiles([...e.dataTransfer.files]);
 });
-fileInput.addEventListener('change', () => { if (fileInput.files.length) setFile(fileInput.files[0]); });
+fileInput.addEventListener('change', () => { addFiles([...fileInput.files]); fileInput.value = ''; });
 
-function setFile(file) {
-  if (!file.type.startsWith('image/')) { showToast('Please choose an image file'); return; }
-  selectedFile = file;
-  previewImg.src = URL.createObjectURL(file);
-  filenameEl.textContent = file.name + ' · ' + (file.size / 1024).toFixed(0) + ' KB';
-  preview.style.display = 'block';
-  assessBtn.disabled = false;
+function addFiles(files) {
+  for (const f of files) {
+    if (selectedFiles.length >= MAX_IMAGES) { showToast(`Maximum ${MAX_IMAGES} images allowed`); break; }
+    if (!f.type.startsWith('image/')) { showToast('Please choose image files only'); continue; }
+    selectedFiles.push(f);
+  }
+  renderThumbs();
+}
+
+function renderThumbs() {
+  previews.innerHTML = '';
+  selectedFiles.forEach((f, i) => {
+    const div = document.createElement('div');
+    div.className = 'thumb';
+    div.innerHTML = `
+      <img src="${URL.createObjectURL(f)}" alt="preview">
+      <button class="rm" title="Remove">✕</button>
+      <div class="name">${f.name}</div>`;
+    div.querySelector('.rm').addEventListener('click', e => {
+      e.stopPropagation();
+      selectedFiles.splice(i, 1);
+      renderThumbs();
+    });
+    previews.appendChild(div);
+  });
+  dzHint.textContent = `JPEG / PNG · ${selectedFiles.length} / ${MAX_IMAGES} selected · original camera photos carry GPS EXIF`;
+  assessBtn.disabled = selectedFiles.length === 0;
 }
 
 function showToast(msg) {
@@ -360,84 +403,137 @@ function setLoading(on) {
   document.getElementById('spinner').style.display = on ? 'block' : 'none';
   document.getElementById('loading-text').style.display = on ? 'block' : 'none';
   document.getElementById('placeholder').style.display = on ? 'none' : 'block';
-  document.getElementById('results').style.display = on ? 'none' : document.getElementById('results').style.display;
-  assessBtn.disabled = on || !selectedFile;
+  if (on) document.getElementById('results').style.display = 'none';
+  assessBtn.disabled = on || selectedFiles.length === 0;
 }
 
 assessBtn.addEventListener('click', async () => {
-  if (!selectedFile) return;
+  if (selectedFiles.length === 0) return;
   setLoading(true);
-  document.getElementById('results').style.display = 'none';
 
-  const form = new FormData();
-  form.append('photo', selectedFile);
-  form.append('claimed_lat', document.getElementById('lat').value);
-  form.append('claimed_lng', document.getElementById('lng').value);
-  form.append('property_type', document.getElementById('ptype').value);
-  form.append('disaster_cutoff', document.getElementById('cutoff').value + ':00');
-  form.append('existing_hashes_csv', '');
+  const lat = document.getElementById('lat').value;
+  const lng = document.getElementById('lng').value;
+  const ptype = document.getElementById('ptype').value;
+  const cutoff = document.getElementById('cutoff').value + ':00';
 
-  try {
-    const resp = await fetch('/api/assess-damage', { method: 'POST', body: form });
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(data.detail || 'Request failed (' + resp.status + ')');
-    render(data);
-  } catch (err) {
-    showToast('❌ ' + err.message);
-    document.getElementById('placeholder').style.display = 'block';
-  } finally {
-    setLoading(false);
+  const seenHashes = [];   // pHashes of earlier photos in this claim → cross-photo duplicate check
+  const results = [];
+
+  for (const file of selectedFiles) {
+    const form = new FormData();
+    form.append('photo', file);
+    form.append('claimed_lat', lat);
+    form.append('claimed_lng', lng);
+    form.append('property_type', ptype);
+    form.append('disaster_cutoff', cutoff);
+    form.append('existing_hashes_csv', seenHashes.join(','));
+
+    try {
+      const resp = await fetch('/api/assess-damage', { method: 'POST', body: form });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.detail || 'Request failed (' + resp.status + ')');
+      seenHashes.push(data.phash);
+      results.push({ file, data, error: null });
+    } catch (err) {
+      results.push({ file, data: null, error: err.message });
+    }
   }
+
+  render(results);
+  setLoading(false);
 });
 
 function fmtMoney(n) { return '₹' + Number(n).toLocaleString('en-IN'); }
 function yn(b) { return b ? '<span class="badge ok">✓ verified</span>' : '<span class="badge bad">✗ failed</span>'; }
 
-function render(d) {
+function gradeChip(grade) {
+  const colors = { MINOR: 'var(--amber)', MAJOR: 'var(--orange)', DESTROYED: 'var(--red)' };
+  return `<span class="grade-chip" style="color:${colors[grade]}; background:rgba(255,255,255,.06)">${grade}</span>`;
+}
+
+function render(results) {
   document.getElementById('placeholder').style.display = 'none';
   document.getElementById('results').style.display = 'block';
 
-  const banner = document.getElementById('gradeBanner');
-  banner.className = 'grade-banner g-' + d.damage_grade;
-  document.getElementById('gradeText').textContent = d.damage_grade;
-  document.getElementById('confText').textContent = 'confidence ' + (d.confidence_score * 100).toFixed(1) + '%';
-  document.getElementById('compensation').textContent = fmtMoney(d.compensation_amount);
-  document.getElementById('ptypeOut').textContent = d.property_type;
+  const perImage = document.getElementById('perImage');
+  perImage.innerHTML = '';
 
-  // score bars
-  const colors = { MINOR: 'var(--amber)', MAJOR: 'var(--orange)', DESTROYED: 'var(--red)' };
-  const bars = document.getElementById('bars');
-  bars.innerHTML = '';
-  ['DESTROYED', 'MAJOR', 'MINOR'].forEach(cls => {
-    const p = (d.all_scores[cls] || 0) * 100;
-    bars.innerHTML += `
-      <div class="bar-row">
+  let verdict = null;  // most severe grade among non-duplicate photos
+  let verdictData = null;
+
+  results.forEach(({ file, data, error }, i) => {
+    const card = document.createElement('div');
+    card.className = 'img-result';
+
+    if (error) {
+      card.innerHTML = `
+        <div class="head">
+          <img src="${URL.createObjectURL(file)}" alt="">
+          <div class="meta">
+            <div class="fname">Photo ${i + 1} · ${file.name}</div>
+            <span class="badge bad">✗ ${error}</span>
+          </div>
+        </div>`;
+      perImage.appendChild(card);
+      return;
+    }
+
+    const d = data;
+    const colors = { MINOR: 'var(--amber)', MAJOR: 'var(--orange)', DESTROYED: 'var(--red)' };
+    const bars = ['DESTROYED', 'MAJOR', 'MINOR'].map(cls => {
+      const p = (d.all_scores[cls] || 0) * 100;
+      return `<div class="bar-row">
         <div class="bar-label"><span class="name">${cls}</span><span>${p.toFixed(1)}%</span></div>
         <div class="bar"><div style="width:${p}%; background:${colors[cls]}"></div></div>
       </div>`;
+    }).join('');
+
+    const flags = d.fraud_flags.length === 0
+      ? '<span class="flag ok">✓ All fraud checks passed</span>'
+      : d.fraud_flags.map(f => '<span class="flag">⚠ ' + f + '</span>').join('');
+
+    card.innerHTML = `
+      <div class="head">
+        <img src="${URL.createObjectURL(file)}" alt="">
+        <div class="meta">
+          <div class="fname">Photo ${i + 1} · ${file.name}</div>
+          ${gradeChip(d.damage_grade)}
+          <span style="font-size:12px; color:var(--muted)"> · confidence ${(d.confidence_score * 100).toFixed(1)}%</span>
+        </div>
+        <span class="v money">${fmtMoney(d.compensation_amount)}</span>
+      </div>
+      ${bars}
+      <div class="flags">${flags}</div>
+      <div style="margin-top:8px">
+        <div class="row"><span class="k">GPS verified (≤ 500 m)</span><span class="v">${yn(d.gps_verified)}</span></div>
+        <div class="row"><span class="k">After disaster cutoff</span><span class="v">${yn(d.timestamp_verified)}</span></div>
+        <div class="row"><span class="k">Camera</span><span class="v">${[d.camera_make, d.camera_model].filter(Boolean).join(' ') || '—'}</span></div>
+        <div class="row"><span class="k">Duplicate photo?</span><span class="v">${d.is_duplicate
+          ? '<span class="badge bad">duplicate of ' + d.duplicate_of_hash + '</span>'
+          : '<span class="badge ok">unique</span>'}</span></div>
+      </div>`;
+    perImage.appendChild(card);
+
+    // Final verdict: most severe grade among unique (non-duplicate) photos
+    if (!d.is_duplicate && (!verdict || SEVERITY[d.damage_grade] > SEVERITY[verdict])) {
+      verdict = d.damage_grade;
+      verdictData = d;
+    }
   });
 
-  // fraud flags
-  const flags = document.getElementById('flags');
-  if (d.fraud_flags.length === 0) {
-    flags.innerHTML = '<span class="flag ok">✓ All fraud checks passed</span>';
+  const fv = document.getElementById('finalVerdict');
+  if (verdictData) {
+    const colors = { MINOR: 'var(--amber)', MAJOR: 'var(--orange)', DESTROYED: 'var(--red)' };
+    document.getElementById('finalGrade').innerHTML =
+      `FINAL VERDICT: <span style="color:${colors[verdict]}">${verdict}</span>`;
+    document.getElementById('finalSub').innerHTML =
+      `Based on ${results.filter(r => r.data && !r.data.is_duplicate).length} valid photo(s) · ` +
+      `Recommended compensation <strong style="color:var(--green)">${fmtMoney(verdictData.compensation_amount)}</strong> · ` +
+      verdictData.ai_description;
   } else {
-    flags.innerHTML = d.fraud_flags.map(f => '<span class="flag">⚠ ' + f + '</span>').join('');
+    document.getElementById('finalGrade').textContent = 'NO VALID PHOTOS';
+    document.getElementById('finalSub').textContent = 'All submitted photos were duplicates or failed assessment.';
   }
-
-  // EXIF
-  document.getElementById('exifGps').textContent =
-    d.exif_gps_lat != null ? d.exif_gps_lat.toFixed(5) + ', ' + d.exif_gps_lng.toFixed(5) : '— none —';
-  document.getElementById('gpsOk').innerHTML = yn(d.gps_verified);
-  document.getElementById('exifTime').textContent = d.exif_timestamp ? d.exif_timestamp.replace('T', ' ').slice(0, 19) : '— none —';
-  document.getElementById('timeOk').innerHTML = yn(d.timestamp_verified);
-  document.getElementById('camera').textContent =
-    d.camera_make || d.camera_model ? [d.camera_make, d.camera_model].filter(Boolean).join(' ') : '—';
-  document.getElementById('phash').textContent = d.phash;
-  document.getElementById('dup').innerHTML = d.is_duplicate
-    ? '<span class="badge bad">duplicate of ' + d.duplicate_of_hash + '</span>'
-    : '<span class="badge ok">unique</span>';
-  document.getElementById('desc').textContent = d.ai_description;
 }
 </script>
 </body>
