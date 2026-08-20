@@ -7,8 +7,8 @@ import { useAuth } from '../../hooks/useAuth'
 export default function AdminLogin() {
   const { login, loading, error } = useAuth()
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('admin@aapdasetu.org')
+  const [password, setPassword] = useState('Admin@123')
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
