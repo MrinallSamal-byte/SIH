@@ -294,7 +294,29 @@ class DamageClassifier:
         cls._instance = None
 
 
-def calculate_compensation(damage_grade: str, property_type: str = "RESIDENTIAL") -> float:
-    """Return standard compensation amount in INR based on grade and property type."""
+def calculate_compensation(
+    damage_grade: str,
+    property_type: str = "RESIDENTIAL",
+    all_scores: dict[str, float] | None = None,
+) -> float:
+    """
+    Compensation in INR. When `all_scores` (per-class softmax probabilities) is
+    provided, the amount is a confidence-weighted expected value over all grades
+    plus a top-class confidence bonus, so every photo gets a distinct amount.
+    Otherwise falls back to the flat NDRF/SDRF table amount.
+    """
     table = COMPENSATION_TABLE.get(property_type.upper(), COMPENSATION_TABLE["RESIDENTIAL"])
-    return float(table.get(damage_grade, 0))
+    base = float(table.get(damage_grade, 0))
+
+    if not all_scores or base <= 0:
+        return base
+
+    # Expected value across grades: Σ P(class) × amount(class)
+    blended = sum(table.get(grade, 0) * float(prob)
+                  for grade, prob in all_scores.items() if grade in table)
+    # Blend 50% flat grade amount + 50% score-weighted expected amount
+    amount = 0.5 * base + 0.5 * blended
+    # Confidence bonus: certain predictions earn up to +10% on top
+    amount *= 0.9 + 0.2 * min(float(all_scores.get(damage_grade, 0.5)), 1.0)
+    # Round to nearest ₹100 for clean payout figures
+    return round(amount / 100) * 100
