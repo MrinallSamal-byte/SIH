@@ -314,9 +314,11 @@ def calculate_compensation(
     # Expected value across grades: Σ P(class) × amount(class)
     blended = sum(table.get(grade, 0) * float(prob)
                   for grade, prob in all_scores.items() if grade in table)
-    # Blend 50% flat grade amount + 50% score-weighted expected amount
-    amount = 0.5 * base + 0.5 * blended
-    # Confidence bonus: certain predictions earn up to +10% on top
-    amount *= 0.9 + 0.2 * min(float(all_scores.get(damage_grade, 0.5)), 1.0)
-    # Round to nearest ₹100 for clean payout figures
-    return round(amount / 100) * 100
+    # Blend 40% flat grade amount + 60% score-weighted expected amount so the
+    # per-class probability spread drives most of the payout variation
+    amount = 0.4 * base + 0.6 * blended
+    # Confidence bonus: uncertain predictions pay less, certain ones earn up
+    # to +15% on top (multiplier range 0.70×–1.15×)
+    amount *= 0.7 + 0.45 * min(float(all_scores.get(damage_grade, 0.5)), 1.0)
+    # Round to nearest ₹50 for clean payout figures
+    return round(amount / 50) * 50

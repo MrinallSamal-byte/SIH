@@ -565,9 +565,9 @@ function claimCompensation(grade, avgScores, ptype) {
   const blended = Object.entries(avgScores)
     .filter(([g]) => table[g] !== undefined)
     .reduce((s, [g, p]) => s + table[g] * p, 0);
-  let amount = 0.5 * base + 0.5 * blended;
-  amount *= 0.9 + 0.2 * Math.min(avgScores[grade] || 0.5, 1.0);
-  return Math.round(amount / 100) * 100;
+  let amount = 0.4 * base + 0.6 * blended;
+  amount *= 0.7 + 0.45 * Math.min(avgScores[grade] || 0.5, 1.0);
+  return Math.round(amount / 50) * 50;
 }
 </script>
 </body>
