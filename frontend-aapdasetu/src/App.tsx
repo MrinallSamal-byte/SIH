@@ -11,13 +11,14 @@ const Home = lazy(() => import('./pages/citizen/Home'))
 const SOS = lazy(() => import('./pages/citizen/SOS'))
 const ReportForm = lazy(() => import('./pages/citizen/ReportForm'))
 const ReportTracker = lazy(() => import('./pages/citizen/ReportTracker'))
-const SafetyCheckin = lazy(() => import('./pages/citizen/SafetyCheckin'))
 const ShelterFinder = lazy(() => import('./pages/citizen/ShelterFinder'))
 const Alerts = lazy(() => import('./pages/citizen/Alerts'))
 const ReportDamage = lazy(() => import('./pages/citizen/ReportDamage'))
 const MissingPersons = lazy(() => import('./pages/citizen/MissingPersons'))
 const SafeRoutes = lazy(() => import('./pages/citizen/SafeRoutes'))
 const PfaChat = lazy(() => import('./pages/citizen/PfaChat'))
+const About = lazy(() => import('./pages/citizen/About'))
+const Contacts = lazy(() => import('./pages/citizen/Contacts'))
 
 const AdminLogin = lazy(() => import('./pages/admin/Login'))
 const Overview = lazy(() => import('./pages/admin/Overview'))
@@ -59,12 +60,13 @@ export default function App() {
             <Route path="/sos" element={<SOS />} />
             <Route path="/report" element={<ReportForm />} />
             <Route path="/track" element={<ReportTracker />} />
-            <Route path="/check-in" element={<SafetyCheckin />} />
             <Route path="/shelters" element={<ShelterFinder />} />
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/report-damage" element={<ReportDamage />} />
             <Route path="/missing-persons" element={<MissingPersons />} />
             <Route path="/safe-routes" element={<SafeRoutes />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contacts" element={<Contacts />} />
             <Route path="/pfa-chat" element={<PfaChat />} />
           </Route>
 

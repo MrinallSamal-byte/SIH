@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 const colors: Record<string, string> = {
-  info: 'bg-slate-100 text-slate-800 border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200',
+  info: 'bg-slate-100 text-slate-800 border border-slate-200 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200',
   warning: 'bg-amber-50 text-amber-800 border border-amber-200 dark:border-amber-900/50 dark:bg-amber-950/60 dark:text-amber-300',
   critical: 'bg-red-50 text-red-800 border border-red-200 dark:border-red-900/50 dark:bg-red-950/60 dark:text-red-300',
   open: 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:border-emerald-900/50 dark:bg-emerald-950/60 dark:text-emerald-300',

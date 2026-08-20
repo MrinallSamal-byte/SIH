@@ -135,6 +135,16 @@ export default function PfaChatPage() {
         landmark: 'AapdaMitra AI Mental Health & First-Aid Emergency Escalation',
       })
 
+      // Store in local tracking history
+      try {
+        const existingTracked = JSON.parse(localStorage.getItem('aapdasetu_tracked_reports') || '[]') as string[]
+        if (!existingTracked.includes(report.trackingId)) {
+          localStorage.setItem('aapdasetu_tracked_reports', JSON.stringify([report.trackingId, ...existingTracked]))
+        }
+      } catch {
+        // Storage unavailable
+      }
+
       setMessages((prev) =>
         prev.map((m, i) =>
           i === msgIndex
@@ -157,15 +167,15 @@ export default function PfaChatPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col h-[calc(100vh-7.5rem)]">
+    <div className="mx-auto flex w-full max-w-3xl flex-col h-[calc(100vh-7.5rem)] lg:max-w-5xl">
       {/* Top Banner */}
-      <div className="flex items-center justify-between rounded-t-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex items-center justify-between rounded-t-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 font-bold text-white shadow-xs dark:bg-slate-100 dark:text-slate-950">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800 font-bold text-white shadow-xs dark:bg-slate-100 dark:text-slate-950">
             <Bot className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <h1 className="text-base font-bold text-zinc-800 dark:text-slate-300 flex items-center gap-2">
               <span>AapdaMitra AI</span>
               <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 flex items-center gap-1 mono">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -184,7 +194,7 @@ export default function PfaChatPage() {
           className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition ${
             breathingActive
               ? 'bg-emerald-600 text-white'
-              : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+              : 'border border-zinc-200/80 bg-[#f4f4f5] text-zinc-600 hover:bg-zinc-100 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300'
           }`}
         >
           <Activity className="h-3.5 w-3.5" />
@@ -194,15 +204,15 @@ export default function PfaChatPage() {
 
       {/* Breathing Coach Interactive Bar */}
       {breathingActive && (
-        <div className="flex items-center justify-center gap-4 border-x border-slate-200 bg-slate-100 py-3 dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 font-bold text-white text-xs dark:bg-slate-100 dark:text-slate-900 mono">
+        <div className="flex items-center justify-center gap-4 border-x border-zinc-200/80 bg-[#f4f4f5] py-3 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-800 font-bold text-white text-xs dark:bg-slate-100 dark:text-zinc-800 mono">
             {breathPhase === 'Inhale' ? 'IN' : breathPhase === 'Hold' ? 'HOLD' : 'OUT'}
           </div>
           <div>
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
               Guided 4-Second Box Breathing
             </div>
-            <div className="text-sm font-bold text-slate-900 dark:text-slate-100 mono">
+            <div className="text-sm font-bold text-zinc-800 dark:text-slate-300 mono">
               {breathPhase.toUpperCase()} NOW
             </div>
           </div>
@@ -210,18 +220,18 @@ export default function PfaChatPage() {
       )}
 
       {/* Chat Messages Log */}
-      <div className="flex-1 space-y-4 overflow-y-auto border-x border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
+      <div className="flex-1 space-y-4 overflow-y-auto border-x border-zinc-200/80 bg-[#f4f4f5] p-4 dark:border-white/[0.08] dark:bg-[#151515]">
         {messages.map((m, i) => (
           <div key={m.id || i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div
-              className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm shadow-xs ${
+              className={`max-w-[88%] lg:max-w-[70%] rounded-2xl px-4 py-3 text-sm shadow-xs ${
                 m.role === 'user'
-                  ? 'bg-slate-900 text-white rounded-br-none dark:bg-slate-100 dark:text-slate-950 font-medium'
+                  ? 'bg-zinc-800 text-white rounded-br-none dark:bg-slate-100 dark:text-slate-950 font-medium'
                   : m.dangerLevel === 'CRITICAL' || m.isCritical
-                  ? 'border border-red-200 bg-red-50/90 text-slate-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-slate-100 rounded-bl-none'
+                  ? 'border border-red-200 bg-red-50/90 text-zinc-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-slate-300 rounded-bl-none'
                   : m.dangerLevel === 'MODERATE'
-                  ? 'border border-amber-200 bg-amber-50/90 text-slate-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-slate-100 rounded-bl-none'
-                  : 'border border-slate-200 bg-white text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 rounded-bl-none'
+                  ? 'border border-amber-200 bg-amber-50/90 text-zinc-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-slate-300 rounded-bl-none'
+                  : 'border border-zinc-200/80 bg-white text-zinc-700 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-300 rounded-bl-none'
               }`}
             >
               <div className="whitespace-pre-wrap leading-relaxed">{cleanAiOutput(m.content)}</div>
@@ -237,10 +247,10 @@ export default function PfaChatPage() {
               {(m.dangerLevel === 'CRITICAL' || m.isCritical || m.dangerLevel === 'MODERATE') && (
                 <div className={`mt-3 space-y-3 rounded-xl border p-4 shadow-xs ${
                   m.dangerLevel === 'CRITICAL' || m.isCritical
-                    ? 'border-red-300 bg-white dark:border-red-800 dark:bg-slate-900'
-                    : 'border-amber-300 bg-white dark:border-amber-800 dark:bg-slate-900'
+                    ? 'border-red-300 bg-white dark:border-red-800 dark:bg-[#1a1a1a]'
+                    : 'border-amber-300 bg-white dark:border-amber-800 dark:bg-[#1a1a1a]'
                 }`}>
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5 dark:border-slate-800">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200/80 pb-2.5 dark:border-white/[0.08]">
                     <div>
                       <span className={`text-xs font-bold uppercase tracking-wider mono flex items-center gap-1.5 ${
                         m.dangerLevel === 'CRITICAL' || m.isCritical
@@ -272,7 +282,7 @@ export default function PfaChatPage() {
                   {/* Reach-Out Phone Number Field */}
                   {!m.callbackSubmitted ? (
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5">
+                      <label className="block text-xs font-bold text-zinc-600 dark:text-slate-200 mb-1.5">
                         Enter your mobile number — rescue teams will reach out to you as soon as possible:
                       </label>
                       <div className="flex gap-2">
@@ -283,7 +293,7 @@ export default function PfaChatPage() {
                           onChange={(e) =>
                             setCallbackPhones((prev) => ({ ...prev, [i]: e.target.value }))
                           }
-                          className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3.5 py-2 text-xs sm:text-sm outline-none focus:border-red-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                          className="min-w-0 flex-1 rounded-xl border border-zinc-200 px-3.5 py-2 text-xs sm:text-sm outline-none focus:border-red-500 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300"
                         />
                         <button
                           type="button"
@@ -301,12 +311,12 @@ export default function PfaChatPage() {
                         <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                         <span>Priority Rescue Callback Dispatched!</span>
                       </div>
-                      <div className="mt-1 text-slate-700 dark:text-slate-300">
-                        Tracking ID: <strong className="font-mono text-slate-900 dark:text-slate-100">{m.trackingId}</strong> (Contact: {m.submittedPhone})
+                      <div className="mt-1 text-zinc-600 dark:text-slate-300">
+                        Tracking ID: <strong className="font-mono text-zinc-800 dark:text-slate-300">{m.trackingId}</strong> (Contact: {m.submittedPhone})
                       </div>
                       <a
                         href={`#/track?id=${m.trackingId}`}
-                        className="mt-2 inline-flex items-center gap-1 font-bold text-slate-900 underline hover:text-slate-700 dark:text-slate-100"
+                        className="mt-2 inline-flex items-center gap-1 font-bold text-zinc-800 underline hover:text-zinc-600 dark:text-slate-300"
                       >
                         <span>Track Live Incident Response Status</span>
                         <ArrowRight className="h-3.5 w-3.5" />
@@ -321,7 +331,7 @@ export default function PfaChatPage() {
 
         {busy && (
           <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 italic">
-            <span className="h-2 w-2 animate-bounce rounded-full bg-slate-900 dark:bg-slate-100" />
+            <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-800 dark:bg-slate-100" />
             <span>AapdaMitra AI is preparing survival advice…</span>
           </div>
         )}
@@ -329,14 +339,14 @@ export default function PfaChatPage() {
       </div>
 
       {/* Suggested Quick Shortcuts */}
-      <div className="border-x border-slate-200 bg-white px-4 py-2.5 dark:border-slate-800 dark:bg-slate-900">
+      <div className="border-x border-zinc-200/80 bg-white px-4 py-2.5 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
         <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
           {promptShortcuts.map((ps) => (
             <button
               key={ps.label}
               type="button"
               onClick={() => send(ps.query)}
-              className="shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+              className="shrink-0 rounded-xl border border-zinc-200/80 bg-[#f4f4f5] px-3 py-1.5 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-100 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300"
             >
               {ps.label}
             </button>
@@ -345,19 +355,19 @@ export default function PfaChatPage() {
       </div>
 
       {/* Bottom Input */}
-      <div className="flex gap-2 rounded-b-2xl border border-slate-200 bg-white p-3.5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex gap-2 rounded-b-2xl border border-zinc-200/80 bg-white p-3.5 shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && send()}
           placeholder={t('chat.placeholder')}
-          className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-300"
+          className="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-800 outline-none focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 dark:focus:border-slate-500"
         />
         <button
           type="button"
           onClick={() => send()}
           disabled={busy || !input.trim()}
-          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-xs transition hover:bg-slate-800 disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-zinc-800 px-6 py-2.5 text-sm font-bold text-white shadow-xs transition hover:bg-zinc-700 disabled:opacity-50 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
         >
           <Send className="h-4 w-4" />
           <span>{t('common.send')}</span>

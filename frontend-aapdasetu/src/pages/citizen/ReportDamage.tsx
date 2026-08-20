@@ -135,7 +135,7 @@ export default function ReportDamage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl text-left">
+    <div className="mx-auto max-w-3xl text-left">
       {/* Top Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -143,7 +143,7 @@ export default function ReportDamage() {
             <FileSpreadsheet className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-800 dark:text-slate-300">
               {t('damage.title')}
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -165,10 +165,10 @@ export default function ReportDamage() {
         </a>
       </div>
 
-      <div className="mt-4 space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+      <div className="mt-4 space-y-5 rounded-2xl border border-zinc-200/80 bg-white p-4 sm:p-6 shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
         {/* Step 1: Select Infrastructure Type */}
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mono mb-2">
+          <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-slate-300 mono mb-2">
             {t('damage.step1Title')}
           </label>
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -182,21 +182,21 @@ export default function ReportDamage() {
                   onClick={() => setInfraType(cat.id)}
                   className={`flex items-start gap-3 rounded-xl border p-3 text-left transition-all cursor-pointer ${
                     isSelected
-                      ? 'border-slate-900 bg-slate-50 shadow-xs dark:border-white dark:bg-slate-800/90'
-                      : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-slate-700'
+                      ? 'border-slate-900 bg-[#f4f4f5] shadow-xs dark:border-white dark:bg-[#222222]/90'
+                      : 'border-zinc-200/80 bg-white hover:border-zinc-200 dark:border-white/[0.08] dark:bg-[#1a1a1a]/60 dark:hover:border-slate-700'
                   }`}
                 >
                   <div
                     className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
                       isSelected
-                        ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                        ? 'bg-zinc-800 text-white dark:bg-white dark:text-zinc-800'
+                        : 'bg-slate-100 text-zinc-500 dark:bg-[#222222] dark:text-slate-300'
                     }`}
                   >
                     <Icon className="h-4 w-4" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                    <div className="text-xs font-bold text-zinc-800 dark:text-slate-300">
                       {cat.label}
                     </div>
                     <div className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
@@ -211,7 +211,7 @@ export default function ReportDamage() {
 
         {/* Step 2: Photo Upload */}
         <div className="space-y-2">
-          <label htmlFor="damage-photo" className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mono">
+          <label htmlFor="damage-photo" className="block text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-slate-300 mono">
             {t('damage.step2Title')}
           </label>
           <div className="relative">
@@ -220,11 +220,11 @@ export default function ReportDamage() {
               type="file"
               accept="image/*"
               onChange={(e) => onFile(e.target.files?.[0])}
-              className="block w-full text-sm file:mr-4 file:rounded-xl file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-slate-800 dark:file:bg-slate-100 dark:file:text-slate-900 cursor-pointer"
+              className="block w-full text-sm file:mr-4 file:rounded-xl file:border-0 file:bg-zinc-800 file:px-4 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-slate-800 dark:file:bg-slate-100 dark:file:text-zinc-800 cursor-pointer"
             />
           </div>
           {preview && (
-            <div className="relative mt-2 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-950">
+            <div className="relative mt-2 overflow-hidden rounded-xl border border-zinc-200/80 dark:border-white/[0.1] bg-slate-950">
               <img src={preview} alt="Damage preview" className="max-h-72 w-full object-cover" />
               <div className="absolute bottom-2 left-2 rounded-md bg-black/70 px-2.5 py-1 text-[11px] font-mono text-white backdrop-blur-xs flex items-center gap-1.5">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
@@ -237,13 +237,13 @@ export default function ReportDamage() {
         {/* Step 3: Location & District */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mono mb-1.5">
+            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-slate-300 mono mb-1.5">
               {t('damage.district')} *
             </label>
             <select
               value={district}
               onChange={(e) => setDistrict(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-900 outline-none transition focus:border-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-zinc-800 outline-none transition focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300"
             >
               {DISTRICT_LIST.map((d) => (
                 <option key={d} value={d}>
@@ -284,7 +284,7 @@ export default function ReportDamage() {
 
         {/* Step 5: Damage Description */}
         <div className="space-y-1.5">
-          <label htmlFor="damage-description" className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mono">
+          <label htmlFor="damage-description" className="block text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-slate-300 mono">
             {t('damage.description')}
           </label>
           <textarea
@@ -293,7 +293,7 @@ export default function ReportDamage() {
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
             placeholder="e.g. 600mm main water pipeline ruptured, basement submerged under 1.5m sludge, cracked pillars…"
-            className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs text-slate-900 outline-none transition focus:border-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-300"
+            className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs text-zinc-800 outline-none transition focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 dark:focus:border-slate-500"
           />
         </div>
 
@@ -315,14 +315,14 @@ export default function ReportDamage() {
 
         {/* Verdict Output Card */}
         {verdict && (
-          <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950">
+          <div className="space-y-4 rounded-2xl border border-zinc-200/80 bg-[#f4f4f5] p-5 dark:border-white/[0.08] dark:bg-[#151515]">
             {claimId && (
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3 dark:border-slate-800">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200/80 pb-3 dark:border-white/[0.08]">
                 <div>
                   <span className="text-[10px] text-slate-500 uppercase tracking-wider mono font-bold">
                     Official SDRF Claim ID
                   </span>
-                  <div className="font-mono text-base font-bold text-slate-900 dark:text-slate-100">
+                  <div className="font-mono text-base font-bold text-zinc-800 dark:text-slate-300">
                     {claimId}
                   </div>
                 </div>
@@ -331,7 +331,7 @@ export default function ReportDamage() {
                   <button
                     type="button"
                     onClick={copyClaimReceipt}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 cursor-pointer"
+                    className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs font-bold text-zinc-600 shadow-xs hover:bg-zinc-100 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 cursor-pointer"
                   >
                     <Copy className="h-3 w-3" />
                     <span>{copied ? 'Copied' : t('damage.copyClaim')}</span>
@@ -342,7 +342,7 @@ export default function ReportDamage() {
 
             {/* AI Scoring Summary Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+              <div className="rounded-xl border border-zinc-200/80 bg-white p-3 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
                 <div className="text-[10px] uppercase font-bold text-slate-500 mono">{t('damage.score')}</div>
                 <div className="text-lg font-bold font-mono text-red-600 dark:text-red-400">
                   {verdict.damageScore} / 100
@@ -350,7 +350,7 @@ export default function ReportDamage() {
                 <div className="text-[10px] text-slate-400">Severity Points</div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+              <div className="rounded-xl border border-zinc-200/80 bg-white p-3 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
                 <div className="text-[10px] uppercase font-bold text-slate-500 mono">{t('damage.grade')}</div>
                 <div className={`text-sm font-bold font-mono ${
                   verdict.damageGrade === 'DESTROYED'
@@ -364,7 +364,7 @@ export default function ReportDamage() {
                 <div className="text-[10px] text-slate-400">{verdict.confidence}% Confidence</div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+              <div className="rounded-xl border border-zinc-200/80 bg-white p-3 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
                 <div className="text-[10px] uppercase font-bold text-slate-500 mono">{t('damage.compensation')}</div>
                 <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
                   ₹{verdict.compensationInr.toLocaleString('en-IN')}
@@ -372,9 +372,9 @@ export default function ReportDamage() {
                 <div className="text-[10px] text-slate-400">Gov Compensation</div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+              <div className="rounded-xl border border-zinc-200/80 bg-white p-3 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
                 <div className="text-[10px] uppercase font-bold text-slate-500 mono">Sector Match</div>
-                <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                <div className="text-xs font-bold text-zinc-700 dark:text-slate-200 truncate">
                   {district}
                 </div>
                 <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">GPS Verified</div>
@@ -382,11 +382,11 @@ export default function ReportDamage() {
             </div>
 
             {/* Assessment Factors */}
-            <div className="border-t border-slate-200 pt-3 dark:border-slate-800">
+            <div className="border-t border-zinc-200/80 pt-3 dark:border-white/[0.08]">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mono">
                 ResNet-50 Structural Observations:
               </span>
-              <ul className="mt-1.5 list-inside list-disc space-y-1 text-xs text-slate-600 dark:text-slate-300">
+              <ul className="mt-1.5 list-inside list-disc space-y-1 text-xs text-zinc-500 dark:text-slate-300">
                 {verdict.factors.map((f, i) => (
                   <li key={i}>{f}</li>
                 ))}

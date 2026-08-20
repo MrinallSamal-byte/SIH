@@ -1,38 +1,41 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import {
+  Settings as SettingsIcon,
+  Smartphone,
+  MessageSquare,
+  Cpu,
+  Save,
+  RotateCcw,
+  Sliders,
+} from 'lucide-react'
 import { Field, Input } from '../../components/common/Input'
 import Button from '../../components/common/Button'
-import Card from '../../components/common/Card'
 import { useToast } from '../../components/common/Toast'
+import { resetMockDatabase } from '../../api/endpoints'
 
 interface ServerCreds {
   twilioSid: string
   twilioAuthToken: string
+  twilioSenderNumber: string
   whatsappToken: string
   whatsappPhoneNumberId: string
+  aiVisionEndpoint: string
+  aiTriageEndpoint: string
+  autoEscalateMinutes: string
 }
 
 const STORAGE_KEY = 'aapdasetu_server_creds_placeholder'
 const empty: ServerCreds = {
   twilioSid: '',
   twilioAuthToken: '',
+  twilioSenderNumber: '+1234567890',
   whatsappToken: '',
   whatsappPhoneNumberId: '',
+  aiVisionEndpoint: 'http://localhost:8000/api/ai/damage-assessment',
+  aiTriageEndpoint: 'http://localhost:8000/api/ai/pfa-triage',
+  autoEscalateMinutes: '15',
 }
 
-/**
- * System settings & API integrations.
- *
- * These credentials are SERVER-SIDE ONLY. In production they must live on the
- * Express backend (env vars / secrets manager) and be consumed there:
- *
- *   POST /api/communications/broadcast  channel: sms        -> Twilio SID + Auth Token
- *   POST /api/communications/broadcast  channel: whatsapp   -> Cloud API Token + Phone Number ID
- *
- * This page only saves them to localStorage as a DEV placeholder so you know
- * what to configure. @TODO BUILD: replace with a real backend call
- * (e.g. PATCH /api/settings) that stores them server-side — never ship tokens
- * to the browser in production.
- */
 export default function Settings() {
   const { toast } = useToast()
   const [creds, setCreds] = useState<ServerCreds>(() => {
@@ -44,62 +47,190 @@ export default function Settings() {
     }
   })
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(creds))
-  }, [creds])
+  const [saving, setSaving] = useState(false)
 
-  const set = (key: keyof ServerCreds) => (value: string) => setCreds((prev) => ({ ...prev, [key]: value }))
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaving(true)
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(creds))
+      toast('System settings & gateway configuration saved successfully!', 'success')
+    } catch {
+      toast('Failed to save settings', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const set = (key: keyof ServerCreds) => (value: string) =>
+    setCreds((prev) => ({ ...prev, [key]: value }))
 
   return (
-    <div className="max-w-xl">
-      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">System settings & API integrations</h1>
-      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-        Admin portal for API credentials and default thresholds. Server-side credentials are NEVER bundled into the
-        frontend.
-      </p>
-
-      <div className="mt-5 space-y-4">
-        <Card title="SMS channel — Twilio (consumed by POST /api/communications/broadcast)">
-          <div className="space-y-4">
-            <Field label="Account SID">
-              <Input value={creds.twilioSid} onChange={(e) => set('twilioSid')(e.target.value)} placeholder="ACxxxxxxxxxxxxxxxx" />
-            </Field>
-            <Field label="Auth Token">
-              <Input type="password" value={creds.twilioAuthToken} onChange={(e) => set('twilioAuthToken')(e.target.value)} placeholder="********" />
-            </Field>
+    <form onSubmit={handleSave} className="space-y-6 max-w-4xl">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <SettingsIcon className="h-6 w-6 text-slate-900 dark:text-slate-100" />
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              System Settings & Integration Gateway
+            </h1>
           </div>
-        </Card>
-
-        <Card title="WhatsApp channel — Meta Cloud API (consumed by POST /api/communications/broadcast)">
-          <div className="space-y-4">
-            <Field label="Cloud API Token">
-              <Input type="password" value={creds.whatsappToken} onChange={(e) => set('whatsappToken')(e.target.value)} placeholder="********" />
-            </Field>
-            <Field label="Phone Number ID">
-              <Input value={creds.whatsappPhoneNumberId} onChange={(e) => set('whatsappPhoneNumberId')(e.target.value)} placeholder="10xxxxxxx" />
-            </Field>
-          </div>
-        </Card>
-
-        <Card title="Admin authentication (server-side)">
-          <p className="text-xs text-slate-500">
-            <code>POST /api/admin/login</code> must do a bcrypt compare against a stored hash. Configure
-            <code> ADMIN_EMAIL </code> and <code>ADMIN_PASSWORD_BCRYPT_HASH</code> on the backend.
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            Configure multi-channel communication keys, AI endpoint hooks, and Incident Command operational parameters.
           </p>
-        </Card>
+        </div>
 
-        <Card title="Browser-side environment">
-          <ul className="list-inside list-disc space-y-1 text-xs text-slate-600">
-            <li><code>VITE_API_URL</code> — Express backend (src/api/endpoints.ts)</li>
-            <li><code>VITE_AI_URL</code> — FastAPI AI engine (src/api/ai.ts)</li>
-            <li><code>VITE_SUPABASE_URL</code> / <code>VITE_SUPABASE_ANON_KEY</code> — optional realtime swap (src/hooks/useRealtime.ts)</li>
-            <li><code>VITE_MAP_TILE_URL</code> / <code>VITE_MAP_ATTRIBUTION</code> — Leaflet tiles (src/components/map/LeafletMap.tsx)</li>
-          </ul>
-          <p className="mt-2 text-xs text-slate-400">See .env.example for the full list with where each value is used.</p>
-        </Card>
-
-        <Button onClick={() => toast('Placeholder credentials saved locally')}>Save placeholders</Button>
+        <div className="flex items-center gap-2">
+          <Button type="submit" className="shadow-sm cursor-pointer flex items-center gap-1.5">
+            <Save className="h-4 w-4" />
+            <span>{saving ? 'Saving…' : 'Save Changes'}</span>
+          </Button>
+        </div>
       </div>
-    </div>
+
+      <div className="grid gap-5 md:grid-cols-2">
+        {/* SMS Gateway Card */}
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
+            <Smartphone className="h-4 w-4 text-blue-600" />
+            <span>Cellular SMS Gateway (Twilio / Telecom)</span>
+          </div>
+
+          <Field label="Account SID">
+            <Input
+              value={creds.twilioSid}
+              onChange={(e) => set('twilioSid')(e.target.value)}
+              placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              className="font-mono text-xs"
+            />
+          </Field>
+
+          <Field label="Auth Token">
+            <Input
+              type="password"
+              value={creds.twilioAuthToken}
+              onChange={(e) => set('twilioAuthToken')(e.target.value)}
+              placeholder="••••••••••••••••••••••••••••••••"
+              className="font-mono text-xs"
+            />
+          </Field>
+
+          <Field label="Sender Number / Alpha Tag">
+            <Input
+              value={creds.twilioSenderNumber}
+              onChange={(e) => set('twilioSenderNumber')(e.target.value)}
+              placeholder="+1234567890 or AAPDASETU"
+              className="font-mono text-xs"
+            />
+          </Field>
+        </div>
+
+        {/* WhatsApp Gateway Card */}
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
+            <MessageSquare className="h-4 w-4 text-emerald-600" />
+            <span>WhatsApp Business (Meta Cloud API)</span>
+          </div>
+
+          <Field label="Cloud API Access Token">
+            <Input
+              type="password"
+              value={creds.whatsappToken}
+              onChange={(e) => set('whatsappToken')(e.target.value)}
+              placeholder="EAABxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              className="font-mono text-xs"
+            />
+          </Field>
+
+          <Field label="Phone Number ID">
+            <Input
+              value={creds.whatsappPhoneNumberId}
+              onChange={(e) => set('whatsappPhoneNumberId')(e.target.value)}
+              placeholder="100000000000000"
+              className="font-mono text-xs"
+            />
+          </Field>
+
+          <div className="rounded-xl bg-slate-50 p-3 text-[11px] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+            Webhook Callback URL: <code className="text-slate-800 dark:text-slate-200">https://api.aapdasetu.org/webhook/whatsapp</code>
+          </div>
+        </div>
+
+        {/* AI Engine Hooks */}
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
+            <Cpu className="h-4 w-4 text-purple-600" />
+            <span>AI Vision & Neural NLP Endpoints</span>
+          </div>
+
+          <Field label="Damage Assessment Vision Endpoint (ResNet-50)">
+            <Input
+              value={creds.aiVisionEndpoint}
+              onChange={(e) => set('aiVisionEndpoint')(e.target.value)}
+              placeholder="http://localhost:8000/api/ai/damage-assessment"
+              className="font-mono text-xs"
+            />
+          </Field>
+
+          <Field label="PFA Mental Health & Triage NLP Model">
+            <Input
+              value={creds.aiTriageEndpoint}
+              onChange={(e) => set('aiTriageEndpoint')(e.target.value)}
+              placeholder="http://localhost:8000/api/ai/pfa-triage"
+              className="font-mono text-xs"
+            />
+          </Field>
+        </div>
+
+        {/* Incident Command SOP Parameters */}
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
+            <Sliders className="h-4 w-4 text-amber-600" />
+            <span>Incident Command Operational Thresholds</span>
+          </div>
+
+          <Field label="Auto-Escalate Unacknowledged RED Alerts (Minutes)">
+            <Input
+              type="number"
+              value={creds.autoEscalateMinutes}
+              onChange={(e) => set('autoEscalateMinutes')(e.target.value)}
+              placeholder="15"
+              className="font-mono text-xs"
+            />
+          </Field>
+
+          <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+            Any unassigned RED beacon exceeding {creds.autoEscalateMinutes || 15} minutes will automatically trigger an audio siren at SDRF State Command.
+          </div>
+        </div>
+      </div>
+
+      {/* Database Diagnostic & Environment Banner */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <RotateCcw className="h-4 w-4 text-slate-500" />
+            <span>Simulation Database & Telemetry Reset</span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Reset mock database with 1,000+ realistic disaster incidents, live shelter feeds, and volunteer units.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={async () => {
+            if (window.confirm('Reset local mock database to 1,000+ disaster records?')) {
+              await resetMockDatabase()
+              toast('Database reset with 1,000+ fresh records!', 'success')
+            }
+          }}
+          className="rounded-xl border border-slate-300 bg-slate-50 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 shrink-0 cursor-pointer"
+        >
+          Reset 1,000+ Records
+        </button>
+      </div>
+    </form>
   )
 }

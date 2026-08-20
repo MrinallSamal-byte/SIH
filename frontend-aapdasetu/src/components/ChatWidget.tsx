@@ -117,6 +117,16 @@ export default function ChatWidget() {
         location: { lat, lng },
       })
 
+      // Store in local tracking history
+      try {
+        const existingTracked = JSON.parse(localStorage.getItem('aapdasetu_tracked_reports') || '[]') as string[]
+        if (!existingTracked.includes(report.trackingId)) {
+          localStorage.setItem('aapdasetu_tracked_reports', JSON.stringify([report.trackingId, ...existingTracked]))
+        }
+      } catch {
+        // Storage unavailable
+      }
+
       setMessages((prev) =>
         prev.map((msg, idx) =>
           idx === msgIndex
@@ -282,7 +292,7 @@ export default function ChatWidget() {
                                   setCallbackPhones((prev) => ({ ...prev, [i]: e.target.value }))
                                 }
                                 placeholder="10-digit mobile number"
-                                className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-slate-50 px-2 py-1 text-xs outline-none focus:border-red-500 focus:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 font-mono"
+                                className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-slate-50 px-2 py-1 text-xs outline-none focus:border-red-500 focus:bg-white dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-100 font-mono"
                               />
                               <button
                                 type="button"
@@ -337,7 +347,7 @@ export default function ChatWidget() {
                 type="button"
                 onClick={() => send(qp.text)}
                 disabled={busy}
-                className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[10px] font-semibold text-slate-700 shadow-xs hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 cursor-pointer"
+                className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[10px] font-semibold text-slate-700 shadow-xs hover:bg-slate-100 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300 cursor-pointer"
               >
                 {qp.label}
               </button>
@@ -358,7 +368,7 @@ export default function ChatWidget() {
               onChange={(e) => setInput(e.target.value)}
               placeholder={t('chat.placeholder')}
               disabled={busy}
-              className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 outline-none transition focus:border-slate-900 focus:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-300"
+              className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 outline-none transition focus:border-slate-900 focus:bg-white dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-300"
             />
             <button
               type="submit"

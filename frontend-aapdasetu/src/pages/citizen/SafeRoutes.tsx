@@ -179,13 +179,16 @@ export default function SafeRoutes() {
 
   const shelterMarkers = useMemo(
     () =>
-      (shelters ?? []).map((s) => ({
-        id: s.id,
-        position: { lat: s.latitude, lng: s.longitude } as GeoPoint,
-        title: s.name,
-        subtitle: `${s.status || 'open'} · Occupancy: ${s.occupancy || 0}/${s.capacity || 0}`,
-        color: '#10b981',
-      })),
+      (shelters ?? [])
+        .filter((s) => typeof s.latitude === 'number' && typeof s.longitude === 'number')
+        .map((s) => ({
+          id: s.id,
+          position: { lat: s.latitude, lng: s.longitude } as GeoPoint,
+          title: s.name,
+          subtitle: `${s.status || 'open'} · Occupancy: ${s.occupancy || 0}/${s.capacity || 0}`,
+          color: '#10b981',
+          isShelter: true,
+        })),
     [shelters],
   )
 
@@ -215,13 +218,16 @@ export default function SafeRoutes() {
   )
 
   const fastestRoute = useMemo<GeoPoint[]>(
-    () => (destination ? buildFastestRoute(origin, { lat: destination.latitude, lng: destination.longitude }) : []),
+    () =>
+      destination && typeof destination.latitude === 'number' && typeof destination.longitude === 'number'
+        ? buildFastestRoute(origin, { lat: destination.latitude, lng: destination.longitude })
+        : [],
     [origin, destination],
   )
 
   const safeRoute = useMemo<GeoPoint[]>(
     () =>
-      destination
+      destination && typeof destination.latitude === 'number' && typeof destination.longitude === 'number'
         ? buildSafeRoute(origin, { lat: destination.latitude, lng: destination.longitude }, polygonPaths)
         : [],
     [origin, destination, polygonPaths],
@@ -254,10 +260,10 @@ export default function SafeRoutes() {
   if (!flood || !shelters) return <Loader />
 
   return (
-    <div>
+    <div className="mx-auto max-w-6xl">
       <div className="flex items-center gap-2 mb-1">
-        <Compass className="h-6 w-6 text-slate-900 dark:text-slate-100" />
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+        <Compass className="h-6 w-6 text-zinc-800 dark:text-slate-300" />
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-800 dark:text-slate-300">
           {t('routes.title')}
         </h1>
       </div>
@@ -267,18 +273,18 @@ export default function SafeRoutes() {
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <div className="space-y-3 lg:col-span-1">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-xs dark:border-slate-800 dark:bg-slate-900 shadow-xs">
+          <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 text-xs dark:border-white/[0.08] dark:bg-[#1a1a1a] shadow-xs">
             <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mono">{t('routes.origin')}</label>
-            <div className="mt-1 font-medium text-slate-700 dark:text-slate-200">
+            <div className="mt-1 font-medium text-zinc-600 dark:text-slate-200">
               {coords ? `GPS: ${origin.lat.toFixed(4)}°N, ${origin.lng.toFixed(4)}°E` : 'Regional Center Fallback'}
             </div>
             <button
               type="button"
               onClick={refresh}
               disabled={status === 'locating'}
-              className="mt-2.5 inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              className="mt-2.5 inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200"
             >
-              <MapPin className="h-3.5 w-3.5 text-slate-900 dark:text-slate-100" />
+              <MapPin className="h-3.5 w-3.5 text-zinc-800 dark:text-slate-300" />
               <span>{status === 'locating' ? t('shelter.locating') : coords ? t('shelter.updateLocation') : t('shelter.detectLocation')}</span>
             </button>
 
@@ -289,7 +295,7 @@ export default function SafeRoutes() {
               id="safe-route-dest"
               value={destinationId}
               onChange={(e) => setDestinationId(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-600 outline-none focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300"
             >
               {shelterMarkers.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -303,7 +309,7 @@ export default function SafeRoutes() {
                 href={getNavigationUrl(destination.latitude, destination.longitude)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-zinc-800 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
               >
                 <Navigation className="h-3.5 w-3.5" />
                 <span>{t('common.directions')}</span>
@@ -323,10 +329,10 @@ export default function SafeRoutes() {
                   {r.safe ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertTriangle className="h-4 w-4 text-amber-600" />}
                   <span>{r.safe ? t('routes.safeDistance') : t('routes.directDistance')}</span>
                 </div>
-                <div className="mt-1 text-slate-600 dark:text-slate-400 leading-relaxed">{r.hazard}</div>
+                <div className="mt-1 text-zinc-500 dark:text-slate-400 leading-relaxed">{r.hazard}</div>
               </div>
               <div className="shrink-0 text-right">
-                <div className="font-bold text-slate-900 dark:text-slate-100 mono text-sm">{routeLengthKm(r.points).toFixed(1)} km</div>
+                <div className="font-bold text-zinc-800 dark:text-slate-300 mono text-sm">{routeLengthKm(r.points).toFixed(1)} km</div>
                 <div className="text-slate-500 dark:text-slate-400">
                   ~{formatEta((routeLengthKm(r.points) / WALK_SPEED_KMPH) * 60)} {t('routes.walkingTime')}
                 </div>
@@ -342,13 +348,13 @@ export default function SafeRoutes() {
                 Severity: {f.properties.severity} · ~{f.properties.water_depth_est_meters}m depth
               </div>
               {f.properties.affected_villages && (
-                <div className="mt-1 text-slate-600 dark:text-slate-400">Villages: {f.properties.affected_villages.join(', ')}</div>
+                <div className="mt-1 text-zinc-500 dark:text-slate-400">Villages: {f.properties.affected_villages.join(', ')}</div>
               )}
             </div>
           ))}
         </div>
         <div className="lg:col-span-2">
-          <div className="rounded-2xl overflow-hidden shadow-xs border border-slate-200 dark:border-slate-800">
+          <div className="rounded-2xl overflow-hidden shadow-xs border border-zinc-200/80 dark:border-white/[0.08]">
             <LeafletMap
               center={origin}
               zoom={13}
@@ -373,7 +379,7 @@ export default function SafeRoutes() {
               <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" /> {t('shelter.allShelters')}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-slate-900 dark:bg-slate-100" /> {t('routes.origin')}
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-zinc-800 dark:bg-slate-100" /> {t('routes.origin')}
             </span>
           </div>
         </div>

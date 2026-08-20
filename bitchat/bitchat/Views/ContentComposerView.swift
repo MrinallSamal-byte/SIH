@@ -189,19 +189,17 @@ private extension ContentComposerView {
     /// user never has to guess who can read what they're typing.
     var placeholderText: String {
         if let header = privateConversationModel.selectedHeaderState {
-            // A geohash-DM display name already carries its own "#geohash/@name"
-            // form, so it must not get another "@" prefix; a mesh nickname does.
             let isGeoDM = privateConversationModel.selectedPeerID?.isGeoDM == true
             let target = isGeoDM ? header.displayName : "@\(header.displayName)"
-            return String(
-                format: String(localized: "content.input.placeholder.private", comment: "Composer placeholder inside a private chat, naming the conversation partner"),
-                locale: .current,
-                target
-            )
+            return "Message \(target) (E2EE)"
+        }
+        if let currentChannel = ChannelManager.shared.currentChannelId {
+            let isEnc = ChannelManager.shared.channels.first(where: { $0.id == currentChannel })?.isEncrypted == true
+            return isEnc ? "Message 🔒 \(currentChannel) (E2EE)" : "Message \(currentChannel)"
         }
         switch locationChannelsModel.selectedChannel {
         case .mesh:
-            return String(localized: "content.input.placeholder.mesh", comment: "Composer placeholder for the public mesh channel")
+            return "Message #campus-announcements"
         case .location(let channel):
             return String(
                 format: String(localized: "content.input.placeholder.location", comment: "Composer placeholder for a public geohash channel, naming it"),

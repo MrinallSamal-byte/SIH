@@ -1,5 +1,5 @@
 // AapdaSetu Resilient Disaster Service Worker
-const CACHE_NAME = 'aapdasetu-v1'
+const CACHE_NAME = 'aapdasetu-v3'
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -34,24 +34,33 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url)
 
-  // Skip non-GET requests and external API/analytics endpoints
+  // Skip non-GET requests and backend API endpoints
   if (event.request.method !== 'GET' || url.pathname.startsWith('/api/') || url.pathname.startsWith('/ai/')) {
     return
   }
 
+  // Network-First for Navigation / HTML requests so new deployments are served immediately
+  if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const copy = response.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy))
+          }
+          return response
+        })
+        .catch(() => {
+          return caches.match(event.request).then((cached) => cached || caches.match('/index.html'))
+        })
+    )
+    return
+  }
+
+  // Cache-First with Network-Fallback for immutable versioned assets
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Fetch fresh copy in background for next time (stale-while-revalidate)
-        fetch(event.request)
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(event.request, networkResponse.clone())
-              })
-            }
-          })
-          .catch(() => {})
         return cachedResponse
       }
 
@@ -60,14 +69,17 @@ self.addEventListener('fetch', (event) => {
           if (!response || response.status !== 200 || response.type !== 'basic') {
             return response
           }
-          const responseToCache = response.clone()
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache)
-          })
+          // Only cache valid asset files
+          if (url.pathname.startsWith('/assets/')) {
+            const responseToCache = response.clone()
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache)
+            })
+          }
           return response
         })
         .catch(() => {
-          // Fallback to cached index.html for navigation requests
+          // If offline and navigating, return cached shell
           if (event.request.mode === 'navigate') {
             return caches.match('/index.html')
           }

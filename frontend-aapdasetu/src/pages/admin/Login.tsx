@@ -7,8 +7,8 @@ import { useAuth } from '../../hooks/useAuth'
 export default function AdminLogin() {
   const { login, loading, error } = useAuth()
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('admin@aapdasetu.org')
+  const [password, setPassword] = useState('Admin@123')
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -35,7 +35,7 @@ export default function AdminLogin() {
               <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
                 AapdaSetu Command
               </span>
-              <span className="ml-1.5 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+              <span className="ml-1.5 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-white/[0.1]">
                 Official
               </span>
             </div>

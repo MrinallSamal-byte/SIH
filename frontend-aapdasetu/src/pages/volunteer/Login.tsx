@@ -7,8 +7,8 @@ import { useVolunteerAuth } from '../../hooks/useVolunteerAuth'
 export default function VolunteerLogin() {
   const { login, loading, error } = useVolunteerAuth()
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('volunteer@aapdasetu.in')
+  const [password, setPassword] = useState('Volunteer@123')
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()

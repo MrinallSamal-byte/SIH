@@ -84,7 +84,7 @@ export default function Dashboard() {
             <select
               value={volunteer?.id || ''}
               onChange={(e) => selectVolunteerProfile(e.target.value)}
-              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-800 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-800 outline-none dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200"
             >
               {allVolunteers.map((v) => (
                 <option key={v.id} value={v.id}>
@@ -120,7 +120,7 @@ export default function Dashboard() {
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Registered Skills:</span>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {volunteer.skills.map((s) => (
-                  <span key={s} className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-800 border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 mono">
+                  <span key={s} className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-800 border border-slate-200 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 mono">
                     {s.replace('_', ' ').toUpperCase()}
                   </span>
                 ))}

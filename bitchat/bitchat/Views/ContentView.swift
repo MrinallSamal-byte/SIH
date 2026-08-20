@@ -283,59 +283,88 @@ struct ContentView: View {
             )
         ) {
             #if os(iOS)
-            ContentPeopleSheetView(
-                showSidebar: $showSidebar,
-                messageText: $messageText,
-                selectedMessageSender: $selectedMessageSender,
-                selectedMessageSenderID: $selectedMessageSenderID,
-                imagePreviewURL: $imagePreviewURL,
-                windowCountPublic: $windowCountPublic,
-                windowCountPrivate: $windowCountPrivate,
-                isAtBottomPrivate: $isAtBottomPrivate,
-                isTextFieldFocused: $isTextFieldFocused,
-                voiceRecordingVM: voiceRecordingVM,
-                autocompleteDebounceTimer: $autocompleteDebounceTimer,
-                headerHeight: headerHeight,
-                onSendMessage: sendMessage,
-                showImagePicker: $showImagePicker,
-                imagePickerSourceType: $imagePickerSourceType
-            )
-            // Sheets + NavigationStack can drop inherited EnvironmentObjects on
-            // some iOS versions (#1558). Re-inject every model the sheet tree
-            // reads so ContentPeopleListView / MessageListView never crash.
-            .environmentObject(appChromeModel)
-            .environmentObject(privateConversationModel)
-            .environmentObject(verificationModel)
-            .environmentObject(conversationUIModel)
-            .environmentObject(locationChannelsModel)
-            .environmentObject(peerListModel)
-            .environmentObject(publicChatModel)
-            .environmentObject(privateInboxModel)
+            if selectedPrivatePeerID != nil {
+                ContentPeopleSheetView(
+                    showSidebar: $showSidebar,
+                    messageText: $messageText,
+                    selectedMessageSender: $selectedMessageSender,
+                    selectedMessageSenderID: $selectedMessageSenderID,
+                    imagePreviewURL: $imagePreviewURL,
+                    windowCountPublic: $windowCountPublic,
+                    windowCountPrivate: $windowCountPrivate,
+                    isAtBottomPrivate: $isAtBottomPrivate,
+                    isTextFieldFocused: $isTextFieldFocused,
+                    voiceRecordingVM: voiceRecordingVM,
+                    autocompleteDebounceTimer: $autocompleteDebounceTimer,
+                    headerHeight: headerHeight,
+                    onSendMessage: sendMessage,
+                    showImagePicker: $showImagePicker,
+                    imagePickerSourceType: $imagePickerSourceType
+                )
+                .environmentObject(appChromeModel)
+                .environmentObject(privateConversationModel)
+                .environmentObject(verificationModel)
+                .environmentObject(conversationUIModel)
+                .environmentObject(locationChannelsModel)
+                .environmentObject(peerListModel)
+                .environmentObject(publicChatModel)
+                .environmentObject(privateInboxModel)
+            } else {
+                DiscordChannelDrawer(
+                    myPeerID: appChromeModel.myPeerID,
+                    myNickname: appChromeModel.nickname,
+                    onCloseDrawer: { showSidebar = false }
+                )
+                .environmentObject(appChromeModel)
+                .environmentObject(privateConversationModel)
+                .environmentObject(verificationModel)
+                .environmentObject(conversationUIModel)
+                .environmentObject(locationChannelsModel)
+                .environmentObject(peerListModel)
+                .environmentObject(publicChatModel)
+                .environmentObject(privateInboxModel)
+            }
             #else
-            ContentPeopleSheetView(
-                showSidebar: $showSidebar,
-                messageText: $messageText,
-                selectedMessageSender: $selectedMessageSender,
-                selectedMessageSenderID: $selectedMessageSenderID,
-                imagePreviewURL: $imagePreviewURL,
-                windowCountPublic: $windowCountPublic,
-                windowCountPrivate: $windowCountPrivate,
-                isAtBottomPrivate: $isAtBottomPrivate,
-                isTextFieldFocused: $isTextFieldFocused,
-                voiceRecordingVM: voiceRecordingVM,
-                autocompleteDebounceTimer: $autocompleteDebounceTimer,
-                headerHeight: headerHeight,
-                onSendMessage: sendMessage,
-                showMacImagePicker: $showMacImagePicker
-            )
-            .environmentObject(appChromeModel)
-            .environmentObject(privateConversationModel)
-            .environmentObject(verificationModel)
-            .environmentObject(conversationUIModel)
-            .environmentObject(locationChannelsModel)
-            .environmentObject(peerListModel)
-            .environmentObject(publicChatModel)
-            .environmentObject(privateInboxModel)
+            if selectedPrivatePeerID != nil {
+                ContentPeopleSheetView(
+                    showSidebar: $showSidebar,
+                    messageText: $messageText,
+                    selectedMessageSender: $selectedMessageSender,
+                    selectedMessageSenderID: $selectedMessageSenderID,
+                    imagePreviewURL: $imagePreviewURL,
+                    windowCountPublic: $windowCountPublic,
+                    windowCountPrivate: $windowCountPrivate,
+                    isAtBottomPrivate: $isAtBottomPrivate,
+                    isTextFieldFocused: $isTextFieldFocused,
+                    voiceRecordingVM: voiceRecordingVM,
+                    autocompleteDebounceTimer: $autocompleteDebounceTimer,
+                    headerHeight: headerHeight,
+                    onSendMessage: sendMessage,
+                    showMacImagePicker: $showMacImagePicker
+                )
+                .environmentObject(appChromeModel)
+                .environmentObject(privateConversationModel)
+                .environmentObject(verificationModel)
+                .environmentObject(conversationUIModel)
+                .environmentObject(locationChannelsModel)
+                .environmentObject(peerListModel)
+                .environmentObject(publicChatModel)
+                .environmentObject(privateInboxModel)
+            } else {
+                DiscordChannelDrawer(
+                    myPeerID: appChromeModel.myPeerID,
+                    myNickname: appChromeModel.nickname,
+                    onCloseDrawer: { showSidebar = false }
+                )
+                .environmentObject(appChromeModel)
+                .environmentObject(privateConversationModel)
+                .environmentObject(verificationModel)
+                .environmentObject(conversationUIModel)
+                .environmentObject(locationChannelsModel)
+                .environmentObject(peerListModel)
+                .environmentObject(publicChatModel)
+                .environmentObject(privateInboxModel)
+            }
             #endif
         }
         .sheet(isPresented: $appChromeModel.isAppInfoPresented) {

@@ -891,6 +891,39 @@ final class BLEService: NSObject {
         // Track our own broadcast for sync
         gossipSyncManager?.onPublicPacketSeen(signedPacket)
     }
+
+    func sendRawBroadcastPayload(_ payload: Data, messageID: String? = nil, timestamp: Date? = nil) {
+        if DispatchQueue.getSpecific(key: messageQueueKey) == nil {
+            messageQueue.async { [weak self] in
+                self?.sendRawBroadcastPayload(payload, messageID: messageID, timestamp: timestamp)
+            }
+            return
+        }
+        guard !isPanicSuspended, !payload.isEmpty else { return }
+
+        let sendDate = timestamp ?? Date()
+        let sendTimestampMs = UInt64(sendDate.timeIntervalSince1970 * 1000)
+        let basePacket = BitchatPacket(
+            type: MessageType.message.rawValue,
+            senderID: Data(hexString: myPeerID.id) ?? Data(),
+            recipientID: nil,
+            timestamp: sendTimestampMs,
+            payload: payload,
+            signature: nil,
+            ttl: messageTTL
+        )
+        guard let signedPacket = noiseService.signPacket(basePacket) else {
+            SecureLogger.error("❌ Failed to sign raw broadcast packet", category: .security)
+            return
+        }
+        let dedupID = BLESelfBroadcastTracker.dedupID(for: signedPacket)
+        messageDeduplicator.markProcessed(dedupID)
+        if let messageID {
+            selfBroadcastTracker.record(messageID: messageID, packet: signedPacket, sentAt: sendDate)
+        }
+        broadcastPacket(signedPacket)
+        gossipSyncManager?.onPublicPacketSeen(signedPacket)
+    }
     
     // MARK: - Transport Protocol Conformance
 

@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
-import { ShieldAlert, RotateCcw, Home } from 'lucide-react'
+import { ShieldAlert, Home, RefreshCw } from 'lucide-react'
 
 interface Props {
   children: ReactNode
@@ -9,24 +9,61 @@ interface Props {
 interface State {
   hasError: boolean
   error: Error | null
+  isChunkError: boolean
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props)
-    this.state = { hasError: false, error: null }
+    this.state = { hasError: false, error: null, isChunkError: false }
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error }
+    const msg = (error?.message || '').toLowerCase()
+    const isChunkError =
+      msg.includes('dynamically imported module') ||
+      msg.includes('loading chunk') ||
+      msg.includes('importing a module script failed') ||
+      msg.includes('failed to fetch')
+
+    return { hasError: true, error, isChunkError }
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('[AapdaSetu ErrorBoundary caught]:', error, errorInfo)
+    const msg = (error?.message || '').toLowerCase()
+    if (
+      msg.includes('dynamically imported module') ||
+      msg.includes('loading chunk') ||
+      msg.includes('importing a module script failed')
+    ) {
+      if ('caches' in window) {
+        caches.keys().then((names) => {
+          names.forEach((name) => caches.delete(name))
+        })
+      }
+    }
   }
 
   reset = () => {
-    this.setState({ hasError: false, error: null })
+    if (this.state.isChunkError) {
+      if (typeof caches !== 'undefined') {
+        caches
+          .keys()
+          .then((names) => {
+            Promise.all(names.map((name) => caches.delete(name))).finally(() => {
+              window.location.reload()
+            })
+          })
+          .catch(() => {
+            window.location.reload()
+          })
+      } else {
+        window.location.reload()
+      }
+      return
+    }
+    this.setState({ hasError: false, error: null, isChunkError: false })
   }
 
   render() {
@@ -38,11 +75,15 @@ export default class ErrorBoundary extends Component<Props, State> {
           </div>
 
           <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            {this.props.fallbackTitle || 'Emergency View Temporarily Unavailable'}
+            {this.state.isChunkError
+              ? 'New Application Update Available'
+              : this.props.fallbackTitle || 'Emergency View Temporarily Unavailable'}
           </h2>
 
           <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            A temporary component error occurred while rendering this emergency view. You can reload this view or navigate back safely.
+            {this.state.isChunkError
+              ? 'A newer version of AapdaSetu was deployed. Click below to reload with the latest emergency assets.'
+              : 'A temporary component error occurred while rendering this emergency view. You can reload this view or navigate back safely.'}
           </p>
 
           {this.state.error && (
@@ -57,8 +98,8 @@ export default class ErrorBoundary extends Component<Props, State> {
               onClick={this.reset}
               className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer"
             >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span>Retry View</span>
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span>{this.state.isChunkError ? 'Refresh & Update App' : 'Retry View'}</span>
             </button>
             <a
               href="#/"
@@ -66,7 +107,7 @@ export default class ErrorBoundary extends Component<Props, State> {
                 this.reset()
                 window.location.hash = '#/'
               }}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300 cursor-pointer"
             >
               <Home className="h-3.5 w-3.5" />
               <span>Return Home</span>
