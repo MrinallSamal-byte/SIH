@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { getCurrentPosition, getIpGeolocation, reverseGeocode } from '../lib/helpers'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { getCurrentPosition, getHighPrecisionPosition, getIpGeolocation, reverseGeocode } from '../lib/helpers'
 import type { GeoPoint } from '../types'
 
 export type LocationStatus = 'idle' | 'locating' | 'granted' | 'fallback' | 'denied' | 'error'
@@ -24,6 +24,7 @@ export interface LocationValue {
   source: LocationSource
   isFallback: boolean
   refresh: () => void
+  locateHighAccuracy: () => Promise<GeoLocationCoordinatesLike | null>
   setManualLocation: (point: GeoPoint, customAddress?: string) => void
   setAddress: (addr: string) => void
 }
@@ -80,6 +81,7 @@ const defaultLocationValue: LocationValue = {
   source: getStoredLocation() ? 'cached' : 'default',
   isFallback: true,
   refresh: () => {},
+  locateHighAccuracy: async () => null,
   setManualLocation: () => {},
   setAddress: () => {},
 }
@@ -98,6 +100,7 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<LocationStatus>(initialCached ? 'fallback' : 'idle')
   const [accuracy, setAccuracy] = useState<number | null>(initialCached?.accuracy ?? null)
   const [source, setSource] = useState<LocationSource>(initialCached ? 'cached' : 'default')
+  const isManualRef = useRef<boolean>(false)
 
   const setAddress = useCallback((addr: string) => {
     setAddressState(addr)
@@ -108,45 +111,51 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const saveLocation = useCallback((c: GeoLocationCoordinatesLike, src: LocationSource) => {
-    setCoords(c)
-    setAccuracy(c.accuracy)
-    setSource(src)
-    try {
-      localStorage.setItem(
-        STORAGE_KEY_LOCATION,
-        JSON.stringify({ latitude: c.latitude, longitude: c.longitude, accuracy: c.accuracy })
-      )
-    } catch {
-      // Storage unavailable
-    }
+  const saveLocation = useCallback(
+    (c: GeoLocationCoordinatesLike, src: LocationSource, skipReverseGeocode = false) => {
+      setCoords(c)
+      setAccuracy(c.accuracy)
+      setSource(src)
+      try {
+        localStorage.setItem(
+          STORAGE_KEY_LOCATION,
+          JSON.stringify({ latitude: c.latitude, longitude: c.longitude, accuracy: c.accuracy })
+        )
+      } catch {
+        // Storage unavailable
+      }
 
-    // Auto reverse geocode
-    reverseGeocode({ lat: c.latitude, lng: c.longitude })
-      .then((addr) => {
-        if (addr) {
-          setAddressState(addr)
-          try {
-            localStorage.setItem(STORAGE_KEY_ADDRESS, addr)
-          } catch {
-            // Storage unavailable
+      if (skipReverseGeocode || isManualRef.current) return
+
+      // Auto reverse geocode
+      reverseGeocode({ lat: c.latitude, lng: c.longitude })
+        .then((addr) => {
+          if (addr && !isManualRef.current) {
+            setAddressState(addr)
+            try {
+              localStorage.setItem(STORAGE_KEY_ADDRESS, addr)
+            } catch {
+              // Storage unavailable
+            }
           }
-        }
-      })
-      .catch(() => {})
-  }, [])
+        })
+        .catch(() => {})
+    },
+    []
+  )
 
   const setManualLocation = useCallback((point: GeoPoint, customAddress?: string) => {
+    isManualRef.current = true
     const manualCoords: GeoLocationCoordinatesLike = {
       latitude: point.lat,
       longitude: point.lng,
       altitude: null,
-      accuracy: 10,
+      accuracy: 5,
       altitudeAccuracy: null,
       heading: null,
       speed: null,
     }
-    saveLocation(manualCoords, 'manual')
+    saveLocation(manualCoords, 'manual', true)
     setStatus('granted')
     if (customAddress) {
       setAddress(customAddress)
@@ -157,61 +166,69 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
     }
   }, [saveLocation, setAddress])
 
+  const fallbackToIp = useCallback(async (isDenied = false) => {
+    try {
+      const ipGeo = await getIpGeolocation()
+      if (ipGeo) {
+        const ipCoords: GeoLocationCoordinatesLike = {
+          latitude: ipGeo.lat,
+          longitude: ipGeo.lng,
+          altitude: null,
+          accuracy: 5000,
+          altitudeAccuracy: null,
+          heading: null,
+          speed: null,
+        }
+        saveLocation(ipCoords, 'ip', isManualRef.current)
+        setStatus(isDenied ? 'denied' : 'fallback')
+        if (!isManualRef.current && (ipGeo.city || ipGeo.district)) {
+          const locName = [ipGeo.city, ipGeo.district].filter(Boolean).join(', ')
+          setAddress(locName)
+        }
+        return
+      }
+    } catch {
+      // IP geocode failed
+    }
+    setStatus(isDenied ? 'denied' : 'error')
+  }, [saveLocation, setAddress])
+
   const detect = useCallback(() => {
     setStatus('locating')
-
-    // Helper for IP fallback if hardware GPS times out or is denied
-    const fallbackToIp = async (isDenied = false) => {
-      try {
-        const ipGeo = await getIpGeolocation()
-        if (ipGeo) {
-          const ipCoords: GeoLocationCoordinatesLike = {
-            latitude: ipGeo.lat,
-            longitude: ipGeo.lng,
-            altitude: null,
-            accuracy: 5000,
-            altitudeAccuracy: null,
-            heading: null,
-            speed: null,
-          }
-          saveLocation(ipCoords, 'ip')
-          setStatus(isDenied ? 'denied' : 'fallback')
-          if (ipGeo.city || ipGeo.district) {
-            const locName = [ipGeo.city, ipGeo.district].filter(Boolean).join(', ')
-            setAddress(locName)
-          }
-          return
-        }
-      } catch {
-        // IP geocode failed
-      }
-      setStatus(isDenied ? 'denied' : 'error')
-    }
 
     if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
       fallbackToIp(false)
       return () => {}
     }
 
-    // 1. Initial fast low-accuracy / cached fetch
-    getCurrentPosition(false, 6000)
+    // 1. High-precision hardware GPS fetch
+    getHighPrecisionPosition()
       .then((pos) => {
-        saveLocation(pos.coords, 'gps')
+        saveLocation(pos.coords, 'gps', isManualRef.current)
         setStatus('granted')
       })
       .catch((err) => {
         if (err && (err as GeolocationPositionError).code === 1) {
           fallbackToIp(true)
         } else {
-          fallbackToIp(false)
+          // Standard accuracy attempt before IP fallback
+          getCurrentPosition(false, 8000, 30000)
+            .then((pos) => {
+              saveLocation(pos.coords, 'gps', isManualRef.current)
+              setStatus('granted')
+            })
+            .catch(() => fallbackToIp(false))
         }
       })
 
     // 2. High-precision continuous watcher
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        saveLocation(pos.coords, 'gps')
-        setStatus('granted')
+        // Only update if not manually locked by user
+        if (!isManualRef.current) {
+          saveLocation(pos.coords, 'gps')
+          setStatus('granted')
+        }
       },
       (err) => {
         if (err.code === err.PERMISSION_DENIED) {
@@ -223,15 +240,37 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
       },
       {
         enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 10000,
+        timeout: 20000,
+        maximumAge: 0,
       },
     )
 
     return () => {
       navigator.geolocation.clearWatch(watchId)
     }
-  }, [saveLocation, setAddress])
+  }, [fallbackToIp, saveLocation])
+
+  const locateHighAccuracy = useCallback(async (): Promise<GeoLocationCoordinatesLike | null> => {
+    setStatus('locating')
+    try {
+      const pos = await getHighPrecisionPosition()
+      isManualRef.current = false
+      saveLocation(pos.coords, 'gps')
+      setStatus('granted')
+      return pos.coords
+    } catch {
+      try {
+        const pos = await getCurrentPosition(false, 8000, 10000)
+        isManualRef.current = false
+        saveLocation(pos.coords, 'gps')
+        setStatus('granted')
+        return pos.coords
+      } catch {
+        fallbackToIp(false)
+        return null
+      }
+    }
+  }, [fallbackToIp, saveLocation])
 
   useEffect(() => {
     const cleanup = detect()
@@ -249,10 +288,11 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
       source,
       isFallback: source !== 'gps',
       refresh: detect,
+      locateHighAccuracy,
       setManualLocation,
       setAddress,
     }),
-    [coords, address, status, accuracy, source, detect, setManualLocation, setAddress],
+    [coords, address, status, accuracy, source, detect, locateHighAccuracy, setManualLocation, setAddress],
   )
 
   return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>
@@ -268,6 +308,7 @@ export function useGeoLocation(): LocationValue {
 
 // Alias
 export const useLocation = useGeoLocation
+
 
 
 

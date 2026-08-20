@@ -10,7 +10,7 @@ import {
   Phone,
   ArrowRight,
   MessageSquare,
-  Edit3
+  Edit3,
 } from 'lucide-react'
 import { createReport } from '../../api/endpoints'
 import { aiTriage } from '../../api/ai'
@@ -20,7 +20,7 @@ import Modal from '../../components/common/Modal'
 import LandmarkPicker from '../../components/map/LandmarkPicker'
 import { useToast } from '../../components/common/Toast'
 import { useLanguage } from '../../lib/i18n'
-import { getCurrentPosition, generateEmergencySms } from '../../lib/helpers'
+import { getHighPrecisionPosition, generateEmergencySms } from '../../lib/helpers'
 import { useGeoLocation } from '../../hooks/useLocation'
 import type { IncidentType, Report, ReportInput, GeoPoint } from '../../types'
 
@@ -43,7 +43,7 @@ export default function SOS() {
     setManualLocation,
     status: geoStatus,
     accuracy,
-    refresh: refreshLocation,
+    locateHighAccuracy,
     source,
   } = useGeoLocation()
 
@@ -53,6 +53,7 @@ export default function SOS() {
   const [selectedType, setSelectedType] = useState<IncidentType>('other')
   const [phoneError, setPhoneError] = useState<string | null>(null)
   const [triggering, setTriggering] = useState(false)
+  const [rescanning, setRescanning] = useState(false)
   const [result, setResult] = useState<Report | null>(null)
   const [copied, setCopied] = useState(false)
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
@@ -105,6 +106,23 @@ export default function SOS() {
     return clean.length >= 10 && clean.length <= 15
   }
 
+  const handleRescanGps = async () => {
+    setRescanning(true)
+    toast('Scanning hardware GPS for high-precision satellites...', 'info')
+    try {
+      const c = await locateHighAccuracy()
+      if (c) {
+        toast(`High-precision GPS locked (±${Math.round(c.accuracy ?? 5)}m precision)`, 'success')
+      } else {
+        toast('GPS signal weak, using best available location estimate.', 'info')
+      }
+    } catch {
+      toast('Could not acquire GPS fix. Please verify location manually.', 'error')
+    } finally {
+      setRescanning(false)
+    }
+  }
+
   const trigger = async () => {
     if (!phone.trim()) {
       setPhoneError(t('sos.phoneRequiredError'))
@@ -127,18 +145,18 @@ export default function SOS() {
       const foundType = emergencyTypes.find((e) => e.type === selectedType)
       const typeLabel = foundType ? t(foundType.labelKey) : 'Emergency'
 
-      // Resilient GPS coordinates retrieval with fallback
+      // Resilient GPS coordinates retrieval with high accuracy
       let lat = coords?.latitude
       let lng = coords?.longitude
 
       if (lat === undefined || lng === undefined) {
         try {
-          const pos = await getCurrentPosition(false, 3500)
+          const pos = await getHighPrecisionPosition()
           lat = pos.coords.latitude
           lng = pos.coords.longitude
         } catch {
-          lat = 22.5726
-          lng = 88.3639
+          lat = 20.2961
+          lng = 85.8245
         }
       }
 
@@ -275,14 +293,12 @@ export default function SOS() {
                 )}
                 <button
                   type="button"
-                  onClick={() => {
-                    refreshLocation()
-                    toast('Re-scanning for precision GPS signal...', 'info')
-                  }}
-                  className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 cursor-pointer transition font-sans"
+                  onClick={handleRescanGps}
+                  disabled={rescanning}
+                  className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200 cursor-pointer transition font-sans font-semibold"
                 >
-                  <RefreshCw className="h-3 w-3" />
-                  <span>Re-scan GPS</span>
+                  <RefreshCw className={`h-3 w-3 ${rescanning ? 'animate-spin' : ''}`} />
+                  <span>{rescanning ? 'Acquiring GPS…' : 'Re-scan GPS'}</span>
                 </button>
               </div>
             </div>
@@ -580,15 +596,20 @@ export default function SOS() {
 
           {/* Manual Address Input */}
           <div>
-            <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
-              Address / Area / Landmark
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Address / Area / Landmark &amp; PIN Code
+              </label>
+            </div>
             <input
               value={editAddressText}
               onChange={(e) => setEditAddressText(e.target.value)}
-              placeholder="e.g. Nayapalli, Near ISKCON Temple, Bhubaneswar"
+              placeholder="e.g. Flat 302, Gayatri Vihar, Sundarpada, Bhubaneswar - 751002"
               className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-xs font-semibold text-slate-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
+            <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+              * Rescue teams will see your exact custom address, building name, and PIN code.
+            </p>
           </div>
 
           {/* Quick Regional Presets */}
@@ -598,12 +619,14 @@ export default function SOS() {
             </label>
             <div className="flex flex-wrap gap-1.5">
               {[
-                { name: 'Bhubaneswar', lat: 20.2961, lng: 85.8245, addr: 'Bhubaneswar, Khordha, Odisha' },
-                { name: 'Cuttack', lat: 20.4625, lng: 85.8828, addr: 'Cuttack, Odisha' },
-                { name: 'Puri', lat: 19.8135, lng: 85.8312, addr: 'Puri Beach Road, Odisha' },
-                { name: 'Kolkata (Salt Lake)', lat: 22.5726, lng: 88.3639, addr: 'Sector V, Salt Lake, Kolkata' },
-                { name: 'Howrah', lat: 22.5958, lng: 88.2636, addr: 'Howrah Station Area, West Bengal' },
-                { name: 'Sundarbans Coastal', lat: 21.9497, lng: 88.8997, addr: 'Sundarbans Coastal Delta, West Bengal' },
+                { name: 'Bhubaneswar (Sundarpada)', lat: 20.2371, lng: 85.8114, addr: 'Sundarpada, Bhubaneswar, Odisha - 751002' },
+                { name: 'Bhubaneswar (Old Town)', lat: 20.2365, lng: 85.8336, addr: 'Lingaraj, Old Town, Bhubaneswar - 751002' },
+                { name: 'Bhubaneswar (Patia)', lat: 20.3534, lng: 85.8225, addr: 'Patia / KIIT, Bhubaneswar - 751024' },
+                { name: 'Cuttack', lat: 20.4625, lng: 85.8828, addr: 'Badambadi, Cuttack, Odisha - 753001' },
+                { name: 'Puri', lat: 19.8135, lng: 85.8312, addr: 'Puri Beach Road, Odisha - 752001' },
+                { name: 'Kolkata (Salt Lake)', lat: 22.5726, lng: 88.3639, addr: 'Sector V, Salt Lake, Kolkata - 700091' },
+                { name: 'Howrah', lat: 22.5958, lng: 88.2636, addr: 'Howrah Station Area, West Bengal - 711101' },
+                { name: 'Sundarbans Coastal', lat: 21.9497, lng: 88.8997, addr: 'Sundarbans Coastal Delta, West Bengal - 743370' },
               ].map((preset) => (
                 <button
                   key={preset.name}
@@ -623,7 +646,7 @@ export default function SOS() {
           {/* Interactive Map Picker */}
           <div>
             <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
-              Tap Map to Reposition Pin
+              Tap Map or Search to Reposition Pin
             </label>
             <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
               <LandmarkPicker
@@ -635,7 +658,10 @@ export default function SOS() {
                 }
                 onChange={(p, addr) => {
                   setEditPoint(p)
-                  if (addr) setEditAddressText(addr)
+                  // Only auto-fill if user has not entered a custom address
+                  if (addr && !editAddressText.trim()) {
+                    setEditAddressText(addr)
+                  }
                 }}
                 height="220px"
               />

@@ -83,8 +83,12 @@ export function compressImage(file: File, maxWidth = 1200, quality = 0.75): Prom
   })
 }
 
-/** Browser geolocation helper with configurable accuracy and timeout. */
-export function getCurrentPosition(enableHighAccuracy = true, timeout = 12000): Promise<GeolocationPosition> {
+/** Browser geolocation helper with configurable accuracy, timeout, and maxAge. */
+export function getCurrentPosition(
+  enableHighAccuracy = true,
+  timeout = 10000,
+  maximumAge = 0,
+): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
     if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
       reject(new Error('Geolocation not supported'))
@@ -93,9 +97,24 @@ export function getCurrentPosition(enableHighAccuracy = true, timeout = 12000): 
     navigator.geolocation.getCurrentPosition(resolve, reject, {
       enableHighAccuracy,
       timeout,
-      maximumAge: enableHighAccuracy ? 5000 : 60000,
+      maximumAge,
     })
   })
+}
+
+/** Request a fresh, high-precision GPS lock with tiered fallback if GPS sensor takes time to acquire satellites. */
+export async function getHighPrecisionPosition(): Promise<GeolocationPosition> {
+  try {
+    // 1. Primary: High-precision hardware GPS lock (maximumAge = 0)
+    return await getCurrentPosition(true, 10000, 0)
+  } catch (err: unknown) {
+    // If permission was denied (code 1), don't retry, fail immediately
+    if (err && typeof err === 'object' && 'code' in err && (err as GeolocationPositionError).code === 1) {
+      throw err
+    }
+    // 2. Secondary: Cell tower / Wi-Fi fallback fix
+    return await getCurrentPosition(false, 8000, 30000)
+  }
 }
 
 /** Fetch approximate coordinates via IP geolocation as a secondary fallback when browser GPS is blocked/unavailable. */
@@ -139,46 +158,377 @@ export async function getIpGeolocation(): Promise<{ lat: number; lng: number; ci
   return null
 }
 
+export interface PlaceSearchResult {
+  name: string
+  lat: number
+  lng: number
+  isRelaxed?: boolean
+  matchedQuery?: string
+  source?: 'osm' | 'photon' | 'custom'
+  distanceKm?: number
+  postcode?: string
+}
+
+/** Formats a structured address object into a concise, readable string with verified postal code. */
+export function formatStructuredAddress(
+  a?: {
+    amenity?: string
+    building?: string
+    road?: string
+    pedestrian?: string
+    neighbourhood?: string
+    suburb?: string
+    city?: string
+    town?: string
+    village?: string
+    municipality?: string
+    city_district?: string
+    county?: string
+    state_district?: string
+    state?: string
+    postcode?: string
+  },
+  fallbackDisplayName?: string,
+): string {
+  if (!a) return fallbackDisplayName || 'Unknown location'
+
+  const parts: string[] = []
+  if (a.amenity || a.building) parts.push(a.amenity || a.building!)
+  if (a.road || a.pedestrian) parts.push(a.road || a.pedestrian!)
+  if (a.neighbourhood && !parts.includes(a.neighbourhood)) parts.push(a.neighbourhood)
+  if (a.suburb && !parts.includes(a.suburb) && !parts.some((p) => p.includes(a.suburb!))) {
+    const cleanSuburb = a.suburb.replace(/Ward\s*\d+/gi, '').trim()
+    if (cleanSuburb && !parts.includes(cleanSuburb)) parts.push(cleanSuburb)
+  }
+  const city = a.city || a.town || a.village || a.municipality || a.city_district || a.county
+  if (city) {
+    const cleanCity = city.replace(/ Municipal Corporation|\(M\.Corp\.\)|Zone/gi, '').trim()
+    if (cleanCity && !parts.includes(cleanCity)) parts.push(cleanCity)
+  }
+  if (a.state_district && !parts.includes(a.state_district) && a.state_district !== city) {
+    parts.push(a.state_district)
+  }
+  if (a.state && !parts.includes(a.state)) parts.push(a.state)
+
+  let formatted = parts.slice(0, 4).join(', ')
+  if (!formatted && fallbackDisplayName) {
+    formatted = fallbackDisplayName
+  }
+  if (a.postcode && /^\d{6}$/.test(a.postcode.trim()) && !formatted.includes(a.postcode.trim())) {
+    formatted = `${formatted} - ${a.postcode.trim()}`
+  }
+  return formatted || 'Unknown location'
+}
+
+/** Smart Multi-Tier Geocoding & Query Relaxation for detailed addresses, pincodes, and landmarks */
+export async function searchPlaces(
+  query: string,
+  options?: {
+    proximity?: GeoPoint
+    limit?: number
+  },
+): Promise<PlaceSearchResult[]> {
+  const clean = query.trim()
+  if (!clean) return []
+  const limit = options?.limit || 5
+  const userLat = options?.proximity?.lat
+  const userLng = options?.proximity?.lng
+
+  // 1. Detect 6-digit Indian PIN code if present
+  const pinMatch = clean.match(/\b([1-9][0-9]{5})\b/)
+  const detectedPin = pinMatch ? pinMatch[1] : null
+
+  // 2. Build candidates list from input
+  const normalized = clean
+    .replace(/sunder/gi, 'sundar')
+    .replace(/bhubneswar|bhubaneshwar/gi, 'bhubaneswar')
+    .replace(/cuttuk|katak/gi, 'cuttack')
+    .replace(/kolkatta/gi, 'kolkata')
+    .replace(/gurgaon/gi, 'gurugram')
+    .replace(/bangalore/gi, 'bengaluru')
+    .replace(/calcutta/gi, 'kolkata')
+    .replace(/orissa/gi, 'odisha')
+
+  const stripPrefixes = (s: string) =>
+    s
+      .replace(
+        /\b(flat|plot|house|villa|h\.no|lane|road|block|gali|apartment|apt|sector|near|opp|opposite|behind|beside|at|po|ps|ward|room|floor)\s*[\w\d-]*/gi,
+        ' ',
+      )
+      .replace(/\s+/g, ' ')
+      .trim()
+
+  const stripped = stripPrefixes(normalized)
+  const candidates: string[] = []
+
+  // Full clean query first
+  candidates.push(clean)
+  if (normalized !== clean) candidates.push(normalized)
+  if (stripped && stripped !== clean && stripped !== normalized) candidates.push(stripped)
+
+  // If query had a PIN code attached, also search query without PIN
+  if (detectedPin) {
+    const withoutPin = clean.replace(/\b[1-9][0-9]{5}\b/g, '').trim()
+    if (withoutPin && withoutPin.length >= 3) {
+      candidates.push(withoutPin)
+      const normWithoutPin = withoutPin
+        .replace(/sunder/gi, 'sundar')
+        .replace(/bhubneswar|bhubaneshwar/gi, 'bhubaneswar')
+        .trim()
+      if (normWithoutPin !== withoutPin) candidates.push(normWithoutPin)
+    }
+  }
+
+  // Comma-separated parts from right to left (broader areas first)
+  const commaParts = clean
+    .split(/[,;\n]+/)
+    .map((p) => p.trim())
+    .filter((p) => p.length >= 3)
+  if (commaParts.length > 1) {
+    for (let i = commaParts.length - 1; i >= 0; i--) {
+      candidates.push(commaParts[i])
+      if (i > 0) candidates.push(`${commaParts[i - 1]} ${commaParts[i]}`)
+    }
+  }
+
+  // Token subsets (locality and sub-phrases)
+  const normWords = stripped.split(/\s+/).filter((w) => w.length > 2)
+  if (normWords.length >= 3) {
+    candidates.push(normWords[normWords.length - 1]) // e.g. sundarpada
+    candidates.push(normWords.slice(-2).join(' ')) // e.g. vihar sundarpada
+    candidates.push(normWords.slice(0, 2).join(' ')) // e.g. gayatri vihar
+    candidates.push(normWords.slice(-3).join(' '))
+  } else if (normWords.length === 2) {
+    candidates.push(normWords[1])
+    candidates.push(normWords[0])
+    candidates.push(normWords.join(' '))
+  }
+
+  const uniqueCandidates = [...new Set(candidates.filter((c) => c && c.length >= 3))]
+
+  // Helper for structured postalcode search
+  const queryPostalCode = async (pin: string): Promise<PlaceSearchResult[]> => {
+    try {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 4000)
+      const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=in&postalcode=${encodeURIComponent(pin)}`
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'AapdaSetu-Emergency/2.0',
+        },
+      })
+      clearTimeout(timer)
+      if (!res.ok) return []
+      interface NominatimResult {
+        display_name: string
+        lat: string
+        lon: string
+        address?: Record<string, string | undefined>
+      }
+      const data: NominatimResult[] = await res.json()
+      return data.map((d) => ({
+        name: formatStructuredAddress(d.address, d.display_name),
+        lat: Number(d.lat),
+        lng: Number(d.lon),
+        postcode: pin,
+        source: 'osm' as const,
+      }))
+    } catch {
+      return []
+    }
+  }
+
+  // Helper to query Nominatim
+  const queryNominatim = async (q: string): Promise<PlaceSearchResult[]> => {
+    try {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 4000)
+      let url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=${limit}&q=${encodeURIComponent(q)}`
+      if (userLat !== undefined && userLng !== undefined) {
+        url += `&viewbox=${userLng - 0.75},${userLat + 0.75},${userLng + 0.75},${userLat - 0.75}&bounded=0`
+      }
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'AapdaSetu-Emergency/2.0',
+        },
+      })
+      clearTimeout(timer)
+      if (!res.ok) return []
+      interface NominatimResult {
+        display_name: string
+        lat: string
+        lon: string
+        address?: Record<string, string | undefined>
+      }
+      const data: NominatimResult[] = await res.json()
+      return data.map((d) => ({
+        name: formatStructuredAddress(d.address, d.display_name),
+        lat: Number(d.lat),
+        lng: Number(d.lon),
+        postcode: d.address?.postcode,
+        source: 'osm' as const,
+      }))
+    } catch {
+      return []
+    }
+  }
+
+  // Helper to query Photon
+  const queryPhoton = async (q: string): Promise<PlaceSearchResult[]> => {
+    try {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 3500)
+      let url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=${limit}`
+      if (userLat !== undefined && userLng !== undefined) {
+        url += `&lat=${userLat}&lon=${userLng}`
+      }
+      const res = await fetch(url, { signal: controller.signal })
+      clearTimeout(timer)
+      if (!res.ok) return []
+      interface PhotonFeature {
+        geometry: { coordinates: [number, number] }
+        properties: {
+          name?: string
+          street?: string
+          district?: string
+          city?: string
+          state?: string
+          country?: string
+          postcode?: string
+        }
+      }
+      const data: { features?: PhotonFeature[] } = await res.json()
+      if (!data.features) return []
+      return data.features.map((f) => {
+        const p = f.properties
+        const parts = [p.name, p.street, p.district, p.city, p.state].filter(Boolean) as string[]
+        let formatted = parts.filter((v, idx, arr) => arr.indexOf(v) === idx).join(', ')
+        if (p.postcode && /^\d{6}$/.test(p.postcode.trim())) {
+          formatted = `${formatted} - ${p.postcode.trim()}`
+        }
+        return {
+          name: formatted || p.name || 'Unknown location',
+          lat: f.geometry.coordinates[1],
+          lng: f.geometry.coordinates[0],
+          postcode: p.postcode,
+          source: 'photon' as const,
+        }
+      })
+    } catch {
+      return []
+    }
+  }
+
+  // If user provided a standalone or isolated 6-digit PIN code (e.g. "751002" or "PIN 751002")
+  if (detectedPin && clean.replace(/\D/g, '') === detectedPin) {
+    const pinResults = await queryPostalCode(detectedPin)
+    if (pinResults.length > 0) return pinResults
+  }
+
+  let bestOverallResults: PlaceSearchResult[] = []
+  let bestDistance = Infinity
+
+  for (const cand of uniqueCandidates) {
+    const isRelaxed = cand.toLowerCase() !== clean.toLowerCase()
+    // 1. Try Nominatim
+    let found = await queryNominatim(cand)
+    // 2. If no OSM results, try Photon
+    if (found.length === 0) {
+      found = await queryPhoton(cand)
+    }
+
+    if (found.length > 0) {
+      const results = found.map((r) => ({
+        ...r,
+        isRelaxed,
+        matchedQuery: cand,
+        distanceKm:
+          userLat !== undefined && userLng !== undefined
+            ? haversineKm({ lat: userLat, lng: userLng }, { lat: r.lat, lng: r.lng })
+            : undefined,
+      }))
+
+      if (userLat !== undefined && userLng !== undefined) {
+        results.sort((a, b) => (a.distanceKm ?? 99999) - (b.distanceKm ?? 99999))
+        const closest = results[0].distanceKm ?? 99999
+
+        // If this match is within 75km of the user or map center, prioritize and return immediately!
+        if (closest <= 75) {
+          return results.slice(0, limit)
+        }
+
+        if (closest < bestDistance) {
+          bestDistance = closest
+          bestOverallResults = results
+        }
+      } else {
+        return results.slice(0, limit)
+      }
+    }
+  }
+
+  // Fallback to postal code if general text search found nothing
+  if (detectedPin && bestOverallResults.length === 0) {
+    const pinResults = await queryPostalCode(detectedPin)
+    if (pinResults.length > 0) return pinResults
+  }
+
+  return bestOverallResults.slice(0, limit)
+}
+
 /** Reverse-geocode a coordinate to a human-readable, concise address with safe error handling and fallback. */
 export async function reverseGeocode(point: GeoPoint): Promise<string | null> {
   try {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 4500)
-    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&lat=${point.lat}&lon=${point.lng}`
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&lat=${point.lat}&lon=${point.lng}`
     const res = await fetch(url, {
       signal: controller.signal,
       headers: {
         Accept: 'application/json',
+        'User-Agent': 'AapdaSetu-Emergency/2.0',
       },
     })
     clearTimeout(timer)
-    if (!res.ok) return null
-    const data = await res.json()
-    if (data.address) {
-      const parts: string[] = []
-      const a = data.address
-      if (a.amenity || a.building) parts.push(a.amenity || a.building)
-      if (a.road || a.pedestrian) parts.push(a.road || a.pedestrian)
-      if (a.neighbourhood && !parts.includes(a.neighbourhood)) parts.push(a.neighbourhood)
-      if (a.suburb && !parts.includes(a.suburb) && !parts.some((p) => p.includes(a.suburb))) parts.push(a.suburb)
-      const city = a.city || a.town || a.village || a.municipality || a.city_district || a.county
-      if (city) {
-        const cleanCity = city.replace(/ Municipal Corporation|\(M\.Corp\.\)|Zone/gi, '').trim()
-        if (!parts.includes(cleanCity)) parts.push(cleanCity)
+    if (res.ok) {
+      const data = await res.json()
+      if (data.address) {
+        return formatStructuredAddress(data.address, data.display_name)
       }
-      if (a.state_district && !parts.includes(a.state_district) && a.state_district !== a.city) {
-        parts.push(a.state_district)
-      }
-      if (a.state && !parts.includes(a.state)) parts.push(a.state)
-      
-      if (parts.length > 0) {
-        return parts.slice(0, 4).join(', ')
+      if (data.display_name) return data.display_name
+    }
+  } catch {
+    // Fallback to Photon reverse geocode
+  }
+
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 3500)
+    const res = await fetch(`https://photon.komoot.io/reverse?lat=${point.lat}&lon=${point.lng}`, {
+      signal: controller.signal,
+    })
+    clearTimeout(timer)
+    if (res.ok) {
+      const data = await res.json()
+      if (data.features && data.features.length > 0) {
+        const p = data.features[0].properties
+        const parts = [p.name, p.street, p.district, p.city, p.state].filter(Boolean) as string[]
+        let formatted = parts.filter((v, idx, arr) => arr.indexOf(v) === idx).join(', ')
+        if (p.postcode && /^\d{6}$/.test(p.postcode.trim())) {
+          formatted = `${formatted} - ${p.postcode.trim()}`
+        }
+        if (formatted) return formatted
       }
     }
-    return data.display_name ?? null
   } catch {
-    return null
+    // All reverse geocoders unavailable
   }
+
+  return null
 }
 
 /** Generates native navigation deep-links for Google Maps, Apple Maps, and OpenStreetMap. */

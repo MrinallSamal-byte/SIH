@@ -17,7 +17,7 @@ import { aiTriage } from '../../api/ai'
 import PriorityBadge from '../../components/common/PriorityBadge'
 import LandmarkPicker from '../../components/map/LandmarkPicker'
 import { useToast } from '../../components/common/Toast'
-import { fileToDataUrl, getCurrentPosition, reverseGeocode } from '../../lib/helpers'
+import { fileToDataUrl, getHighPrecisionPosition, reverseGeocode } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
 import { useGeoLocation } from '../../hooks/useLocation'
 import type { GeoPoint, IncidentType, MediaPayload, Report, ReportInput } from '../../types'
@@ -88,12 +88,12 @@ export default function ReportForm() {
     setGpsError(null)
     try {
       refreshGps()
-      const pos = await getCurrentPosition(true, 8000)
+      const pos = await getHighPrecisionPosition()
       const point: GeoPoint = { lat: pos.coords.latitude, lng: pos.coords.longitude }
       setCustomPoint(point)
       const addr = await reverseGeocode(point)
       setGpsAddress(addr ?? `${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
-      toast('GPS location locked successfully!', 'success')
+      toast(`High-precision GPS locked (±${Math.round(pos.coords.accuracy ?? 5)}m)`, 'success')
     } catch {
       if (coords) {
         setCustomPoint({ lat: coords.latitude, lng: coords.longitude })
