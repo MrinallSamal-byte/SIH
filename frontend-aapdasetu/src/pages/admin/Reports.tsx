@@ -153,7 +153,7 @@ export default function Reports() {
                 toast('Database reset with 1,000+ fresh records!', 'success')
               }
             }}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             <span>Reset 1000+ Records</span>
@@ -201,7 +201,7 @@ export default function Reports() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Tracking ID, name, phone, landmark…"
-              className="w-full rounded-xl border border-slate-300 bg-white pl-8 pr-3 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              className="w-full rounded-xl border border-slate-300 bg-white pl-8 pr-3 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-white/[0.1] dark:bg-slate-950 dark:text-slate-100"
             />
           </div>
         </Field>
@@ -267,7 +267,7 @@ export default function Reports() {
                   <button
                     type="button"
                     onClick={() => setSelected(r)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-800 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-800 hover:bg-slate-100 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
                   >
                     <span>Dispatch</span>
                     <span>→</span>
@@ -298,7 +298,7 @@ export default function Reports() {
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300"
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
                 <span>Prev</span>
@@ -312,7 +312,7 @@ export default function Reports() {
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300"
               >
                 <span>Next</span>
                 <ChevronRight className="h-3.5 w-3.5" />

@@ -4,14 +4,14 @@
 
 @layer base {
   html {
-    font-family: 'Plus Jakarta Sans', 'Inter', 'Noto Sans Devanagari', 'Noto Sans Oriya', system-ui, -apple-system, sans-serif;
+    font-family: 'Google Sans', 'Open Sans', 'Noto Sans Devanagari', 'Noto Sans Oriya', system-ui, -apple-system, sans-serif;
     letter-spacing: -0.015em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    @apply bg-slate-50 text-slate-900 selection:bg-slate-900 selection:text-white dark:bg-black dark:text-slate-100 dark:selection:bg-white dark:selection:text-black;
+    @apply bg-[#f4f4f5] text-zinc-800 selection:bg-zinc-800 selection:text-white dark:bg-[#111111] dark:text-slate-200 dark:selection:bg-slate-700 dark:selection:text-white;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -127,27 +127,27 @@
 @layer utilities {
   /* Nothing OS / Clean Monochrome Inverted UI Cards */
   .n-card {
-    @apply rounded-xl border border-slate-200 bg-white text-slate-900 shadow-xs dark:border-slate-800 dark:bg-zinc-950 dark:text-white;
+    @apply rounded-xl border border-zinc-200/80 bg-white text-zinc-800 shadow-xs dark:border-white/[0.08] dark:bg-[#181818] dark:text-slate-200;
   }
 
   .n-tag {
-    @apply inline-flex items-center rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-800 dark:bg-zinc-900 dark:text-slate-300;
+    @apply inline-flex items-center rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border border-zinc-200/80 bg-zinc-100 text-zinc-600 dark:border-white/[0.06] dark:bg-[#222222] dark:text-slate-400;
   }
 
   .n-btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white px-5 py-3 text-sm font-bold tracking-tight transition hover:bg-slate-800 active:scale-[0.98] disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-slate-200;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-800 text-white px-5 py-3 text-sm font-bold tracking-tight transition hover:bg-zinc-700 active:scale-[0.98] disabled:opacity-50 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-white;
   }
 
   .n-btn-outline {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-transparent px-4 py-2.5 text-sm font-semibold tracking-tight text-slate-800 transition hover:bg-slate-100 active:scale-[0.98] dark:border-slate-700 dark:text-slate-100 dark:hover:bg-zinc-900;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200/80 bg-transparent px-4 py-2.5 text-sm font-semibold tracking-tight text-zinc-700 transition hover:bg-zinc-100 active:scale-[0.98] dark:border-white/[0.1] dark:text-slate-400 dark:hover:bg-[#222222];
   }
 
   .n-btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 text-white px-5 py-3 text-sm font-bold tracking-tight transition hover:bg-red-700 active:scale-[0.98] disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-red-500 text-white px-5 py-3 text-sm font-bold tracking-tight transition hover:bg-red-600 active:scale-[0.98] disabled:opacity-50;
   }
 
   .n-input {
-    @apply w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 dark:border-slate-700 dark:bg-zinc-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-white dark:focus:ring-white;
+    @apply w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500/30 dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:border-slate-500 dark:focus:ring-slate-500;
   }
 }
 
@@ -169,4 +169,12 @@
 
 .leaflet-container {
   font-family: inherit;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

@@ -211,7 +211,7 @@ export default function DamageAssessment() {
 
           <button
             onClick={loadData}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
+            className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             <span>Sync</span>
@@ -406,7 +406,7 @@ export default function DamageAssessment() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search Claim ID, Claimant, Phone, Address, Sector…"
-              className="w-full rounded-xl border border-slate-300 bg-slate-50 pl-10 pr-4 py-2 text-xs font-medium text-slate-900 outline-none transition focus:border-slate-900 focus:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-300"
+              className="w-full rounded-xl border border-slate-300 bg-slate-50 pl-10 pr-4 py-2 text-xs font-medium text-slate-900 outline-none transition focus:border-slate-900 focus:bg-white dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-300"
             />
           </div>
 
@@ -414,7 +414,7 @@ export default function DamageAssessment() {
           <select
             value={districtFilter}
             onChange={(e) => setDistrictFilter(e.target.value)}
-            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200"
           >
             <option value="all">All Disaster Sectors ({items.length})</option>
             {sectorAggregation.map((s) => (
@@ -596,7 +596,7 @@ export default function DamageAssessment() {
                           className={`rounded-lg px-2.5 py-1 text-[11px] font-bold cursor-pointer transition-colors ${
                             item.status === 'approved'
                               ? 'bg-emerald-600 text-white'
-                              : 'border border-slate-300 bg-white text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                              : 'border border-slate-300 bg-white text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300'
                           }`}
                         >
                           Approve
@@ -606,7 +606,7 @@ export default function DamageAssessment() {
                           className={`rounded-lg px-2 py-1 text-[11px] font-bold cursor-pointer transition-colors ${
                             item.status === 'flagged_fraud'
                               ? 'bg-red-600 text-white'
-                              : 'border border-slate-300 bg-white text-slate-700 hover:bg-red-50 hover:text-red-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                              : 'border border-slate-300 bg-white text-slate-700 hover:bg-red-50 hover:text-red-700 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300'
                           }`}
                         >
                           Flag
@@ -651,7 +651,7 @@ export default function DamageAssessment() {
             <div className="mt-4 space-y-4">
               {/* Photo preview if present */}
               {selectedReport.photoUrl && (
-                <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 max-h-56 bg-slate-950">
+                <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-white/[0.1] max-h-56 bg-slate-950">
                   <img
                     src={selectedReport.photoUrl}
                     alt="Damage"
