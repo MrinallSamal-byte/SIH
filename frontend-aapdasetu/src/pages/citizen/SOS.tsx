@@ -22,15 +22,7 @@ import { useToast } from '../../components/common/Toast'
 import { useLanguage } from '../../lib/i18n'
 import { getCurrentPosition, generateEmergencySms } from '../../lib/helpers'
 import { useGeoLocation } from '../../hooks/useLocation'
-import type { IncidentType, Report, ReportInput, GeoPoint } from '../../types'
-
-const emergencyTypes: { type: IncidentType; labelKey: string }[] = [
-  { type: 'other', labelKey: 'sos.typeGeneral' },
-  { type: 'flood', labelKey: 'sos.typeFlood' },
-  { type: 'medical', labelKey: 'sos.typeMedical' },
-  { type: 'fire', labelKey: 'sos.typeFire' },
-  { type: 'earthquake', labelKey: 'sos.typeEarthquake' },
-]
+import type { Report, ReportInput, GeoPoint } from '../../types'
 
 export default function SOS() {
   const { t } = useLanguage()
@@ -50,7 +42,7 @@ export default function SOS() {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [landmark, setLandmark] = useState('')
-  const [selectedType, setSelectedType] = useState<IncidentType>('other')
+
   const [phoneError, setPhoneError] = useState<string | null>(null)
   const [triggering, setTriggering] = useState(false)
   const [result, setResult] = useState<Report | null>(null)
@@ -124,8 +116,7 @@ export default function SOS() {
     setTriggering(true)
 
     try {
-      const foundType = emergencyTypes.find((e) => e.type === selectedType)
-      const typeLabel = foundType ? t(foundType.labelKey) : 'Emergency'
+      const typeLabel = 'General Emergency'
 
       // Resilient GPS coordinates retrieval with fallback
       let lat = coords?.latitude
@@ -145,7 +136,7 @@ export default function SOS() {
       const fullLandmark = [address, landmark.trim()].filter(Boolean).join(' | ') || undefined
 
       const input: ReportInput = {
-        type: selectedType,
+        type: 'other',
         description: `1-Tap SOS distress trigger: ${typeLabel}`,
         isOneTapSos: true,
         reporterName: name.trim() || undefined,
@@ -200,7 +191,7 @@ export default function SOS() {
     lat: coords?.latitude,
     lng: coords?.longitude,
     name: name.trim() || undefined,
-    type: selectedType,
+    type: 'other',
     phone: phone.trim() || undefined,
     address: address || undefined,
     landmark: landmark.trim() || undefined,
@@ -315,29 +306,6 @@ export default function SOS() {
             <>
               {/* Category + Contact form — wider on desktop */}
               <div className="mt-6 w-full max-w-3xl space-y-5">
-                {/* Emergency Category Tiles */}
-                <div className="text-left">
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-slate-300 mono">
-                    {t('sos.categoryTitle')}
-                  </label>
-                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                    {emergencyTypes.map((item) => (
-                      <button
-                        key={item.type}
-                        type="button"
-                        onClick={() => setSelectedType(item.type)}
-                        className={`flex items-center gap-2 rounded-xl border p-3 text-left text-xs font-bold transition-all cursor-pointer ${
-                          selectedType === item.type
-                            ? 'border-red-600 bg-red-50 text-red-900 shadow-xs ring-2 ring-red-200 dark:border-red-500 dark:bg-red-950/70 dark:text-red-200 dark:ring-red-900'
-                            : 'border-zinc-200/80 bg-white text-zinc-600 hover:border-zinc-200 hover:bg-zinc-50 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-300'
-                        }`}
-                      >
-                        <span className="leading-tight">{t(item.labelKey)}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Rescue Details Card */}
                 <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 text-left shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
                   <div className="mb-3 flex items-center justify-between flex-wrap gap-2">
@@ -501,58 +469,6 @@ export default function SOS() {
                   <span>Urgency Score: <strong>{result.priorityScore}/100</strong></span>
                   <span>Contact: <strong className="mono">{result.reporterPhone}</strong></span>
                 </div>
-              </div>
-
-              {/* Copyable Report Summary */}
-              <div className="rounded-xl border border-zinc-200/80 bg-white p-4 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">
-                    Report Summary — Copy & Share
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const reportText = [
-                        `AapdaSetu SOS Report`,
-                        `━━━━━━━━━━━━━━━━━━`,
-                        `Tracking ID: ${result.trackingId}`,
-                        `Priority: ${result.priorityLabel} (${result.priorityScore}/100)`,
-                        `Type: ${selectedType}`,
-                        `Contact: ${result.reporterPhone}`,
-                        `Name: ${name || 'N/A'}`,
-                        `Location: ${address || 'N/A'}`,
-                        coords ? `GPS: ${coords.latitude.toFixed(4)}°N, ${coords.longitude.toFixed(4)}°E` : '',
-                        `Landmark: ${landmark || 'N/A'}`,
-                        `Time: ${new Date().toLocaleString()}`,
-                        `━━━━━━━━━━━━━━━━━━`,
-                        `Track: ${window.location.origin}/track?id=${result.trackingId}`,
-                      ].filter(Boolean).join('\n')
-                      navigator.clipboard.writeText(reportText).then(() => {
-                        setCopied(true)
-                        toast('Full report copied to clipboard')
-                        setTimeout(() => setCopied(false), 3000)
-                      })
-                    }}
-                    className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-bold text-zinc-600 transition hover:bg-zinc-100 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 cursor-pointer"
-                  >
-                    <Copy className="h-3 w-3" />
-                    <span>{copied ? 'Copied!' : 'Copy All'}</span>
-                  </button>
-                </div>
-                <pre className="overflow-x-auto rounded-lg bg-[#f4f4f5] p-3 text-[11px] leading-relaxed text-zinc-700 mono dark:bg-[#151515] dark:text-slate-400">
-{`AapdaSetu SOS Report
-━━━━━━━━━━━━━━━━━━
-Tracking ID: ${result.trackingId}
-Priority: ${result.priorityLabel} (${result.priorityScore}/100)
-Type: ${selectedType}
-Contact: ${result.reporterPhone}
-Name: ${name || 'N/A'}
-Location: ${address || 'N/A'}${coords ? `\nGPS: ${coords.latitude.toFixed(4)}°N, ${coords.longitude.toFixed(4)}°E` : ''}
-Landmark: ${landmark || 'N/A'}
-Time: ${new Date().toLocaleString()}
-━━━━━━━━━━━━━━━━━━
-Track: ${typeof window !== 'undefined' ? window.location.origin : ''}/track?id=${result.trackingId}`}
-                </pre>
               </div>
 
               <div className="space-y-2">

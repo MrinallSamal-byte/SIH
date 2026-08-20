@@ -272,70 +272,35 @@ export default function ReportForm() {
           </div>
         </div>
 
-        <div className="mt-5 rounded-2xl border border-zinc-200/80 bg-[#f4f4f5] p-5 dark:border-white/[0.08] dark:bg-[#151515]">
+        {/* Tracking ID Copy */}
+        <div className="mt-4 rounded-2xl border border-zinc-200/80 bg-[#f4f4f5] p-5 dark:border-white/[0.08] dark:bg-[#151515]">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">Tracking ID — Save this</div>
               <div className="mt-0.5 font-mono text-2xl font-bold text-zinc-800 dark:text-slate-300">{result.trackingId}</div>
             </div>
-            <PriorityBadge label={result.priorityLabel} />
+            <div className="flex items-center gap-2">
+              <PriorityBadge label={result.priorityLabel} />
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(result.trackingId).then(() => {
+                    setCopied(true)
+                    toast('Tracking ID copied')
+                    setTimeout(() => setCopied(false), 3000)
+                  })
+                }}
+                className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-bold text-zinc-600 transition hover:bg-zinc-100 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 cursor-pointer"
+              >
+                <Copy className="h-3 w-3" />
+                <span>{copied ? 'Copied!' : 'Copy ID'}</span>
+              </button>
+            </div>
           </div>
           <div className="mt-3 flex items-center justify-between border-t border-zinc-200/80 pt-2 text-xs text-zinc-500 dark:border-white/[0.08] dark:text-slate-400">
             <span>Priority Score: <strong>{result.priorityScore}/100</strong></span>
             <span>Type: <strong className="mono">{result.type.toUpperCase()}</strong></span>
           </div>
-        </div>
-
-        {/* Copyable Report Summary */}
-        <div className="mt-4 rounded-xl border border-zinc-200/80 bg-white p-4 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">
-              Report Summary — Copy & Share
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                const reportText = [
-                  `AapdaSetu Incident Report`,
-                  `━━━━━━━━━━━━━━━━━━`,
-                  `Tracking ID: ${result.trackingId}`,
-                  `Priority: ${result.priorityLabel} (${result.priorityScore}/100)`,
-                  `Type: ${result.type.toUpperCase()}`,
-                  `Contact: ${result.reporterPhone}`,
-                  `Name: ${result.reporterName || 'N/A'}`,
-                  `Location: ${gpsAddress || 'N/A'}`,
-                  customPoint ? `GPS: ${customPoint.lat.toFixed(4)}°N, ${customPoint.lng.toFixed(4)}°E` : '',
-                  `Description: ${description || 'N/A'}`,
-                  `Time: ${new Date().toLocaleString()}`,
-                  `━━━━━━━━━━━━━━━━━━`,
-                  `Track: ${window.location.origin}/track?id=${result.trackingId}`,
-                ].filter(Boolean).join('\n')
-                navigator.clipboard.writeText(reportText).then(() => {
-                  setCopied(true)
-                  toast('Full report copied to clipboard')
-                  setTimeout(() => setCopied(false), 3000)
-                })
-              }}
-              className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-bold text-zinc-600 transition hover:bg-zinc-100 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 cursor-pointer"
-            >
-              <Copy className="h-3 w-3" />
-              <span>{copied ? 'Copied!' : 'Copy All'}</span>
-            </button>
-          </div>
-          <pre className="overflow-x-auto rounded-lg bg-[#f4f4f5] p-3 text-[11px] leading-relaxed text-zinc-700 mono dark:bg-[#151515] dark:text-slate-400">
-{`AapdaSetu Incident Report
-━━━━━━━━━━━━━━━━━━
-Tracking ID: ${result.trackingId}
-Priority: ${result.priorityLabel} (${result.priorityScore}/100)
-Type: ${result.type.toUpperCase()}
-Contact: ${result.reporterPhone}
-Name: ${result.reporterName || 'N/A'}
-Location: ${gpsAddress || 'N/A'}${customPoint ? `\nGPS: ${customPoint.lat.toFixed(4)}°N, ${customPoint.lng.toFixed(4)}°E` : ''}
-Description: ${description || 'N/A'}
-Time: ${new Date().toLocaleString()}
-━━━━━━━━━━━━━━━━━━
-Track: ${typeof window !== 'undefined' ? window.location.origin : ''}/track?id=${result.trackingId}`}
-          </pre>
         </div>
 
         <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
