@@ -272,7 +272,15 @@ export default function MainLayout() {
             <span className="dark:text-slate-300">{t('app.tagline')}</span>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+            <Link to="/admin" className="hover:text-slate-900 dark:hover:text-white font-semibold transition">
+              {t('nav.admin')}
+            </Link>
+            <span className="text-slate-300 dark:text-slate-700">|</span>
+            <Link to="/volunteer" className="hover:text-slate-900 dark:hover:text-white font-semibold transition">
+              {t('nav.volunteer')}
+            </Link>
+            <span className="text-slate-300 dark:text-slate-700">|</span>
             <a href="tel:112" className="flex items-center gap-1 font-bold text-red-600 hover:underline dark:text-red-400">
               <Phone className="h-3.5 w-3.5" />
               {t('header.nationalEmergency')}: 112
