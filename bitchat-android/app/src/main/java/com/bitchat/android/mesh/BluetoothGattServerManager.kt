@@ -240,20 +240,7 @@ class BluetoothGattServerManager(
                 }
 
                 if (characteristic.uuid == AppConstants.Mesh.Gatt.CHARACTERISTIC_UUID) {
-                    val linkID = serverLinkIDs[device.address]
-                    if (linkID == null) {
-                        Log.d(TAG, "Server: Dropping packet from stale connection ${device.address}")
-                        if (responseNeeded) {
-                            gattServer?.sendResponse(
-                                device,
-                                requestId,
-                                BluetoothGatt.GATT_FAILURE,
-                                0,
-                                null
-                            )
-                        }
-                        return
-                    }
+                    val linkID = serverLinkIDs.getOrPut(device.address) { UUID.randomUUID().toString() }
                     val packet = BitchatPacket.fromBinaryData(value)
                     if (packet != null) {
                         val peerID = packet.senderID.take(8).toByteArray().joinToString("") { "%02x".format(it) }
@@ -268,6 +255,10 @@ class BluetoothGattServerManager(
                 }
             }
             
+            override fun onMtuChanged(device: BluetoothDevice, mtu: Int) {
+                Log.d(TAG, "Server: MTU changed for ${device.address} to $mtu")
+            }
+
             override fun onDescriptorWriteRequest(
                 device: BluetoothDevice,
                 requestId: Int,
@@ -377,10 +368,6 @@ class BluetoothGattServerManager(
         }
         if (bleAdvertiser == null) {
             Log.w(TAG, "Not starting advertising: BLE advertiser not available on this device")
-            return
-        }
-        if (!bluetoothAdapter.isMultipleAdvertisementSupported) {
-            Log.w(TAG, "Not starting advertising: multiple advertisement not supported on this device")
             return
         }
 

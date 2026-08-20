@@ -126,7 +126,15 @@ class BluetoothConnectionTracker(
      */
     fun observePeerIfCurrent(deviceAddress: String, linkID: String, peerID: String): Boolean =
         synchronized(connectionStateLock) {
-            if (connectedDevices[deviceAddress]?.linkID != linkID) return@synchronized false
+            val current = connectedDevices[deviceAddress]
+            if (current != null) {
+                addressPeerMap[deviceAddress] = peerID
+                return@synchronized (current.linkID == linkID || current.linkID.isEmpty())
+            }
+            if (subscribedDevices.any { it.address == deviceAddress }) {
+                addressPeerMap[deviceAddress] = peerID
+                return@synchronized true
+            }
             addressPeerMap[deviceAddress] = peerID
             true
         }

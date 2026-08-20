@@ -1,5 +1,13 @@
 # Gson reflection targets in the shared bitchat sources (persisted state payloads).
+-keep class com.bitchat.android.protocol.** { *; }
+-keep class com.bitchat.android.model.** { *; }
+-keep class com.bitchat.android.contacts.** { *; }
 -keep class com.bitchat.android.favorites.** { *; }
+-keep class com.bitchat.android.crypto.** { *; }
+-keep class com.bitchat.android.noise.** { *; }
+-keep class com.bitchat.android.identity.** { *; }
+-dontwarn org.bouncycastle.**
+-keep class org.bouncycastle.** { *; }
 -keep class com.bitchat.android.services.SeenMessageStore$* { *; }
 -keepclassmembers class * {
     @com.google.gson.annotations.SerializedName <fields>;

@@ -1,180 +1,265 @@
-# 🛠️ AapdaSetu Technical Architecture and Stack Documentation
+# 🛠️ AapdaSetu — Technical Architecture, Data Contracts & Engineering Guide
 
-## 1. Executive Technical Summary
-
-**AapdaSetu** is architected as a hybrid, multi-stack disaster management platform designed for resilience, real-time event synchronization, and zero-friction citizen accessibility.
-
-The ecosystem integrates three major technological layers:
-1. **Next.js & Supabase Engine (`SOS-project with bolt/project`)**: Production Command Center built on Next.js 13 App Router, TypeScript, Tailwind CSS, shadcn/ui, and Supabase PostgreSQL with WebSocket subscriptions.
-2. **React Web Client (`frontend-AapdaSetu`)**: Vite-powered Single Page Application (SPA) leveraging React 19, Leaflet.js interactive GIS mapping, and Framer Motion micro-animations.
-3. **Python AI Engine (`apps/ai-engine`)**: FastAPI microservice providing explainable SOS triage scoring, anti-fraud photo damage assessment, SAR satellite flood polygon mapping, and PFA chatbot grounding.
+> **Comprehensive engineering specification of AapdaSetu's multi-stack architecture, clean code patterns, data contracts, Prisma 6 PostgreSQL models, AI microservices, mathematical algorithms, and security policies.**
 
 ---
 
-## 2. Technology Stack Overview
-
-### 2.1 Command Center & Platform Stack (`SOS-project with bolt/project`)
-- **Framework:** [Next.js 13](https://nextjs.org/) (App Router, Server & Client Components)
-- **Language:** [TypeScript](https://www.typescriptlang.org/) (Strict Mode)
-- **Styling:** [Tailwind CSS 3.4](https://tailwindcss.com/) with custom design tokens, dark mode theme variables, and CSS animations.
-- **UI Component Library:** [shadcn/ui](https://ui.shadcn.com/) built on top of [Radix UI](https://www.radix-ui.com/) primitives (Dialog, Dropdown, Tabs, Toast, Select, Switch).
-- **Icons:** [Lucide React](https://lucide.dev/)
-- **Database & Realtime:** [Supabase](https://supabase.com/) (PostgreSQL 15, Row Level Security, Realtime WebSockets `postgres_changes`, RPC Security Definer functions).
-- **Data Visualization:** [Recharts](https://recharts.org/) (AreaChart, BarChart, PieChart, ResponsiveContainer).
-- **Internationalization (i18n):** Custom React Context (`lib/i18n/context.tsx`) with dictionaries for English (`en`), Hindi (`hi`), and Odia (`or`).
-
-### 2.2 React Web Client Stack (`frontend-AapdaSetu`)
-- **Client Framework:** React 19 & Vite 8 SPA.
-- **GIS Mapping:** Leaflet.js 1.9 & CARTO / OpenStreetMap tile layers.
-- **Animations:** Framer Motion 11.
-- **Client Routing:** React Router v6 nested routes (`/dashboard`, `/emergency-sos`, `/disaster-alerts`, `/safe-routes`, `/medical-assistance`, `/report-damage`, `/missing-persons`, `/admin/dashboard`, `/volunteer/dashboard`).
-- **Validation:** Zod 3.23 schema validation.
-
-### 2.3 Python AI Engine Tech Stack (`apps/ai-engine/app/`)
-- **Runtime:** Python 3.10+ & FastAPI microservice framework.
-- **Triage Engine (`triage.py`):** Weighted keyword scanner and demographic vulnerability scoring algorithm.
-- **Damage Assessment (`damage_assessment.py`):** EXIF geotag verification, perceptual hashing (pHash SHA-256) duplicate detection, and SDRF compensation calculation.
-- **PFA Chatbot (`pfa_chatbot.py`):** Conversational AI engine for guided 4-second box breathing and 5-4-3-2-1 sensory grounding.
-- **Satellite SAR Mapping (`satellite_flood_mapping.py`):** Sentinel-1 radar backscatter thresholding generating GeoJSON flood extent polygons.
+## 📑 Table of Contents
+1. [Architectural Principles & Patterns](#1-architectural-principles--patterns)
+2. [Frontend Architecture & Design Tokens](#2-frontend-architecture--design-tokens)
+3. [Realtime Event Bus & State Synchronization](#3-realtime-event-bus--state-synchronization)
+4. [Mathematical & Algorithmic Specifications](#4-mathematical--algorithmic-specifications)
+5. [Prisma 6 Database Schema Specification](#5-prisma-6-database-schema-specification)
+6. [AI Microservice Engine Specifications](#6-ai-microservice-engine-specifications)
+7. [API Contract & Schema References](#7-api-contract--schema-references)
+8. [Offline PWA & Mesh Architecture](#8-offline-pwa--mesh-architecture)
+9. [Security, RLS & Compliance](#9-security-rls--compliance)
 
 ---
 
-## 3. Database Architecture & Schema Specification
+## 1. Architectural Principles & Patterns
 
-The database runs on Supabase PostgreSQL with 8 core tables:
+AapdaSetu adheres to modern clean architecture and event-driven design principles to ensure mission-critical resilience:
 
-### 3.1 `reports` Table
-- `id` (uuid, PK)
-- `type` (text: fire, flood, medical, missing_person, earthquake, accident, other)
-- `status` (text: pending, in_progress, resolved)
-- `priority_score` (integer: 1 to 100)
-- `priority_label` (text: RED, YELLOW, GREEN)
-- `latitude` / `longitude` (float8)
-- `landmark` / `description` (text)
-- `reporter_name` / `reporter_phone` (text)
-- `missing_person_name` / `missing_person_age` / `missing_person_desc` (text/integer)
-- `medical_condition` / `blood_type` (text)
-- `media_data` (text: base64 payload) / `media_type` (text: video, audio, none)
-- `triage_factors` (jsonb: breakdown array of scoring factors)
-- `assigned_volunteer_id` (uuid, FK -> volunteers.id)
-- `assigned_agency_id` (uuid, FK -> agencies.id)
-- `resolution_notes` (text)
-- `created_at` / `updated_at` (timestamptz)
-
-### 3.2 `volunteers` Table
-- `id` (uuid, PK)
-- `name` / `phone` (text)
-- `skills` (text_array: medical, search_rescue, driving, logistics)
-- `latitude` / `longitude` (float8)
-- `status` (text: available, on_duty, offline)
-- `assigned_report_id` (uuid, FK -> reports.id)
-
-### 3.3 `shelters` Table
-- `id` (uuid, PK)
-- `name` / `address` (text)
-- `latitude` / `longitude` (float8)
-- `capacity` / `occupancy` (integer)
-- `facilities` (text_array: food, water, medical_station, power_generator)
-- `contact_phone` / `status` (text: open, full, closed)
-
-### 3.4 `agencies` Table
-- `id` (uuid, PK)
-- `name` / `type` (text: fire_department, police, ndrf, hospital, ngo)
-- `contact_phone` / `contact_email` / `jurisdiction` (text)
-- `latitude` / `longitude` (float8)
-
-### 3.5 `resources` Table
-- `id` (uuid, PK)
-- `name` / `category` (text: food, water, medical, clothing, fuel)
-- `quantity` (integer) / `unit` (text)
-- `shelter_id` (uuid, FK -> shelters.id)
-
-### 3.6 `alerts` Table
-- `id` (uuid, PK)
-- `title` / `message` (text)
-- `severity` (text: info, warning, critical)
-- `channel` (text: sms, whatsapp, public, all)
-- `target_area` / `created_by` (text)
-
-### 3.7 `audit_logs` Table
-- `id` (uuid, PK)
-- `admin_email` / `action` / `entity_type` / `entity_id` (text)
-- `details` (jsonb)
-- `created_at` (timestamptz)
-
-### 3.8 `safety_checkins` Table
-- `id` (uuid, PK)
-- `full_name` / `phone` / `location_name` / `notes` (text)
-- `status` (text: safe, need_assistance)
-- `latitude` / `longitude` (float8)
-- `created_at` (timestamptz)
+- **Hexagonal Architecture (Ports & Adapters):** Core domain business logic (triage calculation, geospatial proximity, PFA protocols) is decoupled from delivery mechanisms (HTTP REST, WebSockets, Mock fallbacks).
+- **Graceful Degradation & Zero-Dependency Demo Mode:** Every client-side API adapter implements an automatic in-memory mock fallback (`src/api/mocks.ts`). If the backend server or AI microservice is unreachable, the client operates in high-fidelity mock mode without throwing unhandled exceptions.
+- **Zero-Authentication Citizen Layer:** Zero friction for emergency users; all citizen endpoints require no prior registration or credentials.
+- **Strict TypeScript Typing:** Full type safety across both frontend and backend models, eliminating runtime type errors during emergency operations.
 
 ---
 
-## 4. Automated AI Triage Scoring Algorithm
+## 2. Frontend Architecture & Design Tokens
 
-The triage calculation engine computes priority scores ranging from **1 to 100**:
+### 2.1 Technology Stack
+- **Framework:** React 19 with Vite 6 SPA bundling.
+- **Routing:** React Router v6 using hash-based routing (`#/sos`, `#/admin`, `#/volunteer`) for compatibility with static CDNs and offline environments.
+- **Styling:** Tailwind CSS 3.4 with custom design tokens, dark/light theme switching via CSS variables, and Lucide React iconography.
+- **GIS Mapping:** Leaflet.js 1.9 & React-Leaflet 5 with OpenStreetMap / CARTO tile rendering and custom SVG marker pins.
+- **Visualizations:** Recharts 3 for incident analytics, priority distribution, and response time telemetry.
+
+### 2.2 Design System Tokens & Color Palette
+```css
+/* Color Palette Specifications */
+--color-brand-primary: #0f172a;       /* Slate 900 */
+--color-brand-accent: #dc2626;        /* Emergency Red 600 */
+--color-brand-warning: #d97706;       /* Amber 600 */
+--color-brand-success: #16a34a;       /* Emerald 600 */
+--color-brand-info: #2563eb;          /* Royal Blue 600 */
+
+/* Priority Badge Semantics */
+--priority-red: #ef4444;              /* RED Alert: Critical Threat (Score >= 80) */
+--priority-yellow: #f59e0b;           /* YELLOW Alert: Urgent Response (50 <= Score < 80) */
+--priority-green: #10b981;            /* GREEN Alert: Advisory / Standard (Score < 50) */
+```
+
+### 2.3 Internationalization (`i18n.tsx`)
+A custom context provider supporting 4 languages with variable interpolation and fallback protection:
+- **English (`en`)**
+- **Hindi (`hi` — हिंदी)**
+- **Bengali (`bn` — বাংলা)**
+- **Odia (`or` — ଓଡ଼ିଆ)**
+
+---
+
+## 3. Realtime Event Bus & State Synchronization
+
+The frontend implements a lightweight, pub-sub `RealtimeEventBus` (`src/lib/realtimeEventBus.ts`) that manages cross-component and cross-tab communication:
 
 ```typescript
-// Core Triage Logic (lib/triage.ts)
-export function computeTriage(input: ReportInput): TriageResult {
-  let score = 30; // Base Score
-  
-  // 1. Emergency Type Weighting
-  score += TYPE_BASE_SCORES[input.type] || 5;
-  
-  // 2. Multi-Keyword NLP Match
-  for (const [keyword, points] of Object.entries(KEYWORD_SCORES)) {
-    if (textParts.includes(keyword)) score += points;
+export type RealtimeEventType =
+  | 'incident:created'
+  | 'incident:updated'
+  | 'volunteer:dispatched'
+  | 'shelter:capacity_changed'
+  | 'alert:broadcast'
+  | 'damage:claim_submitted'
+  | 'checkin:posted'
+
+export interface RealtimeEvent<T = any> {
+  id: string
+  type: RealtimeEventType
+  timestamp: number
+  payload: T
+}
+```
+
+Components subscribe using the `useRealtime` hook:
+```typescript
+useRealtime({
+  onIncidentCreated: (incident) => {
+    if (incident.priorityLabel === 'RED') {
+      playEmergencySiren()
+      flashMapMarker(incident.location)
+    }
   }
-  
-  // 3. Demographics & Vulnerability Boost
-  if (input.missing_person_age <= 12) score += 25;
-  else if (input.missing_person_age >= 65) score += 20;
-  
-  // 4. Medical Condition Boosts
-  if (condition.includes('pregnant')) score += 30;
-  if (condition.includes('bleed')) score += 25;
-  if (condition.includes('heart') || condition.includes('cardiac')) score += 20;
-  
-  // Clamp Score & Tag Label
-  score = Math.max(1, Math.min(100, score));
-  const label = score >= 80 ? 'RED' : score >= 50 ? 'YELLOW' : 'GREEN';
-  
-  return { score, label, factors };
+})
+```
+
+---
+
+## 4. Mathematical & Algorithmic Specifications
+
+### 4.1 Haversine Distance Formula (Great-Circle Distance)
+Used for computing geodesic distance between citizen coordinates $(\text{lat}_1, \text{lng}_1)$ and shelter coordinates $(\text{lat}_2, \text{lng}_2)$:
+
+$$d = 2R \cdot \arcsin \left( \sqrt{\sin^2\left(\frac{\Delta \text{lat}}{2}\right) + \cos(\text{lat}_1)\cos(\text{lat}_2)\sin^2\left(\frac{\Delta \text{lng}}{2}\right)} \right)$$
+
+Where:
+- $R = 6371.0\text{ km}$ (Earth's mean radius)
+- $\Delta \text{lat} = (\text{lat}_2 - \text{lat}_1) \cdot \frac{\pi}{180}$
+- $\Delta \text{lng} = (\text{lng}_2 - \text{lng}_1) \cdot \frac{\pi}{180}$
+
+### 4.2 Multi-Factor AI Triage Urgency Scoring Formula
+$$P_{\text{total}} = \text{clamp}\left( 1, 100, S_{\text{base}} + W_{\text{type}} + \sum W_{\text{nlp}} + W_{\text{demo}} + W_{\text{gps}} \right)$$
+
+Where:
+- $S_{\text{base}} = 30$ (Base initialization score)
+- $W_{\text{type}} \in [5, 25]$: Category weight (Earthquake = $+25$, Fire = $+20$, Flood/Medical = $+18$)
+- $\sum W_{\text{nlp}} \in [0, 40]$: Sum of detected crisis keywords across multi-lingual dictionaries
+- $W_{\text{demo}} \in [0, 30]$: Vulnerability points (Infant/Child = $+25$, Senior = $+20$, Pregnancy = $+30$)
+- $W_{\text{gps}} \in [0, 5]$: High-accuracy GPS verification bonus
+- $\text{clamp}(a, b, x) = \max(a, \min(b, x))$
+
+### 4.3 Perceptual Hash (pHash) Anti-Fraud Duplicate Detection
+For property damage assessment, images are converted to 64-bit perceptual hashes. Two photos $H_1$ and $H_2$ are deemed duplicate/fraudulent if their Hamming distance $D_H$ satisfies:
+
+$$D_H(H_1, H_2) = \sum_{i=1}^{64} (H_{1,i} \oplus H_{2,i}) < 5$$
+
+---
+
+## 5. Prisma 6 Database Schema Specification
+
+The backend models are defined in `backend-aapdasetu/prisma/schema.prisma`:
+
+```prisma
+enum IncidentType {
+  fire
+  flood
+  medical
+  missing_person
+  earthquake
+  accident
+  other
+}
+
+enum IncidentStatus {
+  pending
+  in_progress
+  resolved
+}
+
+enum PriorityLabel {
+  RED
+  YELLOW
+  GREEN
+}
+
+model Incident {
+  id               String         @id @default(uuid())
+  trackingId       String         @unique @map("tracking_id")
+  type             IncidentType
+  status           IncidentStatus @default(pending)
+  priorityScore    Int            @map("priority_score")
+  priorityLabel    PriorityLabel  @map("priority_label")
+  latitude         Float
+  longitude        Float
+  landmark         String?
+  reporterName     String?        @map("reporter_name")
+  reporterPhone    String         @map("reporter_phone")
+  description      String?
+  triageFactors    Json?          @map("triage_factors")
+  mediaUrl         String?        @map("media_url")
+  isOneTapSos      Boolean        @default(false) @map("is_one_tap_sos")
+  assignedVolunteer Volunteer?    @relation(fields: [assignedVolunteerId], references: [id])
+  assignedVolunteerId String?     @map("assigned_volunteer_id")
+  assignedAgency   Agency?        @relation(fields: [assignedAgencyId], references: [id])
+  assignedAgencyId String?        @map("assigned_agency_id")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  @@index([status, priorityLabel])
+  @@index([latitude, longitude])
+  @@map("incidents")
 }
 ```
 
 ---
 
-## 5. Zero User-Side Authentication & RPC Security Definer
+## 6. AI Microservice Engine Specifications
 
-- **Public Access:** Citizens access emergency forms, tracking, shelter locators, and PFA chatbots without any login tokens.
-- **Admin RPC Auth:** Admin Command Center authentication invokes a custom Supabase PostgreSQL RPC function:
-  ```sql
-  CREATE OR REPLACE FUNCTION verify_admin_login(p_email text, p_password text)
-  RETURNS TABLE (id uuid, email text, name text)
-  SECURITY DEFINER
-  ...
-  ```
-- **Session Handling:** Admin sessions are persisted locally in `localStorage` under key `'aapdasetu_admin_session'`.
+### 6.1 `triage.py` (FastAPI `/ai/triage`)
+- Evaluates raw text and telemetry payloads to compute explainable triage factor breakdowns.
+- Exposes REST endpoint accepting `{ type, description, demographics, location }` and returning `{ score, priority_label, factors }`.
+
+### 6.2 `damage_service.py` (FastAPI `/ai/damage-assessment`)
+- Processes base64 or multipart images through a PyTorch / OpenCV structural defect classifier.
+- Extracts EXIF metadata, computes pHash, and outputs SDRF compensation tiers:
+  - **Grade 1 (Total Collapse):** ₹1,20,000
+  - **Grade 2 (Severe Damage):** ₹65,000
+  - **Grade 3 (Minor Damage):** ₹25,000
+
+### 6.3 `satellite_flood_mapping.py` (FastAPI `/ai/satellite-flood-map`)
+- Ingests Sentinel-1 SAR radar backscatter data ($VV / VH$ polarization).
+- Applies Otsu thresholding to extract water surface masks and converts binary masks into GeoJSON MultiPolygon layers for Leaflet map avoidance.
+
+### 6.4 `pfa_chatbot.py` (FastAPI `/ai/pfa-chat`)
+- Implements evidence-based Psychological First Aid (PFA) protocols.
+- Detects acute stress reactions and guides victims through interactive 4-4-4 Box Breathing and 5-4-3-2-1 Sensory Grounding exercises.
 
 ---
 
-## 6. Execution Commands
+## 7. API Contract & Schema References
 
-```bash
-# 1. Run Command Center Platform (SOS-project with bolt)
-cd "SOS-project with bolt/project"
-npm install
-npm run dev
-
-# 2. Run React Web Application (SIH-DM/frontend-AapdaSetu)
-cd SIH-DM/frontend-AapdaSetu
-npm install
-npm run dev
-
-# 3. Run Python AI Microservice Engine (SIH-DM/apps/ai-engine)
-cd SIH-DM/apps/ai-engine
-python app/main.py
+### 7.1 Create Emergency Incident
+- **Method:** `POST /api/reports`
+- **Request Body:**
+```json
+{
+  "type": "flood",
+  "isOneTapSos": false,
+  "reporterName": "Rahul Sharma",
+  "reporterPhone": "9876543210",
+  "description": "Water rising rapidly on 1st floor, 2 senior citizens trapped",
+  "location": { "lat": 20.2961, "lng": 85.8245, "landmark": "Near Unit-1 Market" },
+  "mediaUrl": "data:image/jpeg;base64,..."
+}
 ```
+- **Response (`201 Created`):**
+```json
+{
+  "id": "c836f414-181d-4463-bd4d-efdf8e7b950d",
+  "trackingId": "SOS-7K2X9",
+  "status": "pending",
+  "priorityScore": 88,
+  "priorityLabel": "RED",
+  "triageFactors": [
+    "Base emergency initialization: +30",
+    "Flood emergency category: +18",
+    "Keyword 'trapped' matched: +30",
+    "Keyword 'water rising' matched: +20",
+    "Demographic 'senior citizen' detected: +20"
+  ],
+  "createdAt": "2026-08-17T22:38:45.000Z"
+}
+```
+
+---
+
+## 8. Offline PWA & Mesh Architecture
+
+1. **Service Worker (`public/sw.js`):**
+   - Intercepts fetch requests with a **Network First, Cache Fallback** strategy for APIs and a **Cache First** strategy for static assets (Leaflet tiles, icons, CSS/JS bundles).
+   - Queues offline `POST /api/reports` submissions into IndexedDB (`aapdasetu_offline_queue`) and triggers background synchronization on network restoration.
+
+2. **BitChat BLE Mesh Integration (`bitchat-android`):**
+   - Implements zero-infrastructure Bluetooth Low Energy (BLE) peripheral advertising and central scanning.
+   - Floods 256-byte encrypted emergency packets across multi-hop peer nodes until an internet-connected gateway node relays them to the AapdaSetu Command Center.
+
+---
+
+## 9. Security, RLS & Compliance
+
+- **CORS & Rate Limiting:** Configured on Express and FastAPI gateways to prevent Denial of Service (DoS) during traffic surges.
+- **Bcrypt Password Hashing:** Applied to admin and volunteer credential authentication.
+- **Anti-Fraud EXIF & Geo-Fencing:** Prevents false damage claims filed outside active disaster zones.
+- **Audit Logging:** Every administrative dispatch, priority adjustment, and status update generates an immutable timestamped record in `audit_logs`.

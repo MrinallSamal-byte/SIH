@@ -1246,6 +1246,21 @@ fun AboutSheet(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            if (selectedTab == AboutTab.Settings) {
+                                TextButton(onClick = {
+                                    onDismiss()
+                                    // The ChatScreen composable observes showAdminSheet/showAdminPassphraseDialog
+                                    // so we trigger the admin panel via a global-accessible callback
+                                    com.bitchat.android.features.admin.AboutSheetAdminBridge.onOpenAdmin?.invoke()
+                                }) {
+                                    Text(
+                                        text = "🛡 Admin Panel",
+                                        fontSize = 13.sp,
+                                        fontFamily = BitchatFontFamily,
+                                        color = Color(0xFF6366F1)
+                                    )
+                                }
+                            }
                             if (selectedTab == AboutTab.Settings && onShowDebug != null) {
                                 TextButton(onClick = onShowDebug) {
                                     Text(

@@ -6,6 +6,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,13 +17,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.outlined.Contacts
+import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,7 +42,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.bitchat.android.ui.theme.LocalBitchatPalette
-import com.bitchat.android.ui.theme.PeerColors
+import com.bitchat.android.ui.theme.colorForPeer
+import com.bitchat.android.ui.PeerIdentity
 
 /**
  * Discord-style Channel & Community Navigation Drawer
@@ -56,8 +64,10 @@ fun DiscordChannelDrawer(
     val privateChats by viewModel.privateChats.collectAsState()
     val unreadPrivateCounts by viewModel.unreadPrivateMessageCounts.collectAsState()
     val peerNicknames by viewModel.peerNicknames.collectAsState()
-    val activePeers by viewModel.peers.collectAsState()
+    val activePeers by viewModel.connectedPeers.collectAsState()
     val myNickname by viewModel.nickname.collectAsState()
+    val phoneContacts by viewModel.phoneContacts.collectAsState()
+    val hasContactsPermission by viewModel.hasContactsPermission.collectAsState()
     val myPeerID = viewModel.myPeerID
 
     var showCreateChannelDialog by remember { mutableStateOf(false) }
@@ -241,6 +251,40 @@ fun DiscordChannelDrawer(
                 // If Hub is Direct Messages, display 1-on-1 private chats (WhatsApp style)
                 if (selectedHubId == ChannelManager.HUB_DIRECT_MESSAGES) {
                     item {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    viewModel.showUnifiedContactSearch()
+                                    onCloseDrawer()
+                                },
+                            color = Color(0xFF2B2D31)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "Search",
+                                    tint = Color(0xFF5865F2),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "Search contacts or channels…",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFF949BA4),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+
+                    item {
                         Text(
                             text = "DIRECT MESSAGES (1:1 E2EE NOISE)",
                             style = MaterialTheme.typography.labelSmall,
@@ -262,7 +306,7 @@ fun DiscordChannelDrawer(
                                     .padding(horizontal = 8.dp, vertical = 2.dp)
                                     .clip(RoundedCornerShape(6.dp))
                                     .clickable {
-                                        viewModel.selectPrivateChat(peerID)
+                                        viewModel.showPrivateChatSheet(peerID)
                                         onCloseDrawer()
                                     },
                                 color = Color.Transparent
@@ -279,7 +323,7 @@ fun DiscordChannelDrawer(
                                         modifier = Modifier
                                             .size(28.dp)
                                             .clip(CircleShape)
-                                            .background(PeerColors.colorForPeer(peerID)),
+                                            .background(colorForPeer(PeerIdentity.mesh(peerID), palette)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
@@ -349,7 +393,7 @@ fun DiscordChannelDrawer(
                                     .padding(horizontal = 8.dp, vertical = 2.dp)
                                     .clip(RoundedCornerShape(6.dp))
                                     .clickable {
-                                        viewModel.selectPrivateChat(peerID)
+                                        viewModel.showPrivateChatSheet(peerID)
                                         onCloseDrawer()
                                     },
                                 color = Color.Transparent
@@ -365,7 +409,7 @@ fun DiscordChannelDrawer(
                                         modifier = Modifier
                                             .size(28.dp)
                                             .clip(CircleShape)
-                                            .background(PeerColors.colorForPeer(peerID)),
+                                            .background(colorForPeer(PeerIdentity.mesh(peerID), palette)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
@@ -395,7 +439,7 @@ fun DiscordChannelDrawer(
                                 }
                             }
                         }
-                    } else if (privateChats.isEmpty()) {
+                    } else if (privateChats.isEmpty() && phoneContacts.isEmpty()) {
                         item {
                             Text(
                                 text = "Searching for nearby student devices over Bluetooth/Wi-Fi mesh...",
@@ -403,6 +447,158 @@ fun DiscordChannelDrawer(
                                 color = Color(0xFF949BA4),
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
+                        }
+                    }
+
+                    // Phone Contacts Section
+                    if (!hasContactsPermission) {
+                        item {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        viewModel.showUnifiedContactSearch()
+                                        onCloseDrawer()
+                                    },
+                                color = Color(0xFF1E222D),
+                                border = BorderStroke(1.dp, Color(0xFF388AF6).copy(alpha = 0.4f))
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Contacts,
+                                        contentDescription = null,
+                                        tint = Color(0xFF388AF6),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Sync Phone Contacts",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                        Text(
+                                            text = "Find saved numbers on mesh",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontSize = 10.sp,
+                                            color = Color(0xFF949BA4)
+                                        )
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Default.ChevronRight,
+                                        contentDescription = null,
+                                        tint = Color(0xFF388AF6),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    } else if (phoneContacts.isNotEmpty()) {
+                        item {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = "SAVED PHONE CONTACTS (${phoneContacts.size})",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF5865F2),
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                            )
+                        }
+
+                        items(phoneContacts.take(20)) { contact ->
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .clickable {
+                                        viewModel.startPrivateChatWithPhoneContact(contact)
+                                        onCloseDrawer()
+                                    },
+                                color = Color.Transparent
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF388AF6)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = contact.initial,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = contact.name,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color(0xFFDBDEE1),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = contact.phoneNumber,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontSize = 10.sp,
+                                            color = Color(0xFF949BA4)
+                                        )
+                                    }
+
+                                    if (contact.isMeshAvailable) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(6.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFF32D74B))
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        if (phoneContacts.size > 20) {
+                            item {
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .clickable {
+                                            viewModel.showUnifiedContactSearch()
+                                            onCloseDrawer()
+                                        },
+                                    color = Color(0xFF2B2D31)
+                                ) {
+                                    Text(
+                                        text = "View all ${phoneContacts.size} contacts…",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color(0xFF5865F2),
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 } else {
@@ -477,10 +673,10 @@ fun DiscordChannelDrawer(
                                         .padding(horizontal = 8.dp, vertical = 2.dp)
                                         .clip(RoundedCornerShape(6.dp))
                                         .clickable {
-                                            if (channel.isEncrypted && !viewModel.isChannelPasswordProtected(channel.id)) {
+                                            if (channel.isEncrypted && !viewModel.hasChannelKey(channel.id)) {
                                                 unlockChannelTarget = channel
                                             } else {
-                                                viewModel.selectChannel(channel.id)
+                                                viewModel.switchToChannel(channel.id)
                                                 onCloseDrawer()
                                             }
                                         },
@@ -493,8 +689,16 @@ fun DiscordChannelDrawer(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
-                                        // Channel Icon (# or 🔒 or 🚨)
-                                        if (channel.isEmergency) {
+                                        // Channel Icon (# or 🔒 or 🚨 or 🛡️)
+                                        val isAdminChan = channel.id.equals("#admin", ignoreCase = true) || channel.name.equals("admin", ignoreCase = true)
+                                        if (isAdminChan) {
+                                            Icon(
+                                                imageVector = Icons.Default.AdminPanelSettings,
+                                                contentDescription = "Admin Channel",
+                                                tint = if (isSelected) Color(0xFF818CF8) else Color(0xFF6366F1),
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        } else if (channel.isEmergency) {
                                             Text(text = "🚨", fontSize = 14.sp)
                                         } else if (channel.isEncrypted) {
                                             Icon(
@@ -522,8 +726,21 @@ fun DiscordChannelDrawer(
                                             modifier = Modifier.weight(1f)
                                         )
 
-                                        // E2EE Badge
-                                        if (channel.isEncrypted) {
+                                        // Admin or E2EE Badge
+                                        if (isAdminChan) {
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = Color(0xFF6366F1).copy(alpha = 0.2f)
+                                            ) {
+                                                Text(
+                                                    text = "ADMIN",
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFF818CF8),
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                        } else if (channel.isEncrypted) {
                                             Surface(
                                                 shape = RoundedCornerShape(4.dp),
                                                 color = Color(0xFF1E2F23)
@@ -639,16 +856,19 @@ fun DiscordChannelDrawer(
     }
 
     // -----------------------------------------------------------------
-    // UNLOCK ENCRYPTED CHANNEL MODAL DIALOG
+    // Unlock Protected / Encrypted Channel Dialog
     // -----------------------------------------------------------------
     unlockChannelTarget?.let { channel ->
         UnlockChannelDialog(
             channel = channel,
             onDismiss = { unlockChannelTarget = null },
             onUnlock = { password ->
-                viewModel.joinChannel(channel.id, password)
-                unlockChannelTarget = null
-                onCloseDrawer()
+                val success = viewModel.joinChannel(channel.id, password)
+                if (success) {
+                    unlockChannelTarget = null
+                    onCloseDrawer()
+                }
+                success
             }
         )
     }
@@ -853,7 +1073,7 @@ private fun CreateChannelDialog(
 private fun UnlockChannelDialog(
     channel: DiscordChannel,
     onDismiss: () -> Unit,
-    onUnlock: (password: String) -> Unit
+    onUnlock: (password: String) -> Boolean
 ) {
     var password by remember { mutableStateOf("") }
     var errorText by remember { mutableStateOf<String?>(null) }
@@ -936,7 +1156,10 @@ private fun UnlockChannelDialog(
                                 errorText = "Password cannot be empty"
                                 return@Button
                             }
-                            onUnlock(password)
+                            val success = onUnlock(password)
+                            if (!success) {
+                                errorText = "Incorrect channel passphrase"
+                            }
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF32D74B)

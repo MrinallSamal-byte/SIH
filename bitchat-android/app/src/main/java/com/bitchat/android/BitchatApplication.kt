@@ -40,6 +40,11 @@ class BitchatApplication : Application() {
             com.bitchat.android.services.AppStateStore.initializeConversationPersistence(this)
         } catch (_: Exception) { }
 
+        // Initialize admin system (blocked users, reports, admin config)
+        try {
+            com.bitchat.android.features.admin.AdminManager.initialize(this)
+        } catch (_: Exception) { }
+
         // Warm up Nostr identity to ensure npub is available for favorite notifications
         try {
             com.bitchat.android.nostr.NostrIdentityBridge.getCurrentNostrIdentity(this)
@@ -56,7 +61,7 @@ class BitchatApplication : Application() {
 
         // Initialize Wi‑Fi Aware controller with persisted default
         try {
-            val enabled = com.bitchat.android.ui.debug.DebugPreferenceManager.getWifiAwareEnabled(false)
+            val enabled = com.bitchat.android.ui.debug.DebugPreferenceManager.getWifiAwareEnabled(true)
             com.bitchat.android.wifiaware.WifiAwareController.initialize(this, enabled)
         } catch (_: Exception) { }
 

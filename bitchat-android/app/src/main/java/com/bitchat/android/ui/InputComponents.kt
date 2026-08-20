@@ -2,7 +2,6 @@ package com.bitchat.android.ui
 
 import android.view.HapticFeedbackConstants
 import com.bitchat.android.ui.theme.BitchatFontFamily
-// [Goose] TODO: Replace inline file attachment stub with FilePickerButton abstraction that dispatches via FileShareDispatcher
 
 
 import androidx.compose.material.icons.Icons
@@ -531,9 +530,10 @@ fun MessageInput(
                         val secs = (elapsedMs / 1000).toInt()
                         Text(
                             text = (if (isLiveRecording) "LIVE · " else "") +
-                                String.format("%02d:%02d", secs / 60, secs % 60),
+                                String.format("%02d:%02d / 00:10", secs / 60, secs % 60),
                             fontFamily = BitchatFontFamily,
-                            color = colorScheme.error,
+                            color = if (secs >= 8) colorScheme.error else colorScheme.error.copy(alpha = 0.85f),
+                            fontWeight = if (secs >= 8) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
                             fontSize = (BASE_FONT_SIZE - 4).sp
                         )
                         Spacer(Modifier.width(12.dp))
@@ -603,15 +603,26 @@ fun MessageInput(
                                         tween(BitchatMotion.QUICK_MS, easing = FastOutSlowInEasing)
                                     )
                             ) {
-                                ImagePickerButton(
-                                    onImageReady = { outPath ->
-                                        onSendImageNote(
-                                            latestSelectedPeer.value,
-                                            latestChannel.value,
-                                            outPath
-                                        )
-                                    }
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    ImagePickerButton(
+                                        onImageReady = { outPath ->
+                                            onSendImageNote(
+                                                latestSelectedPeer.value,
+                                                latestChannel.value,
+                                                outPath
+                                            )
+                                        }
+                                    )
+                                    FilePickerButton(
+                                        onFileReady = { outPath ->
+                                            onSendFileNote(
+                                                latestSelectedPeer.value,
+                                                latestChannel.value,
+                                                outPath
+                                            )
+                                        }
+                                    )
+                                }
                             }
 
                             // The slide-to-cancel target sits well clear of the record

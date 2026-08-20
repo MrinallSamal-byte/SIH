@@ -185,6 +185,44 @@ class MessageManager(private val state: ChatState) {
         publishAcceptedPrivateMessage(conversationID, message, forceRead = true)
     }
     
+    fun deleteMessageLocally(messageID: String) {
+        // 1. Remove from private chats
+        val currentPrivateChats = state.getPrivateChatsValue().toMutableMap()
+        var privateChanged = false
+        currentPrivateChats.forEach { (convId, messages) ->
+            if (messages.any { it.id == messageID }) {
+                currentPrivateChats[convId] = messages.filterNot { it.id == messageID }
+                privateChanged = true
+            }
+        }
+        if (privateChanged) {
+            state.setPrivateChats(ContactDirectory.canonicalizePrivateChats(currentPrivateChats))
+            try {
+                com.bitchat.android.services.AppStateStore.removePrivateMessage(messageID)
+            } catch (_: Exception) {}
+        }
+
+        // 2. Remove from main public messages
+        val currentMessages = state.getMessagesValue().toMutableList()
+        if (currentMessages.any { it.id == messageID }) {
+            currentMessages.removeAll { it.id == messageID }
+            state.setMessages(currentMessages)
+        }
+
+        // 3. Remove from channel messages
+        val currentChannelMessages = state.getChannelMessagesValue().toMutableMap()
+        var channelChanged = false
+        currentChannelMessages.forEach { (ch, messages) ->
+            if (messages.any { it.id == messageID }) {
+                currentChannelMessages[ch] = messages.filterNot { it.id == messageID }
+                channelChanged = true
+            }
+        }
+        if (channelChanged) {
+            state.setChannelMessages(currentChannelMessages)
+        }
+    }
+
     fun clearPrivateMessages(peerID: String) {
         val conversationID = ContactDirectory.canonicalConversationId(peerID)
         com.bitchat.android.services.AppStateStore.deletePrivateConversation(conversationID)

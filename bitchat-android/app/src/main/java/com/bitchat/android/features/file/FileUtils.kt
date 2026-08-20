@@ -196,27 +196,57 @@ object FileUtils {
     fun saveIncomingFile(
         context: Context,
         file: com.bitchat.android.model.BitchatFilePacket
-    ): String {
+    ): String? {
+        if (!file.isCompleteAndWithinLimit()) {
+            Log.w(
+                TAG,
+                "Refusing incomplete incoming file: declared=${file.fileSize} actual=${file.content.size}"
+            )
+            return null
+        }
         val lowerMime = file.mimeType.lowercase()
         val isImage = lowerMime.startsWith("image/")
+        val isAudio = lowerMime.startsWith("audio/")
+        val isVideo = lowerMime.startsWith("video/")
         // FIX: Use cacheDir instead of filesDir to prevent storage exhaustion attacks (Issue #592)
         // Files in cacheDir are eligible for automatic system cleanup when space is low
         val baseDir = context.cacheDir
-        val subdir = if (isImage) "images/incoming" else "files/incoming"
+        val subdir = when {
+            isImage -> "images/incoming"
+            isAudio -> "voicenotes/incoming"
+            isVideo -> "videos/incoming"
+            else -> "files/incoming"
+        }
         val dir = java.io.File(baseDir, subdir).apply { mkdirs() }
 
         fun extFromMime(m: String): String = when (m.lowercase()) {
             "image/jpeg", "image/jpg" -> ".jpg"
             "image/png" -> ".png"
             "image/webp" -> ".webp"
+            "image/gif" -> ".gif"
+            "audio/mp4", "audio/m4a", "audio/aac" -> ".m4a"
+            "audio/mpeg", "audio/mp3" -> ".mp3"
+            "audio/wav", "audio/x-wav" -> ".wav"
+            "audio/ogg" -> ".ogg"
+            "video/mp4" -> ".mp4"
             "application/pdf" -> ".pdf"
             "text/plain" -> ".txt"
-            else -> if (isImage) ".jpg" else ".bin"
+            else -> when {
+                isImage -> ".jpg"
+                isAudio -> ".m4a"
+                isVideo -> ".mp4"
+                else -> ".bin"
+            }
         }
 
         // Prefer transmitted original name; ensure uniqueness to avoid overwrites
-        val baseName = (file.fileName.takeIf { it.isNotBlank() }
-            ?: (if (isImage) "img" else "file"))
+        val fallbackPrefix = when {
+            isImage -> "img"
+            isAudio -> "voice"
+            isVideo -> "video"
+            else -> "file"
+        }
+        val baseName = (file.fileName.takeIf { it.isNotBlank() } ?: fallbackPrefix)
             .replace(Regex("[^A-Za-z0-9._-]"), "_")
         val ext = extFromMime(lowerMime)
         var safeName = if (baseName.contains('.')) baseName else baseName + ext
@@ -235,7 +265,7 @@ object FileUtils {
 
         return try {
             val out = java.io.File(dir, safeName)
-            out.outputStream().use { it.write(file.content) }
+            java.io.BufferedOutputStream(java.io.FileOutputStream(out)).use { it.write(file.content) }
             out.absolutePath
         } catch (_: Exception) {
             // Fallback to cache dir with uniqueness
@@ -254,12 +284,20 @@ object FileUtils {
                     idx2++
                 }
                 val out = java.io.File(context.cacheDir, fallback)
-                out.outputStream().use { it.write(file.content) }
+                java.io.BufferedOutputStream(java.io.FileOutputStream(out)).use { it.write(file.content) }
                 out.absolutePath
             } catch (_: Exception) {
-                val tmp = java.io.File.createTempFile(if (isImage) "img_" else "file_", if (isImage) ".jpg" else ".bin")
-                tmp.writeBytes(file.content)
-                tmp.absolutePath
+                try {
+                    val tmp = java.io.File.createTempFile(
+                        if (isImage) "img_" else "file_",
+                        if (isImage) ".jpg" else ".bin"
+                    )
+                    java.io.BufferedOutputStream(java.io.FileOutputStream(tmp)).use { it.write(file.content) }
+                    tmp.absolutePath
+                } catch (error: Exception) {
+                    Log.w(TAG, "Unable to persist incoming file", error)
+                    null
+                }
             }
         }
     }
@@ -273,6 +311,42 @@ object FileUtils {
             lower.startsWith("image/") -> com.bitchat.android.model.BitchatMessageType.Image
             lower.startsWith("audio/") -> com.bitchat.android.model.BitchatMessageType.Audio
             else -> com.bitchat.android.model.BitchatMessageType.File
+        }
+    }
+
+    /**
+     * Safely load and downsample large image bitmaps up to 5 MB without OutOfMemoryError.
+     */
+    fun loadSafeBitmap(path: String, maxDimension: Int = 2048): android.graphics.Bitmap? {
+        return try {
+            val cleanPath = if (path.startsWith("file://")) path.removePrefix("file://") else path
+            val file = File(cleanPath)
+            if (!file.exists() || !file.canRead() || file.length() == 0L) return null
+
+            val boundsOptions = android.graphics.BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+            android.graphics.BitmapFactory.decodeFile(cleanPath, boundsOptions)
+
+            var inSampleSize = 1
+            val height = boundsOptions.outHeight
+            val width = boundsOptions.outWidth
+            if (height > 0 && width > 0 && (height > maxDimension || width > maxDimension)) {
+                var halfHeight = height / 2
+                var halfWidth = width / 2
+                while ((halfHeight / inSampleSize) >= maxDimension && (halfWidth / inSampleSize) >= maxDimension) {
+                    inSampleSize *= 2
+                }
+            }
+
+            val decodeOptions = android.graphics.BitmapFactory.Options().apply {
+                this.inSampleSize = inSampleSize
+                inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
+            }
+            android.graphics.BitmapFactory.decodeFile(cleanPath, decodeOptions)
+        } catch (e: Throwable) {
+            Log.e(TAG, "Failed to decode bitmap from $path: ${e.message}")
+            null
         }
     }
 

@@ -1,0 +1,448 @@
+// AapdaSetu Prisma 6 schema
+// Stack: PostgreSQL 16, Prisma 6, UUID PKs, enums, FKs, indexes, timestamps.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum IncidentType {
+  fire
+  flood
+  medical
+  missing_person
+  earthquake
+  accident
+  other
+}
+
+enum IncidentStatus {
+  pending
+  in_progress
+  resolved
+}
+
+enum PriorityLabel {
+  RED
+  YELLOW
+  GREEN
+}
+
+enum VolunteerSkill {
+  medical
+  search_rescue
+  driving
+  logistics
+}
+
+enum VolunteerStatus {
+  available
+  on_duty
+  offline
+}
+
+enum ShelterStatus {
+  open
+  full
+  closed
+}
+
+enum FacilityType {
+  food
+  water
+  medical_station
+  power_generator
+}
+
+enum AgencyType {
+  fire_department
+  police
+  ndrf
+  hospital
+  ngo
+}
+
+enum ResourceCategory {
+  food
+  water
+  medical
+  clothing
+  fuel
+}
+
+enum AlertSeverity {
+  info
+  warning
+  critical
+}
+
+enum AlertChannel {
+  sms
+  whatsapp
+  public
+  all
+}
+
+enum CheckinStatus {
+  safe
+  need_assistance
+}
+
+enum DamageClassification {
+  MINOR_DAMAGE
+  MAJOR_STRUCTURAL_DAMAGE
+  FULLY_DESTROYED
+}
+
+enum MatchStatus {
+  pending
+  confirmed
+  rejected
+}
+
+// ---------------------------------------------------------------------------
+// reports
+// ---------------------------------------------------------------------------
+
+model Report {
+  id                  String         @id @default(uuid()) @db.Uuid
+  trackingId          String         @unique @default(cuid())
+  type                IncidentType
+  status              IncidentStatus @default(pending)
+  priorityScore       Int            @default(30) @db.SmallInt
+  priorityLabel       PriorityLabel  @default(GREEN)
+  latitude            Float
+  longitude           Float
+  landmark            String?
+  description         String?
+  reporterName        String?
+  reporterPhone       String?
+  missingPersonName   String?
+  missingPersonAge    Int?
+  missingPersonDesc   String?
+  medicalCondition    String?
+  bloodType           String?
+  mediaData           String? // base64 payload
+  mediaType           String? @default("none") // video | audio | none
+  triageFactors       Json?
+  assignedVolunteerId String?  @db.Uuid
+  assignedAgencyId    String?  @db.Uuid
+  resolutionNotes     String?
+  resolvedAt          DateTime?
+  source              String? // sos | form | api
+
+  assignedVolunteer Volunteer? @relation("VolunteerAssignments", fields: [assignedVolunteerId], references: [id])
+  assignedAgency    Agency?    @relation("AgencyAssignments", fields: [assignedAgencyId], references: [id])
+
+  damageAssessments DamageAssessment[]
+  matchAsSource     MissingPersonMatch[] @relation("MatchReportA")
+  matchAsTarget     MissingPersonMatch[] @relation("MatchReportB")
+  dispatches        Dispatch[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([priorityLabel])
+  @@index([type])
+  @@index([latitude, longitude])
+  @@index([assignedVolunteerId])
+  @@index([assignedAgencyId])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// volunteers
+// ---------------------------------------------------------------------------
+
+model Volunteer {
+  id            String         @id @default(uuid()) @db.Uuid
+  name          String
+  phone         String
+  skills        VolunteerSkill[]
+  latitude      Float?
+  longitude     Float?
+  status        VolunteerStatus @default(available)
+
+  assignments Report[] @relation("VolunteerAssignments")
+  dispatches  Dispatch[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([latitude, longitude])
+}
+
+// ---------------------------------------------------------------------------
+// shelters
+// ---------------------------------------------------------------------------
+
+model Shelter {
+  id           String        @id @default(uuid()) @db.Uuid
+  name         String
+  address      String
+  latitude     Float
+  longitude    Float
+  capacity     Int
+  occupancy    Int           @default(0)
+  facilities   FacilityType[]
+  contactPhone String?
+  status       ShelterStatus @default(open)
+
+  resources Resource[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([latitude, longitude])
+}
+
+// ---------------------------------------------------------------------------
+// agencies
+// ---------------------------------------------------------------------------
+
+model Agency {
+  id            String      @id @default(uuid()) @db.Uuid
+  name          String
+  type          AgencyType
+  contactPhone  String?
+  contactEmail  String?
+  jurisdiction  String?
+  latitude      Float?
+  longitude     Float?
+
+  assignments Report[] @relation("AgencyAssignments")
+  dispatches  Dispatch[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([jurisdiction])
+}
+
+// ---------------------------------------------------------------------------
+// resources
+// ---------------------------------------------------------------------------
+
+model Resource {
+  id        String           @id @default(uuid()) @db.Uuid
+  name      String
+  category  ResourceCategory
+  quantity  Int
+  unit      String
+  shelterId String?          @db.Uuid
+
+  shelter Shelter? @relation(fields: [shelterId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shelterId])
+  @@index([category])
+}
+
+// ---------------------------------------------------------------------------
+// alerts
+// ---------------------------------------------------------------------------
+
+model Alert {
+  id         String        @id @default(uuid()) @db.Uuid
+  title      String
+  message    String
+  severity   AlertSeverity
+  channel    AlertChannel  @default(public)
+  targetArea String?
+  createdBy  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([severity])
+  @@index([createdAt])
+  @@index([channel])
+}
+
+// ---------------------------------------------------------------------------
+// audit_logs
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  adminEmail String
+  action     String
+  entityType String?
+  entityId   String?
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([adminEmail])
+  @@index([action])
+  @@index([entityType])
+}
+
+// ---------------------------------------------------------------------------
+// missing_persons (public missing-person registry)
+// ---------------------------------------------------------------------------
+
+model MissingPerson {
+  id               String    @id @default(uuid()) @db.Uuid
+  name             String
+  age              Int?
+  gender           String?
+  lastSeenAt       DateTime?
+  lastSeenLocation String?
+  clothes          String?
+  contactPhone     String?
+  photoUrl         String?
+  status           String    @default("open") // open | matched | resolved
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([name])
+}
+
+// ---------------------------------------------------------------------------
+// safety_checkins
+// ---------------------------------------------------------------------------
+
+model SafetyCheckin {
+  id           String        @id @default(uuid()) @db.Uuid
+  fullName     String
+  phone        String?
+  locationName String?
+  notes        String?
+  status       CheckinStatus
+  latitude     Float?
+  longitude    Float?
+  createdAt    DateTime      @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([latitude, longitude])
+}
+
+// ---------------------------------------------------------------------------
+// admin_users (bootstrap admin, used by verify_admin_login equivalent)
+// ---------------------------------------------------------------------------
+
+model AdminUser {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  name         String?
+  passwordHash String
+  role         String   @default("admin")
+  lastLoginAt  DateTime?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([email])
+}
+
+// ---------------------------------------------------------------------------
+// damage_assessments (anti-fraud photo damage claims)
+// ---------------------------------------------------------------------------
+
+model DamageAssessment {
+  id                String              @id @default(uuid()) @db.Uuid
+  reportId          String?             @db.Uuid
+  reporterName      String?
+  reporterPhone     String?
+  imageHash         String? // SHA-256 perceptual hash for duplicate detection
+  exifLatitude      Float?
+  exifLongitude     Float?
+  reportedLatitude  Float?
+  reportedLongitude Float?
+  locationVerified  Boolean             @default(false)
+  locationDistanceM Float?
+  classification    DamageClassification
+  confidence        Float?
+  duplicate         Boolean             @default(false)
+  compensation      Float               @default(0)
+  rawModelResponse  Json?
+  status            String              @default("approved") // approved | flagged_duplicate
+  createdAt         DateTime            @default(now())
+
+  report Report? @relation(fields: [reportId], references: [id])
+
+  @@index([imageHash])
+  @@index([reportId])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// missing_person_matches (deterministic matching registry)
+// ---------------------------------------------------------------------------
+
+model MissingPersonMatch {
+  id              String      @id @default(uuid()) @db.Uuid
+  reportAId       String      @db.Uuid
+  reportBId       String      @db.Uuid
+  score           Float
+  reasons         Json?
+  status          MatchStatus @default(pending)
+  createdAt       DateTime    @default(now())
+  reviewedBy      String?
+  reviewedAt      DateTime?
+
+  reportA Report @relation("MatchReportA", fields: [reportAId], references: [id])
+  reportB Report @relation("MatchReportB", fields: [reportBId], references: [id])
+
+  @@unique([reportAId, reportBId])
+  @@index([status])
+  @@index([score])
+}
+
+// ---------------------------------------------------------------------------
+// safe_route hazards (flood polygons / blocked underpasses for safe-routes)
+// ---------------------------------------------------------------------------
+
+model RouteHazard {
+  id          String   @id @default(uuid()) @db.Uuid
+  type        String // flood_polygon | blocked_underpass | road_closed
+  name        String?
+  geometry    Json // GeoJSON polygon/line
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([active])
+  @@index([type])
+}
+
+// ---------------------------------------------------------------------------
+// dispatches (audit trail of volunteer/agency assignment actions)
+// ---------------------------------------------------------------------------
+
+model Dispatch {
+  id         String    @id @default(uuid()) @db.Uuid
+  reportId   String    @db.Uuid
+  volunteerId String?  @db.Uuid
+  agencyId   String?   @db.Uuid
+  action     String // assign | unassign
+  assignedBy String
+  createdAt  DateTime  @default(now())
+
+  report     Report   @relation(fields: [reportId], references: [id])
+  volunteer  Volunteer? @relation(fields: [volunteerId], references: [id])
+  agency     Agency?  @relation(fields: [agencyId], references: [id])
+
+  @@index([reportId])
+  @@index([createdAt])
+}

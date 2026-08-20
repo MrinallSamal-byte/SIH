@@ -79,19 +79,17 @@ class UnifiedMeshService(
         announcementJob = serviceScope.launch {
             powerManager.profile
                 .map { profile ->
-                    profile.meshAnnouncementIntervalMs to profile.hasDirectPeers
+                    profile.meshAnnouncementIntervalMs to (profile.hasDirectPeers || bluetooth.getConnectionCount() > 0 || isBleEnabled())
                 }
                 .distinctUntilChanged()
-                .collectLatest { (intervalMs, hasRecipients) ->
-                    if (!hasRecipients) return@collectLatest
-                    // Connection-specific paths already send an immediate announce. Begin the
-                    // periodic cadence after the configured interval to avoid a transition burst.
+                .collectLatest { (intervalMs, isEligible) ->
+                    if (!isEligible) return@collectLatest
                     while (isActive) {
                         delay(intervalMs)
-                        if (powerManager.profile.value.hasDirectPeers) sendBroadcastAnnounce()
+                        sendBroadcastAnnounce()
                     }
                 }
-            }
+        }
     }
 
     override fun sendMessage(content: String, mentions: List<String>, channel: String?) {

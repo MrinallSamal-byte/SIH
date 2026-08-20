@@ -47,9 +47,11 @@ class PrivateMediaTransferPreparerTest {
         assertEquals(MessageType.NOISE_ENCRYPTED.value, ready.built.packet.type)
         assertNotNull(ready.built.packet.signature)
         assertEquals(PrivateMediaWireMode.ENCRYPTED_NOISE_0X20, ready.built.wireMode)
-        val decoded = NoisePayload.decode(encryptedPlaintext!!)
+        assertNotNull(encryptedPlaintext)
+        val plainBytes = encryptedPlaintext ?: return
+        val decoded = NoisePayload.decode(plainBytes)
         assertEquals(NoisePayloadType.FILE_TRANSFER, decoded?.type)
-        assertEquals(0x20u.toUByte(), encryptedPlaintext!![0].toUByte())
+        assertEquals(0x20u.toUByte(), plainBytes[0].toUByte())
     }
 
     @Test
@@ -198,7 +200,7 @@ class PrivateMediaTransferPreparerTest {
         )
 
         assertTrue(outcome is PrivateMediaBuildOutcome.Rejected)
-        assertTrue((outcome as PrivateMediaBuildOutcome.Rejected).reason.contains("256"))
+        assertTrue((outcome as PrivateMediaBuildOutcome.Rejected).reason.contains(com.bitchat.android.util.AppConstants.Fragmentation.MAX_FRAGMENTS_PER_ID.toString()))
         assertTrue(!policyChecked)
         assertTrue(!encrypted)
         assertTrue(!finalized)
@@ -206,12 +208,12 @@ class PrivateMediaTransferPreparerTest {
     }
 
     @Test
-    fun `no route accepts 256 final fragments and rejects 257`() {
+    fun `no route accepts max final fragments and rejects max plus one`() {
         assertExactBoundary(route = null)
     }
 
     @Test
-    fun `source route accepts 256 final fragments and rejects 257`() {
+    fun `source route accepts max final fragments and rejects max plus one`() {
         assertExactBoundary(
             route = listOf(
                 hex("1021324354657687"),
@@ -274,7 +276,9 @@ class PrivateMediaTransferPreparerTest {
     }
 
     private fun assertExactBoundary(route: List<ByteArray>?) {
-        val randomContent = ByteArray(180 * 1024).also { Random(0xB17C4A7).nextBytes(it) }
+        val maxFragments = com.bitchat.android.util.AppConstants.Fragmentation.MAX_FRAGMENTS_PER_ID
+        val maxFragmentSize = com.bitchat.android.util.AppConstants.Fragmentation.MAX_FRAGMENT_SIZE
+        val randomContent = ByteArray((maxFragments + 10) * maxFragmentSize).also { Random(0xB17C4A7).nextBytes(it) }
         val preparer = preparer(
             policy = PrivateMediaPolicyDecision.Encrypted(authenticatedSession),
             finalizer = { packet ->
@@ -307,9 +311,9 @@ class PrivateMediaTransferPreparerTest {
 
         val accepted = outcome(low - 1) as PrivateMediaBuildOutcome.Ready
         val rejected = outcome(low)
-        assertEquals(256, accepted.built.fragments.size)
+        assertEquals(maxFragments, accepted.built.fragments.size)
         assertTrue(rejected is PrivateMediaBuildOutcome.Rejected)
-        assertTrue((rejected as PrivateMediaBuildOutcome.Rejected).reason.contains("256"))
+        assertTrue((rejected as PrivateMediaBuildOutcome.Rejected).reason.contains(maxFragments.toString()))
     }
 
     private fun preparer(

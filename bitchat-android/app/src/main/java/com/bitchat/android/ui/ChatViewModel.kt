@@ -42,6 +42,16 @@ import com.bitchat.android.util.hexEncodedString
 import com.bitchat.android.features.voice.LiveVoicePreferences
 import com.bitchat.android.features.voice.LiveVoiceTarget
 import com.bitchat.android.features.voice.VoiceRecorder
+import com.bitchat.android.features.presence.PresenceManager
+import com.bitchat.android.features.presence.PresencePacket
+import com.bitchat.android.features.presence.PeerPresenceState
+import com.bitchat.android.features.presence.PresenceUpdateType
+import com.bitchat.android.features.admin.AdminManager
+import com.bitchat.android.features.admin.ReportManager
+import com.bitchat.android.features.admin.UserReport
+import com.bitchat.android.features.admin.ReportAction
+import com.bitchat.android.contacts.PhoneContact
+import com.bitchat.android.contacts.PhoneContactsManager
 
 private data class ConversationLiveIdentityState(
     val connectedPeerIDs: List<String>,
@@ -372,6 +382,8 @@ class ChatViewModel(
     val currentChannel: StateFlow<String?> = state.currentChannel
     val channelMessages: StateFlow<Map<String, List<BitchatMessage>>> = state.channelMessages
     val unreadChannelMessages: StateFlow<Map<String, Int>> = state.unreadChannelMessages
+    val unreadPrivateMessageCounts: StateFlow<Map<String, Int>> =
+        com.bitchat.android.services.AppStateStore.unreadPrivateMessageCounts
     val passwordProtectedChannels: StateFlow<Set<String>> = state.passwordProtectedChannels
     val showPasswordPrompt: StateFlow<Boolean> = state.showPasswordPrompt
     val passwordPromptChannel: StateFlow<String?> = state.passwordPromptChannel
@@ -400,6 +412,30 @@ class ChatViewModel(
     val geohashPeople: StateFlow<List<GeoPerson>> = state.geohashPeople
     val teleportedGeo: StateFlow<Set<String>> = state.teleportedGeo
     val geohashParticipantCounts: StateFlow<Map<String, Int>> = state.geohashParticipantCounts
+
+    // ─── Presence (Online / Typing / Last Seen) ─────────────────
+    val peerPresence: StateFlow<Map<String, PeerPresenceState>> = PresenceManager.peerPresence
+    private var lastTypingSentMs = 0L
+    private val typingThrottleMs = 3_000L
+
+    // ─── Admin Panel ────────────────────────────────────────────
+    val isAdminModeEnabled: StateFlow<Boolean> = AdminManager.isAdminEnabled
+    val adminBlockedUsers = AdminManager.blockedUsers
+    val adminReports = AdminManager.reports
+    private val _showAdminSheet = MutableStateFlow(false)
+    val showAdminSheet: StateFlow<Boolean> = _showAdminSheet.asStateFlow()
+    private val _showAdminPassphraseDialog = MutableStateFlow(false)
+    val showAdminPassphraseDialog: StateFlow<Boolean> = _showAdminPassphraseDialog.asStateFlow()
+
+    // ─── Report User ────────────────────────────────────────────
+    private val _showReportUserSheet = MutableStateFlow<Pair<String, String>?>(null)
+    val showReportUserSheet: StateFlow<Pair<String, String>?> = _showReportUserSheet.asStateFlow()
+
+    // Phone Contacts & Unified Search
+    val phoneContacts: StateFlow<List<PhoneContact>> = state.phoneContacts
+    val hasContactsPermission: StateFlow<Boolean> = state.hasContactsPermission
+    val isContactsLoading: StateFlow<Boolean> = state.isContactsLoading
+    val showUnifiedContactSearchSheet: StateFlow<Boolean> = state.showUnifiedContactSearchSheet
     
     // Discord Hierarchy & Channel State
     val discordHubs: StateFlow<List<DiscordHub>> = channelManager.hubs
@@ -439,6 +475,14 @@ class ChatViewModel(
         if (channelId == null) return null
         return channelManager.channels.value.firstOrNull { it.id.equals(channelId, ignoreCase = true) }
     }
+
+    fun isChannelPasswordProtected(channelId: String): Boolean {
+        return channelManager.isChannelPasswordProtected(channelId)
+    }
+
+    fun hasChannelKey(channelId: String): Boolean {
+        return channelManager.hasChannelKey(channelId)
+    }
     
     val meshServiceFacade: MeshService
         get() = mesh
@@ -458,6 +502,7 @@ class ChatViewModel(
         // Note: Mesh service delegate is now set by MainActivity
         loadAndInitialize()
         ContactDirectory.initialize(getApplication()) { mesh }
+        checkContactsPermission()
         com.bitchat.android.services.AppStateStore.canonicalizePrivateChats()
         observeConversationDisplayNames()
         // Application startup performs the initial restore. Repeat it for every new UI owner
@@ -836,7 +881,6 @@ class ChatViewModel(
             com.bitchat.android.services.AppStateStore
                 .restoreDeletedConversation(deletion)
         }
-        if (!restored) return false
         if (deletion.wasPinned != conversationListPreferences.isPinned(deletion.conversationID)) {
             conversationListPreferences.togglePinned(deletion.conversationID)
         }
@@ -857,6 +901,169 @@ class ChatViewModel(
             )
         }
         return true
+    }
+
+    /**
+     * Check if the current user has administrative permissions
+     */
+    fun isAdmin(): Boolean {
+        return AdminManager.isAdminEnabled.value
+    }
+
+    // ─── Presence Methods ────────────────────────────────────────
+
+    /**
+     * Called when the user types in the input field. Sends a throttled typing indicator.
+     */
+    fun onTextInputChanged(text: String, recipientPeerID: String?) {
+        val now = System.currentTimeMillis()
+        if (text.isNotEmpty() && now - lastTypingSentMs >= typingThrottleMs) {
+            lastTypingSentMs = now
+            viewModelScope.launch {
+                try {
+                    val packet = PresencePacket.encode(mesh.myPeerID, PresenceUpdateType.TYPING_START)
+                    mesh.sendRawMessageBroadcast(packet)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to send typing indicator: ${e.message}")
+                }
+            }
+        }
+    }
+
+    fun getPresenceStatusText(peerID: String): String {
+        return PresenceManager.getPresence(peerID)?.getStatusText() ?: ""
+    }
+
+    fun isPeerOnline(peerID: String): Boolean {
+        return PresenceManager.isOnline(peerID)
+    }
+
+    fun isPeerTyping(peerID: String): Boolean {
+        return PresenceManager.isTyping(peerID)
+    }
+
+    // ─── Admin Methods ───────────────────────────────────────────
+
+    fun openAdminPanel() {
+        if (AdminManager.isAdminEnabled.value) {
+            _showAdminSheet.value = true
+        } else {
+            _showAdminPassphraseDialog.value = true
+        }
+    }
+
+    fun closeAdminPanel() {
+        _showAdminSheet.value = false
+    }
+
+    fun closeAdminPassphraseDialog() {
+        _showAdminPassphraseDialog.value = false
+    }
+
+    fun onAdminAuthenticated() {
+        _showAdminPassphraseDialog.value = false
+        _showAdminSheet.value = true
+    }
+
+    fun adminBlockUser(peerID: String, nickname: String, reason: String) {
+        AdminManager.blockUser(peerID, nickname, reason, mesh.myPeerID)
+    }
+
+    fun adminUnblockUser(peerID: String) {
+        AdminManager.unblockUser(peerID)
+    }
+
+    fun adminDeleteAllContentByUser(target: String) {
+        val allMsgs = state.messages.value + state.channelMessages.value.values.flatten()
+        AdminManager.deleteAllContentByUser(target, allMsgs) { msgID ->
+            messageManager.deleteMessageLocally(msgID)
+        }
+    }
+
+    fun adminFormatChannel(channelName: String) {
+        val channelTag = if (channelName.startsWith("#")) channelName else "#$channelName"
+        val msgs = state.channelMessages.value[channelTag] ?: state.channelMessages.value[channelName] ?: return
+        AdminManager.formatChannel(channelTag, msgs) { msgID ->
+            messageManager.deleteMessageLocally(msgID)
+        }
+    }
+
+    fun getChannelNames(): List<String> {
+        return state.joinedChannels.value.toList()
+    }
+
+    // ─── Report Methods ──────────────────────────────────────────
+
+    fun showReportUser(peerID: String, nickname: String) {
+        _showReportUserSheet.value = Pair(peerID, nickname)
+    }
+
+    fun closeReportUserSheet() {
+        _showReportUserSheet.value = null
+    }
+
+    fun submitReport(reportedPeerID: String, reportedNickname: String, reason: String?) {
+        val myNickname = state.nickname.value
+        ReportManager.createReport(
+            reportedPeerID = reportedPeerID,
+            reportedNickname = reportedNickname,
+            reporterPeerID = mesh.myPeerID,
+            reporterNickname = myNickname,
+            reason = reason
+        )
+        // Broadcast report over mesh to admin peers
+        viewModelScope.launch {
+            try {
+                val packet = ReportManager.encodeReportForBroadcast(
+                    reporterPeerID = mesh.myPeerID,
+                    reporterNickname = myNickname,
+                    reportedPeerID = reportedPeerID,
+                    reportedNickname = reportedNickname,
+                    reason = reason
+                )
+                mesh.sendRawMessageBroadcast(packet)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to broadcast report: ${e.message}")
+            }
+        }
+        _showReportUserSheet.value = null
+    }
+
+    /**
+     * Delete a message locally from this device only
+     */
+    fun deleteMessageForMe(message: BitchatMessage) {
+        messageManager.deleteMessageLocally(message.id)
+    }
+
+    /**
+     * Delete a message for everyone (local deletion + broadcast tombstone to peers)
+     */
+    fun deleteMessageForEveryone(message: BitchatMessage) {
+        // 1. Delete locally immediately
+        messageManager.deleteMessageLocally(message.id)
+
+        // 2. Broadcast deletion control packet
+        val deletePayload = com.bitchat.android.model.DeleteControlMessage.encode(message.id)
+
+        viewModelScope.launch {
+            if (message.isPrivate) {
+                val destination = message.senderPeerID?.takeIf { it != mesh.myPeerID }
+                    ?: state.getSelectedPrivateChatPeerValue()
+                    ?: return@launch
+                val router = com.bitchat.android.services.MessageRouter.getInstance(getApplication(), mesh)
+                router.sendPrivate(
+                    deletePayload,
+                    destination,
+                    "",
+                    java.util.UUID.randomUUID().toString().uppercase()
+                )
+            } else if (message.channel != null) {
+                mesh.sendMessage(deletePayload, emptyList(), message.channel)
+            } else {
+                mesh.sendMessage(deletePayload, emptyList(), null)
+            }
+        }
     }
 
     internal suspend fun setConversationRead(
@@ -1045,7 +1252,8 @@ class ChatViewModel(
                         recipientNicknameParam,
                         messageId
                     )
-                    if (route == com.bitchat.android.services.MessageRouter.RouteResult.NOSTR) {
+                    if (route == com.bitchat.android.services.MessageRouter.RouteResult.NOSTR ||
+                        route == com.bitchat.android.services.MessageRouter.RouteResult.MESH) {
                         messageManager.updateMessageDeliveryStatus(
                             messageId,
                             com.bitchat.android.model.DeliveryStatus.Sent
@@ -1374,6 +1582,61 @@ class ChatViewModel(
 
     fun hidePrivateChatSheet() {
         state.setPrivateChatSheetPeer(null)
+    }
+
+    fun checkContactsPermission() {
+        val granted = PhoneContactsManager.hasContactsPermission(getApplication())
+        state.setHasContactsPermission(granted)
+        if (granted && state.phoneContacts.value.isEmpty()) {
+            loadPhoneContacts()
+        }
+    }
+
+    fun updateContactsPermission(granted: Boolean) {
+        state.setHasContactsPermission(granted)
+        if (granted) {
+            loadPhoneContacts()
+        }
+    }
+
+    fun loadPhoneContacts(forceReload: Boolean = false) {
+        if (!PhoneContactsManager.hasContactsPermission(getApplication())) {
+            state.setHasContactsPermission(false)
+            return
+        }
+        state.setHasContactsPermission(true)
+        if (!forceReload && state.phoneContacts.value.isNotEmpty() && !state.isContactsLoading.value) {
+            return
+        }
+        viewModelScope.launch {
+            state.setIsContactsLoading(true)
+            try {
+                val contacts = PhoneContactsManager.loadPhoneContacts(
+                    context = getApplication(),
+                    activePeerNicknames = state.peerNicknames.value
+                )
+                state.setPhoneContacts(contacts)
+            } catch (e: Exception) {
+                Log.e("ChatViewModel", "Failed to load phone contacts: ${e.message}")
+            } finally {
+                state.setIsContactsLoading(false)
+            }
+        }
+    }
+
+    fun showUnifiedContactSearch() {
+        state.setShowUnifiedContactSearchSheet(true)
+        checkContactsPermission()
+    }
+
+    fun hideUnifiedContactSearch() {
+        state.setShowUnifiedContactSearchSheet(false)
+    }
+
+    fun startPrivateChatWithPhoneContact(contact: PhoneContact) {
+        hideUnifiedContactSearch()
+        val targetPeerID = contact.matchedMeshPeerID ?: contact.conversationID
+        showPrivateChatSheet(targetPeerID)
     }
 
     fun getPeerFingerprintForDisplay(peerID: String): String? {

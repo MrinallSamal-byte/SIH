@@ -1,105 +1,180 @@
-<img width="256" height="256" alt="icon_128x128@2x" src="https://github.com/user-attachments/assets/90133f83-b4f6-41c6-aab9-25d0859d2a47" />
+# SOA Mesh for Android
 
-## bitchat for Android
+A decentralized peer-to-peer messaging application for Siksha 'O' Anusandhan (SOA) Campus featuring dual transport architecture: local Bluetooth Low Energy (BLE) and Wi-Fi Aware mesh networks for offline communication, and internet-based Nostr protocol for extended reach. Zero accounts, zero phone numbers, and zero central servers required.
 
-A decentralized peer-to-peer messaging app with dual transport architecture: local Bluetooth mesh networks for offline communication and internet-based Nostr protocol for global reach. No accounts, no phone numbers, no central servers.
+This is the Android implementation of SOA Mesh, fully protocol-compatible with the iOS version for cross-platform campus mesh communication and integrated with the **AapdaSetu** Disaster Response Ecosystem.
 
-This is the Android implementation of bitchat, fully protocol-compatible with the [iOS version](https://github.com/permissionlesstech/bitchat) for cross-platform mesh communication.
-
-[bitchat.free](http://bitchat.free)
-
-[GitHub Releases](https://github.com/permissionlesstech/bitchat-android/releases)
-
-[<img alt="Get it on Google Play" height="60" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"/>](https://play.google.com/store/apps/details?id=com.bitchat.droid)
+---
 
 ## See it in action
 
 <table>
   <tr>
-    <th>Offline mesh conversation</th>
-    <th>Geohash globe picker</th>
+    <th>Offline Mesh Conversation</th>
+    <th>Geohash Location Picker</th>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/readme-mesh-chat.png" alt="Active four-peer Bitchat mesh conversation with an image, voice messages, and text messages" width="360"/></td>
-    <td><img src="docs/screenshots/readme-geohash-globe.png" alt="Bitchat geohash location picker showing the whole Earth and geohash grid" width="360"/></td>
+    <td><img src="docs/screenshots/readme-mesh-chat.png" alt="Active multi-peer SOA Mesh conversation with images, voice messages, and text messages" width="360"/></td>
+    <td><img src="docs/screenshots/readme-geohash-globe.png" alt="SOA Mesh geohash location picker showing global coordinate grid" width="360"/></td>
   </tr>
 </table>
 
-## License
+---
 
-This project is released into the public domain. See the [LICENSE](LICENSE.md) file for details.
+## Overview and Campus Context
 
-## Features
+During severe emergencies (cyclones, monsoon flash floods, structural power failure) or severe cellular congestion across high-density educational environments like the **Siksha 'O' Anusandhan (SOA) Campus** (including ITER academic blocks, student hostels, research facilities, and IMS & SUM Hospital), public cellular networks often become unusable.
 
-- **Dual Transport Architecture**: Bluetooth LE mesh for offline messaging, Nostr relays for internet-based messaging
-- **Location-Based Channels**: Geographic chat rooms using geohash coordinates over Nostr relays
-- **Intelligent Message Routing**: Automatically chooses the best transport, with queuing and retry when a peer is unreachable
-- **End-to-End Encryption**: [Noise Protocol](https://noiseprotocol.org) (XX pattern, X25519 + ChaCha20-Poly1305) for private messages over the mesh
-- **Decentralized Mesh Network**: Automatic peer discovery and multi-hop relay over Bluetooth LE (max 7 hops)
-- **Wi-Fi Aware Transport**: Higher-bandwidth local mesh on supported devices
-- **Channel Chats**: Topic-based group messaging with optional password protection (Argon2id + AES-256-GCM)
-- **IRC-Style Commands**: Familiar `/join`, `/msg`, `/who` style interface
-- **Tor Support**: Built-in Tor (Arti) for private internet connectivity
-- **Emergency Wipe**: Triple-tap to instantly clear all data
-- **Cross-Platform**: Binary protocol compatible with bitchat on iOS and macOS
+**SOA Mesh** provides an autonomous communication layer directly between smartphones. Devices automatically discover each other over Bluetooth Low Energy (BLE) and Wi-Fi Aware, creating a resilient local mesh that forwards messages across hops without internet connectivity or cell towers.
 
-## Technical Architecture
+When network connectivity or satellite uplinks become available on any device in the mesh, that device acts as a gateway, bridging messages via the **Nostr protocol** and streaming emergency alerts directly to the **AapdaSetu Incident Command Center**.
 
-### Bluetooth Mesh Network (Offline)
+---
 
-- Direct peer-to-peer within Bluetooth range, multi-hop relay through nearby devices
-- Noise Protocol sessions with forward secrecy; peer identities derived from static keys
-- Compact binary packet format with fragmentation, TTL routing, and deduplication
-- Adaptive duty cycling and connection limits for battery efficiency
-- Foreground service keeps the mesh alive within Android background execution limits
+## Key Features
 
-### Nostr Protocol (Internet)
+- **Dual Transport Architecture**: Bluetooth LE mesh and Wi-Fi Aware for offline local communication; Nostr protocol over internet for global fallback.
+- **Decentralized Multi-Hop Mesh**: Automatic peer discovery and multi-hop message relay over Bluetooth LE (up to 7 hops).
+- **End-to-End Encryption**: Noise Protocol Framework (XX pattern, X25519 + ChaCha20-Poly1305 + BLAKE2s) for all direct private messages over the mesh with forward secrecy.
+- **SOA Campus Channels**: Topic-based group messaging for campus departments and emergency teams (`#soa-emergency`, `#iter-campus`, `#hostel-alerts`, `#sum-hospital-triage`, `#volunteer-rescue`).
+- **Channel Security**: Topic channels support optional password protection using Argon2id key derivation and AES-256-GCM authenticated encryption.
+- **Location-Based Geohash Channels**: Geographic chat rooms using geohash coordinates over Nostr relays when internet is accessible.
+- **Intelligent Message Routing**: Automatically selects the optimal transport with message queuing and background retry when peers are unreachable.
+- **Zero-Authentication Policy**: No phone numbers, email addresses, or registrations required. Immediate access during emergencies.
+- **Emergency Panic Wipe**: Triple-tap gesture to instantly purge all cryptographic keys, cached channel messages, and local data from device storage.
+- **Offline APK Sharing (Hotspot Mode)**: Built-in local Wi-Fi hotspot server allowing peers to download and install the application directly without Google Play or internet access.
+- **Tor Network Integration**: Built-in Rust-based Arti Tor client for private, metadata-resistant Nostr relay connections.
+- **Wear OS Support**: Companion Wear OS module (`:wear`) for delivering vibration alerts and notifications to smartwatches.
+- **Cross-Platform Compatibility**: Full binary protocol compatibility with SOA Mesh on iOS and macOS.
 
-- Global reach via public relays, geohash-based location channels
-- Private messages fall back to Nostr for mutual favorites when the mesh is unavailable
-- Ephemeral keys per geohash area
+---
 
-### Android Stack
+## Campus Architecture and Emergency Flow
 
-- Kotlin, Jetpack Compose (Material 3), MVVM
-- Coroutines and Flow for all networking and state
-- Core components: `MeshForegroundService` (persistent connectivity), `BluetoothMeshService` / `WifiAwareMeshService` (transports), `UnifiedMeshService` (transport selection), `NoiseSessionManager` (encryption sessions), `MessageRouter` (mesh/Nostr routing with outbox retry)
+```mermaid
+graph TD
+    subgraph Hostels["SOA Student Hostels (Offline Zone)"]
+        StudentA["Student Node A\n(Hostel 1 - SOS Trigger)"]
+        StudentB["Peer Relay Node B\n(Hostel 2)"]
+    end
 
-## Building
+    subgraph AcademicBlocks["ITER Academic Blocks (Offline Mesh)"]
+        StudentC["Peer Relay Node C\n(ITER Block 1)"]
+        SecurityNode["Security / Warden Node\n(Campus Gate / Control)"]
+    end
 
-Requires Android Studio and the Android SDK (API 26+).
+    subgraph GatewayZone["Uplink Edge Gateway (Dual Mode)"]
+        GatewayPhone["Gateway Node\n(Wi-Fi / 4G / Satellite Uplink)"]
+    end
+
+    subgraph AapdaSetuEcosystem["AapdaSetu Command Infrastructure"]
+        NostrRelay["Nostr Decentralized Relays"]
+        AapdaSetuAPI["AapdaSetu AI Microservice Engine\n(/apps/ai-engine)"]
+        CommandCenter["Multi-Agency Incident Command\n(Next.js & Supabase Realtime)"]
+        SumHospital["IMS & SUM Hospital\nEmergency Triage Response"]
+    end
+
+    StudentA -->|"BLE Mesh Hop 1 (E2EE)"| StudentB
+    StudentB -->|"BLE / Wi-Fi Aware Hop 2"| StudentC
+    StudentC -->|"Multi-Hop Relay (Up to 7 Hops)"| SecurityNode
+    SecurityNode -->|"BLE / Wi-Fi Aware"| GatewayPhone
+    GatewayPhone -->|"Nostr Protocol Bridge"| NostrRelay
+    GatewayPhone -->|"REST / WebSocket SOS Push"| AapdaSetuAPI
+    AapdaSetuAPI --> CommandCenter
+    CommandCenter --> SumHospital
+```
+
+---
+
+## Technical Stack and Architecture
+
+### Offline Bluetooth Mesh
+- Direct peer-to-peer discovery within Bluetooth range and multi-hop relay through nearby devices.
+- Noise Protocol sessions with forward secrecy; peer identities derived from cryptographic static keys.
+- Compact binary packet format with fragmentation reassembly, TTL routing, and deduplication buffers.
+- Adaptive duty cycling and connection pooling for battery efficiency.
+- Persistent `MeshForegroundService` maintains mesh operation within Android background execution limits.
+
+### Internet Nostr Transport
+- Global reach via decentralized Nostr relays and geohash-based location channels.
+- Private message fallback to Nostr for mutual contacts when out of direct radio range.
+- Ephemeral keys generated per geohash area.
+
+### Android Application Stack
+- **Language and UI**: Kotlin, Jetpack Compose, Material 3, MVVM Architecture.
+- **Concurrency**: Coroutines and Kotlin Flow for reactive networking and state synchronization.
+- **Core Components**:
+  - `MeshForegroundService`: Persistent foreground connectivity.
+  - `BluetoothMeshService`: BLE GATT client and server transport.
+  - `WifiAwareMeshService`: High-throughput Wi-Fi Aware transport.
+  - `UnifiedMeshService`: Dynamic transport arbitration.
+  - `NoiseSessionManager`: Cryptographic handshakes and session state.
+  - `MessageRouter`: Message queuing, outbox retry, and routing logic.
+  - `HotspotActivity`: Offline local APK distribution server.
+
+---
+
+## Building and Installation
+
+### Prerequisites
+- Android Studio (Koala, Ladybug, or newer)
+- Android SDK (API 26+ / Android 8.0 Oreo or higher)
+- JDK 17 or JDK 21 LTS
+
+### 1. Build Debug APK
 
 ```bash
-git clone https://github.com/permissionlesstech/bitchat-android.git
 cd bitchat-android
 ./gradlew assembleDebug
 ```
 
-Install on a connected device:
+The compiled APK will be located at:
+```
+app/build/outputs/apk/debug/app-debug.apk
+```
+
+### 2. Install on Connected Device
 
 ```bash
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-The app requests Bluetooth, location (required for BLE scanning), and notification permissions at runtime.
+### 3. Permissions
+The application requests the following standard runtime permissions:
+- **Bluetooth / Nearby Devices**: Required for BLE mesh advertising, scanning, and GATT connections.
+- **Location**: Required by Android OS for BLE scanning and geohash channel resolution.
+- **Notifications**: Required to keep the foreground mesh service persistent.
+- **Battery Optimization Exemption**: Recommended to ensure background mesh relaying is not interrupted by Android Doze.
 
-Release APKs and the Android App Bundle can be rebuilt byte-for-byte in the
-pinned Linux container. Maintainers should follow the
-[Android release guide](docs/maintainer-release-guide.md). See
-[Reproducible builds](docs/reproducible-builds.md) for the build trust model
-and public GitHub/Google Play verification procedures.
+---
 
 ## Testing
 
 ```bash
-# Unit tests
+# Run unit tests
 ./gradlew test
 
-# Lint
+# Run code analysis and linting
 ./gradlew lint
 
-# Instrumented tests (requires a device or emulator)
+# Run instrumented tests on connected device or emulator
 ./gradlew connectedAndroidTest
 ```
 
-Note that BLE mesh behavior is difficult to emulate; protocol and session logic is covered by unit tests, while radio-level behavior needs real devices.
+---
+
+## Integration with AapdaSetu Ecosystem
+
+| Component | Function | Path |
+| :--- | :--- | :--- |
+| **SOA Mesh (Android)** | Offline BLE and Wi-Fi Aware peer-to-peer messaging | [`bitchat-android/`](file:///home/mrinall-samal/Project-v2/SIH/bitchat-android) |
+| **SOA Mesh (iOS / macOS)** | Native Swift peer-to-peer Apple client | [`bitchat/`](file:///home/mrinall-samal/Project-v2/SIH/bitchat) |
+| **AapdaSetu Web Client** | Citizen portal, 1-Tap SOS, GIS navigation | [`frontend-AapdaSetu/`](file:///home/mrinall-samal/Project-v2/SIH/frontend-AapdaSetu) |
+| **AapdaSetu AI Engine** | Priority triage, PFA chatbot, SAR flood mapping | [`apps/ai-engine/`](file:///home/mrinall-samal/Project-v2/SIH/apps/ai-engine) |
+| **Command Center** | Multi-agency incident dispatch & real-time monitoring | [`SOS-project with bolt/`](file:///home/mrinall-samal/Project-v2/SIH) |
+
+---
+
+## License
+
+This project is released into the public domain under the terms in [`LICENSE.md`](LICENSE.md).

@@ -1,6 +1,9 @@
 package com.bitchat.android.ui
 
+import android.Manifest
 import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.bitchat.android.ui.theme.BitchatFontFamily
 // [Goose] Bridge file share events to ViewModel via dispatcher is installed in ChatScreen composition
 
@@ -9,6 +12,8 @@ import com.bitchat.android.ui.theme.BitchatFontFamily
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.AdminPanelSettings
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -23,6 +28,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -38,6 +46,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import com.bitchat.android.R
 import com.bitchat.android.geohash.ChannelID
 import com.bitchat.android.geohash.GeohashChannelLevel
@@ -82,7 +91,15 @@ fun ChatScreen(viewModel: ChatViewModel) {
     val privateChatSheetPeer by viewModel.privateChatSheetPeer.collectAsStateWithLifecycle()
     val showVerificationSheet by viewModel.showVerificationSheet.collectAsStateWithLifecycle()
     val showSecurityVerificationSheet by viewModel.showSecurityVerificationSheet.collectAsStateWithLifecycle()
+    val showUnifiedContactSearchSheet by viewModel.showUnifiedContactSearchSheet.collectAsStateWithLifecycle()
     val legacyPrivateMediaConsent by viewModel.legacyPrivateMediaConsent.collectAsStateWithLifecycle()
+    val activeIncomingTransfers by com.bitchat.android.mesh.TransferProgressManager.activeIncomingTransfers.collectAsStateWithLifecycle()
+
+    val contactsPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        viewModel.updateContactsPermission(isGranted)
+    }
 
     var messageText by remember { mutableStateOf(TextFieldValue("")) }
     var showPasswordPrompt by remember { mutableStateOf(false) }
@@ -98,6 +115,16 @@ fun ChatScreen(viewModel: ChatViewModel) {
     var initialViewerIndex by remember { mutableStateOf(0) }
     var forceScrollToBottom by remember { mutableStateOf(false) }
     var isScrolledUp by remember { mutableStateOf(false) }
+
+    // Wire admin bridge for AboutSheet → admin panel
+    DisposableEffect(viewModel) {
+        com.bitchat.android.features.admin.AboutSheetAdminBridge.onOpenAdmin = {
+            viewModel.openAdminPanel()
+        }
+        onDispose {
+            com.bitchat.android.features.admin.AboutSheetAdminBridge.onOpenAdmin = null
+        }
+    }
 
     LaunchedEffect(selectedPrivatePeer) {
         messageText = TextFieldValue(
@@ -253,6 +280,9 @@ fun ChatScreen(viewModel: ChatViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val drawerCoroutineScope = rememberCoroutineScope()
 
+    val isAdminChannel = currentChannel?.removePrefix("#")?.equals("admin", ignoreCase = true) == true
+    var adminTabMode by remember(currentChannel) { mutableStateOf(0) } // 0 = Chat, 1 = Admin Panel
+
     // Determine whether to show media buttons (only hide in geohash location chats)
     val showMediaButtons = when {
         currentChannel != null -> true
@@ -318,68 +348,172 @@ fun ChatScreen(viewModel: ChatViewModel) {
             val showNotesStrip =
                 isMeshTimeline && nearbyNotesRevealed && nearbyNotes.isNotEmpty()
 
-            MessagesList(
-                messages = displayMessages,
-                currentUserNickname = nickname,
-                meshService = viewModel.meshServiceFacade,
-                mentionPeerIdentities = mentionPeerIdentities,
-                modifier = Modifier.fillMaxSize(),
-                conversationKey = conversationKey,
-                contentPadding = PaddingValues(
-                    top = statusBarHeight + headerHeight +
-                        (if (showNotesStrip) notesStripHeight else 0.dp),
-                    bottom = composerHeight
-                ),
-                forceScrollToBottom = forceScrollToBottom,
-                onScrolledUpChanged = { isUp -> isScrolledUp = isUp },
-                onNicknameClick = { fullSenderName ->
-                    // Single click - mention user in text input
-                    val currentText = messageText.text
-
-                    // Extract base nickname and hash suffix from full sender name
-                    val (baseName, hashSuffix) = splitSuffix(fullSenderName)
-
-                    // Check if we're in a geohash channel to include hash suffix
-                    val selectedLocationChannel = viewModel.selectedLocationChannel.value
-                    val mentionText = if (
-                        selectedLocationChannel is ChannelID.Location &&
-                        hashSuffix.isNotEmpty()
-                    ) {
-                        // In geohash chat - include the hash suffix from the full display name
-                        "@$baseName$hashSuffix"
-                    } else {
-                        // Regular chat - just the base nickname
-                        "@$baseName"
-                    }
-
-                    val newText = when {
-                        currentText.isEmpty() -> "$mentionText "
-                        currentText.endsWith(" ") -> "$currentText$mentionText "
-                        else -> "$currentText $mentionText "
-                    }
-
-                    messageText = TextFieldValue(
-                        text = newText,
-                        selection = TextRange(newText.length)
+            if (isAdminChannel && adminTabMode == 1) {
+                // Admin Dashboard Page embedded directly in the admin channel
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            top = statusBarHeight + headerHeight + 56.dp,
+                            start = 12.dp,
+                            end = 12.dp
+                        )
+                ) {
+                    com.bitchat.android.features.admin.AdminDashboardContent(
+                        onDismiss = { adminTabMode = 0 },
+                        onDeleteUserContent = { peerID -> viewModel.adminDeleteAllContentByUser(peerID) },
+                        onFormatChannel = { channel -> viewModel.adminFormatChannel(channel) },
+                        channelNames = viewModel.getChannelNames(),
+                        modifier = Modifier.fillMaxSize()
                     )
-                },
-                onMessageLongPress = { message ->
-                    // Message long press - open user action sheet with message context
-                    // Extract base nickname from message sender (contains all necessary info)
-                    val (baseName, _) = splitSuffix(message.sender)
-                    selectedUserForSheet = baseName
-                    selectedMessageForSheet = message
-                    showUserSheet = true
-                },
-                onCancelTransfer = { msg ->
-                    viewModel.cancelMediaSend(msg.id)
-                },
-                onImageClick = { currentPath, allImagePaths, initialIndex ->
-                    viewerImagePaths = allImagePaths
-                    initialViewerIndex = initialIndex
-                    showFullScreenImageViewer = true
                 }
-            )
+            } else {
+                MessagesList(
+                    messages = displayMessages,
+                    currentUserNickname = nickname,
+                    meshService = viewModel.meshServiceFacade,
+                    mentionPeerIdentities = mentionPeerIdentities,
+                    modifier = Modifier.fillMaxSize(),
+                    conversationKey = conversationKey,
+                    contentPadding = PaddingValues(
+                        top = statusBarHeight + headerHeight +
+                            (if (isAdminChannel) 56.dp else 0.dp) +
+                            (if (showNotesStrip) notesStripHeight else 0.dp),
+                        bottom = composerHeight
+                    ),
+                    forceScrollToBottom = forceScrollToBottom,
+                    onScrolledUpChanged = { isUp -> isScrolledUp = isUp },
+                    onNicknameClick = { fullSenderName ->
+                        // Single click - mention user in text input
+                        val currentText = messageText.text
+
+                        // Extract base nickname and hash suffix from full sender name
+                        val (baseName, hashSuffix) = splitSuffix(fullSenderName)
+
+                        // Check if we're in a geohash channel to include hash suffix
+                        val selectedLocationChannel = viewModel.selectedLocationChannel.value
+                        val mentionText = if (
+                            selectedLocationChannel is ChannelID.Location &&
+                            hashSuffix.isNotEmpty()
+                        ) {
+                            // In geohash chat - include the hash suffix from the full display name
+                            "@$baseName$hashSuffix"
+                        } else {
+                            // Regular chat - just the base nickname
+                            "@$baseName"
+                        }
+
+                        val newText = when {
+                            currentText.isEmpty() -> "$mentionText "
+                            currentText.endsWith(" ") -> "$currentText$mentionText "
+                            else -> "$currentText $mentionText "
+                        }
+
+                        messageText = TextFieldValue(
+                            text = newText,
+                            selection = TextRange(newText.length)
+                        )
+                    },
+                    onMessageLongPress = { message ->
+                        // Message long press - open user action sheet with message context
+                        // Extract base nickname from message sender (contains all necessary info)
+                        val (baseName, _) = splitSuffix(message.sender)
+                        selectedUserForSheet = baseName
+                        selectedMessageForSheet = message
+                        showUserSheet = true
+                    },
+                    onCancelTransfer = { msg ->
+                        viewModel.cancelMediaSend(msg.id)
+                    },
+                    onImageClick = { currentPath, allImagePaths, initialIndex ->
+                        viewerImagePaths = allImagePaths
+                        initialViewerIndex = initialIndex
+                        showFullScreenImageViewer = true
+                    }
+                )
+            }
+
+            // Admin Channel Mode Switcher Tab Bar
+            if (isAdminChannel) {
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = statusBarHeight + headerHeight + 4.dp, start = 16.dp, end = 16.dp)
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
+                    tonalElevation = 4.dp
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(3.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { adminTabMode = 0 },
+                            color = if (adminTabMode == 0) Color(0xFF6366F1) else Color.Transparent
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(vertical = 7.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = if (adminTabMode == 0) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Admin Chat",
+                                    fontSize = 12.sp,
+                                    fontWeight = if (adminTabMode == 0) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (adminTabMode == 0) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    if (!com.bitchat.android.features.admin.AdminManager.isAdminEnabled.value) {
+                                        viewModel.openAdminPanel()
+                                    } else {
+                                        adminTabMode = 1
+                                    }
+                                },
+                            color = if (adminTabMode == 1) Color(0xFF6366F1) else Color.Transparent
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(vertical = 7.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AdminPanelSettings,
+                                    contentDescription = null,
+                                    tint = if (adminTabMode == 1) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Admin Panel",
+                                    fontSize = 12.sp,
+                                    fontWeight = if (adminTabMode == 1) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (adminTabMode == 1) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
             if (showNotesStrip) {
                 NearbyNotesStrip(
@@ -387,10 +521,23 @@ fun ChatScreen(viewModel: ChatViewModel) {
                     onClick = { showLocationNotesSheet = true },
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .padding(top = statusBarHeight + headerHeight)
+                        .padding(top = statusBarHeight + headerHeight + (if (isAdminChannel) 56.dp else 0.dp))
                         .onSizeChanged { size ->
                             notesStripHeight = with(density) { size.height.toDp() }
                         },
+                )
+            }
+
+            if (activeIncomingTransfers.isNotEmpty()) {
+                com.bitchat.android.ui.media.IncomingTransferBanner(
+                    transfers = activeIncomingTransfers,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(
+                            top = statusBarHeight + headerHeight +
+                                (if (isAdminChannel) 56.dp else 0.dp) +
+                                (if (showNotesStrip) notesStripHeight else 0.dp)
+                        )
                 )
             }
 
@@ -402,69 +549,72 @@ fun ChatScreen(viewModel: ChatViewModel) {
         }
     }
 
-    ChatInputSection(
-        modifier = Modifier
-            .align(Alignment.BottomCenter)
-            .onSizeChanged { size ->
-                composerHeight = with(density) { size.height.toDp() }
+    if (!isAdminChannel || adminTabMode == 0) {
+        ChatInputSection(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .onSizeChanged { size ->
+                    composerHeight = with(density) { size.height.toDp() }
+                },
+            messageText = messageText,
+            onMessageTextChange = { newText: TextFieldValue ->
+                messageText = newText
+                viewModel.setConversationDraft(selectedPrivatePeer, newText.text)
+                viewModel.updateCommandSuggestions(newText.text)
+                viewModel.updateMentionSuggestions(newText.text)
+                viewModel.onTextInputChanged(newText.text, selectedPrivatePeer)
             },
-        messageText = messageText,
-        onMessageTextChange = { newText: TextFieldValue ->
-            messageText = newText
-            viewModel.setConversationDraft(selectedPrivatePeer, newText.text)
-            viewModel.updateCommandSuggestions(newText.text)
-            viewModel.updateMentionSuggestions(newText.text)
-        },
-        onSend = {
-            if (messageText.text.trim().isNotEmpty()) {
-                viewModel.sendMessage(messageText.text.trim()) { accepted ->
-                    if (accepted) {
-                        messageText = TextFieldValue("")
-                        viewModel.setConversationDraft(selectedPrivatePeer, "")
-                        // Clearing the field in code does not run onMessageTextChange,
-                        // so the popups have to be dismissed here.
-                        viewModel.clearSuggestions()
-                        forceScrollToBottom = !forceScrollToBottom
+            onSend = {
+                if (messageText.text.trim().isNotEmpty()) {
+                    viewModel.sendMessage(messageText.text.trim()) { accepted ->
+                        if (accepted) {
+                            messageText = TextFieldValue("")
+                            viewModel.setConversationDraft(selectedPrivatePeer, "")
+                            // Clearing the field in code does not run onMessageTextChange,
+                            // so the popups have to be dismissed here.
+                            viewModel.clearSuggestions()
+                            forceScrollToBottom = !forceScrollToBottom
+                        }
                     }
                 }
-            }
-        },
-        onSendVoiceNote = { peer, onionOrChannel, path ->
-            viewModel.sendVoiceNote(peer, onionOrChannel, path)
-        },
-        onSendImageNote = { peer, onionOrChannel, path ->
-            viewModel.sendImageNote(peer, onionOrChannel, path)
-        },
-        onSendFileNote = { peer, onionOrChannel, path ->
-            viewModel.sendFileNote(peer, onionOrChannel, path)
-        },
-        recorderFactory = viewModel::createVoiceRecorder,
-        
-        showCommandSuggestions = showCommandSuggestions,
-        commandSuggestions = commandSuggestions,
-        showMentionSuggestions = showMentionSuggestions,
-        mentionSuggestions = mentionSuggestions,
-        mentionPeerIdentities = mentionPeerIdentities,
-        onCommandSuggestionClick = { suggestion: CommandSuggestion ->
-                    val commandText = viewModel.selectCommandSuggestion(suggestion)
-                    messageText = TextFieldValue(
-                        text = commandText,
-                        selection = TextRange(commandText.length)
-                    )
-                },
-                onMentionSuggestionClick = { mention: String ->
-                    val mentionText = viewModel.selectMentionSuggestion(mention, messageText.text)
-                    messageText = TextFieldValue(
-                        text = mentionText,
-                        selection = TextRange(mentionText.length)
-                    )
-                },
-                selectedPrivatePeer = null,
-                currentChannel = currentChannel,
-                nickname = nickname,
-                colorScheme = colorScheme,
-                showMediaButtons = showMediaButtons
-            )
+            },
+            onSendVoiceNote = { peer, onionOrChannel, path ->
+                viewModel.sendVoiceNote(peer, onionOrChannel, path)
+            },
+            onSendImageNote = { peer, onionOrChannel, path ->
+                viewModel.sendImageNote(peer, onionOrChannel, path)
+            },
+            onSendFileNote = { peer, onionOrChannel, path ->
+                viewModel.sendFileNote(peer, onionOrChannel, path)
+            },
+            recorderFactory = viewModel::createVoiceRecorder,
+            
+            showCommandSuggestions = showCommandSuggestions,
+            commandSuggestions = commandSuggestions,
+            showMentionSuggestions = showMentionSuggestions,
+            mentionSuggestions = mentionSuggestions,
+            mentionPeerIdentities = mentionPeerIdentities,
+            onCommandSuggestionClick = { suggestion: CommandSuggestion ->
+                        val commandText = viewModel.selectCommandSuggestion(suggestion)
+                        messageText = TextFieldValue(
+                            text = commandText,
+                            selection = TextRange(commandText.length)
+                        )
+                    },
+                    onMentionSuggestionClick = { mention: String ->
+                        val mentionText = viewModel.selectMentionSuggestion(mention, messageText.text)
+                        messageText = TextFieldValue(
+                            text = mentionText,
+                            selection = TextRange(mentionText.length)
+                        )
+                    },
+                    selectedPrivatePeer = null,
+                    currentChannel = currentChannel,
+                    nickname = nickname,
+                    colorScheme = colorScheme,
+                    showMediaButtons = showMediaButtons
+                )
+    }
           }
         }
 
@@ -581,6 +731,11 @@ fun ChatScreen(viewModel: ChatViewModel) {
         onSecurityVerificationSheetDismiss = viewModel::hideSecurityVerificationSheet,
         showMeshPeerListSheet = showMeshPeerListSheet,
         onMeshPeerListDismiss = viewModel::hideMeshPeerList,
+        showUnifiedContactSearchSheet = showUnifiedContactSearchSheet,
+        onUnifiedContactSearchDismiss = viewModel::hideUnifiedContactSearch,
+        onRequestContactsPermission = {
+            contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+        }
     )
 
     legacyPrivateMediaConsent?.let { request ->
@@ -606,6 +761,39 @@ fun ChatScreen(viewModel: ChatViewModel) {
                 TextButton(onClick = { viewModel.cancelLegacyPrivateMedia(request.requestId) }) {
                     Text(stringResource(android.R.string.cancel))
                 }
+            }
+        )
+    }
+
+    // ─── Admin Panel Sheet ───────────────────────────────────────
+    val showAdminSheet by viewModel.showAdminSheet.collectAsStateWithLifecycle()
+    val showAdminPassphrase by viewModel.showAdminPassphraseDialog.collectAsStateWithLifecycle()
+
+    if (showAdminSheet) {
+        com.bitchat.android.features.admin.AdminScreen(
+            onDismiss = { viewModel.closeAdminPanel() },
+            onDeleteUserContent = { peerID -> viewModel.adminDeleteAllContentByUser(peerID) },
+            onFormatChannel = { channel -> viewModel.adminFormatChannel(channel) },
+            channelNames = viewModel.getChannelNames()
+        )
+    }
+
+    if (showAdminPassphrase) {
+        com.bitchat.android.features.admin.AdminPassphraseDialog(
+            onDismiss = { viewModel.closeAdminPassphraseDialog() },
+            onAuthenticated = { viewModel.onAdminAuthenticated() }
+        )
+    }
+
+    // ─── Report User Sheet ───────────────────────────────────────
+    val reportUserData by viewModel.showReportUserSheet.collectAsStateWithLifecycle()
+    reportUserData?.let { (peerID, nickname) ->
+        com.bitchat.android.features.admin.ReportUserSheet(
+            reportedPeerID = peerID,
+            reportedNickname = nickname,
+            onDismiss = { viewModel.closeReportUserSheet() },
+            onSubmitReport = { reason ->
+                viewModel.submitReport(peerID, nickname, reason)
             }
         )
     }
@@ -863,6 +1051,9 @@ private fun ChatDialogs(
     onSecurityVerificationSheetDismiss: () -> Unit,
     showMeshPeerListSheet: Boolean,
     onMeshPeerListDismiss: () -> Unit,
+    showUnifiedContactSearchSheet: Boolean = false,
+    onUnifiedContactSearchDismiss: () -> Unit = {},
+    onRequestContactsPermission: () -> Unit = {},
 ) {
     val privateChatSheetPeer by viewModel.privateChatSheetPeer.collectAsStateWithLifecycle()
 
@@ -929,6 +1120,15 @@ private fun ChatDialogs(
                 onMeshPeerListDismiss()
                 viewModel.showVerificationSheet(fromSidebar = true)
             }
+        )
+    }
+
+    if (showUnifiedContactSearchSheet) {
+        UnifiedContactSearchSheet(
+            isPresented = showUnifiedContactSearchSheet,
+            viewModel = viewModel,
+            onDismiss = onUnifiedContactSearchDismiss,
+            onRequestContactsPermission = onRequestContactsPermission
         )
     }
 

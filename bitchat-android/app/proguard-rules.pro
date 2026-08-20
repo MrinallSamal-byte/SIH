@@ -2,7 +2,10 @@
 # You can control the set of applied configuration files using the
 # proguardFiles setting in build.gradle.
 -keep class com.bitchat.android.protocol.** { *; }
+-keep class com.bitchat.android.model.** { *; }
+-keep class com.bitchat.android.contacts.** { *; }
 -keep class com.bitchat.android.crypto.** { *; }
+-keep class com.bitchat.android.noise.** { *; }
 -dontwarn org.bouncycastle.**
 -keep class org.bouncycastle.** { *; }
 

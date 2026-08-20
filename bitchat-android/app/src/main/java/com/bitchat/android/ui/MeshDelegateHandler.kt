@@ -34,13 +34,41 @@ class MeshDelegateHandler(
             }
             messageManager.markMessageProcessed(messageKey)
             
-            // Check if sender is blocked
+            // Check if sender is blocked (peer-level)
             message.senderPeerID?.let { senderPeerID ->
                 if (privateChatManager.isPeerBlocked(senderPeerID)) {
                     return@launch
                 }
+                // Check if sender is blocked (admin-level)
+                if (com.bitchat.android.features.admin.AdminManager.isUserBlocked(senderPeerID)) {
+                    return@launch
+                }
             }
-            
+
+            // Check if channel is blocked (admin-level)
+            message.channel?.let { channelName ->
+                if (com.bitchat.android.features.admin.AdminManager.isChannelBlocked(channelName)) {
+                    return@launch
+                }
+            }
+
+            // Check for delete control message
+            val deleteControl = com.bitchat.android.model.DeleteControlMessage.parse(message.content)
+            if (deleteControl != null) {
+                val targetMsgId = deleteControl.targetMessageID
+                val incomingSender = message.senderPeerID
+                val allMsgs = state.getMessagesValue() + 
+                    state.getChannelMessagesValue().values.flatten() + 
+                    state.getPrivateChatsValue().values.flatten()
+                val targetMsg = allMsgs.firstOrNull { it.id == targetMsgId }
+                val isAuthor = targetMsg != null && incomingSender != null && targetMsg.senderPeerID == incomingSender
+                val isLocalUser = incomingSender != null && incomingSender == getMyPeerID()
+                if (targetMsg != null && (isAuthor || isLocalUser)) {
+                    messageManager.deleteMessageLocally(targetMsgId)
+                }
+                return@launch
+            }
+
             // Trigger haptic feedback
             onHapticFeedback()
 
@@ -107,8 +135,20 @@ class MeshDelegateHandler(
     }
 
     private suspend fun processPeerUpdate(mergedPeers: List<String>) {
+        val previousPeers = state.getConnectedPeersValue().toSet()
         state.setConnectedPeers(mergedPeers)
         state.setIsConnected(mergedPeers.isNotEmpty())
+
+        // Update presence: mark new peers as online, disconnected peers as offline
+        val currentSet = mergedPeers.toSet()
+        val newlyConnected = currentSet - previousPeers
+        val newlyDisconnected = previousPeers - currentSet
+        if (newlyConnected.isNotEmpty()) {
+            com.bitchat.android.features.presence.PresenceManager.markPeersOnline(newlyConnected)
+        }
+        if (newlyDisconnected.isNotEmpty()) {
+            com.bitchat.android.features.presence.PresenceManager.markPeersOffline(newlyDisconnected)
+        }
         
         // Flush router outbox for any peers that just connected (and their noiseHex aliases)
         runCatching { com.bitchat.android.services.MessageRouter.tryGetInstance()?.onPeersUpdated(mergedPeers) }

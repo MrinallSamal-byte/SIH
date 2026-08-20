@@ -44,6 +44,8 @@ fun ChatUserSheet(
     val standardRed = colorScheme.error
     val standardGrey = colorScheme.onSurfaceVariant
     
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     if (isPresented) {
         BitchatBottomSheet(
             onDismissRequest = onDismiss,
@@ -75,7 +77,7 @@ fun ChatUserSheet(
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Copy message action (only show if we have a message)
+                    // Message actions (only show if we have a message)
                     selectedMessage?.let { message ->
                         item {
                             UserActionRow(
@@ -86,6 +88,17 @@ fun ChatUserSheet(
                                     // Copy the message content to clipboard
                                     clipboardManager.setText(AnnotatedString(message.content))
                                     onDismiss()
+                                }
+                            )
+                        }
+
+                        item {
+                            UserActionRow(
+                                title = stringResource(R.string.action_delete_message_title),
+                                subtitle = stringResource(R.string.action_delete_message_subtitle),
+                                titleColor = standardRed,
+                                onClick = {
+                                    showDeleteDialog = true
                                 }
                             )
                         }
@@ -168,6 +181,22 @@ fun ChatUserSheet(
                                 }
                             )
                         }
+
+                        // Report action
+                        item {
+                            UserActionRow(
+                                title = "⚑ Report $targetNickname",
+                                subtitle = "Report this user with a message to admins",
+                                titleColor = Color(0xFFEF4444),
+                                onClick = {
+                                    val peerID = selectedMessage?.senderPeerID
+                                        ?: viewModel.getPeerIDForNickname(targetNickname)
+                                        ?: targetNickname
+                                    viewModel.showReportUser(peerID, targetNickname)
+                                    onDismiss()
+                                }
+                            )
+                        }
                     }
                 }
                 
@@ -189,6 +218,119 @@ fun ChatUserSheet(
             }
         }
     }
+
+    // Delete message options dialog
+    selectedMessage?.let { message ->
+        if (showDeleteDialog) {
+            val isWithinOneHour = (System.currentTimeMillis() - message.timestamp.time) <= 3_600_000L
+            val isSender = message.sender == viewModel.nickname.value || message.senderPeerID == viewModel.myPeerID
+            val isSenderOrAdmin = isSender || viewModel.isAdmin()
+
+            DeleteMessageOptionsDialog(
+                show = showDeleteDialog,
+                isSenderOrAdmin = isSenderOrAdmin,
+                isWithinOneHour = isWithinOneHour,
+                onDeleteForEveryone = {
+                    viewModel.deleteMessageForEveryone(message)
+                    showDeleteDialog = false
+                    onDismiss()
+                },
+                onDeleteForMe = {
+                    viewModel.deleteMessageForMe(message)
+                    showDeleteDialog = false
+                    onDismiss()
+                },
+                onDismiss = {
+                    showDeleteDialog = false
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun DeleteMessageOptionsDialog(
+    show: Boolean,
+    isSenderOrAdmin: Boolean,
+    isWithinOneHour: Boolean,
+    onDeleteForEveryone: () -> Unit,
+    onDeleteForMe: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    if (!show) return
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.delete_message_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                fontFamily = BitchatFontFamily
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (isSenderOrAdmin && isWithinOneHour) {
+                    // Option 1: Delete for everyone (available within 1 hour for sender/admin)
+                    Button(
+                        onClick = onDeleteForEveryone,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = stringResource(R.string.delete_for_everyone),
+                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = BitchatFontFamily
+                        )
+                    }
+
+                    // Option 2: Delete for me
+                    OutlinedButton(
+                        onClick = onDeleteForMe,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = stringResource(R.string.delete_for_me),
+                            fontWeight = FontWeight.Medium,
+                            fontFamily = BitchatFontFamily
+                        )
+                    }
+                } else {
+                    // Option: Delete for me only (after 1 hour or for non-sender)
+                    Button(
+                        onClick = onDeleteForMe,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = stringResource(R.string.delete_for_me),
+                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = BitchatFontFamily
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = stringResource(R.string.cancel),
+                    fontFamily = BitchatFontFamily
+                )
+            }
+        }
+    )
 }
 
 @Composable

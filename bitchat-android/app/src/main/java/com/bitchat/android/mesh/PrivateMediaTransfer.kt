@@ -89,6 +89,11 @@ internal class PrivateMediaTransferPreparer(
         allowLegacyFallback: Boolean,
         generationRetriesRemaining: Int
     ): PrivateMediaBuildOutcome {
+        if (!file.hasConsistentMetadata()) {
+            return PrivateMediaBuildOutcome.Rejected(
+                "File metadata does not match its content"
+            )
+        }
         val maxPrivateFragments =
             com.bitchat.android.util.AppConstants.Fragmentation.MAX_FRAGMENTS_PER_ID
         val absolutePayloadUpperBound =
@@ -99,7 +104,7 @@ internal class PrivateMediaTransferPreparer(
         // and packet serialization make additional full-size copies.
         if (file.content.size.toLong() > absolutePayloadUpperBound) {
             return PrivateMediaBuildOutcome.Rejected(
-                "File exceeds the private-media v1 limit of 256 final mesh fragments"
+                "File exceeds the private-media limit of $maxPrivateFragments final mesh fragments"
             )
         }
 
@@ -199,12 +204,12 @@ internal class PrivateMediaTransferPreparer(
         val fragments = fragment(finalized, maxPrivateFragments)
         if (fragments.isEmpty()) {
             return PrivateMediaBuildOutcome.Rejected(
-                "File exceeds the private-media v1 limit of 256 final mesh fragments"
+                "File exceeds the private-media limit of $maxPrivateFragments final mesh fragments"
             )
         }
         if (fragments.size > maxPrivateFragments) {
             return PrivateMediaBuildOutcome.Rejected(
-                "File exceeds the private-media v1 limit of 256 final mesh fragments"
+                "File exceeds the private-media limit of $maxPrivateFragments final mesh fragments"
             )
         }
 

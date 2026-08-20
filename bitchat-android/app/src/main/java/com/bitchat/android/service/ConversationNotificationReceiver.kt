@@ -65,13 +65,19 @@ class ConversationNotificationReceiver : BroadcastReceiver() {
                             forceRead = true
                         )
                         if (persisted) {
-                            MessageRouter.getInstance(context.applicationContext, mesh)
+                            val route = MessageRouter.getInstance(context.applicationContext, mesh)
                                 .sendPrivate(
                                     content = reply,
                                     toPeerID = conversationID,
                                     recipientNickname = message.recipientNickname.orEmpty(),
                                     messageID = message.id
                                 )
+                            if (route == MessageRouter.RouteResult.NOSTR || route == MessageRouter.RouteResult.MESH) {
+                                AppStateStore.updatePrivateMessageStatus(
+                                    message.id,
+                                    DeliveryStatus.Sent
+                                )
+                            }
                             acknowledged =
                                 AppStateStore.setPrivateConversationRead(conversationID, true)
                         }

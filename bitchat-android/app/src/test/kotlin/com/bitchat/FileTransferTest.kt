@@ -4,12 +4,15 @@ import com.bitchat.android.model.BitchatFilePacket
 import com.bitchat.android.model.BitchatMessage
 import com.bitchat.android.model.BitchatMessageType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.ConscryptMode
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -26,7 +29,7 @@ class FileTransferTest {
         val originalPacket = BitchatFilePacket(
             fileName = "test.png",
             mimeType = "image/png",
-            fileSize = 1024000,
+            fileSize = contentArray.size.toLong(),
             content = contentArray
         )
 
@@ -65,15 +68,15 @@ class FileTransferTest {
         val expectedFilename = "myimage.jpg".toByteArray(Charsets.UTF_8)
         val expectedLength = expectedFilename.size // Should be 10 for UTF-8 "myimage.jpg"
 
-
-
-        assertEquals(expectedType, encoded!![0])
+        assertNotNull(encoded)
+        val nonNullEncoded = encoded ?: return
+        assertEquals(expectedType, nonNullEncoded[0])
         // Calculate the actual length from little-endian encoded data
-        val actualLength = (encoded[2].toInt() and 0xFF) or ((encoded[1].toInt() and 0xFF) shl 8)
+        val actualLength = (nonNullEncoded[2].toInt() and 0xFF) or ((nonNullEncoded[1].toInt() and 0xFF) shl 8)
         // The encoding seems to be including a null terminator or extended bytes
         assertEquals(11, actualLength) // The encoding produces 11 bytes for "myimage.jpg"
 
-        val actualFilename = encoded!!.sliceArray(3 until 3 + expectedLength)
+        val actualFilename = nonNullEncoded.sliceArray(3 until 3 + expectedLength)
         for (i in expectedFilename.indices) {
             assertEquals(expectedFilename[i], actualFilename[i])
         }
@@ -93,26 +96,119 @@ class FileTransferTest {
         // When: Encode
         val encoded = packet.encode()
         assertNotNull(encoded)
+        val nonNullEncoded = encoded ?: return
 
-        // Then: File size should be in big endian order
-        // Find FILE_SIZE TLV (type 0x02)
-        var offset = 0
-        while (offset < encoded!!.size - 1) {
-            if (encoded!![offset] == 0x02.toByte()) {
-                // This is FILE_SIZE TLV
-                offset += 1  // Skip type byte
-                val length = (encoded!![offset].toInt() and 0xFF) or ((encoded[offset + 1].toInt() and 0xFF) shl 8)
-                offset += 2 // Skip length bytes
-                if (length == 4) { // FILE_SIZE always has 4 bytes
-                    val decodedFileSize = ByteBuffer.wrap(encoded!!.sliceArray(offset until offset + 4))
-                        .order(ByteOrder.BIG_ENDIAN)
-                        .int.toLong()
-                    assertEquals(fileSize, decodedFileSize)
-                    break
-                }
+        // Then: FILE_SIZE follows FILE_NAME and keeps the deployed UInt32 format.
+        val sizeTlvOffset = 3 + "test.bin".toByteArray(Charsets.UTF_8).size
+        assertEquals(0x02.toByte(), nonNullEncoded[sizeTlvOffset])
+        assertEquals(0, nonNullEncoded[sizeTlvOffset + 1].toInt())
+        assertEquals(4, nonNullEncoded[sizeTlvOffset + 2].toInt())
+        val decodedFileSize = ByteBuffer.wrap(
+            nonNullEncoded.sliceArray(sizeTlvOffset + 3 until sizeTlvOffset + 7)
+        ).order(ByteOrder.BIG_ENDIAN).int.toLong()
+        assertEquals(fileSize, decodedFileSize)
+    }
+
+    @Test
+    fun `encoder keeps the deployed four-byte content length for large media`() {
+        val content = ByteArray(70_000) { (it % 251).toByte() }
+        val fileName = "large.bin"
+        val mimeType = "application/octet-stream"
+        val encoded = BitchatFilePacket(
+            fileName = fileName,
+            fileSize = content.size.toLong(),
+            mimeType = mimeType,
+            content = content
+        ).encode()!!
+
+        val firstContentOffset =
+            3 + fileName.toByteArray().size +
+                3 + 4 +
+                3 + mimeType.toByteArray().size
+        assertEquals(0x04.toByte(), encoded[firstContentOffset])
+        assertEquals(0, encoded[firstContentOffset + 1].toInt())
+        assertEquals(1, encoded[firstContentOffset + 2].toInt())
+        assertEquals(0x11, encoded[firstContentOffset + 3].toInt())
+        assertEquals(0x70, encoded[firstContentOffset + 4].toInt())
+        assertTrue(BitchatFilePacket.decode(encoded)!!.content.contentEquals(content))
+    }
+
+    @Test
+    fun `decoder accepts chunked UInt16 content fields`() {
+        val content = ByteArray(70_000) { (it % 251).toByte() }
+        val name = "compatible.bin".toByteArray()
+        val mime = "application/octet-stream".toByteArray()
+        val wire = ByteArrayOutputStream().apply {
+            fun writeTlv(type: Int, value: ByteArray) {
+                write(type)
+                write(value.size ushr 8)
+                write(value.size)
+                write(value)
             }
-            offset += 1
-        }
+
+            writeTlv(0x01, name)
+            writeTlv(
+                0x02,
+                ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(content.size.toLong()).array()
+            )
+            writeTlv(0x03, mime)
+            // A one-byte first chunk is deliberately awkward for a parser
+            // that assumes the deployed UInt32 length. The legacy UInt64 size
+            // marker must select the chunked decoder before content is read.
+            write(0x04)
+            write(0)
+            write(1)
+            write(content, 0, 1)
+
+            var offset = 1
+            while (offset < content.size) {
+                val length = minOf(0xFFFF, content.size - offset)
+                write(0x04)
+                write(length ushr 8)
+                write(length)
+                write(content, offset, length)
+                offset += length
+            }
+        }.toByteArray()
+
+        val decoded = BitchatFilePacket.decode(wire)
+        assertNotNull(decoded)
+        assertEquals(content.size.toLong(), decoded!!.fileSize)
+        assertTrue(decoded.content.contentEquals(content))
+    }
+
+    @Test
+    fun `legacy Android four-byte content length remains decodable`() {
+        val content = ByteArray(32) { it.toByte() }
+        val name = "legacy.bin".toByteArray()
+        val mime = "application/octet-stream".toByteArray()
+        val wire = ByteBuffer.allocate(
+            3 + name.size + 3 + 4 + 3 + mime.size + 1 + 4 + content.size
+        ).order(ByteOrder.BIG_ENDIAN).apply {
+            put(0x01.toByte()); putShort(name.size.toShort()); put(name)
+            put(0x02.toByte()); putShort(4.toShort()); putInt(content.size)
+            put(0x03.toByte()); putShort(mime.size.toShort()); put(mime)
+            put(0x04.toByte()); putInt(content.size); put(content)
+        }.array()
+
+        val decoded = BitchatFilePacket.decode(wire)
+        assertNotNull(decoded)
+        assertTrue(decoded!!.content.contentEquals(content))
+        assertEquals(content.size.toLong(), decoded.fileSize)
+    }
+
+    @Test
+    fun `incomplete file packet is never considered safe to persist`() {
+        val packet = BitchatFilePacket(
+            fileName = "partial.jpg",
+            fileSize = 128,
+            mimeType = "image/jpeg",
+            content = ByteArray(127)
+        )
+
+        assertFalse(packet.hasConsistentMetadata())
+        assertFalse(packet.isCompleteAndWithinLimit())
+        assertNotNull(packet.encode())
     }
 
     @Test

@@ -15,6 +15,7 @@ class MainViewModelTest {
         val cases = listOf(
             OnboardingState.ERROR,
             OnboardingState.CHECKING,
+            OnboardingState.WELCOME,
             OnboardingState.BLUETOOTH_CHECK,
             OnboardingState.LOCATION_CHECK,
             OnboardingState.BATTERY_OPTIMIZATION_CHECK,

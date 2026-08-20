@@ -7,11 +7,21 @@ import java.security.MessageDigest
 
 object ContactIdentityResolver {
     private const val CONTACT_PREFIX = "contact_"
+    private const val PHONE_PREFIX = "phone_"
     private val meshPeerIdRegex = Regex("^[0-9a-fA-F]{16}$")
     private val noiseKeyRegex = Regex("^[0-9a-fA-F]{64}$")
     private val fingerprintRegex = Regex("^[0-9a-fA-F]{64}$")
 
     fun isMeshPeerId(value: String): Boolean = meshPeerIdRegex.matches(value)
+
+    fun isPhoneConversationId(value: String): Boolean =
+        value.startsWith(PHONE_PREFIX, ignoreCase = true)
+
+    fun phoneFromConversationId(value: String): String =
+        value.removePrefix(PHONE_PREFIX)
+
+    fun phoneConversationId(normalizedPhone: String): String =
+        PHONE_PREFIX + normalizedPhone.lowercase()
 
     fun isNoiseKeyHex(value: String): Boolean = noiseKeyRegex.matches(value)
 

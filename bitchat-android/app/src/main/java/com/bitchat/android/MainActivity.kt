@@ -30,6 +30,7 @@ import com.bitchat.android.onboarding.BatteryOptimizationPreferenceManager
 import com.bitchat.android.onboarding.BatteryOptimizationScreen
 import com.bitchat.android.onboarding.BatteryOptimizationStatus
 import com.bitchat.android.onboarding.BackgroundLocationPermissionScreen
+import com.bitchat.android.onboarding.WelcomeScreen
 import com.bitchat.android.onboarding.InitializationErrorScreen
 import com.bitchat.android.onboarding.InitializingScreen
 import com.bitchat.android.onboarding.LocationCheckScreen
@@ -286,6 +287,15 @@ class MainActivity : OrientationAwareActivity() {
                 )
             }
             
+            OnboardingState.WELCOME -> {
+                WelcomeScreen(
+                    modifier = modifier,
+                    onContinue = {
+                        mainViewModel.updateOnboardingState(OnboardingState.PERMISSION_EXPLANATION)
+                    }
+                )
+            }
+
             OnboardingState.PERMISSION_EXPLANATION -> {
                 PermissionExplanationScreen(
                     modifier = modifier,
@@ -427,7 +437,7 @@ class MainActivity : OrientationAwareActivity() {
             delay(200) // Small delay for smooth transition
 
             if (permissionManager.isFirstTimeLaunch()) {
-                mainViewModel.updateOnboardingState(OnboardingState.PERMISSION_EXPLANATION)
+                mainViewModel.updateOnboardingState(OnboardingState.WELCOME)
             } else if (permissionManager.getUnrequestedOptionalPermissions().isNotEmpty()) {
                 mainViewModel.updateOnboardingState(OnboardingState.PERMISSION_EXPLANATION)
             } else if (permissionManager.areRequiredPermissionsGranted()) {

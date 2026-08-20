@@ -209,7 +209,12 @@ class NostrDirectMessageHandler(
                 val file = BitchatFilePacket.decode(payload.data)
                 if (file != null) {
                     val uniqueMsgId = java.util.UUID.randomUUID().toString().uppercase()
-                    val savedPath = com.bitchat.android.features.file.FileUtils.saveIncomingFile(application, file)
+                    val savedPath = com.bitchat.android.features.file.FileUtils
+                        .saveIncomingFile(application, file)
+                        ?: run {
+                            Log.w(TAG, "Rejected incomplete Nostr file transfer from $conversationID")
+                            return
+                        }
                     val message = BitchatMessage(
                         id = uniqueMsgId,
                         sender = senderNickname,
