@@ -54,45 +54,44 @@ During major natural catastrophes (cyclones, flash floods, earthquakes, industri
 ### 1. Complete Website Workflow & User Journey
 
 ```mermaid
-flowchart TD
-    classDef citizen fill:#eff6ff,stroke:#3b82f6,stroke-width:2px,color:#1e3a8a;
-    classDef triage fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#78350f;
-    classDef volunteer fill:#f0fdf4,stroke:#10b981,stroke-width:2px,color:#064e3b;
-    classDef admin fill:#fef2f2,stroke:#ef4444,stroke-width:2px,color:#7f1d1d;
-    classDef pfa fill:#faf5ff,stroke:#a855f7,stroke-width:2px,color:#581c87;
-
-    subgraph Citizen["1. 📱 Citizen / Public User Actions"]
-        A["🌐 AapdaSetu Portal"]:::citizen
-        A --> B1["🚨 1-Tap Emergency SOS\n(Instant GPS distress)"]:::citizen
-        A --> B2["📋 Report Incident\n(Voice, Video, Text)"]:::citizen
-        A --> B3["🗺️ Safe Evacuation Routes\n(Hazard-avoidance GIS)"]:::citizen
-        A --> B4["🏕️ Find Nearest Shelters\n(Capacity & Amenities)"]:::citizen
-        A --> B5["🔍 Missing Persons\n(Search & Register Cases)"]:::citizen
-        A --> B6["🏠 Property Damage Claims\n(Photo upload for compensation)"]:::citizen
-        A --> B7["🤖 AapdaMitra AI Assistant\n(PFA chat & Grounding)"]:::pfa
+flowchart LR
+    subgraph C1["1. Citizen Portal"]
+        A1["1-Tap SOS / Report"]
+        A2["Safe Routes & PFA"]
     end
 
-    subgraph AI["2. 🧠 AI Processing & Triage Engine"]
-        B1 & B2 --> C1["⚡ Multi-Factor Urgency Triage\n(Priority: RED / YELLOW / GREEN)"]:::triage
-        B6 --> C2["👁️ ResNet-50 Vision Analysis\n(Damage Grade & Grant Estimate)"]:::triage
-        B3 --> C3["🛰️ Sentinel-1 Satellite GIS\n(Flood Inundation Layers)"]:::triage
-        B7 --> C4["💬 Psychological First Aid (PFA)\n(Box Breathing & Callbacks)"]:::pfa
+    subgraph C2["2. AI Triage Engine"]
+        B1["Multi-Factor Scoring<br/>(RED / YELLOW / GREEN)"]
+        B2["Satellite & Damage Vision"]
     end
 
-    subgraph Admin["3. 🚨 Command Center / Admin Operations"]
-        C1 & C2 --> D1["🎛️ Realtime Command Dashboard\n(Live SOS Sirens & GIS Pins)"]:::admin
-        D1 --> D2["📢 Broadcast Emergency Alerts\n(SMS, WhatsApp, Web Feed)"]:::admin
-        D1 --> D3["🤝 Proximity Unit Dispatch\n(Assign closest Volunteers / NDRF)"]:::admin
-        D1 --> D4["💰 Approve SDRF Claims\n(Verify damage compensation)"]:::admin
+    subgraph C3["3. Command Center"]
+        C_Admin["Live Siren Alert &<br/>Smart Auto-Dispatch"]
     end
 
-    subgraph Volunteer["4. 🧑‍🚒 Field Responder / Volunteer Actions"]
-        D3 --> E1["📲 Receive Task Alert\n(Skill match & GPS coords)"]:::volunteer
-        E1 --> E2["🧭 Turn-by-Turn Route\n(Navigate to disaster site)"]:::volunteer
-        E2 --> E3["✅ Execute Relief & Update Status\n(On-Scene ➔ Resolved)"]:::volunteer
+    subgraph C4["4. Field Responder"]
+        D1["Turn-by-Turn GPS"]
+        D2["Rescue & Status Update"]
     end
 
-    E3 -->|Realtime Status Update| F["📡 Live Tracking Stream\n(Citizens view rescue milestone progress)"]:::citizen
+    A1 --> B1
+    A2 --> B2
+    B1 --> C_Admin
+    B2 --> C_Admin
+    C_Admin --> D1
+    D1 --> D2
+    D2 -.->|Live Milestone Sync| A1
+
+    classDef default fill:#ffffff,stroke:#475569,stroke-width:1.5px,color:#0f172a;
+    classDef citizen fill:#eff6ff,stroke:#3b82f6,stroke-width:1.5px,color:#1e3a8a;
+    classDef ai fill:#fef3c7,stroke:#f59e0b,stroke-width:1.5px,color:#78350f;
+    classDef admin fill:#fef2f2,stroke:#ef4444,stroke-width:1.5px,color:#7f1d1d;
+    classDef volunteer fill:#f0fdf4,stroke:#10b981,stroke-width:1.5px,color:#064e3b;
+
+    class A1,A2 citizen;
+    class B1,B2 ai;
+    class C_Admin admin;
+    class D1,D2 volunteer;
 ```
 
 ---
