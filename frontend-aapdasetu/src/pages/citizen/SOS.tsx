@@ -14,7 +14,6 @@ import {
 } from 'lucide-react'
 import { createReport } from '../../api/endpoints'
 import { aiTriage } from '../../api/ai'
-import PriorityBadge from '../../components/common/PriorityBadge'
 import { Field, Input } from '../../components/common/Input'
 import Modal from '../../components/common/Modal'
 import LandmarkPicker from '../../components/map/LandmarkPicker'
@@ -507,84 +506,26 @@ export default function SOS() {
               </div>
 
               <div className="rounded-xl border border-zinc-200/80 bg-[#f4f4f5] p-4 dark:border-white/[0.08] dark:bg-[#151515]">
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">
                       YOUR INCIDENT TRACKING ID
                     </span>
-                    <div className="mt-1 flex items-center gap-2">
-                      <span className="font-mono text-xl sm:text-2xl font-bold text-zinc-800 dark:text-slate-300">
+                    <div className="mt-1 flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-xl sm:text-2xl font-bold text-zinc-800 dark:text-slate-300 break-all">
                         {result.trackingId}
                       </span>
                       <button
                         type="button"
                         onClick={() => copyTrackingId(result.trackingId)}
-                        className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-2 py-0.5 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-100 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300"
+                        className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-zinc-800 px-2.5 py-1.5 text-xs font-bold text-white transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
                       >
                         <Copy className="h-3 w-3" />
                         <span>{copied ? 'Copied' : 'Copy'}</span>
                       </button>
                     </div>
                   </div>
-                  <PriorityBadge label={result.priorityLabel} />
                 </div>
-
-                <div className="mt-3 flex items-center justify-between border-t border-zinc-200/80 pt-2 text-xs text-zinc-500 dark:border-white/[0.08] dark:text-slate-400">
-                  <span>Urgency Score: <strong>{result.priorityScore}/100</strong></span>
-                  <span>Contact: <strong className="mono">{result.reporterPhone}</strong></span>
-                </div>
-              </div>
-
-              {/* Copyable Report Summary */}
-              <div className="rounded-xl border border-zinc-200/80 bg-white p-4 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">
-                    Report Summary — Copy & Share
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const reportText = [
-                        `AapdaSetu SOS Report`,
-                        `━━━━━━━━━━━━━━━━━━`,
-                        `Tracking ID: ${result.trackingId}`,
-                        `Priority: ${result.priorityLabel} (${result.priorityScore}/100)`,
-                        `Type: ${selectedType}`,
-                        `Contact: ${result.reporterPhone}`,
-                        `Name: ${name || 'N/A'}`,
-                        `Location: ${address || 'N/A'}`,
-                        coords ? `GPS: ${coords.latitude.toFixed(4)}°N, ${coords.longitude.toFixed(4)}°E` : '',
-                        `Landmark: ${landmark || 'N/A'}`,
-                        `Time: ${new Date().toLocaleString()}`,
-                        `━━━━━━━━━━━━━━━━━━`,
-                        `Track: ${window.location.origin}/track?id=${result.trackingId}`,
-                      ].filter(Boolean).join('\n')
-                      navigator.clipboard.writeText(reportText).then(() => {
-                        setCopied(true)
-                        toast('Full report copied to clipboard')
-                        setTimeout(() => setCopied(false), 3000)
-                      })
-                    }}
-                    className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-bold text-zinc-600 transition hover:bg-zinc-100 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 cursor-pointer"
-                  >
-                    <Copy className="h-3 w-3" />
-                    <span>{copied ? 'Copied!' : 'Copy All'}</span>
-                  </button>
-                </div>
-                <pre className="overflow-x-auto rounded-lg bg-[#f4f4f5] p-3 text-[11px] leading-relaxed text-zinc-700 mono dark:bg-[#151515] dark:text-slate-400">
-{`AapdaSetu SOS Report
-━━━━━━━━━━━━━━━━━━
-Tracking ID: ${result.trackingId}
-Priority: ${result.priorityLabel} (${result.priorityScore}/100)
-Type: ${selectedType}
-Contact: ${result.reporterPhone}
-Name: ${name || 'N/A'}
-Location: ${address || 'N/A'}${coords ? `\nGPS: ${coords.latitude.toFixed(4)}°N, ${coords.longitude.toFixed(4)}°E` : ''}
-Landmark: ${landmark || 'N/A'}
-Time: ${new Date().toLocaleString()}
-━━━━━━━━━━━━━━━━━━
-Track: ${typeof window !== 'undefined' ? window.location.origin : ''}/track?id=${result.trackingId}`}
-                </pre>
               </div>
 
               <div className="space-y-2">
