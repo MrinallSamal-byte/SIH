@@ -35,7 +35,7 @@ export default function Alerts() {
             <h1 className="text-2xl font-bold text-zinc-800 dark:text-slate-300">{t('bulletin.title')}</h1>
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Real-time emergency broadcasts from NDMA, SDMA, and National Incident Command.
+            {t('alerts.pageDesc')}
           </p>
         </div>
 
@@ -45,13 +45,13 @@ export default function Alerts() {
             <button
               key={sev}
               onClick={() => setFilter(sev)}
-              className={`rounded-lg px-3 py-1 text-xs font-semibold capitalize transition ${
+              className={`rounded-lg px-3 py-1 text-xs font-semibold transition ${
                 filter === sev
                   ? 'bg-zinc-800 text-white dark:bg-slate-100 dark:text-zinc-800'
                   : 'text-zinc-500 hover:text-zinc-800 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
-            >
-              {sev}
+              >
+              {sev === 'all' ? t('common.all') : sev === 'critical' ? t('alerts.sevCritical') : sev === 'warning' ? t('alerts.sevWarning') : t('alerts.sevInfo')}
             </button>
           ))}
         </div>
@@ -78,7 +78,7 @@ export default function Alerts() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Icon className="h-4.5 w-4.5 text-slate-500" />
-                  <Badge value={a.severity} />
+                  <Badge value={a.severity} label={a.severity === 'critical' ? t('alerts.sevCritical') : a.severity === 'warning' ? t('alerts.sevWarning') : t('alerts.sevInfo')} />
                   <h3 className="text-sm font-bold text-zinc-800 dark:text-slate-300">{a.title}</h3>
                 </div>
                 <div className="flex items-center gap-1 text-xs text-slate-400 mono">
@@ -92,7 +92,7 @@ export default function Alerts() {
               {a.region && (
                 <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 pt-2.5 dark:border-white/[0.08]">
                   <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                  <span className="font-semibold text-zinc-600 dark:text-slate-300">Affected Area: {a.region}</span>
+                  <span className="font-semibold text-zinc-600 dark:text-slate-300">{t('alerts.affectedArea')} {a.region}</span>
                 </div>
               )}
             </div>
@@ -101,7 +101,7 @@ export default function Alerts() {
 
         {alerts && filtered.length === 0 && (
           <div className="rounded-2xl border border-dashed border-zinc-200/80 p-12 text-center text-xs text-slate-400 dark:border-white/[0.08]">
-            No active emergency alerts in this category.
+            {t('alerts.empty')}
           </div>
         )}
       </div>

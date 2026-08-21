@@ -13,6 +13,7 @@ import {
   MapPin,
   TrendingUp,
   Flame,
+  HelpCircle,
   Phone,
   RefreshCw
 } from 'lucide-react'
@@ -29,6 +30,7 @@ const INFRA_ICONS: Record<DamageInfrastructureType, typeof Home> = {
   electrical_power: Zap,
   commercial_public: Building,
   agricultural: Flame,
+  other: HelpCircle,
 }
 
 const INFRA_LABELS: Record<DamageInfrastructureType, string> = {
@@ -38,6 +40,7 @@ const INFRA_LABELS: Record<DamageInfrastructureType, string> = {
   electrical_power: 'Power Grid Feeder',
   commercial_public: 'Commercial / Public Wing',
   agricultural: 'Agricultural / Farmland',
+  other: 'Other',
 }
 
 export default function DamageAssessment() {

@@ -71,13 +71,13 @@ export default function ReportTracker() {
           setSearchParams({ id: res.trackingId }, { replace: true })
         }
       } catch {
-        setError(`Incident "${id}" not found. Please verify the tracking ID code.`)
+        setError(t('track.notFound'))
         setReport(null)
       } finally {
         setLoading(false)
       }
     },
-    [trackingId, searchParams, setSearchParams]
+    [trackingId, searchParams, setSearchParams, t]
   )
 
   const queryParamId = searchParams.get('id')?.trim() || ''
@@ -89,7 +89,22 @@ export default function ReportTracker() {
       abortRef.current = new AbortController()
       lookup(queryParamId)
     }
-  }, [queryParamId])
+  }, [queryParamId, lookup])
+
+  const typeLabels: Record<string, string> = {
+    flood: t('report.typeFlood'),
+    medical: t('report.typeMedical'),
+    earthquake: t('report.typeEarthquake'),
+    collapse: t('report.typeEarthquake'),
+    fire: t('report.typeFire'),
+    accident: t('report.typeAccident'),
+    missing_person: t('report.typeMissing'),
+    missing: t('report.typeMissing'),
+    other: t('report.typeOther'),
+  }
+  const reportTypeLabel = report
+    ? typeLabels[report.type?.toLowerCase() ?? ''] ?? report.type.toUpperCase()
+    : ''
 
   const reportIdRef = useRef<string | null>(null)
   const reportStatusRef = useRef<string | null>(null)
@@ -157,8 +172,8 @@ export default function ReportTracker() {
     mapMarkers.push({
       id: 'incident',
       position: incidentPoint,
-      title: `Incident: ${report?.type.toUpperCase()}`,
-      subtitle: report?.landmark ?? 'Victim Location',
+      title: `${t('tracker.markerIncident')} ${reportTypeLabel}`,
+      subtitle: report?.landmark ?? t('tracker.victimLocation'),
       color: '#dc2626',
       isSos: true,
     })
@@ -168,8 +183,8 @@ export default function ReportTracker() {
     mapMarkers.push({
       id: 'responder',
       position: responderPoint,
-      title: `Rescue Unit: ${report?.assignedVolunteerName ?? 'Field Responder'}`,
-      subtitle: `En Route — ETA ~${estimatedEtaMins ?? '?'} mins`,
+      title: `${t('tracker.rescueUnit')}: ${report?.assignedVolunteerName ?? t('tracker.fieldResponder')}`,
+      subtitle: `${t('tracker.enRouteEta')}${estimatedEtaMins ?? '?'} ${t('common.mins')}`,
       color: '#2563eb',
     })
   }
@@ -181,7 +196,7 @@ export default function ReportTracker() {
       points: routePoints.length >= 2 ? routePoints : [responderPoint, incidentPoint],
       color: '#2563eb',
       dashed: false,
-      label: `Rescue Route (~${distanceKm?.toFixed(1) ?? '0.9'} km)`,
+      label: `${t('tracker.routeLabel')} (~${distanceKm?.toFixed(1) ?? '0.9'} ${t('common.km')})`,
     })
   }
 
@@ -346,7 +361,7 @@ export default function ReportTracker() {
                 <span>{t('track.liveTelemetry')}</span>
                 {responderPoint && distanceKm && (
                   <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                    {t('track.eta')}: ~{estimatedEtaMins} mins (~{distanceKm.toFixed(1)} km)
+                    {t('track.eta')}: ~{estimatedEtaMins} {t('common.mins')} (~{distanceKm.toFixed(1)} {t('common.km')})
                   </span>
                 )}
               </div>
@@ -417,20 +432,20 @@ export default function ReportTracker() {
 
           {/* Incident Info Breakdown */}
           <div className="space-y-2 rounded-xl border border-slate-100 bg-[#f4f4f5] p-4 text-xs dark:border-white/[0.08] dark:bg-[#151515]">
-            <InfoRow label={t('report.categoryLabel')} value={report.type.toUpperCase()} />
-            <InfoRow label={t('common.landmark')} value={report.landmark ?? 'GPS Coordinates Recorded'} />
+            <InfoRow label={t('report.categoryLabel')} value={reportTypeLabel} />
+            <InfoRow label={t('common.landmark')} value={report.landmark ?? t('tracker.gpsRecorded')} />
             {report.latitude != null && report.longitude != null && (
               <InfoRow
-                label="GPS"
+                label={t('tracker.gps')}
                 value={`${report.latitude.toFixed(4)}°N, ${report.longitude.toFixed(4)}°E`}
               />
             )}
             <InfoRow label={t('report.descLabel')} value={report.description ?? '—'} />
             <InfoRow label={t('report.phoneLabel')} value={report.reporterPhone ?? '—'} />
-            <InfoRow label={t('track.assignedAgency')} value={report.assignedAgencyName ?? 'NDRF / SDRF Command'} />
-            <InfoRow label={t('track.assignedVolunteer')} value={report.assignedVolunteerName ?? 'Volunteer Team In-Queue'} />
+            <InfoRow label={t('track.assignedAgency')} value={report.assignedAgencyName ?? t('tracker.commandFallback')} />
+            <InfoRow label={t('track.assignedVolunteer')} value={report.assignedVolunteerName ?? t('tracker.volunteerQueued')} />
             {report.resolutionNotes && (
-              <InfoRow label="Resolution & Safety Notes" value={report.resolutionNotes} highlight />
+              <InfoRow label={t('tracker.notesLabel')} value={report.resolutionNotes} highlight />
             )}
           </div>
 
@@ -459,14 +474,14 @@ export default function ReportTracker() {
                 className="inline-flex items-center gap-1 rounded-xl bg-red-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-red-700"
               >
                 <Phone className="h-3.5 w-3.5" />
-                <span>Call 112</span>
+                <span>{t('common.call112')}</span>
               </a>
               <a
                 href="tel:1070"
                 className="inline-flex items-center gap-1 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs font-bold text-zinc-700 shadow-xs hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200"
               >
                 <Phone className="h-3.5 w-3.5" />
-                <span>Call 1070</span>
+                <span>{t('common.call1070')}</span>
               </a>
             </div>
           </div>

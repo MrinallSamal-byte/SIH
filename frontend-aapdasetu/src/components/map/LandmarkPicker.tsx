@@ -3,6 +3,7 @@ import L from 'leaflet'
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents, ScaleControl } from 'react-leaflet'
 import { Search, MapPin, Crosshair, Sparkles } from 'lucide-react'
 import { searchPlaces, reverseGeocode, getHighPrecisionPosition, type PlaceSearchResult } from '../../lib/helpers'
+import { useLanguage } from '../../lib/i18n'
 import type { GeoPoint } from '../../types'
 
 const INDIA_BOUNDS: [[number, number], [number, number]] = [
@@ -51,6 +52,7 @@ export default function LandmarkPicker({
   onChange: (p: GeoPoint, address?: string) => void
   height?: string
 }) {
+  const { t } = useLanguage()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<PlaceSearchResult[] | null>(null)
   const [searching, setSearching] = useState(false)
@@ -79,7 +81,7 @@ export default function LandmarkPicker({
         setNoMatchFallback(q)
       }
     } catch {
-      setStatusMessage('Geocoding service unavailable. You can tap the map directly.')
+      setStatusMessage(t('lp.geocodeUnavailable'))
       setResults(null)
       setNoMatchFallback(q)
     } finally {
@@ -99,12 +101,12 @@ export default function LandmarkPicker({
     onChange(center, customAddr)
     setNoMatchFallback(null)
     setResults(null)
-    setStatusMessage(`Location set to map center with address: "${customAddr}"`)
+    setStatusMessage(`${t('lp.mapCenterSet')} "${customAddr}"`)
   }
 
   const handleLocateHighAccuracy = async () => {
     setLocatingGps(true)
-    setStatusMessage('Acquiring high-precision GPS lock...')
+    setStatusMessage(t('lp.acquiringGps'))
     try {
       const pos = await getHighPrecisionPosition()
       const p: GeoPoint = { lat: pos.coords.latitude, lng: pos.coords.longitude }
@@ -112,9 +114,9 @@ export default function LandmarkPicker({
       onChange(p, revAddr || undefined)
       if (revAddr) setQuery(revAddr)
       setView({ target: p, zoom: 17 })
-      setStatusMessage(`GPS locked (accuracy: ±${Math.round(pos.coords.accuracy ?? 5)}m)`)
+      setStatusMessage(`${t('lp.gpsLocked')} (±${Math.round(pos.coords.accuracy ?? 5)}m)`)
     } catch {
-      setStatusMessage('Could not retrieve hardware GPS. Please tap your location on the map.')
+      setStatusMessage(t('lp.gpsFail'))
     } finally {
       setLocatingGps(false)
     }
@@ -142,7 +144,7 @@ export default function LandmarkPicker({
               if (noMatchFallback) setNoMatchFallback(null)
             }}
             onKeyDown={(e) => e.key === 'Enter' && runSearch()}
-            placeholder="Search place, landmark, or area (e.g. Sunderpada, Master Canteen)"
+            placeholder={t('lp.searchPlaceholder')}
             className="w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3.5 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-white/[0.1] dark:bg-slate-900 dark:text-slate-100"
           />
         </div>
@@ -152,17 +154,17 @@ export default function LandmarkPicker({
           disabled={searching || !query.trim()}
           className="shrink-0 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-slate-800 disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer"
         >
-          {searching ? 'Searching…' : 'Locate'}
+          {searching ? t('common.searching') : t('lp.locate')}
         </button>
         <button
           type="button"
           onClick={handleLocateHighAccuracy}
           disabled={locatingGps}
-          title="Pinpoint exact location using device High-Precision GPS"
+          title={t('lp.gpsTitle')}
           className="shrink-0 inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100 hover:border-emerald-400 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900/80 cursor-pointer"
         >
           <Crosshair className={`h-3.5 w-3.5 ${locatingGps ? 'animate-spin' : ''}`} />
-          <span className="hidden sm:inline">{locatingGps ? 'Locking GPS…' : 'Live GPS'}</span>
+          <span className="hidden sm:inline">{locatingGps ? t('lp.lockingGps') : t('lp.liveGps')}</span>
         </button>
       </div>
 
@@ -187,7 +189,7 @@ export default function LandmarkPicker({
                 {r.isRelaxed && (
                   <span className="shrink-0 inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800">
                     <Sparkles className="h-2.5 w-2.5" />
-                    Area Match
+                    {t('lp.areaMatch')}
                   </span>
                 )}
               </button>
@@ -200,7 +202,7 @@ export default function LandmarkPicker({
       {noMatchFallback && (
         <div className="mb-2.5 rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300">
           <p className="font-semibold mb-1">
-            Exact building not indexed online. You can place the pin on the map or assign this address directly:
+            {t('lp.notIndexed')}
           </p>
           <div className="flex items-center gap-2 flex-wrap pt-1">
             <button
@@ -209,9 +211,9 @@ export default function LandmarkPicker({
               className="inline-flex items-center gap-1 rounded-lg bg-amber-800 px-3 py-1 text-xs font-bold text-white shadow-xs hover:bg-amber-900 dark:bg-amber-200 dark:text-amber-900 dark:hover:bg-white cursor-pointer"
             >
               <MapPin className="h-3.5 w-3.5" />
-              <span>Use address: &ldquo;{noMatchFallback.slice(0, 32)}&hellip;&rdquo;</span>
+              <span>{t('lp.useAddress')} &ldquo;{noMatchFallback.slice(0, 32)}&hellip;&rdquo;</span>
             </button>
-            <span className="text-[11px] opacity-80">or drag the pin on map to your exact building</span>
+            <span className="text-[11px] opacity-80">{t('lp.dragHint')}</span>
           </div>
         </div>
       )}
@@ -259,7 +261,7 @@ export default function LandmarkPicker({
         </MapContainer>
       </div>
       <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-        <span>* Click anywhere on map or drag pin to adjust coordinates</span>
+        <span>{t('lp.footerHint')}</span>
         {value && (
           <span className="font-mono text-[10px]">
             {value.lat.toFixed(4)}°N, {value.lng.toFixed(4)}°E

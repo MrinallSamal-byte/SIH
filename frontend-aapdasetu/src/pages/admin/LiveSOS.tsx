@@ -16,6 +16,7 @@ import Loader from '../../components/common/Loader'
 import LeafletMap, { type MapMarker } from '../../components/map/LeafletMap'
 import { useRealtime } from '../../hooks/useRealtime'
 import { timeAgo, getNavigationUrl } from '../../lib/helpers'
+import { useLanguage } from '../../lib/i18n'
 import type { GeoPoint, Report } from '../../types'
 
 // Singleton Audio Context for alarm siren
@@ -55,6 +56,7 @@ function playCriticalAlarm() {
 }
 
 export default function LiveSOS() {
+  const { t } = useLanguage()
   const fetchReports = useCallback(() => listReports({ status: 'pending' }), [])
   const reports = useRealtime<Report[]>(fetchReports, 3000)
   const [audioEnabled, setAudioEnabled] = useState(false)
@@ -100,7 +102,7 @@ export default function LiveSOS() {
       .map((r) => ({
         id: r.id,
         position: { lat: r.latitude!, lng: r.longitude! },
-        title: `SOS: ${r.type.toUpperCase()} (${r.trackingId})`,
+        title: `${t('ls.sos')} ${r.type.toUpperCase()} (${r.trackingId})`,
         subtitle: `${r.description ?? ''} - Reported ${timeAgo(r.createdAt)}`,
         color: r.priorityLabel === 'RED' ? '#dc2626' : '#f59e0b',
         isSos: true,
@@ -121,12 +123,12 @@ export default function LiveSOS() {
           <div className="flex items-center gap-2">
             <Siren className="h-6 w-6 text-red-600 animate-pulse" />
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-              Live Emergency SOS Stream
+              {t('ls.title')}
             </h1>
           </div>
           <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1">
             <span className="inline-block h-2 w-2 rounded-full bg-red-500 animate-ping" />
-            <span>Active Realtime Distress Queue ({reports.length} pending incidents)</span>
+            <span>{t('ls.activeDistressQueue')} ({reports.length} {t('ls.pendingIncidents')})</span>
           </div>
         </div>
 
@@ -134,12 +136,12 @@ export default function LiveSOS() {
           {!audioEnabled ? (
             <Button variant="outline" size="sm" onClick={enableAudio} className="font-bold flex items-center gap-1.5">
               <Volume2 className="h-4 w-4 text-slate-700 dark:text-slate-300" />
-              <span>Enable Audio Siren</span>
+              <span>{t('ls.enableAudioSiren')}</span>
             </Button>
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 shadow-xs">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Siren Active</span>
+              <span>{t('ls.sirenActive')}</span>
             </span>
           )}
         </div>
@@ -148,8 +150,8 @@ export default function LiveSOS() {
       {/* Realistic Tactical Satellite Map */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
-          <span>Active Distress Map ({markers.length} Geolocated Incidents)</span>
-          <span className="text-[11px] text-slate-400">Layer switcher active (Satellite / Terrain / Streets)</span>
+          <span>{t('ls.activeDistressMap')} ({markers.length} {t('ls.geolocatedIncidents')})</span>
+          <span className="text-[11px] text-slate-400">{t('ls.layerSwitcherHint')}</span>
         </div>
         <div className="h-72 rounded-2xl overflow-hidden shadow-xs border border-slate-200 dark:border-slate-800">
           <LeafletMap
@@ -175,7 +177,7 @@ export default function LiveSOS() {
             <div className="flex flex-wrap items-center gap-2">
               <PriorityBadge label={r.priorityLabel} />
               <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100">{r.trackingId}</span>
-              <span className="text-xs font-bold capitalize text-slate-800 dark:text-slate-200">{r.type} Emergency</span>
+              <span className="text-xs font-bold capitalize text-slate-800 dark:text-slate-200">{r.type} {t('ls.emergency')}</span>
               <Badge value={r.status} />
               <span className="ml-auto text-xs text-slate-400 mono">{timeAgo(r.createdAt)}</span>
             </div>
@@ -186,13 +188,13 @@ export default function LiveSOS() {
               {r.landmark && (
                 <div className="flex items-center gap-1">
                   <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                  <span>Location: <strong className="text-slate-700 dark:text-slate-300">{r.landmark}</strong></span>
+                  <span>{t('ls.location')}: <strong className="text-slate-700 dark:text-slate-300">{r.landmark}</strong></span>
                 </div>
               )}
               {r.reporterPhone && (
                 <div className="flex items-center gap-1">
                   <Phone className="h-3.5 w-3.5 text-slate-400" />
-                  <span>Contact: <a href={`tel:${r.reporterPhone}`} className="text-slate-900 dark:text-slate-100 underline font-mono font-bold hover:text-emerald-600">{r.reporterPhone}</a></span>
+                  <span>{t('ls.contact')}: <a href={`tel:${r.reporterPhone}`} className="text-slate-900 dark:text-slate-100 underline font-mono font-bold hover:text-emerald-600">{r.reporterPhone}</a></span>
                 </div>
               )}
             </div>
@@ -207,7 +209,7 @@ export default function LiveSOS() {
                     className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
                   >
                     <Navigation className="h-3.5 w-3.5" />
-                    <span>Map Directions</span>
+                    <span>{t('ls.mapDirections')}</span>
                   </a>
                 )}
                 {r.reporterPhone && (
@@ -216,20 +218,20 @@ export default function LiveSOS() {
                     className="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/50 dark:text-emerald-300 cursor-pointer"
                   >
                     <Phone className="h-3.5 w-3.5" />
-                    <span>Call Victim</span>
+                    <span>{t('ls.callVictim')}</span>
                   </a>
                 )}
               </div>
 
               <div className="flex items-center gap-2">
                 <Button variant="secondary" size="sm" onClick={() => acknowledge(r.id)} className="font-bold">
-                  Acknowledge & Triage
+                  {t('ls.acknowledgeTriage')}
                 </Button>
                 <Link
                   to="/admin/reports"
                   className="inline-flex items-center gap-1 rounded-xl bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer"
                 >
-                  <span>Dispatch Unit</span>
+                  <span>{t('ls.dispatchUnit')}</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
@@ -239,7 +241,7 @@ export default function LiveSOS() {
 
         {reports.length === 0 && (
           <div className="rounded-2xl border border-dashed border-slate-300 p-12 text-center text-sm text-slate-400 dark:border-slate-800">
-            No pending emergency SOS alerts in queue. Command Center operational.
+            {t('ls.emptyQueue')}
           </div>
         )}
       </div>

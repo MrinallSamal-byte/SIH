@@ -19,9 +19,11 @@ import Loader from '../../components/common/Loader'
 import { useRealtime } from '../../hooks/useRealtime'
 import { useToast } from '../../components/common/Toast'
 import { timeAgo } from '../../lib/helpers'
+import { useLanguage } from '../../lib/i18n'
 import type { OverviewKPIs, Report } from '../../types'
 
 export default function Overview() {
+  const { t } = useLanguage()
   const { toast } = useToast()
   const fetchKpis = useCallback(() => getOverviewKPIs(), [])
   const kpis = useRealtime<OverviewKPIs>(fetchKpis, 6000)
@@ -32,9 +34,9 @@ export default function Overview() {
   const handleAcknowledge = async (id: string) => {
     try {
       await updateReport(id, { status: 'in_progress' })
-      toast('Incident acknowledged and moved to triage queue.', 'success')
+      toast(t('ov.ackSuccess'), 'success')
     } catch {
-      toast('Failed to acknowledge report', 'error')
+      toast(t('ov.ackFailed'), 'error')
     }
   }
 
@@ -42,92 +44,92 @@ export default function Overview() {
 
   const cards = [
     {
-      label: 'Active RED Alerts',
+      label: t('ov.cardRedAlerts'),
       value: kpis.activeRedAlerts,
       color: 'text-red-600 dark:text-red-400',
       bg: 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900/50',
       icon: Siren,
       to: '/admin/live-sos',
-      desc: 'Critical distress cases requiring immediate unit dispatch',
+      desc: t('ov.cardRedAlertsDesc'),
     },
     {
-      label: 'Total Incident Reports',
+      label: t('ov.cardTotalReports'),
       value: kpis.totalReports.toLocaleString(),
       color: 'text-slate-900 dark:text-slate-100',
       bg: 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800',
       icon: FileText,
       to: '/admin/reports',
-      desc: 'Total geotagged incidents across disaster sectors',
+      desc: t('ov.cardTotalReportsDesc'),
     },
     {
-      label: 'Open Relief Shelters',
+      label: t('ov.cardOpenShelters'),
       value: kpis.openShelters,
       color: 'text-emerald-600 dark:text-emerald-400',
       bg: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900/50',
       icon: Building,
       to: '/admin/shelters',
-      desc: 'Relief camps currently admitting displaced citizens',
+      desc: t('ov.cardOpenSheltersDesc'),
     },
     {
-      label: 'Volunteer Force Ready',
+      label: t('ov.cardVolunteersReady'),
       value: kpis.availableVolunteers,
       color: 'text-blue-600 dark:text-blue-400',
       bg: 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-900/50',
       icon: Users,
       to: '/admin/volunteers',
-      desc: 'Trained first-aid & rescue volunteers available',
+      desc: t('ov.cardVolunteersReadyDesc'),
     },
     {
-      label: 'Avg Response Time',
+      label: t('ov.cardAvgResponse'),
       value: `${kpis.avgResponseTimeMins}m`,
       color: 'text-amber-600 dark:text-amber-400',
       bg: 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/50',
       icon: Clock,
       to: '/admin/analytics',
-      desc: 'Time from distress SOS trigger to first unit arrival',
+      desc: t('ov.cardAvgResponseDesc'),
     },
     {
-      label: 'Pending Resolution',
+      label: t('ov.cardPendingResolution'),
       value: kpis.openCases,
       color: 'text-purple-600 dark:text-purple-400',
       bg: 'bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-900/50',
       icon: AlertTriangle,
       to: '/admin/reports',
-      desc: 'Open cases being actively mitigated by field teams',
+      desc: t('ov.cardPendingResolutionDesc'),
     },
   ]
 
   const quickActions = [
     {
-      title: 'Live SOS Stream',
-      desc: 'Realtime distress beacon queue with audio sirens & directions',
+      title: t('ov.qaLiveSos'),
+      desc: t('ov.qaLiveSosDesc'),
       to: '/admin/live-sos',
       icon: Siren,
-      badge: `${kpis.activeRedAlerts} Active`,
+      badge: `${kpis.activeRedAlerts} ${t('ov.active')}`,
       accent: 'border-red-300 hover:border-red-500 bg-red-50/50 dark:bg-red-950/20 text-red-700 dark:text-red-300',
     },
     {
-      title: 'Incident Triage & Dispatch',
-      desc: 'Assign nearest volunteers and multi-agency units by proximity',
+      title: t('ov.qaTriage'),
+      desc: t('ov.qaTriageDesc'),
       to: '/admin/reports',
       icon: FileText,
-      badge: 'Proximity Match',
+      badge: t('ov.badgeProximityMatch'),
       accent: 'border-blue-300 hover:border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-300',
     },
     {
-      title: 'Damage Claims & AI Vision',
-      desc: 'Review ResNet-50 graded structural damage compensation claims',
+      title: t('ov.qaDamageClaims'),
+      desc: t('ov.qaDamageClaimsDesc'),
       to: '/admin/damage',
       icon: ShieldCheck,
-      badge: 'SDRF Grants',
+      badge: t('ov.badgeSdrfGrants'),
       accent: 'border-emerald-300 hover:border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300',
     },
     {
-      title: 'Emergency Broadcaster',
-      desc: 'Push multi-channel alerts across SMS, WhatsApp & web ticker',
+      title: t('ov.qaBroadcaster'),
+      desc: t('ov.qaBroadcasterDesc'),
       to: '/admin/alerts',
       icon: Megaphone,
-      badge: 'Multi-Channel',
+      badge: t('ov.badgeMultiChannel'),
       accent: 'border-amber-300 hover:border-amber-500 bg-amber-50/50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-300',
     },
   ]
@@ -140,18 +142,18 @@ export default function Overview() {
           <div className="flex items-center gap-2">
             <Radio className="h-6 w-6 text-red-600 animate-pulse" />
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-              Disaster Command Center & Live Gauge
+              {t('ov.title')}
             </h1>
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Realtime situational awareness, multi-agency response telemetry, and tactical resource allocation.
+            {t('ov.subtitle')}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 shadow-2xs">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>NDRF Telemetry Synchronized</span>
+            <span>{t('ov.ndrfSynced')}</span>
           </span>
         </div>
       </div>
@@ -168,7 +170,7 @@ export default function Overview() {
             >
               <div className="flex items-center justify-between">
                 <Icon className={`h-4 w-4 ${c.color}`} />
-                <span className="text-[10px] text-slate-400 font-bold uppercase mono">Live</span>
+                <span className="text-[10px] text-slate-400 font-bold uppercase mono">{t('ov.live')}</span>
               </div>
               <div className="my-2">
                 <div className={`text-2xl sm:text-3xl font-extrabold font-mono tracking-tight ${c.color}`}>
@@ -193,18 +195,18 @@ export default function Overview() {
           <div>
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mono">
-                Crisis Severity Gauge
+                {t('ov.crisisGauge')}
               </h2>
               <span className={`text-xs font-bold font-mono px-2 py-0.5 rounded-full ${
                 kpis.crisisScore >= 80 ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300' :
                 kpis.crisisScore >= 50 ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' :
                 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
               }`}>
-                {kpis.crisisScore >= 80 ? 'CRITICAL LEVEL' : kpis.crisisScore >= 50 ? 'ELEVATED RISK' : 'STABLE RISK'}
+                {kpis.crisisScore >= 80 ? t('ov.criticalLevel') : kpis.crisisScore >= 50 ? t('ov.elevatedRisk') : t('ov.stableRisk')}
               </span>
             </div>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Composite index computed from active RED alerts, pending rescue requests, and flood water levels.
+              {t('ov.crisisGaugeDesc')}
             </p>
           </div>
 
@@ -222,28 +224,28 @@ export default function Overview() {
                 <span className="text-3xl font-black font-mono text-slate-900 dark:text-slate-100">
                   {kpis.crisisScore}
                 </span>
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mono">/ 100 PTS</span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mono">{t('ov.outOf100')}</span>
               </div>
             </div>
 
             <div className="space-y-2 text-xs">
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full bg-red-600" />
-                <span className="font-medium text-slate-700 dark:text-slate-300">RED: &gt;80 Critical</span>
+                <span className="font-medium text-slate-700 dark:text-slate-300">{t('ov.legendRed')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
-                <span className="font-medium text-slate-700 dark:text-slate-300">YELLOW: 50-80 Alert</span>
+                <span className="font-medium text-slate-700 dark:text-slate-300">{t('ov.legendYellow')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                <span className="font-medium text-slate-700 dark:text-slate-300">GREEN: &lt;50 Normal</span>
+                <span className="font-medium text-slate-700 dark:text-slate-300">{t('ov.legendGreen')}</span>
               </div>
             </div>
           </div>
 
           <div className="border-t border-slate-100 pt-3 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400">
-            Updated live every 6s via National Incident Command telemetry.
+            {t('ov.updatedLiveNote')}
           </div>
         </div>
 
@@ -251,34 +253,34 @@ export default function Overview() {
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
           <div>
             <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mono">
-              Response Readiness Pulse
+              {t('ov.readinessPulse')}
             </h2>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Real-time resource deployment vs active incident load.
+              {t('ov.readinessPulseDesc')}
             </p>
           </div>
 
           <div className="space-y-4 my-2 text-xs">
             <Bar
-              label="Incidents Handled & Mobilized"
+              label={t('ov.barHandled')}
               value={kpis.totalReports - kpis.openCases}
               max={Math.max(kpis.totalReports, 1)}
               color="bg-emerald-600"
             />
             <Bar
-              label="Open / Pending Triage"
+              label={t('ov.barOpenTriage')}
               value={kpis.openCases}
               max={Math.max(kpis.totalReports, 1)}
               color="bg-blue-600"
             />
             <Bar
-              label="Critical RED Distress Active"
+              label={t('ov.barCriticalRed')}
               value={kpis.activeRedAlerts}
               max={Math.max(kpis.totalReports, 1)}
               color="bg-red-600"
             />
             <Bar
-              label="Shelter Beds Available"
+              label={t('ov.barShelterBeds')}
               value={Math.round(kpis.openShelters * 240)}
               max={Math.max(kpis.openShelters * 350, 1000)}
               color="bg-purple-600"
@@ -286,9 +288,9 @@ export default function Overview() {
           </div>
 
           <div className="flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800 text-[11px]">
-            <span className="text-slate-500">Volunteers: <strong className="text-slate-800 dark:text-slate-200">{kpis.availableVolunteers} Ready</strong></span>
+            <span className="text-slate-500">{t('ov.volunteers')}: <strong className="text-slate-800 dark:text-slate-200">{kpis.availableVolunteers} {t('ov.ready')}</strong></span>
             <Link to="/admin/analytics" className="font-bold text-slate-900 dark:text-slate-100 hover:underline inline-flex items-center gap-1">
-              <span>View Full Intel</span>
+              <span>{t('ov.viewFullIntel')}</span>
               <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
@@ -298,10 +300,10 @@ export default function Overview() {
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
           <div>
             <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mono">
-              Command Quick Launch
+              {t('ov.quickLaunch')}
             </h2>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Instant operations shortcuts for emergency controllers.
+              {t('ov.quickLaunchDesc')}
             </p>
           </div>
 
@@ -334,8 +336,8 @@ export default function Overview() {
           </div>
 
           <div className="border-t border-slate-100 pt-3 dark:border-slate-800 text-[11px] text-slate-500 flex items-center justify-between">
-            <span>Official Helpline: <strong>112</strong></span>
-            <span>SDRF Command: <strong>1070</strong></span>
+            <span>{t('ov.helpline')}: <strong>112</strong></span>
+            <span>{t('ov.sdrfCommand')}: <strong>1070</strong></span>
           </div>
         </div>
       </div>
@@ -347,14 +349,14 @@ export default function Overview() {
             <div className="flex items-center gap-2">
               <Siren className="h-4.5 w-4.5 text-red-600 animate-pulse" />
               <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mono">
-                Pending SOS Distress Stream ({pendingReports.length} Unassigned Incidents)
+                {t('ov.pendingSosStream')} ({pendingReports.length} {t('ov.unassignedIncidents')})
               </h2>
             </div>
             <Link
               to="/admin/live-sos"
               className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:underline dark:text-red-400"
             >
-              <span>Open Tactical Stream Map</span>
+              <span>{t('ov.openStreamMap')}</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -368,7 +370,7 @@ export default function Overview() {
                 <div className="flex flex-wrap items-center gap-2.5">
                   <PriorityBadge label={r.priorityLabel} />
                   <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">{r.trackingId}</span>
-                  <span className="text-xs font-bold capitalize text-slate-700 dark:text-slate-300">{r.type} Emergency</span>
+                  <span className="text-xs font-bold capitalize text-slate-700 dark:text-slate-300">{r.type} {t('ov.emergency')}</span>
                   <span className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs sm:max-w-md">{r.description}</span>
                 </div>
 
@@ -380,7 +382,7 @@ export default function Overview() {
                     className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer"
                   >
                     <CheckCircle2 className="h-3 w-3" />
-                    <span>Acknowledge</span>
+                    <span>{t('ov.acknowledge')}</span>
                   </button>
                 </div>
               </div>

@@ -269,6 +269,7 @@ export type DamageInfrastructureType =
   | 'electrical_power'
   | 'commercial_public'
   | 'agricultural'
+  | 'other'
 
 export type DamageGrade = 'DESTROYED' | 'MAJOR' | 'MINOR'
 

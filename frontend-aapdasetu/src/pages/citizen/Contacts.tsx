@@ -12,13 +12,13 @@ import {
 import { useLanguage } from '../../lib/i18n'
 
 const contacts = [
-  { name: 'National Emergency (SOS)', num: '112', icon: Siren, highlight: true },
-  { name: 'Ambulance', num: '108', icon: Ambulance },
-  { name: 'Police', num: '100', icon: Shield },
-  { name: 'Fire Brigade', num: '101', icon: Flame },
-  { name: 'Disaster Helpline (NDMA)', num: '1070', icon: HeartPulse },
-  { name: 'Flood Control Room', num: '1070', icon: Droplets },
-  { name: 'NDRF Control Room', num: '011-24363260', icon: HardHat },
+  { nameKey: 'contacts.nationalSos', num: '112', icon: Siren, highlight: true },
+  { nameKey: 'contacts.ambulance', num: '108', icon: Ambulance },
+  { nameKey: 'contacts.police', num: '100', icon: Shield },
+  { nameKey: 'contacts.fire', num: '101', icon: Flame },
+  { nameKey: 'contacts.ndmaHelpline', num: '1070', icon: HeartPulse },
+  { nameKey: 'contacts.floodControl', num: '1070', icon: Droplets },
+  { nameKey: 'contacts.ndrfControl', num: '011-24363260', icon: HardHat },
 ]
 
 export default function Contacts() {
@@ -57,7 +57,7 @@ export default function Contacts() {
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-bold text-red-700 dark:text-red-300">
-                  {c.name}
+                  {t(c.nameKey)}
                 </h3>
                 <span className="mono text-2xl font-extrabold tracking-tight text-red-700 dark:text-red-300">
                   {c.num}
@@ -76,7 +76,7 @@ export default function Contacts() {
             const Icon = c.icon
             return (
               <a
-                key={c.num + c.name}
+                key={c.num + c.nameKey}
                 href={`tel:${c.num}`}
                 className="group flex items-center gap-4 rounded-2xl border border-zinc-200/80 bg-white p-5 transition-all duration-200 hover:border-slate-400 active:scale-[0.98] dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:hover:border-slate-600/80"
               >
@@ -85,7 +85,7 @@ export default function Contacts() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-sm font-bold text-zinc-800 dark:text-slate-300">
-                    {c.name}
+                    {t(c.nameKey)}
                   </h3>
                   <span className="mono text-lg font-bold tracking-tight text-zinc-800 dark:text-slate-300">
                     {c.num}

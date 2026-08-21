@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   Siren,
   FileText,
+  FileWarning,
   Search,
   Home as HomeIcon,
   Building,
@@ -40,6 +41,7 @@ const topNavItems: NavLinkItem[] = [
 const featureNavItems: NavLinkItem[] = [
   { to: '/sos', labelKey: 'nav.sos', isSos: true },
   { to: '/report', labelKey: 'nav.report' },
+  { to: '/report-damage', labelKey: 'nav.damage' },
   { to: '/track', labelKey: 'nav.track' },
   { to: '/shelters', labelKey: 'nav.shelters' },
   { to: '/safe-routes', labelKey: 'nav.routes' },
@@ -49,6 +51,7 @@ const featureNavItems: NavLinkItem[] = [
 const featureIconMap: Record<string, typeof Siren> = {
   '/sos': Siren,
   '/report': FileText,
+  '/report-damage': FileWarning,
   '/track': Search,
   '/shelters': Building,
   '/safe-routes': Compass,
@@ -175,7 +178,7 @@ export default function MainLayout() {
           </Link>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-3" aria-label="Desktop Navigation">
+          <nav className="hidden lg:flex items-center gap-3" aria-label={t('layout.navDesktop')}>
             {topNavItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -243,7 +246,7 @@ export default function MainLayout() {
             {/* Language Selector */}
             <div className="relative">
               <select
-                aria-label="Language selector"
+                aria-label={t('layout.langSelector')}
                 value={lang}
                 onChange={(e) => setLang(e.target.value as Language)}
                 className="rounded-lg border border-zinc-200/80 bg-[#f4f4f5] px-2.5 py-1.5 text-xs font-bold text-zinc-700 outline-none transition hover:bg-zinc-100 focus:border-zinc-500 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-200 dark:hover:bg-[#252525] cursor-pointer"
@@ -265,7 +268,7 @@ export default function MainLayout() {
                   setNotifRead(true)
                 }}
                 className="relative rounded-lg border border-zinc-200/80 bg-white p-2.5 text-zinc-500 transition hover:bg-orange-50 hover:text-orange-700 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-400 dark:hover:bg-orange-950 dark:hover:text-orange-300"
-                aria-label="Notifications"
+                aria-label={t('layout.notifications')}
               >
                 <Bell className="h-5 w-5" />
                 {bulletins.length > 0 && !notifRead && (
@@ -280,20 +283,20 @@ export default function MainLayout() {
                   <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-white/[0.08]">
                     <div className="flex items-center gap-2">
                       <Bell className="h-4 w-4 text-zinc-500 dark:text-slate-400" />
-                      <span className="text-sm font-bold text-zinc-800 dark:text-slate-300">Bulletins</span>
+                      <span className="text-sm font-bold text-zinc-800 dark:text-slate-300">{t('layout.bulletins')}</span>
                     </div>
                     <Link
                       to="/alerts"
                       onClick={() => setNotifOpen(false)}
                       className="text-[11px] font-bold text-orange-600 hover:underline dark:text-orange-400"
                     >
-                      View all
+                      {t('layout.viewAll')}
                     </Link>
                   </div>
 
                   {bulletins.length === 0 ? (
                     <div className="px-4 py-8 text-center text-xs text-slate-400 dark:text-slate-500">
-                      No active bulletins
+                      {t('layout.noBulletins')}
                     </div>
                   ) : (
                     <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -324,7 +327,7 @@ export default function MainLayout() {
               type="button"
               onClick={toggleTheme}
               className="rounded-lg border border-zinc-200/80 bg-white p-2.5 text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-400 dark:hover:bg-[#252525] dark:hover:text-slate-200"
-              aria-label="Toggle theme"
+              aria-label={t('layout.toggleTheme')}
             >
               {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
@@ -334,7 +337,7 @@ export default function MainLayout() {
               type="button"
               onClick={() => setMobileMenuOpen((o) => !o)}
               className="rounded-lg border border-zinc-200/80 bg-white p-2.5 text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800 lg:hidden dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-400 dark:hover:bg-[#252525]"
-              aria-label="Toggle mobile menu"
+              aria-label={t('layout.toggleMenu')}
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -422,7 +425,7 @@ export default function MainLayout() {
       {/* Fixed Mobile Bottom Action Bar */}
       <nav
         className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-zinc-200/80 bg-white/95 py-2 px-1 backdrop-blur-md md:hidden dark:border-white/[0.06] dark:bg-[#181818]/95"
-        aria-label="Mobile Navigation"
+        aria-label={t('layout.navMobile')}
       >
         {mobileBottomTabs.map((tab) => {
           const Icon = tab.icon

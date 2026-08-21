@@ -102,7 +102,7 @@ export default function MissingPersons() {
                       : 'bg-slate-100 text-zinc-500 hover:bg-slate-200 dark:bg-[#222222] dark:text-slate-300'
                   }`}
                 >
-                  {st}
+                  {st === 'all' ? t('common.all') : st === 'open' ? t('missing.filterOpen') : st === 'matched' ? t('missing.filterMatched') : t('missing.filterResolved')}
                 </button>
               ))}
             </div>
@@ -133,7 +133,7 @@ export default function MissingPersons() {
                       >
                         <img src={p.photoUrl} alt={p.name} className="h-full w-full object-cover transition" />
                         <span className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition group-hover:opacity-100 text-[10px] font-bold text-white">
-                          View
+                          {t('missing.view')}
                         </span>
                       </button>
                     ) : (
@@ -149,21 +149,21 @@ export default function MissingPersons() {
                             {p.name}
                             {p.age !== undefined && (
                               <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400 mono">
-                                (Age: {p.age})
+                                ({t('common.age')}: {p.age})
                               </span>
                             )}
                           </div>
                           <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                            Gender: <strong className="capitalize">{p.gender || 'Not specified'}</strong>
+                            {t('missing.genderLabel')} <strong className="capitalize">{p.gender === 'male' ? t('missing.male') : p.gender === 'female' ? t('missing.female') : p.gender ? t('missing.other') : t('missing.notSpecified')}</strong>
                           </div>
                         </div>
-                        <Badge value={p.status} />
+                        <Badge value={p.status} label={p.status === 'open' ? t('missing.filterOpen') : p.status === 'matched' ? t('missing.filterMatched') : p.status === 'resolved' ? t('missing.filterResolved') : p.status} />
                       </div>
 
                       <div className="mt-2 space-y-1 text-xs text-zinc-500 dark:text-slate-300">
                         <div className="flex items-center gap-1">
                           <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                          <span>{t('missing.lastSeen')}: <strong>{p.lastSeenLocation ?? 'Unknown'}</strong></span>
+                          <span>{t('missing.lastSeen')}: <strong>{p.lastSeenLocation ?? t('missing.unknown')}</strong></span>
                         </div>
                         {p.clothes && (
                           <div className="text-slate-500 italic">
@@ -191,7 +191,7 @@ export default function MissingPersons() {
 
               {filteredPersons.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-zinc-200 p-12 text-center text-xs text-slate-500 dark:border-white/[0.08] dark:text-slate-400">
-                  No missing person records matched your search.
+                  {t('missing.empty')}
                 </div>
               )}
             </div>
@@ -215,13 +215,13 @@ export default function MissingPersons() {
           onClick={() => setEnlargedPhoto(null)}
         >
           <div className="relative max-w-lg overflow-hidden rounded-2xl bg-white p-3 dark:bg-[#1a1a1a] shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <img src={enlargedPhoto} alt="Enlarged visual ID" className="max-h-[80vh] w-full rounded-xl object-contain" />
+            <img src={enlargedPhoto} alt={t('missing.photoPreviewAlt')} className="max-h-[80vh] w-full rounded-xl object-contain" />
             <button
               type="button"
               onClick={() => setEnlargedPhoto(null)}
               className="mt-3 w-full rounded-xl bg-slate-100 py-2 text-xs font-bold text-zinc-700 hover:bg-slate-200 dark:bg-[#222222] dark:text-slate-200"
             >
-              Close Preview
+              {t('missing.closePreview')}
             </button>
           </div>
         </div>
@@ -248,12 +248,12 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
     const file = e.target.files?.[0]
     if (!file) return
     if (!file.type.startsWith('image/')) {
-      toast('Only image files allowed', 'error')
+      toast(t('missing.errImageOnly'), 'error')
       e.target.value = ''
       return
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast('Image exceeds 5MB limit', 'error')
+      toast(t('missing.errImageSize'), 'error')
       e.target.value = ''
       return
     }
@@ -261,9 +261,9 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
     try {
       const compressed = await compressImage(file, 800, 0.75)
       setPhotoDataUrl(compressed)
-      toast('Photo attached and optimized for disaster upload')
+      toast(t('missing.photoAttached'))
     } catch {
-      toast('Could not process photo', 'error')
+      toast(t('missing.errProcessPhoto'), 'error')
     } finally {
       setCompressing(false)
       e.target.value = ''
@@ -272,23 +272,23 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
 
   const submit = async () => {
     if (!name.trim()) {
-      toast('Please enter the missing person name', 'error')
+      toast(t('missing.errName'), 'error')
       return
     }
     if (!lastSeenLocation.trim()) {
-      toast('Please specify the last seen location', 'error')
+      toast(t('missing.errLastSeen'), 'error')
       return
     }
     if (!photoDataUrl) {
-      toast('Please upload a clear photo (required for identification)', 'error')
+      toast(t('missing.errPhotoRequired'), 'error')
       return
     }
     if (!age.trim()) {
-      toast('Please enter age (required)', 'error')
+      toast(t('missing.errAge'), 'error')
       return
     }
     if (!contactPhone.trim() || contactPhone.replace(/\D/g, '').length < 10) {
-      toast('Please provide a valid 10-digit contact phone number', 'error')
+      toast(t('missing.errContactPhone'), 'error')
       return
     }
 
@@ -306,7 +306,7 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
         contactPhone: contactPhone.replace(/\D/g, ''),
         photoUrl: photoDataUrl || undefined,
       })
-      toast('Missing person registered in system')
+      toast(t('missing.registered'))
       setName('')
       setAge('')
       setLastSeenLocation('')
@@ -315,7 +315,7 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
       setPhotoDataUrl(null)
       onSubmitted(person)
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Submission failed', 'error')
+      toast(err instanceof Error ? err.message : t('common.submissionFailed'), 'error')
     } finally {
       setSending(false)
     }
@@ -335,7 +335,7 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
         <div className="flex items-center gap-3">
           {photoDataUrl ? (
             <div className="relative h-16 w-16 overflow-hidden rounded-xl border border-zinc-200/80 dark:border-white/[0.1]">
-              <img src={photoDataUrl} alt="Preview" className="h-full w-full object-cover" />
+              <img src={photoDataUrl} alt={t('missing.previewAlt')} className="h-full w-full object-cover" />
               <button
                 type="button"
                 onClick={() => setPhotoDataUrl(null)}
@@ -364,14 +364,14 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
             disabled={compressing}
             onClick={() => fileInputRef.current?.click()}
           >
-            {compressing ? 'Optimizing…' : photoDataUrl ? 'Change Photo' : t('missing.uploadPhoto')}
+            {compressing ? t('missing.optimizing') : photoDataUrl ? t('missing.changePhoto') : t('missing.uploadPhoto')}
           </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <Field label={`${t('missing.age')} *`}>
-          <Input type="number" min="0" max="120" value={age} onChange={(e) => setAge(e.target.value)} placeholder="e.g. 35" required />
+          <Input type="number" min="0" max="120" value={age} onChange={(e) => setAge(e.target.value)} placeholder={t('missing.agePlaceholder')} required />
         </Field>
         <Field label={`${t('missing.gender')} *`}>
           <select
@@ -390,7 +390,7 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
         <Input
           value={lastSeenLocation}
           onChange={(e) => setLastSeenLocation(e.target.value)}
-          placeholder="e.g. Near Salt Lake Karunamoyee Bus Stand"
+          placeholder={t('missing.locationPlaceholder')}
           required
         />
       </Field>
@@ -399,7 +399,7 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
         <Input
           value={clothes}
           onChange={(e) => setClothes(e.target.value)}
-          placeholder="e.g. Blue shirt, black jeans, wears spectacles"
+          placeholder={t('missing.clothesPlaceholder')}
         />
       </Field>
 

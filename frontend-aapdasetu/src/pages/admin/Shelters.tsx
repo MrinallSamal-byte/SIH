@@ -18,22 +18,34 @@ import LeafletMap, { type MapMarker } from '../../components/map/LeafletMap'
 import LandmarkPicker from '../../components/map/LandmarkPicker'
 import { useRealtime } from '../../hooks/useRealtime'
 import { useToast } from '../../components/common/Toast'
+import { useLanguage } from '../../lib/i18n'
 import type { GeoPoint, Shelter, ShelterStatus } from '../../types'
 
 export type FacilityType = 'food' | 'water' | 'medical_station' | 'power_generator'
 
-const ALL_FACILITIES: { id: FacilityType; label: string }[] = [
-  { id: 'food', label: 'Food & Meals' },
-  { id: 'water', label: 'Clean Drinking Water' },
-  { id: 'medical_station', label: 'Medical Station / First Aid' },
-  { id: 'power_generator', label: 'Power Generator' },
+const ALL_FACILITIES: FacilityType[] = [
+  'food',
+  'water',
+  'medical_station',
+  'power_generator',
 ]
 
 export default function AdminShelters() {
+  const { t } = useLanguage()
   const { toast } = useToast()
   // Include all shelters (even closed/hidden ones) in admin view
   const fetchShelters = useCallback(() => listShelters(undefined, true), [])
   const shelters = useRealtime<Shelter[]>(fetchShelters, 5000)
+
+  const facilityLabels: Record<FacilityType, string> = {
+    food: t('sh.facilityFood'),
+    water: t('sh.facilityWater'),
+    medical_station: t('sh.facilityMedical'),
+    power_generator: t('sh.facilityPower'),
+  }
+
+  const statusText = (st: ShelterStatus) =>
+    st === 'open' ? t('sh.open') : st === 'full' ? t('sh.full') : t('sh.closed')
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -97,7 +109,7 @@ export default function AdminShelters() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim() || !address.trim()) {
-      toast('Please enter shelter name and address', 'error')
+      toast(t('sh.enterNameAddress'), 'error')
       return
     }
 
@@ -120,7 +132,7 @@ export default function AdminShelters() {
           contactPhone: contactPhone.trim() || undefined,
           status,
         })
-        toast(`Shelter "${name}" updated successfully!`, 'success')
+        toast(`${t('sh.updated')} "${name}"`, 'success')
       } else {
         await createShelter({
           name: name.trim(),
@@ -133,12 +145,12 @@ export default function AdminShelters() {
           contactPhone: contactPhone.trim() || undefined,
           status,
         })
-        toast(`New shelter "${name}" created and published to citizens!`, 'success')
+        toast(`${t('sh.created')} "${name}"`, 'success')
       }
 
       setModalOpen(false)
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Failed to save shelter', 'error')
+      toast(err instanceof Error ? err.message : t('sh.saveFailed'), 'error')
     } finally {
       setSaving(false)
     }
@@ -146,12 +158,12 @@ export default function AdminShelters() {
 
   // Delete Shelter
   const handleDelete = async (id: string, shelterName: string) => {
-    if (window.confirm(`Are you sure you want to permanently delete shelter "${shelterName}"? It will be removed from all citizen maps.`)) {
+    if (window.confirm(`${t('sh.deleteConfirm')} "${shelterName}". ${t('sh.deleteConfirmNote')}`)) {
       try {
         await deleteShelter(id)
-        toast(`Shelter "${shelterName}" deleted.`, 'success')
+        toast(`${t('sh.deleted')} "${shelterName}"`, 'success')
       } catch (err) {
-        toast(err instanceof Error ? err.message : 'Failed to delete shelter', 'error')
+        toast(err instanceof Error ? err.message : t('sh.deleteFailed'), 'error')
       }
     }
   }
@@ -160,9 +172,9 @@ export default function AdminShelters() {
   const handleQuickStatus = async (s: Shelter, newStatus: ShelterStatus) => {
     try {
       await updateShelter(s.id, { status: newStatus })
-      toast(`Shelter status changed to ${newStatus.toUpperCase()}`)
+      toast(`${t('sh.statusChangedTo')} ${statusText(newStatus)}`)
     } catch {
-      toast('Failed to change status', 'error')
+      toast(t('sh.statusChangeFailed'), 'error')
     }
   }
 
@@ -174,16 +186,16 @@ export default function AdminShelters() {
         occupancy: safeOcc,
         status: safeOcc >= s.capacity ? 'full' : s.status === 'closed' ? 'closed' : 'open',
       })
-      toast(`Occupancy updated to ${safeOcc}/${s.capacity}`)
+      toast(`${t('sh.occupancyUpdatedTo')} ${safeOcc}/${s.capacity}`)
     } catch {
-      toast('Failed to update occupancy', 'error')
+      toast(t('sh.occupancyUpdateFailed'), 'error')
     }
   }
 
   const handleResetData = async () => {
-    if (window.confirm('Reset all demo data to 1,000+ realistic disaster reports, 8 shelters, and volunteers?')) {
+    if (window.confirm(t('sh.resetConfirm'))) {
       await resetMockDatabase()
-      toast('Database reset with 1,000+ fresh records!', 'success')
+      toast(t('sh.dbReset'), 'success')
     }
   }
 
@@ -211,7 +223,7 @@ export default function AdminShelters() {
       id: s.id,
       position: { lat: s.latitude, lng: s.longitude },
       title: s.name,
-      subtitle: `${s.status.toUpperCase()} · Occupancy: ${s.occupancy}/${s.capacity} · ${s.address ?? ''}`,
+      subtitle: `${statusText(s.status)} · ${t('sh.occupancy')}: ${s.occupancy}/${s.capacity} · ${s.address ?? ''}`,
       color: s.status === 'open' ? '#10b981' : s.status === 'full' ? '#f59e0b' : '#ef4444',
       isShelter: true,
     }))
@@ -234,11 +246,11 @@ export default function AdminShelters() {
           <div className="flex items-center gap-2">
             <Building2 className="h-6 w-6 text-slate-900 dark:text-slate-100" />
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-              Relief Shelter Command & Capacity Management
+              {t('sh.title')}
             </h1>
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Full admin control: Add, edit, verify, or close emergency camps. All changes reflect in real time on citizen maps.
+            {t('sh.subtitle')}
           </p>
         </div>
 
@@ -247,10 +259,10 @@ export default function AdminShelters() {
             type="button"
             onClick={handleResetData}
             className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200"
-            title="Reset Mock Data to 1000+ fresh records"
+            title={t('sh.resetTooltip')}
           >
             <RotateCcw className="h-3.5 w-3.5" />
-            <span>Reset Demo DB</span>
+            <span>{t('sh.resetDemoDb')}</span>
           </button>
 
           <button
@@ -259,7 +271,7 @@ export default function AdminShelters() {
             className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer"
           >
             <Plus className="h-4 w-4" />
-            <span>Add New Shelter</span>
+            <span>{t('sh.addNew')}</span>
           </button>
         </div>
       </div>
@@ -267,8 +279,8 @@ export default function AdminShelters() {
       {/* Realistic Interactive Map Preview */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
-          <span>Live Shelter Locations ({filtered.length} Shelters Plotted)</span>
-          <span className="text-[11px] text-slate-400">Switch Satellite / Streets / Terrain using layer toggle on map</span>
+          <span>{t('sh.liveLocations')} ({filtered.length} {t('sh.sheltersPlotted')})</span>
+          <span className="text-[11px] text-slate-400">{t('sh.mapLayerHint')}</span>
         </div>
         <div className="h-72 rounded-2xl overflow-hidden shadow-xs border border-slate-200 dark:border-slate-800">
           <LeafletMap
@@ -287,7 +299,7 @@ export default function AdminShelters() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search shelters by name, location, address, phone…"
+            placeholder={t('sh.searchPlaceholder')}
             className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3.5 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-white/[0.1] dark:bg-slate-950 dark:text-slate-100"
           />
         </div>
@@ -299,10 +311,10 @@ export default function AdminShelters() {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-slate-900 dark:border-white/[0.1] dark:bg-slate-950 dark:text-slate-100"
           >
-            <option value="all">All Operational Statuses</option>
-            <option value="open">Open (Accepting Victims)</option>
-            <option value="full">Full (At Max Capacity)</option>
-            <option value="closed">Closed / Inactive (Hidden)</option>
+            <option value="all">{t('sh.allStatuses')}</option>
+            <option value="open">{t('sh.filterOpen')}</option>
+            <option value="full">{t('sh.filterFull')}</option>
+            <option value="closed">{t('sh.filterClosed')}</option>
           </select>
 
           {/* Facility filter */}
@@ -311,9 +323,9 @@ export default function AdminShelters() {
             onChange={(e) => setFacilityFilter(e.target.value)}
             className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-slate-900 dark:border-white/[0.1] dark:bg-slate-950 dark:text-slate-100"
           >
-            <option value="all">All Facilities</option>
+            <option value="all">{t('sh.allFacilities')}</option>
             {ALL_FACILITIES.map((f) => (
-              <option key={f.id} value={f.id}>{f.label}</option>
+              <option key={f} value={f}>{facilityLabels[f]}</option>
             ))}
           </select>
         </div>
@@ -363,9 +375,9 @@ export default function AdminShelters() {
                   <div className="flex justify-between text-xs font-semibold">
                     <span className="text-slate-600 dark:text-slate-300 flex items-center gap-1">
                       <Users className="h-3.5 w-3.5" />
-                      <span>Occupancy: {s.occupancy} / {s.capacity}</span>
+                      <span>{t('sh.occupancy')}: {s.occupancy} / {s.capacity}</span>
                     </span>
-                    <span className="mono font-bold">{pct}% full</span>
+                    <span className="mono font-bold">{pct}% {t('sh.fullPct')}</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                     <div
@@ -384,7 +396,7 @@ export default function AdminShelters() {
                       key={f}
                       className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:bg-slate-800 dark:text-slate-400 mono"
                     >
-                      {f.replace(/_/g, ' ')}
+                      {facilityLabels[f as FacilityType] ?? f.replace(/_/g, ' ')}
                     </span>
                   ))}
                 </div>
@@ -394,7 +406,7 @@ export default function AdminShelters() {
               <div className="mt-5 space-y-2 border-t border-slate-100 pt-3 dark:border-slate-800">
                 {/* Status Quick Buttons */}
                 <div className="flex items-center justify-between gap-1 text-xs">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase mono">Status:</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase mono">{t('sh.statusLabel')}</span>
                   <div className="flex gap-1">
                     <button
                       type="button"
@@ -405,7 +417,7 @@ export default function AdminShelters() {
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
                       }`}
                     >
-                      Open
+                      {t('sh.open')}
                     </button>
                     <button
                       type="button"
@@ -416,7 +428,7 @@ export default function AdminShelters() {
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
                       }`}
                     >
-                      Full
+                      {t('sh.full')}
                     </button>
                     <button
                       type="button"
@@ -427,7 +439,7 @@ export default function AdminShelters() {
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
                       }`}
                     >
-                      Closed (Hide)
+                      {t('sh.closeHide')}
                     </button>
                   </div>
                 </div>
@@ -439,17 +451,17 @@ export default function AdminShelters() {
                       type="button"
                       onClick={() => handleQuickOccupancy(s, s.occupancy + 10)}
                       className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-100 dark:border-white/[0.1] dark:text-slate-300"
-                      title="Quick +10 Occupancy"
+                      title={t('sh.quickPlus10')}
                     >
-                      +10 Beds
+                      {t('sh.plus10Beds')}
                     </button>
                     <button
                       type="button"
                       onClick={() => handleQuickOccupancy(s, s.occupancy - 10)}
                       className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-100 dark:border-white/[0.1] dark:text-slate-300"
-                      title="Quick -10 Occupancy"
+                      title={t('sh.quickMinus10')}
                     >
-                      -10 Beds
+                      {t('sh.minus10Beds')}
                     </button>
                   </div>
 
@@ -460,7 +472,7 @@ export default function AdminShelters() {
                       className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
                     >
                       <Edit2 className="h-3 w-3" />
-                      <span>Edit</span>
+                      <span>{t('sh.edit')}</span>
                     </button>
                     <button
                       type="button"
@@ -468,7 +480,7 @@ export default function AdminShelters() {
                       className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-bold text-red-600 hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300 cursor-pointer"
                     >
                       <Trash2 className="h-3 w-3" />
-                      <span>Delete</span>
+                      <span>{t('sh.delete')}</span>
                     </button>
                   </div>
                 </div>
@@ -479,7 +491,7 @@ export default function AdminShelters() {
 
         {filtered.length === 0 && (
           <div className="col-span-full rounded-2xl border border-dashed border-slate-300 p-12 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-            No shelters matched your search and filter criteria.
+            {t('sh.empty')}
           </div>
         )}
       </div>
@@ -492,7 +504,7 @@ export default function AdminShelters() {
               <div className="flex items-center gap-2">
                 <Building2 className="h-5 w-5 text-slate-900 dark:text-slate-100" />
                 <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                  {editingShelter ? 'Edit Shelter Details' : 'Add New Relief Shelter'}
+                  {editingShelter ? t('sh.editTitle') : t('sh.createTitle')}
                 </h2>
               </div>
               <button
@@ -507,28 +519,28 @@ export default function AdminShelters() {
             <form onSubmit={handleSave} className="mt-4 space-y-4 text-left">
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 mono uppercase">
-                  Shelter Name *
+                  {t('sh.nameLabel')}
                 </label>
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Salt Lake Stadium Relief Camp #02"
+                  placeholder={t('sh.namePlaceholder')}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-slate-900 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-100"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 mono uppercase">
-                  Physical Address / Locality *
+                  {t('sh.addressLabel')}
                 </label>
                 <input
                   type="text"
                   required
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  placeholder="e.g. Action Area 1, Near Axis Mall, New Town"
+                  placeholder={t('sh.addressPlaceholder')}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-slate-900 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-100"
                 />
               </div>
@@ -537,7 +549,7 @@ export default function AdminShelters() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 mono uppercase">
-                    Latitude
+                    {t('sh.lat')}
                   </label>
                   <input
                     type="number"
@@ -549,7 +561,7 @@ export default function AdminShelters() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 mono uppercase">
-                    Longitude
+                    {t('sh.lng')}
                   </label>
                   <input
                     type="number"
@@ -567,7 +579,7 @@ export default function AdminShelters() {
                   onClick={() => setShowLocationPicker((o) => !o)}
                   className="text-xs font-bold text-slate-900 hover:underline dark:text-slate-100 cursor-pointer"
                 >
-                  {showLocationPicker ? 'Hide interactive coordinate picker' : 'Pick location on interactive map'}
+                  {showLocationPicker ? t('sh.hidePicker') : t('sh.pickLocation')}
                 </button>
                 {showLocationPicker && (
                   <div className="mt-2">
@@ -588,7 +600,7 @@ export default function AdminShelters() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 mono uppercase">
-                    Max Capacity (Beds)
+                    {t('sh.maxCapacity')}
                   </label>
                   <input
                     type="number"
@@ -600,7 +612,7 @@ export default function AdminShelters() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 mono uppercase">
-                    Current Occupancy
+                    {t('sh.currentOccupancy')}
                   </label>
                   <input
                     type="number"
@@ -612,7 +624,7 @@ export default function AdminShelters() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 mono uppercase">
-                    Contact Phone
+                    {t('sh.contactPhone')}
                   </label>
                   <input
                     type="tel"
@@ -627,18 +639,18 @@ export default function AdminShelters() {
               {/* Status selection */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 mono uppercase">
-                  Operation Status
+                  {t('sh.operationStatus')}
                 </label>
                 <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { val: 'open', label: 'Open (Accepting)' },
-                    { val: 'full', label: 'Full (Visible as Full)' },
-                    { val: 'closed', label: 'Closed / Hidden' },
-                  ].map((st) => (
+                  {([
+                    { val: 'open', label: t('sh.optOpen') },
+                    { val: 'full', label: t('sh.optFull') },
+                    { val: 'closed', label: t('sh.optClosed') },
+                  ] as { val: ShelterStatus; label: string }[]).map((st) => (
                     <button
                       key={st.val}
                       type="button"
-                      onClick={() => setStatus(st.val as ShelterStatus)}
+                      onClick={() => setStatus(st.val)}
                       className={`rounded-xl border p-2.5 text-xs font-bold transition cursor-pointer ${
                         status === st.val
                           ? 'border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900'
@@ -654,25 +666,25 @@ export default function AdminShelters() {
               {/* Facilities selection */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 mono uppercase">
-                  Available Amenities & Facilities
+                  {t('sh.amenities')}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {ALL_FACILITIES.map((f) => (
                     <label
-                      key={f.id}
+                      key={f}
                       className={`flex items-center gap-2 rounded-xl border p-2.5 text-xs font-medium cursor-pointer transition ${
-                        facilities.includes(f.id)
+                        facilities.includes(f)
                           ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900 font-bold'
                           : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300'
                       }`}
                     >
                       <input
                         type="checkbox"
-                        checked={facilities.includes(f.id)}
-                        onChange={() => toggleFacility(f.id)}
+                        checked={facilities.includes(f)}
+                        onChange={() => toggleFacility(f)}
                         className="hidden"
                       />
-                      <span>{f.label}</span>
+                      <span>{facilityLabels[f]}</span>
                     </label>
                   ))}
                 </div>
@@ -685,14 +697,14 @@ export default function AdminShelters() {
                   onClick={() => setModalOpen(false)}
                   className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300"
                 >
-                  Cancel
+                  {t('sh.cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
                   className="rounded-xl bg-slate-900 px-6 py-2 text-xs font-bold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer"
                 >
-                  {saving ? 'Saving…' : editingShelter ? 'Update Shelter' : 'Create & Publish Shelter'}
+                  {saving ? t('sh.saving') : editingShelter ? t('sh.updateBtn') : t('sh.createBtn')}
                 </button>
               </div>
             </form>

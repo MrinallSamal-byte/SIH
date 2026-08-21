@@ -21,9 +21,9 @@ const colors: Record<string, string> = {
   offline: 'bg-slate-100 text-slate-600 border border-slate-200 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400',
 }
 
-export default function Badge({ value, children }: { value?: string; children?: ReactNode }) {
-  const text = children ?? value
-  const key = String(text).toLowerCase()
+export default function Badge({ value, children, label }: { value?: string; children?: ReactNode; label?: ReactNode }) {
+  const text = label ?? children ?? value
+  const key = String(value ?? children ?? text).toLowerCase()
   return (
     <span
       className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold tracking-wide ${

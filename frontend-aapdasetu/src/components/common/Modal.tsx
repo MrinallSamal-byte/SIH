@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useLanguage } from '../../lib/i18n'
 
 export default function Modal({
   open,
@@ -11,6 +12,7 @@ export default function Modal({
   onClose: () => void
   children: ReactNode
 }) {
+  const { t } = useLanguage()
   if (!open) return null
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs" onClick={onClose}>
@@ -23,7 +25,7 @@ export default function Modal({
           <button
             className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 text-sm"
             onClick={onClose}
-            aria-label="Close dialog"
+            aria-label={t('common.closeDialog')}
           >
             ✕
           </button>

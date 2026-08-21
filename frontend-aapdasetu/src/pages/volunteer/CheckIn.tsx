@@ -4,9 +4,11 @@ import { Field, Input } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import { useGeoLocation } from '../../hooks/useLocation'
+import { useLanguage } from '../../lib/i18n'
 import type { Volunteer } from '../../types'
 
 export default function CheckIn() {
+  const { t } = useLanguage()
   const { toast } = useToast()
   const { coords } = useGeoLocation()
   const [volunteer, setVolunteer] = useState<Volunteer | null>(null)
@@ -39,10 +41,10 @@ export default function CheckIn() {
         const updated = await updateVolunteer(volunteer.id, { status: 'available' })
         setVolunteer(updated)
       }
-      toast('Checked in as safe & marked available', 'success')
+      toast(t('vc.checkedIn'), 'success')
       setNotes('')
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Check-in failed', 'error')
+      toast(err instanceof Error ? err.message : t('vc.checkinFailed'), 'error')
     } finally {
       setSending(false)
     }
@@ -50,24 +52,24 @@ export default function CheckIn() {
 
   return (
     <div className="max-w-md">
-      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Volunteer Check-In</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{t('vc.title')}</h1>
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-        Record your safe status and mark yourself available for active missions.
+        {t('vc.subtitle')}
       </p>
 
       <div className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
         {volunteer && (
           <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-950">
-            <div className="font-bold text-slate-800 dark:text-slate-200">Responder Profile: {volunteer.name}</div>
-            <div className="text-slate-500">{volunteer.phone ?? 'Contact on file'}</div>
+            <div className="font-bold text-slate-800 dark:text-slate-200">{t('vc.responderProfile')}: {volunteer.name}</div>
+            <div className="text-slate-500">{volunteer.phone ?? t('vc.contactOnFile')}</div>
           </div>
         )}
 
-        <Field label="Check-in Notes / Current Field Location">
-          <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. reached Sector V camp safely" />
+        <Field label={t('vc.notesLabel')}>
+          <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('vc.notesPlaceholder')} />
         </Field>
         <Button onClick={submit} disabled={sending} className="w-full font-bold cursor-pointer">
-          {sending ? 'Checking in…' : 'Check In & Go Available'}
+          {sending ? t('vc.checkingIn') : t('vc.checkInGo')}
         </Button>
       </div>
     </div>

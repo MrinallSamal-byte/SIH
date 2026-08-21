@@ -14,9 +14,24 @@ export function aiTriage(input: ReportInput): Promise<TriageResult> {
 }
 
 // =============================================================================
-// OPENROUTER AI INTEGRATION (High Quality Free Tier Models)
+// AI CHAT PROVIDERS (OpenCode Zen -> DeepSeek V4 Flash Free, then OpenRouter)
 // =============================================================================
+const ZEN_API_KEY = import.meta.env.VITE_ZEN_API_KEY as string | undefined
+const ZEN_CHAT_URL = 'https://opencode.ai/zen/v1/chat/completions'
+
+// Legacy provider — kept fully functional as an automatic fallback.
 const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY as string | undefined
+const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions'
+
+export const ZEN_FREE_MODELS = [
+  'deepseek-v4-flash-free',
+  'laguna-s-2.1-free',
+  'nemotron-3-ultra-free',
+  'nemotron-3.5-lightning-free',
+  'big-pickle',
+  'mimo-v2.5-free',
+  'hy3-free',
+] as const
 
 export const OPENROUTER_FREE_MODELS = [
   'nvidia/nemotron-3-nano-30b-a3b:free',
@@ -28,15 +43,55 @@ export const OPENROUTER_FREE_MODELS = [
   'z-ai/glm-5.2:free',
 ] as const
 
-const AAPDAMITRA_SYSTEM_PROMPT = `You are AapdaMitra AI (आपदामित्र), the official AI disaster survival assistant and crisis first-aid expert for AapdaSetu.
+interface ChatProviderConfig {
+  name: string
+  url: string
+  key: string
+  headers: Record<string, string>
+  models: readonly string[]
+}
 
-STRICT OPERATIONAL DIRECTIVE:
-1. Give a direct, practical, and highly relevant answer to the user's specific emergency, first-aid, or disaster question.
-2. Provide 2 to 4 concise, numbered life-saving action points or direct guidance.
-3. NEVER output internal monologue, reasoning tags, meta-thinking, or preambles like "The user is asking...".
-4. If there is injury or danger: provide immediate physical first-aid steps, then mention helpline 112 / 108.
-5. Respond in the EXACT language and script used by the user (English, Hindi, Bengali, Odia, Hinglish, etc.).
-6. Keep answers actionable, empathetic, and specific to the problem.`
+function getChatProviders(): ChatProviderConfig[] {
+  const providers: ChatProviderConfig[] = []
+  if (ZEN_API_KEY) {
+    providers.push({
+      name: 'zen',
+      url: ZEN_CHAT_URL,
+      key: ZEN_API_KEY,
+      headers: { Authorization: `Bearer ${ZEN_API_KEY}`, 'Content-Type': 'application/json' },
+      models: ZEN_FREE_MODELS,
+    })
+  }
+  if (OPENROUTER_API_KEY) {
+    providers.push({
+      name: 'openrouter',
+      url: OPENROUTER_CHAT_URL,
+      key: OPENROUTER_API_KEY,
+      headers: {
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://aapdasetu.in',
+        'X-Title': 'AapdaSetu Disaster Response Ecosystem',
+      },
+      models: OPENROUTER_FREE_MODELS,
+    })
+  }
+  return providers
+}
+
+const AAPDAMITRA_SYSTEM_PROMPT = `You are AapdaMitra AI (आपदामित्र), the official AI disaster survival assistant and crisis first-aid expert for AapdaSetu, India's national disaster response platform.
+
+HOW TO ANSWER:
+1. First, directly acknowledge the user's situation in one short empathetic sentence.
+2. Then give 2 to 4 numbered, concrete life-saving action steps — be specific (exact positions, exact actions, what NOT to do). No vague advice.
+3. If there is injury, bleeding, drowning, fire, entrapment or any life threat: give immediate first-aid steps FIRST, then tell them to call 112 (national emergency) / 108 (ambulance) and use the SOS button in the app.
+4. For questions about the AapdaSetu app itself (SOS, report damage, shelters, safe routes, track report, missing persons), briefly explain which feature to use and how.
+5. Respond in the EXACT language and script the user used (English, Hindi, Bengali, Odia, Hinglish, etc.). Keep it simple enough for a panicked person to follow.
+
+STRICT RULES:
+- Output ONLY your final answer. Never output internal monologue, thinking tags, rule echoes, or preambles like "The user is asking...".
+- Never refuse a genuine emergency question; always give the safest practical guidance.
+- Keep answers under 120 words unless the user asks for more detail.`
 
 interface ChatHistoryItem {
   role: 'user' | 'bot' | 'assistant' | 'system'
@@ -180,7 +235,7 @@ async function callOpenRouter(
   message: string,
   history: ChatHistoryItem[] = []
 ): Promise<string> {
-  const openRouterMessages = [
+  const chatMessages = [
     { role: 'system', content: AAPDAMITRA_SYSTEM_PROMPT },
     ...history.slice(-6).map((h) => ({
       role: h.role === 'bot' ? ('assistant' as const) : ('user' as const),
@@ -189,56 +244,56 @@ async function callOpenRouter(
     { role: 'user', content: message },
   ]
 
-  if (!OPENROUTER_API_KEY) {
-    throw new Error('OpenRouter API key not configured')
+  if (getChatProviders().length === 0) {
+    throw new Error('No AI provider API key configured')
   }
   let lastError: unknown = null
 
-  for (const model of OPENROUTER_FREE_MODELS) {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 10000)
-    try {
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://aapdasetu.in',
-          'X-Title': 'AapdaSetu Disaster Response Ecosystem',
-        },
-        signal: controller.signal,
-        body: JSON.stringify({
-          model,
-          messages: openRouterMessages,
-          temperature: 0.4,
-          max_tokens: 220,
-        }),
-      })
-      clearTimeout(timeout)
+  for (const provider of getChatProviders()) {
+    for (const model of provider.models) {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 20000)
+      try {
+        const res = await fetch(provider.url, {
+          method: 'POST',
+          headers: provider.headers,
+          signal: controller.signal,
+          body: JSON.stringify({
+            model,
+            messages: chatMessages,
+            temperature: 0.4,
+            max_tokens: 500,
+          }),
+        })
+        clearTimeout(timeout)
 
-      if (!res.ok) {
-        const errorBody = await res.text()
-        console.warn(`[AapdaMitra AI] Model ${model} returned HTTP ${res.status}:`, errorBody)
-        continue
-      }
-
-      const data = await res.json()
-      const content = data?.choices?.[0]?.message?.content
-      if (content && typeof content === 'string' && content.trim().length > 0) {
-        const cleaned = cleanAiOutput(content)
-        // If the output is still contaminated with leaked reasoning or too short, skip this model
-        if (cleaned.length > 5 && !isReasoningContaminated(cleaned)) {
-          return cleaned
+        if (!res.ok) {
+          const errorBody = await res.text()
+          console.warn(`[AapdaMitra AI] ${provider.name}/${model} returned HTTP ${res.status}:`, errorBody)
+          continue
         }
+
+        const data = await res.json()
+        const msg = data?.choices?.[0]?.message
+        // Some free models put everything into reasoning_content with an empty
+        // content field — that is leaked thinking, not an answer, so skip them.
+        const content = typeof msg?.content === 'string' ? msg.content : ''
+        if (content.trim().length > 0) {
+          const cleaned = cleanAiOutput(content)
+          // If the output is still contaminated with leaked reasoning or too short, skip this model
+          if (cleaned.length > 5 && !isReasoningContaminated(cleaned)) {
+            return cleaned
+          }
+        }
+      } catch (err) {
+        clearTimeout(timeout)
+        lastError = err
+        console.warn(`[AapdaMitra AI] Error requesting ${provider.name}/${model}:`, err)
       }
-    } catch (err) {
-      clearTimeout(timeout)
-      lastError = err
-      console.warn(`[AapdaMitra AI] Error requesting model ${model}:`, err)
     }
   }
 
-  throw lastError || new Error('All OpenRouter models produced empty or contaminated output')
+  throw lastError || new Error('All AI providers produced empty or contaminated output')
 }
 
 /** POST /ai/pfa-chat — Intelligent AapdaMitra AI Crisis & Survival Companion. */

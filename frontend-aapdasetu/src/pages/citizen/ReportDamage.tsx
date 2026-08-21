@@ -7,6 +7,7 @@ import {
   Wheat,
   Warehouse,
   Flame,
+  HelpCircle,
   CheckCircle2,
 } from 'lucide-react'
 import { aiDamageAssessment, type DamageVerdict } from '../../api/ai'
@@ -22,15 +23,16 @@ import type { DamageInfrastructureType } from '../../types'
 
 const INFRASTRUCTURE_CATEGORIES: Array<{
   id: DamageInfrastructureType
-  label: string
+  titleKey: string
   icon: typeof Home
-  desc: string
+  descKey: string
 }> = [
-  { id: 'broken_home', label: 'Residential Home', icon: Home, desc: 'Roofs collapsed, walls cracked, flood inundation' },
-  { id: 'commercial_public', label: 'Commercial / Public', icon: Store, desc: 'Storefront damaged, inventory flooded or public building' },
-  { id: 'agricultural', label: 'Agricultural Crops', icon: Wheat, desc: 'Farmland submerged, topsoil eroded, crop failure' },
-  { id: 'road_bridge', label: 'Bridge & Road', icon: Warehouse, desc: 'Culvert washed away, road split or submerged' },
-  { id: 'electrical_power', label: 'Power Grid & Utility', icon: Flame, desc: 'Transformer fallen, cables severed, poles broken' },
+  { id: 'broken_home', titleKey: 'damage.cat1Title', icon: Home, descKey: 'damage.cat1Desc' },
+  { id: 'commercial_public', titleKey: 'damage.cat2Title', icon: Store, descKey: 'damage.cat2Desc' },
+  { id: 'agricultural', titleKey: 'damage.cat3Title', icon: Wheat, descKey: 'damage.cat3Desc' },
+  { id: 'road_bridge', titleKey: 'damage.cat4Title', icon: Warehouse, descKey: 'damage.cat4Desc' },
+  { id: 'electrical_power', titleKey: 'damage.cat5Title', icon: Flame, descKey: 'damage.cat5Desc' },
+  { id: 'other', titleKey: 'damage.cat6Title', icon: HelpCircle, descKey: 'damage.cat6Desc' },
 ]
 
 const DISTRICT_LIST = [
@@ -67,25 +69,25 @@ export default function ReportDamage() {
     if (!files) return
     const remaining = 5 - photos.length
     if (remaining <= 0) {
-      toast('Maximum 5 images allowed', 'error')
+      toast(t('damage.errMaxImages'), 'error')
       return
     }
     const selected = Array.from(files).slice(0, remaining)
     const newPhotos: string[] = []
     for (const file of selected) {
       if (!file.type.startsWith('image/')) {
-        toast(`${file.name}: Only image files allowed`, 'error')
+        toast(`${file.name}: ${t('damage.errFileImage')}`, 'error')
         continue
       }
       if (file.size > 10 * 1024 * 1024) {
-        toast(`${file.name} exceeds 10MB`, 'error')
+        toast(`${file.name} ${t('damage.exceedsLimit')}`, 'error')
         continue
       }
       try {
         const compressed = await compressImage(file, 800, 0.75)
         newPhotos.push(compressed)
       } catch {
-        toast(`${file.name}: Could not process this image`, 'error')
+        toast(`${file.name}: ${t('damage.errProcessImage')}`, 'error')
       }
     }
     setPhotos((prev) => [...prev, ...newPhotos])
@@ -100,24 +102,24 @@ export default function ReportDamage() {
 
   const assess = async () => {
     if (photos.length === 0) {
-      toast('Please upload at least 1 damage photo (max 5)', 'error')
+      toast(t('damage.errMinPhotos'), 'error')
       return
     }
     const cleanPhone = ownerPhone.replace(/\D/g, '')
     if (!cleanPhone || cleanPhone.length < 10) {
-      toast('Enter a valid 10-digit mobile number', 'error')
+      toast(t('common.errPhone10'), 'error')
       return
     }
     if (!address.trim()) {
-      toast('Property address is required', 'error')
+      toast(t('damage.errAddressRequired'), 'error')
       return
     }
     if (!hasGps) {
-      toast('Location unavailable — please enable GPS or allow location', 'error')
+      toast(t('sos.gpsFailToast'), 'error')
       return
     }
     if (!description.trim()) {
-      toast('Please describe the structural failure (required)', 'error')
+      toast(t('damage.errDescription'), 'error')
       return
     }
 
@@ -180,7 +182,7 @@ export default function ReportDamage() {
         // Storage unavailable
       }
     } catch (e) {
-      toast(e instanceof Error ? e.message : 'Damage assessment failed', 'error')
+      toast(e instanceof Error ? e.message : t('common.submissionFailed'), 'error')
     } finally {
       setBusy(false)
     }
@@ -192,10 +194,10 @@ export default function ReportDamage() {
       .writeText(claimId)
       .then(() => {
         setCopied(true)
-        toast('Claim ID copied to clipboard')
+        toast(t('common.copiedClipboard'))
         setTimeout(() => setCopied(false), 3000)
       })
-      .catch(() => toast('Could not copy — please note the ID manually', 'error'))
+      .catch(() => toast(t('common.copyFailed'), 'error'))
   }
 
   return (
@@ -221,48 +223,23 @@ export default function ReportDamage() {
           <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-slate-300 mono mb-2">
             {t('damage.step1Title')} <span className="text-red-600">*</span>
           </label>
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-            {INFRASTRUCTURE_CATEGORIES.map((cat) => {
-              const Icon = cat.icon
-              const isSelected = infraType === cat.id
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setInfraType(cat.id)}
-                  className={`flex items-start gap-3 rounded-xl border p-3 text-left transition-all cursor-pointer ${
-                    isSelected
-                      ? 'border-slate-900 bg-[#f4f4f5] shadow-xs dark:border-white dark:bg-[#222222]/90'
-                      : 'border-zinc-200/80 bg-white hover:border-zinc-200 dark:border-white/[0.08] dark:bg-[#1a1a1a]/60 dark:hover:border-slate-700'
-                  }`}
-                >
-                  <div
-                    className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                      isSelected
-                        ? 'bg-zinc-800 text-white dark:bg-white dark:text-zinc-800'
-                        : 'bg-slate-100 text-zinc-500 dark:bg-[#222222] dark:text-slate-300'
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-zinc-800 dark:text-slate-300">
-                      {cat.label}
-                    </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                      {cat.desc}
-                    </div>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
+          <select
+            value={infraType}
+            onChange={(e) => setInfraType(e.target.value as DamageInfrastructureType)}
+            className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-zinc-800 outline-none transition focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 cursor-pointer"
+          >
+            {INFRASTRUCTURE_CATEGORIES.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {t(cat.titleKey)} — {t(cat.descKey)}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Step 2: Photo Upload (max 5) */}
         <div className="space-y-2">
           <label htmlFor="damage-photo" className="block text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-slate-300 mono">
-            {t('damage.step2Title')} <span className="text-red-600">*</span> <span className="font-normal normal-case text-slate-400">({photos.length}/5 images)</span>
+            {t('damage.step2Title')} <span className="text-red-600">*</span> <span className="font-normal normal-case text-slate-400">({photos.length}/5 {t('damage.imagesCount')})</span>
           </label>
           <div className="relative">
             <input
@@ -277,14 +254,14 @@ export default function ReportDamage() {
               className="block w-full text-sm file:mr-4 file:rounded-xl file:border-0 file:bg-zinc-800 file:px-4 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-slate-800 dark:file:bg-slate-100 dark:file:text-zinc-800 cursor-pointer"
             />
           </div>
-          <p className="text-[11px] text-slate-500">Upload 1–5 geotagged photos. Each is scored individually, then averaged for final claim.</p>
+          <p className="text-[11px] text-slate-500">{t('damage.uploadHint')}</p>
           {photos.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
               {photos.map((p, idx) => (
                 <div key={idx} className="relative overflow-hidden rounded-xl border border-zinc-200/80 dark:border-white/[0.1] bg-slate-950">
                   <img src={p} alt={`Damage ${idx + 1}`} className="h-32 w-full object-cover" />
                   <button type="button" onClick={() => removePhoto(idx)} className="absolute top-1.5 right-1.5 rounded-full bg-black/70 px-2 py-1 text-[10px] font-bold text-white hover:bg-red-600">
-                    Remove
+                    {t('common.remove')}
                   </button>
                   <div className="absolute bottom-1 left-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-mono text-white">#{idx + 1}</div>
                   {perImageVerdicts[idx] && (
@@ -319,14 +296,14 @@ export default function ReportDamage() {
             <Input
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="e.g. Holding 42, Block B, Main Road"
+              placeholder={t('damage.addressPlaceholder')}
             />
           </Field>
         </div>
 
         {!hasGps && (
           <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30">
-            <span className="font-bold">GPS unavailable — </span>Enable location to geotag damage claim. Current fallback (Kolkata) not used — your claim requires precise GPS.
+            <span className="font-bold">{t('damage.gpsWarn1')} </span>{t('damage.gpsWarn2')}
           </div>
         )}
         {/* Step 4: Claimant Details */}
@@ -335,7 +312,7 @@ export default function ReportDamage() {
             <Input
               value={ownerName}
               onChange={(e) => setOwnerName(e.target.value)}
-              placeholder="e.g. Ramesh Sen"
+              placeholder={t('damage.ownerPlaceholder')}
             />
           </Field>
           <Field label={t('damage.ownerPhone')}>
@@ -359,7 +336,7 @@ export default function ReportDamage() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
-            placeholder="e.g. 600mm main water pipeline ruptured, basement submerged under 1.5m sludge, cracked pillars…"
+            placeholder={t('damage.descPlaceholder')}
             className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs text-zinc-800 outline-none transition focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 dark:focus:border-slate-500"
           />
         </div>
@@ -386,9 +363,9 @@ export default function ReportDamage() {
             <div className="flex items-center gap-3 text-emerald-800 dark:text-emerald-300">
               <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <div>
-                <h2 className="text-sm font-bold">Damage Claim Registered with Command Center</h2>
+                <h2 className="text-sm font-bold">{t('damage.successTitle')}</h2>
                 <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
-                  Your claim has been assessed by the AI engine and logged for SDRF relief review.
+                  {t('damage.successDesc')}
                 </p>
               </div>
             </div>
@@ -397,7 +374,7 @@ export default function ReportDamage() {
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200/80 bg-[#f4f4f5] p-4 dark:border-white/[0.08] dark:bg-[#151515]">
                 <div className="min-w-0">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">
-                    Official SDRF Claim ID — Save this
+                    {t('damage.claimIdLabel')}
                   </span>
                   <div className="font-mono text-lg sm:text-xl font-bold text-zinc-800 dark:text-slate-300 break-all">
                     {claimId}
@@ -409,7 +386,7 @@ export default function ReportDamage() {
                   className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-2 text-xs font-bold text-white transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white cursor-pointer"
                 >
                   <Copy className="h-3.5 w-3.5" />
-                  <span>{copied ? 'Copied!' : 'Copy ID'}</span>
+                  <span>{copied ? t('common.copied') : t('damage.copyId')}</span>
                 </button>
               </div>
             )}

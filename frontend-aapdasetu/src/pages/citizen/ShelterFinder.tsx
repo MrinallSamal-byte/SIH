@@ -88,8 +88,8 @@ export default function ShelterFinder() {
       list.push({
         id: 'you',
         position: userPos,
-        title: 'You are here',
-        subtitle: accuracy ? `GPS Accuracy ±${Math.round(accuracy)}m` : 'Current location',
+        title: t('common.youAreHere'),
+        subtitle: accuracy ? `${t('common.gpsAccuracy')}${Math.round(accuracy)}m` : t('shelter.currentLocation'),
         color: '#3b82f6',
         isSos: true,
       })
@@ -98,20 +98,20 @@ export default function ShelterFinder() {
       const s = filteredAndSorted[i]
       if (!s) continue
       if (typeof s.latitude !== 'number' || typeof s.longitude !== 'number') continue
-      const statusStr = (s.status || 'open').toUpperCase()
+      const statusLabel = s.status === 'full' ? t('shelter.full') : t('shelter.statusOpen')
       const occ = s.occupancy ?? 0
       const cap = s.capacity ?? 100
       list.push({
         id: s.id || `shel-fallback-${i}`,
         position: { lat: s.latitude, lng: s.longitude },
-        title: s.name || 'Disaster Shelter',
-        subtitle: `${statusStr} · Occupancy: ${occ}/${cap} beds (${s.address ?? ''})`,
+        title: s.name || t('shelter.markerFallback'),
+        subtitle: `${statusLabel} · ${t('routes.occupancy')} ${occ}/${cap} (${s.address ?? ''})`,
         color: s.status === 'open' ? '#10b981' : '#f59e0b',
         isShelter: true,
       })
     }
     return list
-  }, [filteredAndSorted, userPos, accuracy])
+  }, [filteredAndSorted, userPos, accuracy, t])
 
   if (!shelters) {
     return (
@@ -235,13 +235,13 @@ export default function ShelterFinder() {
               <Card key={s.id} className="flex flex-col rounded-2xl border border-zinc-200/80 bg-white p-5 sm:p-6 shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="truncate font-bold text-zinc-800 dark:text-slate-300 text-base">{s.name || 'Emergency Shelter'}</div>
+                    <div className="truncate font-bold text-zinc-800 dark:text-slate-300 text-base">{s.name || t('shelter.cardFallback')}</div>
                     <div className="mt-1 flex items-start gap-1 line-clamp-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                       <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5 text-slate-400" />
-                      <span>{s.address || 'Address on record'}</span>
+                      <span>{s.address || t('shelter.addressFallback')}</span>
                     </div>
                   </div>
-                  <Badge value={s.status || 'open'} />
+                  <Badge value={s.status || 'open'} label={s.status === 'full' ? t('shelter.full') : t('shelter.statusOpen')} />
                 </div>
 
                 <div className="mt-3 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
@@ -273,15 +273,18 @@ export default function ShelterFinder() {
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-1">
-                  {facilitiesList.map((f) => (
-                    <span key={f} className="rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-zinc-500 dark:bg-[#222222] dark:text-slate-400 mono">
-                      {String(f).replace(/_/g, ' ')}
-                    </span>
-                  ))}
+                  {facilitiesList.map((f) => {
+                    const knownFacility = criticalFacilities.find((cf) => cf.key === f)
+                    return (
+                      <span key={f} className="rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-zinc-500 dark:bg-[#222222] dark:text-slate-400 mono">
+                        {knownFacility ? t(knownFacility.labelKey) : String(f).replace(/_/g, ' ')}
+                      </span>
+                    )
+                  })}
                 </div>
 
                 <div className="mt-4 flex items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-white/[0.08]">
-                  <span className="text-[10px] text-slate-400 mono">{hasCoords ? `${(s.latitude as number).toFixed(4)}, ${(s.longitude as number).toFixed(4)}` : 'Location unavailable'}</span>
+                  <span className="text-[10px] text-slate-400 mono">{hasCoords ? `${(s.latitude as number).toFixed(4)}, ${(s.longitude as number).toFixed(4)}` : t('shelter.locationUnavailable')}</span>
                   {hasCoords ? (
                     <a
                       href={getNavigationUrl(s.latitude as number, s.longitude as number)}
@@ -293,7 +296,7 @@ export default function ShelterFinder() {
                       <span>{t('common.directions')}</span>
                     </a>
                   ) : (
-                    <span className="text-[11px] font-bold text-slate-400">No GPS</span>
+                    <span className="text-[11px] font-bold text-slate-400">{t('shelter.noGps')}</span>
                   )}
                 </div>
               </Card>
@@ -302,7 +305,7 @@ export default function ShelterFinder() {
 
           {filteredAndSorted.length === 0 && (
             <div className="col-span-full rounded-2xl border border-dashed border-zinc-200 p-12 text-center text-xs text-slate-500 dark:border-white/[0.08] dark:text-slate-400">
-              No shelters matched your search or facility filter criteria.
+              {t('shelter.empty')}
             </div>
           )}
       </div>

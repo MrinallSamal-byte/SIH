@@ -16,6 +16,7 @@ import Loader from '../../components/common/Loader'
 import { useRealtime } from '../../hooks/useRealtime'
 import { useToast } from '../../components/common/Toast'
 import { formatDateTime, haversineKm } from '../../lib/helpers'
+import { useLanguage } from '../../lib/i18n'
 import type { Agency, Report, Volunteer } from '../../types'
 
 interface DispatchDraft {
@@ -26,6 +27,7 @@ interface DispatchDraft {
 }
 
 export default function Reports() {
+  const { t } = useLanguage()
   const { toast } = useToast()
   const [statusFilter, setStatusFilter] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('')
@@ -106,10 +108,10 @@ export default function Reports() {
         status: overrideStatus || draft.status,
         resolutionNotes: draft.notes || undefined,
       })
-      toast('Incident dispatch successfully updated in real time', 'success')
+      toast(t('rp.dispatchUpdated'), 'success')
       setSelected(null)
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Dispatch failed', 'error')
+      toast(err instanceof Error ? err.message : t('rp.dispatchFailed'), 'error')
     } finally {
       setSaving(false)
     }
@@ -135,14 +137,14 @@ export default function Reports() {
           <div className="flex items-center gap-2">
             <FileText className="h-6 w-6 text-slate-900 dark:text-slate-100" />
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-              Incident Reports & Dispatch Command
+              {t('rp.title')}
             </h1>
             <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300 mono">
-              {totalCount.toLocaleString()} Total Records
+              {totalCount.toLocaleString()} {t('rp.totalRecords')}
             </span>
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Real-time live incident stream across all disaster zones. AI triage scoring, proximity volunteer assignment, and multi-agency dispatch.
+            {t('rp.subtitle')}
           </p>
         </div>
 
@@ -150,59 +152,59 @@ export default function Reports() {
           <button
             type="button"
             onClick={async () => {
-              if (window.confirm('Reset database to 1,000+ realistic disaster records?')) {
+              if (window.confirm(t('rp.resetConfirm'))) {
                 await resetMockDatabase()
-                toast('Database reset with 1,000+ fresh records!', 'success')
+                toast(t('rp.dbReset'), 'success')
               }
             }}
             className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200"
           >
             <RotateCcw className="h-3.5 w-3.5" />
-            <span>Reset 1000+ Records</span>
+            <span>{t('rp.resetRecords')}</span>
           </button>
         </div>
       </div>
 
       {/* Filter & Search Bar */}
       <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900 md:grid-cols-4">
-        <Field label="Emergency Type">
+        <Field label={t('rp.emergencyType')}>
           <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-            <option value="">All Emergency Types</option>
-            <option value="flood">Flood / Submersion</option>
-            <option value="medical">Critical Medical</option>
-            <option value="fire">Fire / Explosion</option>
-            <option value="earthquake">Building Collapse / Trapped</option>
-            <option value="accident">Transit / Rescue Accident</option>
-            <option value="missing_person">Missing Person</option>
-            <option value="other">Other Hazards</option>
+            <option value="">{t('rp.allEmergencyTypes')}</option>
+            <option value="flood">{t('rp.typeFlood')}</option>
+            <option value="medical">{t('rp.typeMedical')}</option>
+            <option value="fire">{t('rp.typeFire')}</option>
+            <option value="earthquake">{t('rp.typeEarthquake')}</option>
+            <option value="accident">{t('rp.typeAccident')}</option>
+            <option value="missing_person">{t('rp.typeMissing')}</option>
+            <option value="other">{t('rp.typeOther')}</option>
           </Select>
         </Field>
 
-        <Field label="Status">
+        <Field label={t('rp.statusLabel')}>
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="">All Statuses</option>
-            <option value="pending">Pending (Unassigned)</option>
-            <option value="in_progress">In Progress (Dispatched)</option>
-            <option value="resolved">Resolved (Evacuated)</option>
+            <option value="">{t('rp.allStatuses')}</option>
+            <option value="pending">{t('rp.filterPending')}</option>
+            <option value="in_progress">{t('rp.filterInProgress')}</option>
+            <option value="resolved">{t('rp.filterResolved')}</option>
           </Select>
         </Field>
 
-        <Field label="Priority Tier">
+        <Field label={t('rp.priorityTier')}>
           <Select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
-            <option value="">All Priorities</option>
-            <option value="RED">RED (Critical Urgency 80-100)</option>
-            <option value="YELLOW">YELLOW (High Priority 50-79)</option>
-            <option value="GREEN">GREEN (Standard Priority 0-49)</option>
+            <option value="">{t('rp.allPriorities')}</option>
+            <option value="RED">{t('rp.priorityRed')}</option>
+            <option value="YELLOW">{t('rp.priorityYellow')}</option>
+            <option value="GREEN">{t('rp.priorityGreen')}</option>
           </Select>
         </Field>
 
-        <Field label="Search Query">
+        <Field label={t('rp.searchQuery')}>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Tracking ID, name, phone, landmark…"
+              placeholder={t('rp.searchPlaceholder')}
               className="w-full rounded-xl border border-slate-300 bg-white pl-8 pr-3 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-white/[0.1] dark:bg-slate-950 dark:text-slate-100"
             />
           </div>
@@ -214,15 +216,15 @@ export default function Reports() {
         <table className="w-full text-left text-sm">
           <thead className="border-b bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400 mono font-bold">
             <tr>
-              <th className="px-4 py-3">Tracking ID</th>
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Priority Score</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Location / Landmark</th>
-              <th className="px-4 py-3">Reporter</th>
-              <th className="px-4 py-3">Assigned Units</th>
-              <th className="px-4 py-3">Reported</th>
-              <th className="px-4 py-3 text-right">Dispatch</th>
+              <th className="px-4 py-3">{t('rp.thTrackingId')}</th>
+              <th className="px-4 py-3">{t('rp.thType')}</th>
+              <th className="px-4 py-3">{t('rp.thPriorityScore')}</th>
+              <th className="px-4 py-3">{t('rp.thStatus')}</th>
+              <th className="px-4 py-3">{t('rp.thLocation')}</th>
+              <th className="px-4 py-3">{t('rp.thReporter')}</th>
+              <th className="px-4 py-3">{t('rp.thAssignedUnits')}</th>
+              <th className="px-4 py-3">{t('rp.thReported')}</th>
+              <th className="px-4 py-3 text-right">{t('rp.thDispatch')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -247,10 +249,10 @@ export default function Reports() {
                 </td>
                 <td className="px-4 py-3"><Badge value={r.status} /></td>
                 <td className="px-4 py-3 text-xs max-w-[200px] truncate text-slate-700 dark:text-slate-300">
-                  {r.landmark ?? (r.latitude ? `${r.latitude.toFixed(4)}, ${r.longitude?.toFixed(4)}` : 'GPS Record')}
+                  {r.landmark ?? (r.latitude ? `${r.latitude.toFixed(4)}, ${r.longitude?.toFixed(4)}` : t('rp.gpsRecord'))}
                 </td>
                 <td className="px-4 py-3 text-xs">
-                  <div className="font-semibold text-slate-800 dark:text-slate-200">{r.reporterName || 'Citizen'}</div>
+                  <div className="font-semibold text-slate-800 dark:text-slate-200">{r.reporterName || t('rp.citizen')}</div>
                   <div className="mono text-[11px] text-slate-400">{r.reporterPhone || '—'}</div>
                 </td>
                 <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 max-w-[160px] truncate">
@@ -259,7 +261,7 @@ export default function Reports() {
                   ) : r.assignedAgencyName ? (
                     <span className="font-semibold text-slate-800 dark:text-slate-200">{r.assignedAgencyName}</span>
                   ) : (
-                    <span className="text-amber-600 dark:text-amber-400 font-medium">Unassigned</span>
+                    <span className="text-amber-600 dark:text-amber-400 font-medium">{t('rp.unassigned')}</span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-[11px] text-slate-400 mono whitespace-nowrap">
@@ -271,7 +273,7 @@ export default function Reports() {
                     onClick={() => setSelected(r)}
                     className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-800 hover:bg-slate-100 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
                   >
-                    <span>Dispatch</span>
+                    <span>{t('rp.dispatch')}</span>
                     <span>→</span>
                   </button>
                 </td>
@@ -282,7 +284,7 @@ export default function Reports() {
 
         {totalCount === 0 && (
           <div className="p-12 text-center text-sm text-slate-400">
-            No incident reports matched your specified filter criteria.
+            {t('rp.emptyTable')}
           </div>
         )}
 
@@ -290,9 +292,9 @@ export default function Reports() {
         {totalCount > 0 && (
           <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-400">
             <div>
-              Showing <strong className="mono">{(page - 1) * pageSize + 1}</strong> to{' '}
-              <strong className="mono">{Math.min(page * pageSize, totalCount)}</strong> of{' '}
-              <strong className="mono">{totalCount.toLocaleString()}</strong> incidents
+              {t('rp.showing')} <strong className="mono">{(page - 1) * pageSize + 1}</strong> {t('rp.to')}{' '}
+              <strong className="mono">{Math.min(page * pageSize, totalCount)}</strong> {t('rp.of')}{' '}
+              <strong className="mono">{totalCount.toLocaleString()}</strong> {t('rp.incidents')}
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -303,11 +305,11 @@ export default function Reports() {
                 className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300"
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
-                <span>Prev</span>
+                <span>{t('rp.prev')}</span>
               </button>
 
               <span className="px-2 font-bold mono">
-                Page {page} / {totalPages}
+                {t('rp.page')} {page} / {totalPages}
               </span>
 
               <button
@@ -316,7 +318,7 @@ export default function Reports() {
                 disabled={page === totalPages}
                 className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300"
               >
-                <span>Next</span>
+                <span>{t('rp.next')}</span>
                 <ChevronRight className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -326,7 +328,7 @@ export default function Reports() {
 
       {/* Dispatch Modal */}
       {selected && (
-        <Modal open title="Operational Incident Dispatch & Assignment" onClose={() => setSelected(null)}>
+        <Modal open title={t('rp.modalTitle')} onClose={() => setSelected(null)}>
           <div className="space-y-4">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs dark:border-slate-800 dark:bg-slate-950">
               <div className="flex items-center justify-between">
@@ -335,65 +337,65 @@ export default function Reports() {
               </div>
               <p className="mt-2 text-slate-800 dark:text-slate-200 font-medium leading-relaxed">{selected.description}</p>
               <div className="mt-2 flex flex-wrap items-center gap-4 text-slate-500 border-t border-slate-200/60 pt-2 dark:border-slate-800">
-                {selected.landmark && <div>Landmark: <strong className="text-slate-700 dark:text-slate-300">{selected.landmark}</strong></div>}
-                {selected.reporterPhone && <div>Phone: <strong className="text-slate-700 dark:text-slate-300 mono">{selected.reporterPhone}</strong></div>}
-                <div>Type: <strong className="capitalize text-slate-700 dark:text-slate-300">{selected.type}</strong></div>
+                {selected.landmark && <div>{t('rp.landmarkLabel')}: <strong className="text-slate-700 dark:text-slate-300">{selected.landmark}</strong></div>}
+                {selected.reporterPhone && <div>{t('rp.phoneLabel')}: <strong className="text-slate-700 dark:text-slate-300 mono">{selected.reporterPhone}</strong></div>}
+                <div>{t('rp.typeLabel')}: <strong className="capitalize text-slate-700 dark:text-slate-300">{selected.type}</strong></div>
               </div>
             </div>
 
-            <Field label="Assign Recommended Field Volunteer (Ranked by Proximity & Skill)">
+            <Field label={t('rp.assignVolunteer')}>
               <Select
                 value={draft.volunteerId}
                 onChange={(e) => setDraft((d) => ({ ...d, volunteerId: e.target.value }))}
               >
-                <option value="">-- Select Volunteer --</option>
+                <option value="">{t('rp.selectVolunteer')}</option>
                 {rankedVolunteers.map((v) => {
                   const dist = (selected.latitude && selected.longitude && v.latitude && v.longitude)
                     ? haversineKm({ lat: selected.latitude, lng: selected.longitude }, { lat: v.latitude, lng: v.longitude })
                     : null
                   return (
                     <option key={v.id} value={v.id}>
-                      {v.name} {dist !== null ? `(${dist.toFixed(1)} km away)` : ''} — Skills: {v.skills.join(', ') || 'General'}
+                      {v.name} {dist !== null ? `(${dist.toFixed(1)} ${t('rp.kmAway')})` : ''} — {t('rp.skills')}: {v.skills.join(', ') || t('rp.general')}
                     </option>
                   )
                 })}
               </Select>
             </Field>
 
-            <Field label="Assign Disaster Agency Unit">
+            <Field label={t('rp.assignAgency')}>
               <Select
                 value={draft.agencyId}
                 onChange={(e) => setDraft((d) => ({ ...d, agencyId: e.target.value }))}
               >
-                <option value="">-- Select Agency --</option>
+                <option value="">{t('rp.selectAgency')}</option>
                 {agencies.map((a) => (
                   <option key={a.id} value={a.id}>{a.name} ({a.type.toUpperCase()})</option>
                 ))}
               </Select>
             </Field>
 
-            <Field label="Update Operational Status">
+            <Field label={t('rp.updateStatus')}>
               <Select
                 value={draft.status}
                 onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value as Report['status'] }))}
               >
-                <option value="pending">Pending (Unassigned)</option>
-                <option value="in_progress">In Progress (Dispatched / En Route)</option>
-                <option value="resolved">Resolved (Evacuated / Safe)</option>
+                <option value="pending">{t('rp.optPending')}</option>
+                <option value="in_progress">{t('rp.optInProgress')}</option>
+                <option value="resolved">{t('rp.optResolved')}</option>
               </Select>
             </Field>
 
-            <Field label="Resolution / Field Instructions">
+            <Field label={t('rp.resolutionNotes')}>
               <Input
                 value={draft.notes}
                 onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
-                placeholder="Enter dispatch notes, rescue directives, or hospital transfer details…"
+                placeholder={t('rp.notesPlaceholder')}
               />
             </Field>
 
             <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
               <Button variant="secondary" onClick={() => setSelected(null)}>
-                Cancel
+                {t('rp.cancel')}
               </Button>
               <Button
                 variant="primary"
@@ -401,7 +403,7 @@ export default function Reports() {
                 disabled={saving}
                 className="font-bold"
               >
-                {saving ? 'Saving Dispatch…' : 'Save & Execute Dispatch'}
+                {saving ? t('rp.saving') : t('rp.saveExecute')}
               </Button>
             </div>
           </div>

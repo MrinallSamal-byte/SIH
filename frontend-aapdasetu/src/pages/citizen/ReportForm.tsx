@@ -96,17 +96,17 @@ export default function ReportForm() {
         setCustomPoint(point)
         const addr = await reverseGeocode(point)
         setGpsAddress(addr ?? `${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
-        toast(`High-precision GPS locked (±${Math.round(pos.accuracy ?? 5)}m)`, 'success')
+        toast(`${t('report.gpsLockedToast')} (±${Math.round(pos.accuracy ?? 5)}m)`, 'success')
       } else {
         throw new Error('no gps')
       }
     } catch {
       if (coords && !isFallback) {
         setCustomPoint({ lat: coords.latitude, lng: coords.longitude })
-        toast('Using last known location.', 'info')
+        toast(t('report.lastKnownLocation'), 'info')
       } else {
-        setGpsError('Location unavailable. Type your area or pick on map.')
-        toast('Location unavailable. Please pick on map or enter manually.', 'info')
+        setGpsError(t('report.locateFail'))
+        toast(t('report.locateFail'), 'info')
       }
     } finally {
       setLocatingGps(false)
@@ -120,12 +120,12 @@ export default function ReportForm() {
       setGpsAddress(address)
       return
     }
-    setGpsAddress('Locating address…')
+    setGpsAddress(t('report.locatingAddress'))
     try {
       const addr = await reverseGeocode(p)
-      setGpsAddress(addr ?? `Landmark at ${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}`)
+      setGpsAddress(addr ?? `${t('report.landmarkAt')} ${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}`)
     } catch {
-      setGpsAddress(`Landmark at ${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}`)
+      setGpsAddress(`${t('report.landmarkAt')} ${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}`)
     }
   }
 
@@ -176,7 +176,7 @@ export default function ReportForm() {
         })
       }, 1000)
     } catch {
-      toast('Microphone access denied. You can upload an audio file instead.', 'error')
+      toast(t('report.micDenied'), 'error')
       audioInputRef.current?.click()
     }
   }
@@ -210,11 +210,11 @@ export default function ReportForm() {
     const items: MediaPayload[] = []
     for (const file of Array.from(files).slice(0, 3 - media.length)) {
       if (file.size > MAX) {
-        toast(`File ${file.name} exceeds 5MB limit`, 'error')
+        toast(`${file.name} ${t('report.fileTooLarge')}`, 'error')
         continue
       }
       if (file.type && !ALLOWED.includes(file.type) && !file.type.startsWith('image/') && !file.type.startsWith('video/') && !file.type.startsWith('audio/')) {
-        toast(`File ${file.name} type not allowed`, 'error')
+        toast(`${file.name}: ${t('report.fileNotAllowed')}`, 'error')
         continue
       }
       const dataUrl = await fileToDataUrl(file)
@@ -236,17 +236,17 @@ export default function ReportForm() {
     e.preventDefault()
 
     if (!selectedType) {
-      toast('Please select an Emergency Type', 'error')
+      toast(t('report.errCategory'), 'error')
       return
     }
 
     const cleanPhone = reporterPhone.replace(/\D/g, '')
     if (!cleanPhone || cleanPhone.length < 10) {
-      toast('Please enter a valid 10-digit mobile number for emergency contact', 'error')
+      toast(t('common.errPhone10'), 'error')
       return
     }
     if (media.length === 0) {
-      toast('Please upload a photo/video or record a voice note — at least one is required', 'error')
+      toast(t('report.errMediaRequired'), 'error')
       return
     }
 
@@ -255,7 +255,7 @@ export default function ReportForm() {
       finalLocation = { lat: coords.latitude, lng: coords.longitude }
     }
     if (!finalLocation) {
-      toast('Please allow GPS or pick your location on the map before submitting', 'error')
+      toast(t('report.errGpsRequired'), 'error')
       setSending(false)
       return
     }
@@ -264,7 +264,7 @@ export default function ReportForm() {
     try {
       const input: ReportInput = {
         type: selectedType as IncidentType,
-        description: description.trim() || `Emergency Report: ${selectedType.toUpperCase()}`,
+        description: description.trim() || `${t('report.emergencyReport')} ${selectedType.toUpperCase()}`,
         landmark: gpsAddress.trim() || undefined,
         reporterName: reporterName.trim() || undefined,
         reporterPhone: cleanPhone,
@@ -294,9 +294,9 @@ export default function ReportForm() {
         // Storage unavailable
       }
 
-      toast('Emergency incident reported successfully!', 'success')
+      toast(t('report.reportedSuccess'), 'success')
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Submission failed', 'error')
+      toast(err instanceof Error ? err.message : t('common.submissionFailed'), 'error')
     } finally {
       setSending(false)
     }
@@ -309,9 +309,9 @@ export default function ReportForm() {
         <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 p-4 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/60">
           <CheckCircle2 className="h-8 w-8 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <div>
-            <h1 className="text-base font-bold">Incident Registered with Command Center</h1>
+            <h1 className="text-base font-bold">{t('report.successTitle')}</h1>
             <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5 leading-relaxed">
-              Your report is prioritized by the AI triage engine and logged in the rescue dispatch queue.
+              {t('report.successDesc')}
             </p>
           </div>
         </div>
@@ -319,7 +319,7 @@ export default function ReportForm() {
         <div className="mt-5 rounded-2xl border border-zinc-200/80 bg-[#f4f4f5] p-5 dark:border-white/[0.08] dark:bg-[#151515]">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">Tracking ID — Save this</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">{t('report.trackingIdLabel')}</div>
               <div className="mt-0.5 font-mono text-xl sm:text-2xl font-bold text-zinc-800 dark:text-slate-300 break-all">{result.trackingId}</div>
             </div>
             <button
@@ -327,14 +327,14 @@ export default function ReportForm() {
               onClick={() => {
                 navigator.clipboard.writeText(result.trackingId).then(() => {
                   setCopied(true)
-                  toast('Tracking ID copied to clipboard')
+                  toast(t('common.copiedClipboard'))
                   setTimeout(() => setCopied(false), 3000)
                 })
               }}
               className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-2 text-xs font-bold text-white transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white cursor-pointer"
             >
               <Copy className="h-3.5 w-3.5" />
-              <span>{copied ? 'Copied!' : 'Copy ID'}</span>
+              <span>{copied ? t('common.copied') : t('damage.copyId')}</span>
             </button>
           </div>
         </div>
@@ -344,7 +344,7 @@ export default function ReportForm() {
             href={`#/track?id=${encodeURIComponent(result.trackingId)}`}
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-zinc-800 py-3.5 text-sm font-bold text-white shadow-xs hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
           >
-            <span>Track Live Rescue Status</span>
+            <span>{t('report.trackStatusLink')}</span>
             <ArrowRight className="h-4 w-4" />
           </a>
           <button
@@ -361,7 +361,7 @@ export default function ReportForm() {
             }}
             className="rounded-xl border border-zinc-200 bg-white px-5 py-3.5 text-sm font-bold text-zinc-600 hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200"
           >
-            New Report
+            {t('report.newReport')}
           </button>
         </div>
       </div>
@@ -434,7 +434,7 @@ export default function ReportForm() {
                   <>
                     <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                     <span className={`font-semibold ${isFallback || (accuracy && accuracy >= 1000) ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
-                      {isFallback || source !== 'gps' ? 'Location estimated — tap Retry for precise GPS' : <>{t('report.gpsAutoDetected')} {accuracy && accuracy < 1000 ? `(±${Math.round(accuracy)}m)` : ''}</>}
+                      {isFallback || source !== 'gps' ? t('report.estimatedHint') : <>{t('report.gpsAutoDetected')} {accuracy && accuracy < 1000 ? `(±${Math.round(accuracy)}m)` : ''}</>}
                     </span>
                   </>
                 )}
@@ -632,8 +632,8 @@ export default function ReportForm() {
           const isCriticalDesc = ['bleed','blood','trapped','drown','sinking','heart attack','chest pain','stroke','electrocute','severe burn','fire','choking','snake','poison','collapse','debris','fracture','dying','flood rising'].some(k=>lower.includes(k))
           return isCriticalDesc ? (
             <div className="rounded-xl border border-red-300 bg-red-50 p-3 text-xs text-red-800 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300 flex items-center justify-between gap-3">
-              <span className="font-bold">Life-threatening keywords detected — use Emergency SOS for immediate dispatch?</span>
-              <a href="#/sos" className="shrink-0 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700">Go to SOS</a>
+              <span className="font-bold">{t('report.lifeThreatWarn')}</span>
+              <a href="#/sos" className="shrink-0 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700">{t('report.goToSos')}</a>
             </div>
           ) : null
         })()}

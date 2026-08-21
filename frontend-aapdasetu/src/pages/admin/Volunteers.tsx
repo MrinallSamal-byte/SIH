@@ -5,24 +5,26 @@ import Badge from '../../components/common/Badge'
 import Loader from '../../components/common/Loader'
 import { useRealtime } from '../../hooks/useRealtime'
 import { useToast } from '../../components/common/Toast'
+import { useLanguage } from '../../lib/i18n'
 import type { Volunteer } from '../../types'
 
 export default function Volunteers() {
+  const { t } = useLanguage()
   const { toast } = useToast()
   const fetchVolunteers = useCallback(() => listVolunteers(), [])
   const volunteers = useRealtime<Volunteer[]>(fetchVolunteers, 10000)
 
   const update = async (id: string, patch: Partial<Volunteer>) => {
     await updateVolunteer(id, patch)
-    toast('Volunteer updated')
+    toast(t('vl.volunteerUpdated'))
   }
 
   if (!volunteers) return <Loader />
 
   return (
     <div>
-      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Volunteer roster & skill dispatch</h1>
-      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Skills: medical · search_rescue · driving · logistics</p>
+      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{t('vl.title')}</h1>
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('vl.skillsHint')}</p>
 
       <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         {volunteers.map((v) => (
@@ -38,7 +40,7 @@ export default function Volunteers() {
                   {s.replace('_', ' ')}
                 </span>
               ))}
-              {v.skills.length === 0 && <span className="text-xs text-slate-400 dark:text-slate-500">no skills</span>}
+              {v.skills.length === 0 && <span className="text-xs text-slate-400 dark:text-slate-500">{t('vl.noSkills')}</span>}
             </div>
             <div className="mt-3">
               <Select
@@ -46,11 +48,11 @@ export default function Volunteers() {
                 onChange={(e) => update(v.id, { status: e.target.value as Volunteer['status'] })}
                 className="w-auto py-1 text-xs"
               >
-                <option value="available">available</option>
-                <option value="on_duty">on_duty</option>
-                <option value="offline">offline</option>
+                <option value="available">{t('vl.statusAvailable')}</option>
+                <option value="on_duty">{t('vl.statusOnDuty')}</option>
+                <option value="offline">{t('vl.statusOffline')}</option>
               </Select>
-              {v.assignedReportId && <div className="mt-1 text-xs text-slate-400 dark:text-slate-500">Task: {v.assignedReportId}</div>}
+              {v.assignedReportId && <div className="mt-1 text-xs text-slate-400 dark:text-slate-500">{t('vl.task')}: {v.assignedReportId}</div>}
             </div>
           </div>
         ))}

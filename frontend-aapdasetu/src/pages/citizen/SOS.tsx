@@ -49,7 +49,8 @@ export default function SOS() {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [landmark, setLandmark] = useState('')
-  const [selectedType, setSelectedType] = useState<IncidentType>('other')
+  // Category selector removed — SOS always dispatches as General Emergency.
+  const selectedType: IncidentType = 'other'
   const [phoneError, setPhoneError] = useState<string | null>(null)
   const [triggering, setTriggering] = useState(false)
   const [rescanning, setRescanning] = useState(false)
@@ -82,7 +83,7 @@ export default function SOS() {
         for (const item of queue) {
           try {
             await createReport(item)
-            toast('Pending offline SOS synced successfully!', 'success')
+            toast(t('sos.syncedToast'), 'success')
           } catch {
             remaining.push(item)
           }
@@ -112,7 +113,7 @@ export default function SOS() {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
     }
-  }, [toast])
+  }, [toast, t])
 
   const validatePhone = (raw: string): boolean => {
     const clean = raw.replace(/\D/g, '')
@@ -121,16 +122,16 @@ export default function SOS() {
 
   const handleRescanGps = async () => {
     setRescanning(true)
-    toast('Scanning hardware GPS for high-precision satellites...', 'info')
+    toast(t('sos.scanningGps'), 'info')
     try {
       const c = await locateHighAccuracy()
       if (c) {
-        toast(`High-precision GPS locked (±${Math.round(c.accuracy ?? 5)}m precision)`, 'success')
+        toast(`${t('report.gpsLockedToast')} (±${Math.round(c.accuracy ?? 5)}m)`, 'success')
       } else {
-        toast('GPS signal weak, using best available location estimate.', 'info')
+        toast(t('sos.gpsWeakToast'), 'info')
       }
     } catch {
-      toast('Could not acquire GPS fix. Please verify location manually.', 'error')
+      toast(t('sos.gpsFailToast'), 'error')
     } finally {
       setRescanning(false)
     }
@@ -140,14 +141,14 @@ export default function SOS() {
     if (!phone.trim()) {
       setPhoneError(t('sos.phoneRequiredError'))
       phoneInputRef.current?.focus()
-      toast('Mobile number is required for emergency dispatch', 'error')
+      toast(t('sos.errPhoneRequired'), 'error')
       return
     }
 
     if (!validatePhone(phone.trim())) {
-      setPhoneError('Please enter a valid 10-digit mobile number.')
+      setPhoneError(t('sos.errPhoneInvalid'))
       phoneInputRef.current?.focus()
-      toast('Invalid mobile number format', 'error')
+      toast(t('sos.errPhoneFormat'), 'error')
       return
     }
 
@@ -156,7 +157,7 @@ export default function SOS() {
 
     try {
       const foundType = emergencyTypes.find((e) => e.type === selectedType)
-      const typeLabel = foundType ? t(foundType.labelKey) : 'Emergency'
+      const typeLabel = foundType ? t(foundType.labelKey) : t('sos.typeFallback')
 
       // coords is never null (hook seeds a hardcoded fallback), so gate on provenance:
       // only trust gps/manual/cached/ip fixes — never the fabricated default location.
@@ -170,14 +171,14 @@ export default function SOS() {
           lat = pos.coords.latitude
           lng = pos.coords.longitude
         } catch {
-          toast('Location unavailable — please pick your location on the map before sending SOS', 'error')
+          toast(t('sos.pickLocationToast'), 'error')
           setShowLocationModal(true)
           setTriggering(false)
           return
         }
       }
       if (lat === undefined || lng === undefined) {
-        toast('Location unavailable — please pick your location on the map', 'error')
+        toast(t('sos.pickLocationToast'), 'error')
         setShowLocationModal(true)
         setTriggering(false)
         return
@@ -206,7 +207,7 @@ export default function SOS() {
         } catch {
           localStorage.setItem('aapdasetu_pending_sos', JSON.stringify([input]))
         }
-        toast('Offline: SOS queued! Will dispatch as soon as network reconnects.', 'info')
+        toast(t('sos.offlineQueuedToast'), 'info')
         setTriggering(false)
         return
       }
@@ -240,7 +241,7 @@ export default function SOS() {
 
       toast(t('sos.sent'))
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Failed to send SOS', 'error')
+      toast(err instanceof Error ? err.message : t('common.submissionFailed'), 'error')
     } finally {
       setTriggering(false)
     }
@@ -249,7 +250,7 @@ export default function SOS() {
   const copyTrackingId = (id: string) => {
     navigator.clipboard.writeText(id).then(() => {
       setCopied(true)
-      toast('Tracking ID copied to clipboard')
+      toast(t('common.copiedClipboard'))
       setTimeout(() => setCopied(false), 3000)
     })
   }
@@ -303,7 +304,7 @@ export default function SOS() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
-                      Rescue Dispatch Location
+                      {t('sos.dispatchLocationLabel')}
                     </span>
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
@@ -315,18 +316,18 @@ export default function SOS() {
                       }`}
                     >
                       {source === 'gps'
-                        ? 'Live GPS Locked'
+                        ? t('sos.gpsLive')
                         : source === 'manual'
-                        ? 'Manually Verified'
+                        ? t('sos.manuallyVerified')
                         : source === 'cached'
-                        ? 'Cached GPS'
-                        : 'Estimated Area'}
+                        ? t('sos.cachedGps')
+                        : t('sos.estimatedArea')}
                       {accuracy !== null && accuracy < 5000 && ` (±${Math.round(accuracy)}m)`}
                     </span>
                   </div>
 
                   <div className="mt-1 font-bold text-sm sm:text-base text-zinc-800 dark:text-slate-300 leading-snug break-words">
-                    {address || (geoStatus === 'locating' ? 'Resolving street address...' : 'Bhubaneswar, Odisha, India')}
+                    {address || (geoStatus === 'locating' ? t('sos.resolvingAddress') : t('sos.defaultCity'))}
                   </div>
 
                   <div className="mt-1.5 flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
@@ -342,7 +343,7 @@ export default function SOS() {
                       className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200 cursor-pointer transition font-sans font-semibold"
                     >
                       <RefreshCw className={`h-3 w-3 ${rescanning ? 'animate-spin' : ''}`} />
-                      <span>{rescanning ? 'Acquiring GPS…' : 'Re-scan GPS'}</span>
+                      <span>{rescanning ? t('sos.acquiring') : t('sos.rescan')}</span>
                     </button>
                   </div>
                 </div>
@@ -358,7 +359,7 @@ export default function SOS() {
                 className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100 hover:border-red-300 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-900/70 cursor-pointer shadow-2xs transition shrink-0"
               >
                 <Edit3 className="h-3.5 w-3.5" />
-                <span>Correct Area</span>
+                <span>{t('sos.correctArea')}</span>
               </button>
             </div>
           </div>
@@ -372,38 +373,15 @@ export default function SOS() {
 
           {!result ? (
             <>
-              {/* Category + Contact form — wider on desktop */}
+              {/* Contact form — wider on desktop */}
               <div className="mt-6 w-full max-w-3xl space-y-5">
-                {/* Emergency Category Tiles */}
-                <div className="text-left">
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-slate-300 mono">
-                    {t('sos.categoryTitle')}
-                  </label>
-                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                    {emergencyTypes.map((item) => (
-                      <button
-                        key={item.type}
-                        type="button"
-                        onClick={() => setSelectedType(item.type)}
-                        className={`flex items-center gap-2 rounded-xl border p-3 text-left text-xs font-bold transition-all cursor-pointer ${
-                          selectedType === item.type
-                            ? 'border-red-600 bg-red-50 text-red-900 shadow-xs ring-2 ring-red-200 dark:border-red-500 dark:bg-red-950/70 dark:text-red-200 dark:ring-red-900'
-                            : 'border-zinc-200/80 bg-white text-zinc-600 hover:border-zinc-200 hover:bg-zinc-50 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-300'
-                        }`}
-                      >
-                        <span className="leading-tight">{t(item.labelKey)}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Rescue Details Card */}
                 <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 text-left shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
                   <div className="mb-3 flex items-center justify-between flex-wrap gap-2">
                     <span className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-slate-200 mono">
                       {t('sos.contactTitle')}
                     </span>
-                    <span className="text-[11px] font-bold text-red-600 dark:text-red-400">* Mobile required for rescue call</span>
+                    <span className="text-[11px] font-bold text-red-600 dark:text-red-400">{t('sos.phoneHint')}</span>
                   </div>
 
                   <div className="space-y-3">
@@ -449,11 +427,11 @@ export default function SOS() {
                         />
                       </Field>
 
-                      <Field label="Floor / Landmark (Optional)">
+                      <Field label={t('sos.floorLabel')}>
                         <Input
                           value={landmark}
                           onChange={(e) => setLandmark(e.target.value)}
-                          placeholder="e.g. 2nd Floor, Room 204"
+                          placeholder={t('sos.floorPlaceholder')}
                         />
                       </Field>
                     </div>
@@ -467,7 +445,7 @@ export default function SOS() {
                   type="button"
                   onClick={trigger}
                   disabled={triggering}
-                  aria-label="Press for Emergency Satellite SOS Dispatch"
+                  aria-label={t('sos.sosAria')}
                   className="
                     relative flex h-14 sm:h-16 w-full
                     flex-row items-center justify-center gap-2 sm:gap-3
@@ -488,35 +466,35 @@ export default function SOS() {
                     <>
                       <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
                       <span className="text-base font-bold uppercase tracking-wide">
-                        Dispatching SOS Signal…
+                        {t('sos.dispatchingSos')}
                       </span>
                     </>
                   ) : (
                     <>
                       <Siren className="h-6 w-6" />
                       <span className="text-sm sm:text-lg font-extrabold uppercase tracking-tight">
-                        Send SOS Distress Signal Now
+                        {t('sos.sendNow')}
                       </span>
                     </>
                   )}
                 </button>
 
                 <p className="mt-3 max-w-lg text-xs text-slate-500 dark:text-slate-400 text-center">
-                  * Tap to alert response units immediately. Your exact GPS coordinates and contact phone will be broadcasted to NDRF/SDRF command.
+                  {t('sos.disclaimer')}
                 </p>
               </div>
 
               {/* Offline Fallback */}
               <div className="mt-3 w-full max-w-3xl space-y-2 rounded-2xl border border-zinc-200/80 bg-white p-4 text-left shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
                 <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">
-                  OFFLINE FALLBACK OPTIONS
+                  {t('sos.offlineOptionsTitle')}
                 </span>
                 <a
                   href={emergencySmsLink}
                   className="flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-[#f4f4f5] py-2.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-200 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200 shadow-xs cursor-pointer"
                 >
                   <MessageSquare className="h-4 w-4" />
-                  <span>1-Tap Emergency SMS (112 Offline Fallback)</span>
+                  <span>{t('sos.smsLink')}</span>
                 </a>
               </div>
             </>
@@ -526,9 +504,9 @@ export default function SOS() {
               <div className="flex items-center gap-3 rounded-xl bg-red-50 p-4 text-red-800 dark:bg-red-950/50 dark:text-red-300">
                 <CheckCircle2 className="h-6 w-6 shrink-0 text-red-600 dark:text-red-400" />
                 <div>
-                  <h2 className="text-sm font-bold">SOS Distress Signal Broadcasted!</h2>
+                  <h2 className="text-sm font-bold">{t('sos.broadcastTitle')}</h2>
                   <p className="text-xs text-red-700 dark:text-red-400 mt-0.5">
-                    Disaster control room & nearby rescue units have been notified with your phone and GPS location.
+                    {t('sos.broadcastDesc')}
                   </p>
                 </div>
               </div>
@@ -537,7 +515,7 @@ export default function SOS() {
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">
-                      YOUR INCIDENT TRACKING ID
+                      {t('sos.trackingIdHeading')}
                     </span>
                     <div className="mt-1 flex items-center gap-2 flex-wrap">
                       <span className="font-mono text-xl sm:text-2xl font-bold text-zinc-800 dark:text-slate-300 break-all">
@@ -549,7 +527,7 @@ export default function SOS() {
                         className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-zinc-800 px-2.5 py-1.5 text-xs font-bold text-white transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
                       >
                         <Copy className="h-3 w-3" />
-                        <span>{copied ? 'Copied' : 'Copy'}</span>
+                        <span>{copied ? t('sos.copied') : t('common.copy')}</span>
                       </button>
                     </div>
                   </div>
@@ -562,7 +540,7 @@ export default function SOS() {
                   onClick={() => navigate(`/track?id=${encodeURIComponent(result.trackingId)}`)}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-800 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white cursor-pointer"
                 >
-                  <span>Track Live Response Status</span>
+                  <span>{t('sos.trackResponse')}</span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
 
@@ -571,7 +549,7 @@ export default function SOS() {
                   onClick={() => navigate('/report-damage')}
                   className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50/80 py-2.5 text-xs font-bold text-red-700 transition hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300 cursor-pointer"
                 >
-                  <span>Facing Broken Home / Pipeline Damage? Upload for AI Relief</span>
+                  <span>{t('sos.damageCta')}</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </button>
 
@@ -585,26 +563,26 @@ export default function SOS() {
                   }}
                   className="w-full rounded-xl border border-zinc-200/80 bg-white py-2 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 cursor-pointer"
                 >
-                  Trigger Another SOS
+                  {t('sos.anotherSos')}
                 </button>
               </div>
 
               <div className="border-t border-zinc-200/80 pt-4 dark:border-white/[0.08]">
                 <span className="block text-center text-xs font-bold text-slate-400 mono mb-2 uppercase">
-                  Direct Emergency Helplines (Toll-Free)
+                  {t('sos.helplinesTitle')}
                 </span>
                 <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold">
                   <a href="tel:112" className="rounded-xl bg-[#f4f4f5] p-2.5 text-zinc-700 transition hover:bg-zinc-200 dark:bg-[#222222] dark:text-slate-200">
                     <div className="text-base font-bold text-red-600 mono">112</div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400">National SOS</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400">{t('helpline.nationalSos')}</div>
                   </a>
                   <a href="tel:108" className="rounded-xl bg-[#f4f4f5] p-2.5 text-zinc-700 transition hover:bg-zinc-200 dark:bg-[#222222] dark:text-slate-200">
                     <div className="text-base font-bold text-amber-600 mono">108</div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400">Ambulance</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400">{t('helpline.ambulance')}</div>
                   </a>
                   <a href="tel:1070" className="rounded-xl bg-[#f4f4f5] p-2.5 text-zinc-700 transition hover:bg-zinc-200 dark:bg-[#222222] dark:text-slate-200">
                     <div className="text-base font-bold text-emerald-600 mono">1070</div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400">Disaster Ops</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400">{t('helpline.disaster')}</div>
                   </a>
                 </div>
               </div>
@@ -615,36 +593,36 @@ export default function SOS() {
       {/* Location Correction & Map Picker Modal */}
       <Modal
         open={showLocationModal}
-        title="Correct Emergency Location"
+        title={t('sos.modalTitle')}
         onClose={() => setShowLocationModal(false)}
       >
         <div className="space-y-4 text-left">
           <p className="text-xs text-zinc-500 dark:text-slate-400">
-            Ensure rescue teams reach your exact location. You can type your local neighborhood/address, choose a quick region, or tap the map to place a precise pin.
+            {t('sos.modalDesc')}
           </p>
 
           {/* Manual Address Input */}
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                Address / Area / Landmark &amp; PIN Code
+                {t('sos.addressLabel')}
               </label>
             </div>
             <input
               value={editAddressText}
               onChange={(e) => setEditAddressText(e.target.value)}
-              placeholder="e.g. Flat 302, Gayatri Vihar, Sundarpada, Bhubaneswar - 751002"
+              placeholder={t('sos.addressPlaceholder')}
               className="w-full rounded-xl border border-zinc-200 px-3.5 py-2.5 text-xs font-semibold text-zinc-800 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-200 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300"
             />
             <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-              * Rescue teams will see your exact custom address, building name, and PIN code.
+              {t('sos.modalHint')}
             </p>
           </div>
 
           {/* Quick Regional Presets */}
           <div>
             <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
-              Quick Region Presets
+              {t('sos.presetsLabel')}
             </label>
             <div className="flex flex-wrap gap-1.5">
               {[
@@ -675,7 +653,7 @@ export default function SOS() {
           {/* Interactive Map Picker */}
           <div>
             <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
-              Tap Map or Search to Reposition Pin
+              {t('sos.mapLabel')}
             </label>
             <div className="overflow-hidden rounded-xl border border-zinc-200/80 dark:border-white/[0.1]">
               <LandmarkPicker
@@ -704,7 +682,7 @@ export default function SOS() {
               onClick={() => setShowLocationModal(false)}
               className="rounded-xl border border-zinc-200/80 px-4 py-2 text-xs font-semibold text-zinc-500 hover:bg-zinc-100 dark:border-white/[0.1] dark:text-slate-300 dark:hover:bg-[#252525] cursor-pointer"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="button"
@@ -715,11 +693,11 @@ export default function SOS() {
                   setAddress(editAddressText.trim())
                 }
                 setShowLocationModal(false)
-                toast('Emergency dispatch location updated successfully!', 'success')
+                toast(t('sos.savedToast'), 'success')
               }}
               className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-red-700 cursor-pointer"
             >
-              Save & Apply Location
+              {t('sos.saveLocation')}
             </button>
           </div>
         </div>

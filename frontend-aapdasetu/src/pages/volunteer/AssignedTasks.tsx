@@ -8,9 +8,11 @@ import Modal from '../../components/common/Modal'
 import { Field, Textarea } from '../../components/common/Input'
 import { useToast } from '../../components/common/Toast'
 import { timeAgo, getNavigationUrl } from '../../lib/helpers'
+import { useLanguage } from '../../lib/i18n'
 import type { Report } from '../../types'
 
 export default function AssignedTasks() {
+  const { t } = useLanguage()
   const { toast } = useToast()
   const [tasks, setTasks] = useState<Report[] | null>(null)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
@@ -29,7 +31,7 @@ export default function AssignedTasks() {
       const relevant = reports.filter((r) => r.assignedVolunteerId === activeVolunteerId)
       setTasks(relevant)
     } catch {
-      toast('Failed to load assigned tasks', 'error')
+      toast(t('vt.loadFailed'), 'error')
     }
   }, [activeVolunteerId, toast])
 
@@ -41,12 +43,12 @@ export default function AssignedTasks() {
     setUpdatingId(reportId)
     try {
       await updateReport(reportId, { status: nextStatus, resolutionNotes: notes })
-      toast(`Task updated: ${nextStatus.toUpperCase()}`, 'success')
+      toast(`${t('vt.taskUpdated')}: ${nextStatus.toUpperCase()}`, 'success')
       setResolveTarget(null)
       setResolutionNotes('')
       loadTasks()
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Update failed', 'error')
+      toast(err instanceof Error ? err.message : t('vt.updateFailed'), 'error')
     } finally {
       setUpdatingId(null)
     }
@@ -56,7 +58,7 @@ export default function AssignedTasks() {
   if (!activeVolunteerId) {
     return (
       <div className="rounded-2xl border border-amber-300 bg-amber-50 p-6 text-center text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
-        No volunteer session. Please <a href="#/volunteer/login" className="font-bold underline">log in</a> to view assigned tasks.
+        {t('vt.noSession')} <a href="#/volunteer/login" className="font-bold underline">{t('vt.logIn')}</a> {t('vt.toViewTasks')}
       </div>
     )
   }
@@ -64,9 +66,9 @@ export default function AssignedTasks() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Assigned Tasks</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{t('vt.title')}</h1>
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          Active incidents assigned to you.
+          {t('vt.subtitle')}
         </p>
       </div>
 
@@ -82,7 +84,7 @@ export default function AssignedTasks() {
               <div className="flex flex-wrap items-center gap-2">
                 <PriorityBadge label={task.priorityLabel} />
                 <span className="font-mono text-xs font-bold text-slate-400 dark:text-slate-500">{task.trackingId}</span>
-                <span className="text-sm font-bold capitalize">{task.type} Emergency</span>
+                <span className="text-sm font-bold capitalize">{task.type} {t('vt.emergency')}</span>
                 <Badge value={task.status} />
                 <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">{timeAgo(task.createdAt)}</span>
               </div>
@@ -90,17 +92,17 @@ export default function AssignedTasks() {
               <p className="mt-3 text-sm text-slate-800 dark:text-slate-200 font-medium">{task.description}</p>
               
               <div className="mt-2 space-y-1 text-xs text-slate-500 dark:text-slate-400">
-                {task.landmark && <div>Landmark: <strong>{task.landmark}</strong></div>}
+                {task.landmark && <div>{t('vt.landmark')}: <strong>{task.landmark}</strong></div>}
                 {task.reporterPhone && (
                   <div>
-                    Contact:{' '}
+                    {t('vt.contact')}:{' '}
                     <a href={`tel:${task.reporterPhone}`} className="text-slate-900 dark:text-slate-100 underline font-bold hover:text-emerald-600">
                       {task.reporterPhone}
                     </a>
                   </div>
                 )}
                 {task.assignedVolunteerName && (
-                  <div>Assignee: <strong>{task.assignedVolunteerName}</strong></div>
+                  <div>{t('vt.assignee')}: <strong>{task.assignedVolunteerName}</strong></div>
                 )}
               </div>
 
@@ -113,10 +115,10 @@ export default function AssignedTasks() {
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700 cursor-pointer"
                     >
-                      <span>Start Navigation</span>
+                      <span>{t('vt.startNavigation')}</span>
                     </a>
                   ) : (
-                    <span className="text-xs text-slate-400">No GPS Attached</span>
+                    <span className="text-xs text-slate-400">{t('vt.noGps')}</span>
                   )}
 
                   {task.reporterPhone && (
@@ -124,7 +126,7 @@ export default function AssignedTasks() {
                       href={`tel:${task.reporterPhone}`}
                       className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-xs font-bold text-slate-800 hover:bg-slate-200 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
                     >
-                      <span>Call Contact</span>
+                      <span>{t('vt.callContact')}</span>
                     </a>
                   )}
                 </div>
@@ -136,11 +138,11 @@ export default function AssignedTasks() {
                     disabled={updatingId === task.id}
                     onClick={() => {
                       setResolveTarget(task)
-                      setResolutionNotes('Victim safely evacuated and transferred to shelter/medical team.')
+                      setResolutionNotes(t('vt.defaultResolutionNotes'))
                     }}
                     className="font-bold"
                   >
-                    Complete Mission
+                    {t('vt.completeMission')}
                   </Button>
                 </div>
               </div>
@@ -150,31 +152,31 @@ export default function AssignedTasks() {
 
         {tasks.length === 0 && (
           <div className="rounded-2xl border border-dashed border-slate-300 p-12 text-center text-sm text-slate-400 dark:border-slate-800">
-            No active tasks currently assigned.
+            {t('vt.noActiveTasks')}
           </div>
         )}
       </div>
 
       {/* Resolution Notes Modal */}
       {resolveTarget && (
-        <Modal open title="Complete Task" onClose={() => setResolveTarget(null)}>
+        <Modal open title={t('vt.completeTask')} onClose={() => setResolveTarget(null)}>
           <div className="space-y-4">
             <div className="text-xs text-slate-600 dark:text-slate-400">
-              Confirm resolution for incident <strong className="font-mono text-slate-800 dark:text-slate-200">{resolveTarget.trackingId}</strong> ({resolveTarget.type.toUpperCase()}).
+              {t('vt.confirmResolutionFor')} <strong className="font-mono text-slate-800 dark:text-slate-200">{resolveTarget.trackingId}</strong> ({resolveTarget.type.toUpperCase()}).
             </div>
 
-            <Field label="Resolution Notes">
+            <Field label={t('vt.resolutionNotes')}>
               <Textarea
                 rows={3}
                 value={resolutionNotes}
                 onChange={(e) => setResolutionNotes(e.target.value)}
-                placeholder="Describe resolution details..."
+                placeholder={t('vt.resolutionPlaceholder')}
               />
             </Field>
 
             <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
               <Button variant="secondary" onClick={() => setResolveTarget(null)}>
-                Cancel
+                {t('vt.cancel')}
               </Button>
               <Button
                 variant="danger"
@@ -182,7 +184,7 @@ export default function AssignedTasks() {
                 onClick={() => updateTaskStatus(resolveTarget.id, 'resolved', resolutionNotes)}
                 className="font-bold"
               >
-                {updatingId === resolveTarget.id ? 'Resolving…' : 'Confirm Resolution'}
+                {updatingId === resolveTarget.id ? t('vt.resolving') : t('vt.confirmResolution')}
               </Button>
             </div>
           </div>

@@ -17,14 +17,14 @@ import { useGeoLocation } from '../../hooks/useLocation'
 import type { PfaChatMessage } from '../../types'
 
 const promptShortcuts = [
-  { label: 'Water entering house / Flood', query: 'Water is entering our house rapidly. What are our immediate flood survival actions?' },
-  { label: 'Severe bleeding first-aid', query: 'How to administer emergency first-aid for severe arterial bleeding?' },
-  { label: 'Panic & anxiety relief', query: 'I am having intense panic and fear during this disaster. Guide me to calm down.' },
-  { label: 'Trapped under building collapse', query: 'We are trapped under collapsed concrete debris. What should we do to survive and signal rescuers?' },
-  { label: 'Chest pain / cardiac distress', query: 'Someone is having severe chest pain and breathing distress. What should I do immediately?' },
-  { label: 'Electrical & wire hazard safety', query: 'Fallen power lines in standing water. What electrical safety rules should we follow?' },
-  { label: 'Snakebite protocol', query: 'Someone was bitten by a snake in flood water. What is the immediate first-aid protocol?' },
-  { label: 'Fire evacuation tactics', query: 'Dense smoke and fire blocking exit. How should we evacuate safely?' },
+  { labelKey: 'pfa.topicFlood', query: 'Water is entering our house rapidly. What are our immediate flood survival actions?' },
+  { labelKey: 'pfa.topicBleeding', query: 'How to administer emergency first-aid for severe arterial bleeding?' },
+  { labelKey: 'pfa.topicPanic', query: 'I am having intense panic and fear during this disaster. Guide me to calm down.' },
+  { labelKey: 'pfa.topicTrapped', query: 'We are trapped under collapsed concrete debris. What should we do to survive and signal rescuers?' },
+  { labelKey: 'pfa.topicCardiac', query: 'Someone is having severe chest pain and breathing distress. What should I do immediately?' },
+  { labelKey: 'pfa.topicElectrical', query: 'Fallen power lines in standing water. What electrical safety rules should we follow?' },
+  { labelKey: 'pfa.topicSnakebite', query: 'Someone was bitten by a snake in flood water. What is the immediate first-aid protocol?' },
+  { labelKey: 'pfa.topicFire', query: 'Dense smoke and fire blocking exit. How should we evacuate safely?' },
 ]
 
 export default function PfaChatPage() {
@@ -49,7 +49,7 @@ export default function PfaChatPage() {
             role: 'bot',
             content:
               t('chat.greeting') ||
-              'Namaste! I am AapdaMitra AI, your 24/7 disaster survival, triage, and crisis companion. How can I help you and your family right now?',
+              t('pfa.greeting'),
           },
         ]
       }
@@ -107,7 +107,7 @@ export default function PfaChatPage() {
         setBreathingActive(true)
       }
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'AapdaMitra AI unreachable', 'error')
+      toast(err instanceof Error ? err.message : t('chat.unreachable'), 'error')
     } finally {
       setBusy(false)
     }
@@ -117,7 +117,7 @@ export default function PfaChatPage() {
     const phone = (callbackPhones[msgIndex] || '').trim()
     const clean = phone.replace(/\D/g, '')
     if (clean.length < 10) {
-      toast('Please enter a valid 10-digit mobile number', 'error')
+      toast(t('common.errPhone10'), 'error')
       return
     }
 
@@ -158,9 +158,9 @@ export default function PfaChatPage() {
         )
       )
 
-      toast('Urgent rescue callback requested! Responders notified.', 'success')
+      toast(t('pfa.callbackSent'), 'success')
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Failed to request callback', 'error')
+      toast(err instanceof Error ? err.message : t('pfa.callbackFailed'), 'error')
     } finally {
       setSubmittingCallback(null)
     }
@@ -179,11 +179,11 @@ export default function PfaChatPage() {
               <span>AapdaMitra AI</span>
               <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 flex items-center gap-1 mono">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                24/7 ACTIVE
+                {t('pfa.badgeActive')}
               </span>
             </h1>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              24/7 intelligent disaster survival guidance, emergency first-aid & trauma support.
+              {t('pfa.tagline')}
             </p>
           </div>
         </div>
@@ -198,7 +198,7 @@ export default function PfaChatPage() {
           }`}
         >
           <Activity className="h-3.5 w-3.5" />
-          <span>{breathingActive ? 'Stop Breath Coach' : '4-4-4 Box Breathing'}</span>
+          <span>{breathingActive ? t('pfa.stopCoach') : t('pfa.startCoach')}</span>
         </button>
       </div>
 
@@ -206,14 +206,14 @@ export default function PfaChatPage() {
       {breathingActive && (
         <div className="flex items-center justify-center gap-4 border-x border-zinc-200/80 bg-[#f4f4f5] py-3 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-800 font-bold text-white text-xs dark:bg-slate-100 dark:text-zinc-800 mono">
-            {breathPhase === 'Inhale' ? 'IN' : breathPhase === 'Hold' ? 'HOLD' : 'OUT'}
+            {breathPhase === 'Inhale' ? t('pfa.breathIn') : breathPhase === 'Hold' ? t('pfa.breathHold') : t('pfa.breathOut')}
           </div>
           <div>
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
-              Guided 4-Second Box Breathing
+              {t('pfa.coachTitle')}
             </div>
             <div className="text-sm font-bold text-zinc-800 dark:text-slate-300 mono">
-              {breathPhase.toUpperCase()} NOW
+              {breathPhase === 'Inhale' ? t('pfa.phaseInhale') : breathPhase === 'Hold' ? t('pfa.phaseHold') : t('pfa.phaseExhale')} {t('pfa.breathNow')}
             </div>
           </div>
         </div>
@@ -258,10 +258,10 @@ export default function PfaChatPage() {
                           : 'text-amber-700 dark:text-amber-400'
                       }`}>
                         <Siren className="h-3.5 w-3.5 animate-pulse" />
-                        {m.dangerLevel === 'CRITICAL' || m.isCritical ? 'Critical Emergency' : 'Assistance & Support'}
+                        {m.dangerLevel === 'CRITICAL' || m.isCritical ? t('pfa.modeCritical') : t('pfa.modeSupport')}
                       </span>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        Direct toll-free connection to emergency dispatch
+                        {t('pfa.callDesc')}
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -274,7 +274,7 @@ export default function PfaChatPage() {
                         }`}
                       >
                         <Phone className="h-3.5 w-3.5" />
-                        <span>Call {m.dangerLevel === 'CRITICAL' || m.isCritical ? '112' : '108'}</span>
+                        <span>{t('common.call')} {m.dangerLevel === 'CRITICAL' || m.isCritical ? '112' : '108'}</span>
                       </a>
                     </div>
                   </div>
@@ -283,12 +283,12 @@ export default function PfaChatPage() {
                   {!m.callbackSubmitted ? (
                     <div>
                       <label className="block text-xs font-bold text-zinc-600 dark:text-slate-200 mb-1.5">
-                        Enter your mobile number — rescue teams will reach out to you as soon as possible:
+                        {t('pfa.phonePrompt')}
                       </label>
                       <div className="flex gap-2">
                         <input
                           type="tel"
-                          placeholder="Enter 10-digit mobile number"
+                          placeholder={t('sos.phonePlaceholder')}
                           value={callbackPhones[i] || ''}
                           onChange={(e) =>
                             setCallbackPhones((prev) => ({ ...prev, [i]: e.target.value }))
@@ -301,7 +301,7 @@ export default function PfaChatPage() {
                           disabled={submittingCallback === i}
                           className="shrink-0 rounded-xl bg-red-600 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-xs transition hover:bg-red-700 disabled:opacity-50"
                         >
-                          {submittingCallback === i ? 'Dispatching…' : 'Reach Me Out'}
+                          {submittingCallback === i ? t('pfa.dispatching') : t('pfa.reachMe')}
                         </button>
                       </div>
                     </div>
@@ -309,16 +309,16 @@ export default function PfaChatPage() {
                     <div className="rounded-xl bg-emerald-50 p-3 text-xs text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-900">
                       <div className="font-bold text-sm flex items-center gap-1.5">
                         <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                        <span>Priority Rescue Callback Dispatched!</span>
+                        <span>{t('pfa.dispatchedTitle')}</span>
                       </div>
                       <div className="mt-1 text-zinc-600 dark:text-slate-300">
-                        Tracking ID: <strong className="font-mono text-zinc-800 dark:text-slate-300">{m.trackingId}</strong> (Contact: {m.submittedPhone})
+                        {t('report.trackingIdLabel')} <strong className="font-mono text-zinc-800 dark:text-slate-300">{m.trackingId}</strong> ({t('pfa.contactInfo')} {m.submittedPhone})
                       </div>
                       <a
                         href={`#/track?id=${m.trackingId}`}
                         className="mt-2 inline-flex items-center gap-1 font-bold text-zinc-800 underline hover:text-zinc-600 dark:text-slate-300"
                       >
-                        <span>Track Live Incident Response Status</span>
+                        <span>{t('pfa.trackStatusLink')}</span>
                         <ArrowRight className="h-3.5 w-3.5" />
                       </a>
                     </div>
@@ -332,7 +332,7 @@ export default function PfaChatPage() {
         {busy && (
           <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 italic">
             <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-800 dark:bg-slate-100" />
-            <span>AapdaMitra AI is preparing survival advice…</span>
+            <span>{t('pfa.thinking')}</span>
           </div>
         )}
         <div ref={bottomRef} />
@@ -343,12 +343,12 @@ export default function PfaChatPage() {
         <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
           {promptShortcuts.map((ps) => (
             <button
-              key={ps.label}
+              key={ps.labelKey}
               type="button"
               onClick={() => send(ps.query)}
               className="shrink-0 rounded-xl border border-zinc-200/80 bg-[#f4f4f5] px-3 py-1.5 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-100 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300"
             >
-              {ps.label}
+              {t(ps.labelKey)}
             </button>
           ))}
         </div>

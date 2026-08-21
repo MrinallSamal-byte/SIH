@@ -12,6 +12,7 @@ import { Field, Input } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import { resetMockDatabase } from '../../api/endpoints'
+import { useLanguage } from '../../lib/i18n'
 
 interface ServerCreds {
   twilioSid: string
@@ -37,6 +38,7 @@ const empty: ServerCreds = {
 }
 
 export default function Settings() {
+  const { t } = useLanguage()
   const { toast } = useToast()
   const [creds, setCreds] = useState<ServerCreds>(() => {
     try {
@@ -54,9 +56,9 @@ export default function Settings() {
     setSaving(true)
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(creds))
-      toast('System settings & gateway configuration saved successfully!', 'success')
+      toast(t('st.saveSuccess'), 'success')
     } catch {
-      toast('Failed to save settings', 'error')
+      toast(t('st.saveFailed'), 'error')
     } finally {
       setSaving(false)
     }
@@ -73,18 +75,18 @@ export default function Settings() {
           <div className="flex items-center gap-2">
             <SettingsIcon className="h-6 w-6 text-slate-900 dark:text-slate-100" />
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-              System Settings & Integration Gateway
+              {t('st.title')}
             </h1>
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Configure multi-channel communication keys, AI endpoint hooks, and Incident Command operational parameters.
+            {t('st.subtitle')}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <Button type="submit" className="shadow-sm cursor-pointer flex items-center gap-1.5">
             <Save className="h-4 w-4" />
-            <span>{saving ? 'Saving…' : 'Save Changes'}</span>
+            <span>{saving ? t('st.saving') : t('st.saveChanges')}</span>
           </Button>
         </div>
       </div>
@@ -94,10 +96,10 @@ export default function Settings() {
         <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
             <Smartphone className="h-4 w-4 text-blue-600" />
-            <span>Cellular SMS Gateway (Twilio / Telecom)</span>
+            <span>{t('st.smsGateway')}</span>
           </div>
 
-          <Field label="Account SID">
+          <Field label={t('st.accountSid')}>
             <Input
               value={creds.twilioSid}
               onChange={(e) => set('twilioSid')(e.target.value)}
@@ -106,7 +108,7 @@ export default function Settings() {
             />
           </Field>
 
-          <Field label="Auth Token">
+          <Field label={t('st.authToken')}>
             <Input
               type="password"
               value={creds.twilioAuthToken}
@@ -116,7 +118,7 @@ export default function Settings() {
             />
           </Field>
 
-          <Field label="Sender Number / Alpha Tag">
+          <Field label={t('st.senderNumber')}>
             <Input
               value={creds.twilioSenderNumber}
               onChange={(e) => set('twilioSenderNumber')(e.target.value)}
@@ -130,10 +132,10 @@ export default function Settings() {
         <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
             <MessageSquare className="h-4 w-4 text-emerald-600" />
-            <span>WhatsApp Business (Meta Cloud API)</span>
+            <span>{t('st.whatsappGateway')}</span>
           </div>
 
-          <Field label="Cloud API Access Token">
+          <Field label={t('st.cloudApiToken')}>
             <Input
               type="password"
               value={creds.whatsappToken}
@@ -143,7 +145,7 @@ export default function Settings() {
             />
           </Field>
 
-          <Field label="Phone Number ID">
+          <Field label={t('st.phoneNumberId')}>
             <Input
               value={creds.whatsappPhoneNumberId}
               onChange={(e) => set('whatsappPhoneNumberId')(e.target.value)}
@@ -153,7 +155,7 @@ export default function Settings() {
           </Field>
 
           <div className="rounded-xl bg-slate-50 p-3 text-[11px] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-            Webhook Callback URL: <code className="text-slate-800 dark:text-slate-200">https://api.aapdasetu.org/webhook/whatsapp</code>
+            {t('st.webhookCallbackUrl')} <code className="text-slate-800 dark:text-slate-200">https://api.aapdasetu.org/webhook/whatsapp</code>
           </div>
         </div>
 
@@ -161,10 +163,10 @@ export default function Settings() {
         <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
             <Cpu className="h-4 w-4 text-purple-600" />
-            <span>AI Vision & Neural NLP Endpoints</span>
+            <span>{t('st.aiEndpoints')}</span>
           </div>
 
-          <Field label="Damage Assessment Vision Endpoint (ResNet-50)">
+          <Field label={t('st.visionEndpointLabel')}>
             <Input
               value={creds.aiVisionEndpoint}
               onChange={(e) => set('aiVisionEndpoint')(e.target.value)}
@@ -173,7 +175,7 @@ export default function Settings() {
             />
           </Field>
 
-          <Field label="PFA Mental Health & Triage NLP Model">
+          <Field label={t('st.triageModelLabel')}>
             <Input
               value={creds.aiTriageEndpoint}
               onChange={(e) => set('aiTriageEndpoint')(e.target.value)}
@@ -187,10 +189,10 @@ export default function Settings() {
         <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
             <Sliders className="h-4 w-4 text-amber-600" />
-            <span>Incident Command Operational Thresholds</span>
+            <span>{t('st.thresholds')}</span>
           </div>
 
-          <Field label="Auto-Escalate Unacknowledged RED Alerts (Minutes)">
+          <Field label={t('st.autoEscalateLabel')}>
             <Input
               type="number"
               value={creds.autoEscalateMinutes}
@@ -201,7 +203,7 @@ export default function Settings() {
           </Field>
 
           <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-            Any unassigned RED beacon exceeding {creds.autoEscalateMinutes || 15} minutes will automatically trigger an audio siren at SDRF State Command.
+            {t('st.escalationWarning').replace('{n}', creds.autoEscalateMinutes || '15')}
           </div>
         </div>
       </div>
@@ -211,24 +213,24 @@ export default function Settings() {
         <div>
           <div className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <RotateCcw className="h-4 w-4 text-slate-500" />
-            <span>Simulation Database & Telemetry Reset</span>
+            <span>{t('st.resetSection')}</span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Reset mock database with 1,000+ realistic disaster incidents, live shelter feeds, and volunteer units.
+            {t('st.resetDesc')}
           </p>
         </div>
 
         <button
           type="button"
           onClick={async () => {
-            if (window.confirm('Reset local mock database to 1,000+ disaster records?')) {
+            if (window.confirm(t('st.resetConfirm'))) {
               await resetMockDatabase()
-              toast('Database reset with 1,000+ fresh records!', 'success')
+              toast(t('st.resetSuccess'), 'success')
             }
           }}
           className="rounded-xl border border-slate-300 bg-slate-50 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 shrink-0 cursor-pointer"
         >
-          Reset 1,000+ Records
+          {t('st.resetButton')}
         </button>
       </div>
     </form>

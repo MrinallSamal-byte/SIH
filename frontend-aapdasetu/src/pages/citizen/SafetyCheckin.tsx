@@ -60,17 +60,17 @@ export default function SafetyCheckinPage() {
 
   const submit = async () => {
     if (!fullName.trim()) {
-      toast('Please enter your full name', 'error')
+      toast(t('checkin.errName'), 'error')
       return
     }
 
     if (!phone.trim() || !validatePhone(phone.trim())) {
-      setPhoneError('Please enter a valid 10-digit mobile number.')
-      toast('Valid phone number is required', 'error')
+      setPhoneError(t('checkin.errPhoneDisplay'))
+      toast(t('checkin.errPhoneToast'), 'error')
       return
     }
     if (!locationName.trim()) {
-      toast('Please enter your current location / shelter (required)', 'error')
+      toast(t('checkin.errLocation'), 'error')
       return
     }
 
@@ -88,9 +88,9 @@ export default function SafetyCheckinPage() {
       }
       const saved = await createSafetyCheckin(input)
       setConfirm(saved)
-      toast('Safety status recorded successfully')
+      toast(t('checkin.recordedToast'))
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Check-in failed', 'error')
+      toast(err instanceof Error ? err.message : t('common.submissionFailed'), 'error')
     } finally {
       setSending(false)
     }
@@ -198,7 +198,7 @@ export default function SafetyCheckinPage() {
                   onChange={(e) => setFullName(e.target.value)}
                   required
                   maxLength={100}
-                  placeholder="e.g. Ramesh Chandra Sen"
+                  placeholder={t('checkin.namePlaceholder')}
                 />
               </Field>
 
@@ -224,7 +224,7 @@ export default function SafetyCheckinPage() {
                 <Input
                   value={locationName}
                   onChange={(e) => setLocationName(e.target.value)}
-                  placeholder="e.g. Salt Lake Sector V Shelter or At Home"
+                  placeholder={t('checkin.locationPlaceholder')}
                   required
                 />
               </Field>
@@ -234,7 +234,7 @@ export default function SafetyCheckinPage() {
                   rows={3}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="e.g. With 3 family members, power is on, have food/water."
+                  placeholder={t('checkin.messagePlaceholder')}
                 />
               </Field>
 
@@ -254,13 +254,13 @@ export default function SafetyCheckinPage() {
       {activeTab === 'search' && (
         <div className="mt-4 space-y-4">
           <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
-            <Field label="Search by Name, Phone Number, or Location">
+            <Field label={t('checkin.searchLabel')}>
               <div className="relative">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Type name or 10-digit phone number…"
+                  placeholder={t('checkin.searchInputPlaceholder')}
                   autoFocus
                   className="w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-3.5 py-2.5 text-sm placeholder:text-slate-400 outline-none focus:border-slate-800 dark:border-white/[0.1] dark:bg-[#151515] dark:text-slate-300"
                 />
@@ -290,7 +290,7 @@ export default function SafetyCheckinPage() {
                         {maskPhone(item.phone)}
                       </div>
                     </div>
-                    <Badge value={item.status} />
+                    <Badge value={item.status} label={item.status === 'safe' ? t('checkin.statusSafe') : item.status === 'need_assistance' ? t('checkin.statusNeedHelp') : item.status} />
                   </div>
 
                   {item.locationName && (
@@ -307,14 +307,14 @@ export default function SafetyCheckinPage() {
                   )}
 
                   <div className="mt-2 text-[11px] text-slate-400 mono">
-                    Checked in {formatDateTime(item.createdAt)}
+                    {t('checkin.checkedInAt')} {formatDateTime(item.createdAt)}
                   </div>
                 </div>
               ))}
 
               {filteredCheckins.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-zinc-200 p-8 text-center text-xs text-slate-500 dark:border-white/[0.08] dark:text-slate-400">
-                  No check-in records matched your search query.
+                  {t('checkin.emptySearch')}
                 </div>
               )}
             </div>

@@ -130,7 +130,7 @@ export default function Home() {
               type="button"
               onClick={() => scrollCards('left')}
               className="rounded-lg border border-zinc-200/80 bg-white p-1.5 text-slate-500 transition hover:bg-zinc-50 hover:text-zinc-800 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-400 dark:hover:bg-[#252525] dark:hover:text-slate-200"
-              aria-label="Scroll left"
+              aria-label={t('common.scrollLeft')}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -138,7 +138,7 @@ export default function Home() {
               type="button"
               onClick={() => scrollCards('right')}
               className="rounded-lg border border-zinc-200/80 bg-white p-1.5 text-slate-500 transition hover:bg-zinc-50 hover:text-zinc-800 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-400 dark:hover:bg-[#252525] dark:hover:text-slate-200"
-              aria-label="Scroll right"
+              aria-label={t('common.scrollRight')}
             >
               <ChevronRight className="h-4 w-4" />
             </button>

@@ -48,7 +48,7 @@ export default function ChatWidget() {
             {
               id: 'msg-init',
               role: 'bot',
-              content: t('chat.greeting') || 'Namaste! I am AapdaMitra AI. Tell me what emergency, injury, or safety assistance you need.',
+              content: t('chat.greetingShort'),
             },
           ]
         }
@@ -90,7 +90,7 @@ export default function ChatWidget() {
         },
       ])
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'AapdaMitra AI unreachable', 'error')
+      toast(err instanceof Error ? err.message : t('chat.unreachable'), 'error')
     } finally {
       setBusy(false)
     }
@@ -100,7 +100,7 @@ export default function ChatWidget() {
     const phone = (callbackPhones[msgIndex] || '').trim()
     const clean = phone.replace(/\D/g, '')
     if (clean.length < 10) {
-      toast('Please enter a valid 10-digit mobile number', 'error')
+      toast(t('common.errPhone10'), 'error')
       return
     }
 
@@ -140,9 +140,9 @@ export default function ChatWidget() {
         )
       )
 
-      toast('Emergency callback requested! Rescue team notified.')
+      toast(t('pfa.callbackSent'))
     } catch {
-      toast('Failed to dispatch callback request', 'error')
+      toast(t('pfa.callbackFailed'), 'error')
     } finally {
       setSubmittingCallback(null)
     }
@@ -150,7 +150,7 @@ export default function ChatWidget() {
 
   return (
     <aside
-      aria-label="AapdaMitra AI Assistant"
+      aria-label={t('chat.openAria')}
       className="fixed bottom-20 right-4 sm:bottom-20 sm:right-6 md:bottom-6 md:right-6 z-50"
     >
       {/* Circular Floating Toggle Button */}
@@ -162,8 +162,8 @@ export default function ChatWidget() {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            aria-label="Open AapdaMitra AI assistant"
-            title="Ask AapdaMitra AI"
+            aria-label={t('chat.openAria')}
+            title={t('chat.openTitle')}
             className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-600 text-white shadow-xl shadow-orange-500/30 ring-2 ring-white/70 transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer dark:ring-slate-900/80"
           >
             <Bot className="h-7 w-7 text-white drop-shadow-md transition-transform duration-300 group-hover:rotate-6" />
@@ -181,7 +181,7 @@ export default function ChatWidget() {
       {open && (
         <div
           role="dialog"
-          aria-label="AapdaMitra AI Disaster Support"
+          aria-label={t('chat.dialogAria')}
           className="flex h-[520px] max-h-[calc(100vh-110px)] w-[calc(100vw-28px)] sm:w-[380px] max-w-[400px] flex-col overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
         >
           {/* Header */}
@@ -195,10 +195,10 @@ export default function ChatWidget() {
                   <span className="font-bold text-xs">AapdaMitra AI</span>
                   <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold text-emerald-300 flex items-center gap-1 mono">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    LIVE ASSIST
+                    {t('chat.badgeLive')}
                   </span>
                 </div>
-                <p className="truncate text-[10px] text-slate-400">Rapid 24/7 Disaster Survival Guidance</p>
+                <p className="truncate text-[10px] text-slate-400">{t('chat.subtitle')}</p>
               </div>
             </div>
             <button
@@ -252,7 +252,7 @@ export default function ChatWidget() {
                             isCrit ? 'text-red-600 dark:text-red-400' : 'text-amber-700 dark:text-amber-400'
                           }`}>
                             {isCrit ? <Siren className="h-3.5 w-3.5 animate-pulse" /> : <AlertTriangle className="h-3.5 w-3.5" />}
-                            {isCrit ? 'Critical Emergency' : 'Assistance Hotline'}
+                            {isCrit ? t('chat.hotlineCritical') : t('chat.hotlineSupport')}
                           </span>
 
                           <div className="flex items-center gap-1">
@@ -263,7 +263,7 @@ export default function ChatWidget() {
                               }`}
                             >
                               <Phone className="h-3 w-3" />
-                              <span>Call {isCrit ? '112' : '108'}</span>
+                              <span>{t('common.call')} {isCrit ? '112' : '108'}</span>
                             </a>
                             {isCrit && (
                               <a
@@ -281,8 +281,8 @@ export default function ChatWidget() {
                           <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
                             <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                               {isCrit
-                                ? 'Enter phone number — Rescue team will call & dispatch:'
-                                : 'Enter phone number for relief volunteer callback:'}
+                                ? t('chat.callbackDesc')
+                                : t('chat.reliefDesc')}
                             </label>
                             <div className="flex gap-1.5">
                               <input
@@ -291,7 +291,7 @@ export default function ChatWidget() {
                                 onChange={(e) =>
                                   setCallbackPhones((prev) => ({ ...prev, [i]: e.target.value }))
                                 }
-                                placeholder="10-digit mobile number"
+                                placeholder={t('chat.phonePlaceholder')}
                                 className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-slate-50 px-2 py-1 text-xs outline-none focus:border-red-500 focus:bg-white dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-100 font-mono"
                               />
                               <button
@@ -302,7 +302,7 @@ export default function ChatWidget() {
                                   isCrit ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'
                                 }`}
                               >
-                                {submittingCallback === i ? 'Dispatching…' : 'Request Help'}
+                                {submittingCallback === i ? t('pfa.dispatching') : t('chat.requestHelp')}
                               </button>
                             </div>
                           </div>
@@ -310,7 +310,7 @@ export default function ChatWidget() {
                           <div className="flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 font-medium pt-1">
                             <CheckCircle2 className="h-4 w-4 shrink-0" />
                             <span>
-                              Emergency SOS dispatched! Rescue team notified to call {m.submittedPhone} (Ref: {m.trackingId})
+                              {t('chat.dispatchConfirm')} {m.submittedPhone} ({t('chat.ref')} {m.trackingId})
                             </span>
                           </div>
                         )}
@@ -327,7 +327,7 @@ export default function ChatWidget() {
                   <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" />
                   <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce [animation-delay:0.2s]" />
                   <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce [animation-delay:0.4s]" />
-                  <span className="ml-1 font-medium">AapdaMitra AI formulating safety guidance…</span>
+                  <span className="ml-1 font-medium">{t('chat.thinking')}</span>
                 </div>
               </div>
             )}
@@ -337,15 +337,15 @@ export default function ChatWidget() {
           {/* Quick Prompts */}
           <div className="flex gap-1.5 overflow-x-auto border-t border-slate-100 bg-slate-50 px-3 py-1.5 dark:border-slate-800 dark:bg-slate-950">
             {[
-              { label: 'Water rising', text: 'Flood water is entering the building fast' },
-              { label: 'Severe wound', text: 'Someone has deep bleeding wound' },
-              { label: 'Trapped under debris', text: 'Help, someone is trapped under collapsed wall' },
-              { label: 'Safe evacuation', text: 'Where is the nearest safe shelter route?' },
+              { label: t('chat.qWater'), text: 'Flood water is entering the building fast' },
+              { label: t('chat.qWound'), text: 'Someone has deep bleeding wound' },
+              { label: t('chat.qDebris'), text: 'Help, someone is trapped under collapsed wall' },
+              { label: t('chat.qEvac'), text: 'Where is the nearest safe shelter route?' },
             ].map((qp, idx) => (
               <button
                 key={idx}
                 type="button"
-                onClick={() => send(qp.text)}
+                onClick={() => send(qp.label)}
                 disabled={busy}
                 className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[10px] font-semibold text-slate-700 shadow-xs hover:bg-slate-100 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300 cursor-pointer"
               >
@@ -374,7 +374,7 @@ export default function ChatWidget() {
               type="submit"
               disabled={!input.trim() || busy}
               className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 text-white transition hover:bg-slate-800 disabled:opacity-40 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer"
-              aria-label="Send message"
+              aria-label={t('chat.sendMsg')}
             >
               <Send className="h-3.5 w-3.5" />
             </button>

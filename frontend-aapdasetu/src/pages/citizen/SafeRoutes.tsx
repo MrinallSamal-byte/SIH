@@ -126,10 +126,10 @@ function buildSafeRoute(from: GeoPoint, to: GeoPoint, polygons?: GeoPoint[][]): 
   return [from, ...waypoints, to]
 }
 
-function formatEta(minutes: number): string {
-  if (!minutes || isNaN(minutes) || minutes < 0) return '0 min'
-  if (minutes < 60) return `${Math.max(1, Math.round(minutes))} min`
-  return `${Math.floor(minutes / 60)} hr ${Math.round(minutes % 60)} min`
+function formatEta(minutes: number, t: (key: string) => string): string {
+  if (!minutes || isNaN(minutes) || minutes < 0) return `0 ${t('routes.min')}`
+  if (minutes < 60) return `${Math.max(1, Math.round(minutes))} ${t('routes.min')}`
+  return `${Math.floor(minutes / 60)} ${t('routes.hr')} ${Math.round(minutes % 60)} ${t('routes.min')}`
 }
 
 export default function SafeRoutes() {
@@ -190,9 +190,9 @@ export default function SafeRoutes() {
       .map((f, i) => ({
         id: `flood-${i}`,
         points: polygonPaths[i] ?? [],
-        label: `${f.properties.hazard_type || 'Flood Inundation'} — ${f.properties.severity || 'Critical'}${f.properties.water_depth_est_meters ? ` (~${f.properties.water_depth_est_meters}m water)` : ''}`,
+        label: `${f.properties.hazard_type || t('routes.floodZone')} — ${f.properties.severity || t('routes.critical')}${f.properties.water_depth_est_meters ? ` (~${f.properties.water_depth_est_meters}m ${t('routes.waterDepth')})` : ''}`,
       }))
-  }, [flood, polygonPaths])
+  }, [flood, polygonPaths, t])
 
   const shelterMarkers = useMemo(
     () =>
@@ -202,11 +202,11 @@ export default function SafeRoutes() {
           id: s.id,
           position: { lat: s.latitude, lng: s.longitude } as GeoPoint,
           title: s.name,
-          subtitle: `${s.status || 'open'} · Occupancy: ${s.occupancy || 0}/${s.capacity || 0}`,
+          subtitle: `${s.status === 'full' ? t('shelter.full') : t('shelter.statusOpen')} · ${t('routes.occupancy')} ${s.occupancy || 0}/${s.capacity || 0}`,
           color: '#10b981',
           isShelter: true,
         })),
-    [shelters],
+    [shelters, t],
   )
 
   const userMarker = useMemo(
@@ -215,13 +215,13 @@ export default function SafeRoutes() {
         ? {
             id: 'you',
             position: origin,
-            title: 'You are here',
-            subtitle: accuracy ? `GPS Accuracy ±${Math.round(accuracy)}m` : 'Live location',
+            title: t('common.youAreHere'),
+            subtitle: accuracy ? `${t('common.gpsAccuracy')}${Math.round(accuracy)}m` : t('routes.liveLocation'),
             color: '#3b82f6',
             isSos: true,
           }
         : null,
-    [coords, origin, accuracy],
+    [coords, origin, accuracy, t],
   )
 
   const markers = useMemo(
@@ -288,28 +288,28 @@ export default function SafeRoutes() {
     () => [
       {
         id: 'fastest',
-        label: 'Fastest road route',
+        label: t('routes.fastestRoute'),
         points: fastestRoute ?? [],
         color: '#f59e0b',
         dashed: false,
-        hazard: routingFallback ? 'Road routing unavailable — showing direct line' : 'Follows roads — may cross flooded zones',
+        hazard: routingFallback ? t('routes.directLineHazard') : t('routes.followsRoads'),
         safe: false,
         distanceKm: osrmFastest?.distanceKm ?? haversineRouteLength(fastestRoute),
         durationMin: osrmFastest?.durationMin ?? (haversineRouteLength(fastestRoute) / WALK_SPEED_KMPH) * 60,
       },
       {
         id: 'safe',
-        label: 'Safe detour route (Recommended)',
+        label: t('routes.safeDetour'),
         points: safeRoute ?? [],
         color: '#10b981',
         dashed: true,
-        hazard: 'Road-based safe route — avoids inundation zones (300m clearance)',
+        hazard: t('routes.safeDetourDesc'),
         safe: true,
         distanceKm: osrmSafe?.distanceKm ?? haversineRouteLength(safeRoute),
         durationMin: osrmSafe?.durationMin ?? (haversineRouteLength(safeRoute) / WALK_SPEED_KMPH) * 60,
       },
     ],
-    [fastestRoute, safeRoute, osrmFastest, osrmSafe, routingFallback],
+    [fastestRoute, safeRoute, osrmFastest, osrmSafe, routingFallback, t],
   )
 
   if (!flood || !shelters) return <Loader />
@@ -331,9 +331,9 @@ export default function SafeRoutes() {
           <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 text-xs dark:border-white/[0.08] dark:bg-[#1a1a1a] shadow-xs">
             <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mono">{t('routes.origin')}</label>
             <div className="mt-1 font-medium text-zinc-600 dark:text-slate-200">
-              {coords ? `GPS: ${origin.lat.toFixed(4)}°N, ${origin.lng.toFixed(4)}°E` : 'Regional Center Fallback — Location unavailable'}
+              {coords ? `GPS: ${origin.lat.toFixed(4)}°N, ${origin.lng.toFixed(4)}°E` : t('routes.regionFallback')}
             </div>
-            {!hasGps && <div className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">Location unavailable — using regional center. Tap Re-scan GPS.</div>}
+            {!hasGps && <div className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">{t('routes.regionHint')}</div>}
             <button
               type="button"
               onClick={refresh}
@@ -388,9 +388,9 @@ export default function SafeRoutes() {
                 <div className="mt-1 text-zinc-500 dark:text-slate-400 leading-relaxed">{r.hazard}</div>
               </div>
               <div className="shrink-0 text-right">
-                <div className="font-bold text-zinc-800 dark:text-slate-300 mono text-sm">{r.distanceKm.toFixed(1)} km{r.distanceKm !== routeLengthKm(r.points) ? '' : routingFallback ? ' ~' : ''}</div>
+                <div className="font-bold text-zinc-800 dark:text-slate-300 mono text-sm">{r.distanceKm.toFixed(1)} {t('common.km')}{r.distanceKm !== routeLengthKm(r.points) ? '' : routingFallback ? ' ~' : ''}</div>
                 <div className="text-slate-500 dark:text-slate-400">
-                  ~{formatEta(r.durationMin)} {t('routes.walkingTime')}{routingLoading ? ' · loading…' : ''}
+                  ~{formatEta(r.durationMin, t)} {t('routes.walkingTime')}{routingLoading ? ` · ${t('common.loading')}` : ''}
                 </div>
               </div>
             </div>
@@ -401,10 +401,10 @@ export default function SafeRoutes() {
             <div key={i} className="rounded-2xl border border-red-200 bg-red-50/70 p-3.5 text-xs dark:border-red-900/40 dark:bg-red-950/30">
               <div className="font-bold text-red-700 dark:text-red-300">{f.properties.hazard_type}</div>
               <div className="text-red-600 dark:text-red-400 mt-0.5">
-                Severity: {f.properties.severity} · ~{f.properties.water_depth_est_meters}m depth
+                {t('routes.severity')} {f.properties.severity} · ~{f.properties.water_depth_est_meters}m {t('routes.depthSuffix')}
               </div>
               {f.properties.affected_villages && (
-                <div className="mt-1 text-zinc-500 dark:text-slate-400">Villages: {f.properties.affected_villages.join(', ')}</div>
+                <div className="mt-1 text-zinc-500 dark:text-slate-400">{t('routes.villages')} {f.properties.affected_villages.join(', ')}</div>
               )}
             </div>
           ))}

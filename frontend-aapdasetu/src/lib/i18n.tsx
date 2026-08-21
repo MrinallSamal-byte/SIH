@@ -351,10 +351,403 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'chat.callbackPrompt': 'Our rescue dispatch team can call you back immediately:',
     'chat.callbackBtn': 'Request Rescue Callback',
     'chat.hotlineDial': 'One-Tap Emergency Helpline:',
+
+    // Shared / Common extras
+    'common.youAreHere': 'You are here',
+    'common.gpsAccuracy': 'GPS Accuracy ±',
+    'common.cancel': 'Cancel',
+    'common.copiedClipboard': 'copied to clipboard',
+    'common.copyFailed': 'Could not copy — please note the ID manually',
+    'common.submissionFailed': 'Submission failed',
+    'common.errPhone10': 'Please enter a valid 10-digit mobile number',
+    'common.mins': 'mins',
+    'common.km': 'km',
+    'common.age': 'Age',
+    'common.call': 'Call',
+    'common.copy': 'Copy',
+    'common.copied': 'Copied!',
+    'common.remove': 'Remove',
+    'common.searching': 'Searching…',
+
+    // About story section
+    'about.storyTitle': 'Why we built AapdaSetu — the 3 AM call that never connects',
+    'about.storyP1': 'In a real flood at 3 AM, you dial the official helpline. It rings. Then an IVR. Then a bot says “press 1”. Then it cuts. Or the line is busy for hours. We’ve been there — and so have thousands of families.',
+    'about.storyP2Pre': 'We built AapdaSetu to skip that queue. No login, no forms, no bot loop. One tap sends your ',
+    'about.storyP2Bold': 'live GPS, phone and ground reality',
+    'about.storyP2Post': ' straight to a government officer’s command dashboard — with precision down to your lane, not just your district.',
+    'about.storyP3': 'It’s not a chatbot answering you. It’s a real official who can see you on the map, call you back, and dispatch the nearest NDRF/SDRF team in seconds.',
+
+    // Alerts page
+    'alerts.pageDesc': 'Real-time emergency broadcasts from NDMA, SDMA, and National Incident Command.',
+    'alerts.sevCritical': 'Critical',
+    'alerts.sevWarning': 'Warning',
+    'alerts.sevInfo': 'Info',
+    'alerts.affectedArea': 'Affected Area:',
+    'alerts.empty': 'No active emergency alerts in this category.',
+
+    // Contacts page
+    'contacts.nationalSos': 'National Emergency (SOS)',
+    'contacts.ambulance': 'Ambulance',
+    'contacts.police': 'Police',
+    'contacts.fire': 'Fire Brigade',
+    'contacts.ndmaHelpline': 'Disaster Helpline (NDMA)',
+    'contacts.floodControl': 'Flood Control Room',
+    'contacts.ndrfControl': 'NDRF Control Room',
+
+    // Missing Persons extras
+    'missing.filterOpen': 'Open',
+    'missing.filterMatched': 'Matched',
+    'missing.filterResolved': 'Resolved',
+    'missing.view': 'View',
+    'missing.genderLabel': 'Gender:',
+    'missing.notSpecified': 'Not specified',
+    'missing.unknown': 'Unknown',
+    'missing.empty': 'No missing person records matched your search.',
+    'missing.photoPreviewAlt': 'Enlarged visual ID',
+    'missing.closePreview': 'Close Preview',
+    'missing.optimizing': 'Optimizing…',
+    'missing.changePhoto': 'Change Photo',
+    'missing.agePlaceholder': 'e.g. 35',
+    'missing.locationPlaceholder': 'e.g. Near Salt Lake Karunamoyee Bus Stand',
+    'missing.clothesPlaceholder': 'e.g. Blue shirt, black jeans, wears spectacles',
+    'missing.errImageOnly': 'Only image files allowed',
+    'missing.errImageSize': 'Image exceeds 5MB limit',
+    'missing.photoAttached': 'Photo attached and optimized for disaster upload',
+    'missing.errProcessPhoto': 'Could not process photo',
+    'missing.errName': 'Please enter the missing person name',
+    'missing.errLastSeen': 'Please specify the last seen location',
+    'missing.errPhotoRequired': 'Please upload a clear photo (required for identification)',
+    'missing.errAge': 'Please enter age (required)',
+    'missing.errContactPhone': 'Please provide a valid 10-digit contact phone number',
+    'missing.registered': 'Missing person registered in system',
+    'missing.previewAlt': 'Preview',
+
+    // PfaChat (AapdaMitra page)
+    'pfa.topicFlood': 'Water entering house / Flood',
+    'pfa.topicBleeding': 'Severe bleeding first-aid',
+    'pfa.topicPanic': 'Panic & anxiety relief',
+    'pfa.topicTrapped': 'Trapped under building collapse',
+    'pfa.topicCardiac': 'Chest pain / cardiac distress',
+    'pfa.topicElectrical': 'Electrical & wire hazard safety',
+    'pfa.topicSnakebite': 'Snakebite protocol',
+    'pfa.topicFire': 'Fire evacuation tactics',
+    'pfa.greeting': 'Namaste! I am AapdaMitra AI, your 24/7 disaster survival, triage, and crisis companion. How can I help you and your family right now?',
+    'chat.unreachable': 'AapdaMitra AI unreachable',
+    'pfa.callbackSent': 'Urgent rescue callback requested! Responders notified.',
+    'pfa.callbackFailed': 'Failed to request callback',
+    'pfa.badgeActive': '24/7 ACTIVE',
+    'pfa.tagline': '24/7 intelligent disaster survival guidance, emergency first-aid & trauma support.',
+    'pfa.stopCoach': 'Stop Breath Coach',
+    'pfa.startCoach': '4-4-4 Box Breathing',
+    'pfa.breathIn': 'IN',
+    'pfa.breathHold': 'HOLD',
+    'pfa.breathOut': 'OUT',
+    'pfa.coachTitle': 'Guided 4-Second Box Breathing',
+    'pfa.breathNow': 'NOW',
+    'pfa.modeCritical': 'Critical Emergency',
+    'pfa.modeSupport': 'Assistance & Support',
+    'pfa.callDesc': 'Direct toll-free connection to emergency dispatch',
+    'pfa.phonePrompt': 'Enter your mobile number — rescue teams will reach out to you as soon as possible:',
+    'pfa.dispatching': 'Dispatching…',
+    'pfa.reachMe': 'Reach Me Out',
+    'pfa.dispatchedTitle': 'Priority Rescue Callback Dispatched!',
+    'pfa.contactInfo': 'Contact:',
+    'pfa.trackStatusLink': 'Track Live Incident Response Status',
+    'pfa.thinking': 'AapdaMitra AI is preparing survival advice…',
+
+    // Report Damage extras
+    'damage.cat1Title': 'Residential Home',
+    'damage.cat1Desc': 'Roofs collapsed, walls cracked, flood inundation',
+    'damage.cat2Title': 'Commercial / Public',
+    'damage.cat2Desc': 'Storefront damaged, inventory flooded or public building',
+    'damage.cat3Title': 'Agricultural Crops',
+    'damage.cat3Desc': 'Farmland submerged, topsoil eroded, crop failure',
+    'damage.cat4Title': 'Bridge & Road',
+    'damage.cat4Desc': 'Culvert washed away, road split or submerged',
+    'damage.cat5Title': 'Power Grid & Utility',
+    'damage.cat5Desc': 'Transformer fallen, cables severed, poles broken',
+    'damage.cat6Title': 'Other',
+    'damage.cat6Desc': 'Any other damaged property or infrastructure',
+    'damage.errMaxImages': 'Maximum 5 images allowed',
+    'damage.errFileImage': 'Only image files allowed',
+    'damage.exceedsLimit': 'exceeds 10MB',
+    'damage.errProcessImage': 'Could not process this image',
+    'damage.errMinPhotos': 'Please upload at least 1 damage photo (max 5)',
+    'damage.errAddressRequired': 'Property address is required',
+    'damage.errDescription': 'Please describe the structural failure (required)',
+    'damage.imagesCount': 'images',
+    'damage.uploadHint': 'Upload 1–5 geotagged photos. Each is scored individually, then averaged for final claim.',
+    'damage.addressPlaceholder': 'e.g. Holding 42, Block B, Main Road',
+    'damage.gpsWarn1': 'GPS unavailable — ',
+    'damage.gpsWarn2': 'Enable location to geotag damage claim. Current fallback (Kolkata) not used — your claim requires precise GPS.',
+    'damage.ownerPlaceholder': 'e.g. Ramesh Sen',
+    'damage.descPlaceholder': 'e.g. 600mm main water pipeline ruptured, basement submerged under 1.5m sludge, cracked pillars…',
+    'damage.successTitle': 'Damage Claim Registered with Command Center',
+    'damage.successDesc': 'Your claim has been assessed by the AI engine and logged for SDRF relief review.',
+    'damage.claimIdLabel': 'Official SDRF Claim ID — Save this',
+    'damage.copyId': 'Copy ID',
+
+    // Report Form extras
+    'report.gpsLockedToast': 'High-precision GPS locked',
+    'report.lastKnownLocation': 'Using last known location.',
+    'report.locateFail': 'Location unavailable. Type your area or pick on map.',
+    'report.locatingAddress': 'Locating address…',
+    'report.landmarkAt': 'Landmark at',
+    'report.micDenied': 'Microphone access denied. You can upload an audio file instead.',
+    'report.fileTooLarge': 'exceeds 5MB limit',
+    'report.fileNotAllowed': 'type not allowed',
+    'report.errCategory': 'Please select an Emergency Type',
+    'report.errMediaRequired': 'Please upload a photo/video or record a voice note — at least one is required',
+    'report.errGpsRequired': 'Please allow GPS or pick your location on the map before submitting',
+    'report.emergencyReport': 'Emergency Report:',
+    'report.reportedSuccess': 'Emergency incident reported successfully!',
+    'report.successDesc': 'Your report is prioritized by the AI triage engine and logged in the rescue dispatch queue.',
+    'report.trackingIdLabel': 'Tracking ID — Save this',
+    'report.trackStatusLink': 'Track Live Rescue Status',
+    'report.newReport': 'New Report',
+    'report.estimatedHint': 'Location estimated — tap Retry for precise GPS',
+    'report.lifeThreatWarn': 'Life-threatening keywords detected — use Emergency SOS for immediate dispatch?',
+    'report.goToSos': 'Go to SOS',
+
+    // Tracker extras
+    'tracker.markerIncident': 'Incident:',
+    'tracker.victimLocation': 'Victim Location',
+    'tracker.rescueUnit': 'Rescue Unit',
+    'tracker.fieldResponder': 'Field Responder',
+    'tracker.enRouteEta': 'En Route — ETA ~',
+    'tracker.routeLabel': 'Rescue Route',
+    'tracker.gpsRecorded': 'GPS Coordinates Recorded',
+    'tracker.gps': 'GPS',
+    'tracker.commandFallback': 'NDRF / SDRF Command',
+    'tracker.volunteerQueued': 'Volunteer Team In-Queue',
+    'tracker.notesLabel': 'Resolution & Safety Notes',
+    'common.call112': 'Call 112',
+    'common.call1070': 'Call 1070',
+
+    // Safe Routes extras
+    'routes.min': 'min',
+    'routes.hr': 'hr',
+    'routes.floodZone': 'Flood Inundation',
+    'routes.critical': 'Critical',
+    'routes.waterDepth': 'water',
+    'routes.occupancy': 'Occupancy:',
+    'routes.liveLocation': 'Live location',
+    'routes.fastestRoute': 'Fastest road route',
+    'routes.directLineHazard': 'Road routing unavailable — showing direct line',
+    'routes.followsRoads': 'Follows roads — may cross flooded zones',
+    'routes.safeDetour': 'Safe detour route (Recommended)',
+    'routes.safeDetourDesc': 'Road-based safe route — avoids inundation zones (300m clearance)',
+    'routes.regionFallback': 'Regional Center Fallback — Location unavailable',
+    'routes.regionHint': 'Location unavailable — using regional center. Tap Re-scan GPS.',
+    'routes.severity': 'Severity:',
+    'routes.depthSuffix': 'depth',
+    'routes.villages': 'Villages:',
+
+    // Safety Check-in extras
+    'checkin.errName': 'Please enter your full name',
+    'checkin.errPhoneDisplay': 'Please enter a valid 10-digit mobile number.',
+    'checkin.errPhoneToast': 'Valid phone number is required',
+    'checkin.errLocation': 'Please enter your current location / shelter (required)',
+    'checkin.recordedToast': 'Safety status recorded successfully',
+    'checkin.namePlaceholder': 'e.g. Ramesh Chandra Sen',
+    'checkin.locationPlaceholder': 'e.g. Salt Lake Sector V Shelter or At Home',
+    'checkin.messagePlaceholder': 'e.g. With 3 family members, power is on, have food/water.',
+    'checkin.searchLabel': 'Search by Name, Phone Number, or Location',
+    'checkin.searchInputPlaceholder': 'Type name or 10-digit phone number…',
+    'checkin.checkedInAt': 'Checked in',
+    'checkin.emptySearch': 'No check-in records matched your search query.',
+
+    // Shelter Finder extras
+    'shelter.currentLocation': 'Current location',
+    'shelter.markerFallback': 'Disaster Shelter',
+    'shelter.cardFallback': 'Emergency Shelter',
+    'shelter.addressFallback': 'Address on record',
+    'shelter.noGps': 'No GPS',
+    'shelter.locationUnavailable': 'Location unavailable',
+    'shelter.empty': 'No shelters matched your search or facility filter criteria.',
+
+    // SOS extras
+    'sos.syncedToast': 'Pending offline SOS synced successfully!',
+    'sos.scanningGps': 'Scanning hardware GPS for high-precision satellites...',
+    'sos.gpsWeakToast': 'GPS signal weak, using best available location estimate.',
+    'sos.gpsFailToast': 'Could not acquire GPS fix. Please verify location manually.',
+    'sos.errPhoneRequired': 'Mobile number is required for emergency dispatch',
+    'sos.errPhoneInvalid': 'Please enter a valid 10-digit mobile number.',
+    'sos.errPhoneFormat': 'Invalid mobile number format',
+    'sos.typeFallback': 'Emergency',
+    'sos.pickLocationToast': 'Location unavailable — please pick your location on the map before sending SOS',
+    'sos.offlineQueuedToast': 'Offline: SOS queued! Will dispatch as soon as network reconnects.',
+    'sos.dispatchLocationLabel': 'Rescue Dispatch Location',
+    'sos.gpsLive': 'Live GPS Locked',
+    'sos.manuallyVerified': 'Manually Verified',
+    'sos.cachedGps': 'Cached GPS',
+    'sos.estimatedArea': 'Estimated Area',
+    'sos.resolvingAddress': 'Resolving street address...',
+    'sos.defaultCity': 'Bhubaneswar, Odisha, India',
+    'sos.acquiring': 'Acquiring GPS…',
+    'sos.rescan': 'Re-scan GPS',
+    'sos.correctArea': 'Correct Area',
+    'sos.phoneHint': '* Mobile required for rescue call',
+    'sos.floorLabel': 'Floor / Landmark (Optional)',
+    'sos.floorPlaceholder': 'e.g. 2nd Floor, Room 204',
+    'sos.sosAria': 'Press for Emergency Satellite SOS Dispatch',
+    'sos.dispatchingSos': 'Dispatching SOS Signal…',
+    'sos.sendNow': 'Send SOS Distress Signal Now',
+    'sos.disclaimer': '* Tap to alert response units immediately. Your exact GPS coordinates and contact phone will be broadcasted to NDRF/SDRF command.',
+    'sos.offlineOptionsTitle': 'OFFLINE FALLBACK OPTIONS',
+    'sos.smsLink': '1-Tap Emergency SMS (112 Offline Fallback)',
+    'sos.broadcastTitle': 'SOS Distress Signal Broadcasted!',
+    'sos.broadcastDesc': 'Disaster control room & nearby rescue units have been notified with your phone and GPS location.',
+    'sos.trackingIdHeading': 'YOUR INCIDENT TRACKING ID',
+    'sos.trackResponse': 'Track Live Response Status',
+    'sos.damageCta': 'Facing Broken Home / Pipeline Damage? Upload for AI Relief',
+    'sos.anotherSos': 'Trigger Another SOS',
+    'sos.helplinesTitle': 'Direct Emergency Helplines (Toll-Free)',
+    'sos.modalTitle': 'Correct Emergency Location',
+    'sos.modalDesc': 'Ensure rescue teams reach your exact location. You can type your local neighborhood/address, choose a quick region, or tap the map to place a precise pin.',
+    'sos.addressLabel': 'Address / Area / Landmark & PIN Code',
+    'sos.addressPlaceholder': 'e.g. Flat 302, Gayatri Vihar, Sundarpada, Bhubaneswar - 751002',
+    'sos.modalHint': '* Rescue teams will see your exact custom address, building name, and PIN code.',
+    'sos.presetsLabel': 'Quick Region Presets',
+    'sos.mapLabel': 'Tap Map or Search to Reposition Pin',
+    'sos.savedToast': 'Emergency dispatch location updated successfully!',
+    'sos.saveLocation': 'Save & Apply Location',
+
+    // MainLayout extras
+    'layout.bulletins': 'Bulletins',
+    'layout.viewAll': 'View all',
+    'layout.noBulletins': 'No active bulletins',
+    'layout.navDesktop': 'Desktop Navigation',
+    'layout.langSelector': 'Language selector',
+    'layout.notifications': 'Notifications',
+    'layout.toggleTheme': 'Toggle theme',
+    'layout.toggleMenu': 'Toggle mobile menu',
+    'layout.navMobile': 'Mobile Navigation',
+
+    // ChatWidget extras
+    'chat.greetingShort': 'Namaste! I am AapdaMitra AI. Tell me what emergency, injury, or safety assistance you need.',
+    'chat.openAria': 'AapdaMitra AI Assistant',
+    'chat.openTitle': 'Ask AapdaMitra AI',
+    'chat.dialogAria': 'AapdaMitra AI Disaster Support',
+    'chat.badgeLive': 'LIVE ASSIST',
+    'chat.hotlineCritical': 'Critical Emergency',
+    'chat.hotlineSupport': 'Assistance Hotline',
+    'chat.callbackDesc': 'Enter phone number — Rescue team will call & dispatch:',
+    'chat.reliefDesc': 'Enter phone number for relief volunteer callback:',
+    'chat.phonePlaceholder': '10-digit mobile number',
+    'chat.requestHelp': 'Request Help',
+    'chat.dispatchConfirm': 'Emergency SOS dispatched! Rescue team notified to call',
+    'chat.ref': 'Ref:',
+    'chat.thinking': 'AapdaMitra AI formulating safety guidance…',
+    'chat.qWater': 'Water rising',
+    'chat.qWound': 'Severe wound',
+    'chat.qDebris': 'Trapped under debris',
+    'chat.qEvac': 'Safe evacuation',
+    'chat.sendMsg': 'Send message',
+
+    // LandmarkPicker extras
+    'lp.geocodeUnavailable': 'Geocoding service unavailable. You can tap the map directly.',
+    'lp.mapCenterSet': 'Location set to map center with address:',
+    'lp.acquiringGps': 'Acquiring high-precision GPS lock...',
+    'lp.gpsLocked': 'GPS locked (accuracy: ±',
+    'lp.gpsFail': 'Could not retrieve hardware GPS. Please tap your location on the map.',
+    'lp.searchPlaceholder': 'Search place, landmark, or area (e.g. Sunderpada, Master Canteen)',
+    'lp.locate': 'Locate',
+    'lp.gpsTitle': 'Pinpoint exact location using device High-Precision GPS',
+    'lp.lockingGps': 'Locking GPS…',
+    'lp.liveGps': 'Live GPS',
+    'lp.areaMatch': 'Area Match',
+    'lp.notIndexed': 'Exact building not indexed online. You can place the pin on the map or assign this address directly:',
+    'lp.useAddress': 'Use address:',
+    'lp.dragHint': 'or drag the pin on map to your exact building',
+    'lp.footerHint': '* Click anywhere on map or drag pin to adjust coordinates',
+
+    // Modal
+    'common.closeDialog': 'Close dialog',
+
+    // Enum label mappings
+    'shelter.statusOpen': 'Open',
+    'pfa.phaseInhale': 'Inhale',
+    'pfa.phaseHold': 'Hold',
+    'pfa.phaseExhale': 'Exhale',
+    'sos.copiedShort': 'Copied',
+    'common.scrollLeft': 'Scroll left',
+    'common.scrollRight': 'Scroll right',
+    'checkin.statusSafe': 'Safe',
+    'checkin.statusNeedHelp': 'Needs Assistance',
   },
 
   hi: {
     // App & Header
+
+    // Navigation
+
+    // About Page
+
+    // Contact Page
+
+    // Common
+
+    // Home Hero Section
+
+    // Home Services Cards
+
+    // Home 3-Step Triage
+
+    // Home Bulletins Feed
+
+    // Home Quick Track & Helplines
+
+
+    // SOS Page
+
+    // Incident Report Form
+
+    // Incident Tracker
+
+    // Shelter Finder
+
+    // Safe Routes
+
+    // Missing Persons
+
+    // Report Damage
+
+    // Safety Checkin
+
+    // Chatbot
+
+    // Shared / Common extras
+
+    // About story section
+
+    // Alerts page
+
+    // Contacts page
+
+    // Missing Persons extras
+
+    // PfaChat
+
+    // Report Damage extras
+
+    // Report Form extras
+
+    // Tracker extras
+
+    // Safe Routes extras
+
+    // Safety Check-in extras
+
+    // Shelter Finder extras
+
+    // SOS extras
+
+    // MainLayout extras
+
+    // ChatWidget extras
+
+    // LandmarkPicker extras
     'app.name': 'आपदासेतु',
     'app.tagline': 'आपदा प्रतिक्रिया और AI ट्राइएज पारिस्थितिकी तंत्र',
     'header.nationalEmergency': 'राष्ट्रीय आपातकाल',
@@ -362,8 +755,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'header.disasterHelpline': 'आपदा हेल्पलाइन',
     'header.offlineNotice': 'ऑफ़लाइन मोड सक्रिय — इंटरनेट जुड़ते ही घटनाएं अपने आप सिंक हो जाएंगी।',
     'header.callOffline': '112 पर कॉल करें',
-
-    // Navigation
     'nav.home': 'होम',
     'nav.sos': 'वन-टैप SOS',
     'nav.report': 'घटना रिपोर्ट करें',
@@ -381,8 +772,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'nav.features': 'सुविधाएँ',
     'nav.contacts': 'संपर्क',
     'nav.pfa': 'आपदामित्र AI',
-
-    // About Page
     'about.title': 'आपदासेतु के बारे में',
     'about.subtitle': 'आपदा प्रतिक्रिया और AI ट्राइज इकोसिस्टम — हर सेकंड मायने रखता है।',
     'about.missionTitle': 'हमारा मिशन',
@@ -404,12 +793,8 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'about.feature7Desc': 'लापता व्यक्तियों के बुलेटिन खोजें या फ़ोटो सत्यापन के साथ परिवार के सदस्य की रिपोर्ट करें।',
     'about.feature8Title': 'ऑफ़लाइन-फ़र्स्ट डिज़ाइन',
     'about.feature8Desc': 'आपदा परिदृश्यों के लिए डिज़ाइन किया गया जहाँ कनेक्टिविटी अस्थिर होती है।',
-
-    // Contact Page
     'contact.title': 'आपातकालीन संपर्क',
     'contact.subtitle': 'सभी आवश्यक आपातकालीन नंबर एक जगह। कॉल करने के लिए टैप करें।',
-
-    // Common
     'common.submit': 'जमा करें',
     'common.loading': 'लोड हो रहा है…',
     'common.send': 'भेजें',
@@ -430,8 +815,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'common.name': 'पूरा नाम',
     'common.required': 'आवश्यक',
     'common.optional': 'ऐच्छिक',
-
-    // Home Hero Section
     'hero.badgeSystem': 'राष्ट्रीय आपातकालीन प्रतिक्रिया प्रणाली',
     'hero.activeBulletins': 'सक्रिय चेतावनियां',
     'hero.syncing': 'सिंक हो रहा है...',
@@ -442,8 +825,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'hero.aiCompanion': 'आपदामित्र AI',
     'hero.quickAccess': 'त्वरित सेवाएं',
     'hero.structuredFlows': 'आपातकालीन प्रतिक्रिया चरण',
-
-    // Home Services Cards
     'service.noticeTag': 'सार्वजनिक सूचना',
     'service.checkinDesc': 'परिजनों को आश्वस्त करने और बचाव दलों का समय बचाने के लिए खुद को सुरक्षित चिह्नित करें।',
     'service.sheltersTag': 'राहत शिविर',
@@ -461,22 +842,16 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'service.verificationTag': 'सत्यापन',
     'service.publicSafetyTitle': 'सार्वजनिक सुरक्षा रजिस्ट्री',
     'service.publicSafetyDesc': 'प्रभावित क्षेत्रों में परिजनों की सुरक्षा स्थिति की जांच करें।',
-
-    // Home 3-Step Triage
     'triage.step1Title': 'आपातकालीन ट्राइएज',
     'triage.step1Desc': 'घटना रिपोर्ट करें या 1-टैप SOS से AI प्राथमिकता के साथ सीधे अलर्ट भेजें।',
     'triage.step2Title': 'GPS स्थान लॉक',
     'triage.step2Desc': 'उपग्रह बाढ़ सीमाओं के साथ सटीक भौगोलिक स्थान लॉक किया जाता है।',
     'triage.step3Title': 'कमांड डिस्पैच',
     'triage.step3Desc': 'NDRF, SDRF और फील्ड स्वयंसेवकों को लाइव रूट के साथ तुरंत तैनात किया जाता है।',
-
-    // Home Bulletins Feed
     'bulletin.title': 'आधिकारिक चेतावनी बुलेटिन',
     'bulletin.liveFeed': 'लाइव फीड',
     'bulletin.viewAll': 'सभी बुलेटिन',
     'bulletin.noAlerts': 'वर्तमान में आपके क्षेत्र में कोई सक्रिय चेतावनी नहीं है।',
-
-    // Home Quick Track & Helplines
     'track.quickTag': 'त्वरित खोज',
     'track.quickTitle': 'लाइव घटना स्थिति ट्रैक करें',
     'track.quickDesc': 'राहत कार्य और तैनात टीम की स्थिति जानने के लिए ट्रैकिंग आईडी दर्ज करें।',
@@ -491,8 +866,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'helpline.ambulance': 'एम्बुलेंस',
     'helpline.police': 'पुलिस',
     'helpline.disaster': 'आपदा हेल्पलाइन',
-
-    // SOS Page
     'sos.title': 'आपातकालीन संकट SOS सिग्नल',
     'sos.subtitle': 'NDRF, SDRF, पुलिस और स्थानीय बचाव दलों को सीधे संकट संदेश भेजें।',
     'sos.channelBadge': 'उच्च प्राथमिकता चैनल',
@@ -525,8 +898,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'sos.smsDesc': 'इंटरनेट नहीं है? सीधे राष्ट्रीय आपातकालीन केंद्र को SMS भेजें।',
     'sos.copySms': 'आपातकालीन SMS कॉपी करें',
     'sos.copied': 'कॉपी हो गया!',
-
-    // Incident Report Form
     'report.pageTitle': 'आपातकालीन घटना रिपोर्ट',
     'report.pageSubtitle': 'बचाव टीम की तैनाती के लिए * चिह्नित फ़ील्ड अनिवार्य हैं।',
     'report.categoryLabel': 'आपातकालीन श्रेणी *',
@@ -563,8 +934,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'report.submitValidation': '* भेजने के लिए आपातकालीन श्रेणी चुनें और फ़ोन नंबर दर्ज करें',
     'report.successTitle': 'घटना सफलतापूर्वक दर्ज हुई!',
     'report.trackPrompt': 'आपका आपातकालीन सिग्नल कमांड यूनिट्स को भेज दिया गया है। ट्रैकिंग आईडी सहेजें:',
-
-    // Incident Tracker
     'track.pageTitle': 'लाइव बचाव एवं घटना ट्रैकर',
     'track.pageSubtitle': 'वास्तविक समय में बचाव अभियान और तैनात टीमों की स्थिति देखें।',
     'track.inputPlaceholder': 'ट्रैकिंग आईडी दर्ज करें (उदा. SOS-7890)',
@@ -583,8 +952,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'track.incidentDetails': 'घटना का विवरण',
     'track.liveTelemetry': 'लाइव भौगोलिक स्थिति एवं घटना स्थल',
     'track.eta': 'अनुमानित आगमन समय (ETA)',
-
-    // Shelter Finder
     'shelter.title': 'निकटतम आपातकालीन राहत शिविर',
     'shelter.subtitle': 'आपकी GPS स्थिति से निकटतम दूरी के आधार पर सरकारी सत्यापित शिविर।',
     'shelter.detectLocation': 'मेरा स्थान खोजें',
@@ -602,8 +969,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'shelter.filterFood': 'भोजन व्यवस्था',
     'shelter.filterWater': 'स्वच्छ जल',
     'shelter.filterPower': 'जनरेटर बैकअप',
-
-    // Safe Routes
     'routes.title': 'सुरक्षित निकास गलियारे और मार्ग',
     'routes.subtitle': 'बाढ़ और क्षतिग्रस्त सड़कों से बचकर वास्तविक समय में सुरक्षित मार्ग।',
     'routes.origin': 'आपका प्रारंभिक स्थान',
@@ -612,8 +977,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'routes.directDistance': 'सीधा मार्ग (बाढ़ प्रभावित)',
     'routes.safeDistance': 'सुरक्षित निकास गलियारा',
     'routes.walkingTime': 'अनुमानित पैदल समय',
-
-    // Missing Persons
     'missing.title': 'लापता व्यक्ति रजिस्ट्री एवं खोज',
     'missing.subtitle': 'लापता व्यक्ति बुलेटिन खोजें या परिवार के लापता सदस्य की रिपोर्ट करें।',
     'missing.tabRegistry': 'सार्वजनिक बुलेटिन',
@@ -631,8 +994,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'missing.female': 'महिला',
     'missing.other': 'अन्य',
     'missing.submitReport': 'लापता व्यक्ति की रिपोर्ट दर्ज करें',
-
-    // Report Damage
     'damage.title': 'SDRF / NDMA आपदा राहत क्षति मूल्यांकन',
     'damage.subtitle': 'वित्तीय राहत मुआवजे के लिए जियोटैग की गई फोटो के साथ दावा प्रस्तुत करें।',
     'damage.step1Title': '1. प्रभावित बुनियादी ढांचा श्रेणी चुनें',
@@ -652,8 +1013,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'damage.grade': 'AI क्षति श्रेणी',
     'damage.score': 'क्षति प्रभाव स्कोर',
     'damage.compensation': 'अनुमानित SDRF राहत राशि',
-
-    // Safety Checkin
     'checkin.title': 'मैं सुरक्षित हूँ — सामुदायिक सुरक्षा रजिस्ट्री',
     'checkin.subtitle': 'परिजनों को आश्वस्त करने और बचाव दलों का समय बचाने के लिए अपनी सुरक्षा स्थिति दर्ज करें।',
     'checkin.tabCheckin': 'मेरी सुरक्षा दर्ज करें',
@@ -676,21 +1035,418 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'checkin.submitCheckin': 'सुरक्षा स्थिति जमा करें',
     'checkin.recentCheckins': 'हालिया सुरक्षा चेक-इन',
     'checkin.searchPlaceholder': 'नाम, फ़ोन नंबर या क्षेत्र द्वारा खोजें…',
-
-    // Chatbot
     'chat.suggestion': 'मदद चाहिए? आपदामित्र AI से बात करें',
     'chat.title': 'आपदामित्र AI',
     'chat.subtitle': '24/7 त्वरित आपदा जीवन रक्षा एवं चिकित्सा ट्राइएज',
     'chat.greeting':
-      'नमस्ते! मैं आपदामित्र AI हूँ। बताएं कि आपको क्या आपातकालीन सहायता या सुरक्षा मार्गदर्शन चाहिए?',
+      'नमस्ते! मैं आपदामित्र AI हूँ। बताएं कि आपको कौन सा आपातकालीन मार्गदर्शन या राहत सहायता चाहिए।',
     'chat.placeholder': 'सुरक्षा प्रश्न पूछें या स्थिति बताएं…',
     'chat.callbackPrompt': 'हमारी आपदा राहत टीम आपसे तुरंत संपर्क कर सकती है:',
     'chat.callbackBtn': 'बचाव कॉल का अनुरोध करें',
     'chat.hotlineDial': 'वन-टैप आपातकालीन हेल्पलाइन:',
+
+    // Shared / Common extras
+    'common.youAreHere': 'आप यहाँ हैं',
+    'common.gpsAccuracy': 'GPS सटीकता ±',
+    'common.cancel': 'रद्द करें',
+    'common.copiedClipboard': 'क्लिपबोर्ड पर कॉपी हो गया',
+    'common.copyFailed': 'कॉपी नहीं हो सका — कृपया ID मैन्युअल रूप से नोट करें',
+    'common.submissionFailed': 'सबमिट करने में विफल',
+    'common.errPhone10': 'कृपया मान्य 10-अंकों का मोबाइल नंबर दर्ज करें',
+    'common.mins': 'मिनट',
+    'common.km': 'किमी',
+    'common.age': 'उम्र',
+    'common.call': 'कॉल करें',
+    'common.copy': 'कॉपी',
+    'common.copied': 'कॉपी हो गया!',
+    'common.remove': 'हटाएं',
+    'common.searching': 'खोज रहे हैं…',
+    'common.closeDialog': 'डायलॉग बंद करें',
+
+    // About story section
+    'about.storyTitle': 'हमने आपदासेतु क्यों बनाया — वह तड़के 3 बजे का कॉल जो कभी जुड़ा नहीं',
+    'about.storyP1': 'असली बाढ़ में तड़के 3 बजे आप सरकारी हेल्पलाइन पर फोन करते हैं। घंटी बजती है। फिर IVR आता है। फिर एक बॉट कहता है "1 दबाएं"। फिर कॉल कट जाती है। या घंटों लाइन व्यस्त रहती है। हम वहाँ थे — और हज़ारों परिवार भी थे।',
+    'about.storyP2Pre': 'हमने आपदासेतु बनाया ताकि वह कतार छूट जाए। न लॉगिन, न फॉर्म, न बॉट-लूप। एक टैप में आपकी ',
+    'about.storyP2Bold': 'लाइव GPS, फोन और ज़मीनी हकीकत',
+    'about.storyP2Post': ' सीधे सरकारी अधिकारी के कमांड डैशबोर्ड तक पहुँचती है — सिर्फ आपके ज़िले नहीं, आपकी गली तक की सटीकता के साथ।',
+    'about.storyP3': 'यह कोई चैटबॉट नहीं है जो आपको जवाब दे। यह एक असली अधिकारी है जो आपको नक्शे पर देख सकता है, आपको वापस कॉल कर सकता है, और सेकंडों में नज़दीकी NDRF/SDRF टीम भेज सकता है।',
+
+    // Alerts page
+    'alerts.pageDesc': 'NDMA, SDMA और राष्ट्रीय इंसिडेंट कमांड से रीयल-टाइम आपातकालीन प्रसारण।',
+    'alerts.sevCritical': 'गंभीर',
+    'alerts.sevWarning': 'चेतावनी',
+    'alerts.sevInfo': 'सूचना',
+    'alerts.affectedArea': 'प्रभावित क्षेत्र:',
+    'alerts.empty': 'इस श्रेणी में कोई सक्रिय आपातकालीन अलर्ट नहीं है।',
+
+    // Contacts page
+    'contacts.nationalSos': 'राष्ट्रीय आपातकाल (SOS)',
+    'contacts.ambulance': 'एम्बुलेंस',
+    'contacts.police': 'पुलिस',
+    'contacts.fire': 'फायर ब्रिगेड',
+    'contacts.ndmaHelpline': 'आपदा हेल्पलाइन (NDMA)',
+    'contacts.floodControl': 'बाढ़ नियंत्रण कक्ष',
+    'contacts.ndrfControl': 'NDRF नियंत्रण कक्ष',
+
+    // Missing Persons extras
+    'missing.filterOpen': 'खुला',
+    'missing.filterMatched': 'मैच हुआ',
+    'missing.filterResolved': 'हल हुआ',
+    'missing.view': 'देखें',
+    'missing.genderLabel': 'लिंग:',
+    'missing.notSpecified': 'निर्दिष्ट नहीं',
+    'missing.unknown': 'अज्ञात',
+    'missing.empty': 'आपकी खोज से कोई लापता व्यक्ति रिकॉर्ड मेल नहीं खाया।',
+    'missing.photoPreviewAlt': 'बड़ा किया गया फोटो पहचान',
+    'missing.closePreview': 'प्रीव्यू बंद करें',
+    'missing.optimizing': 'ऑप्टिमाइज़ हो रहा है…',
+    'missing.changePhoto': 'फोटो बदलें',
+    'missing.agePlaceholder': 'जैसे 35',
+    'missing.locationPlaceholder': 'जैसे साल्ट लेक बस स्टैंड के पास',
+    'missing.clothesPlaceholder': 'जैसे नीली शर्ट, काली जींस, चश्मा पहनते हैं',
+    'missing.errImageOnly': 'केवल इमेज फ़ाइलें मान्य हैं',
+    'missing.errImageSize': 'इमेज 5MB की सीमा पार कर गई है',
+    'missing.photoAttached': 'फोटो जुड़ गया और अपलोड के लिए ऑप्टिमाइज़ हो गया',
+    'missing.errProcessPhoto': 'फोटो प्रोसेस नहीं हो सका',
+    'missing.errName': 'कृपया लापता व्यक्ति का नाम दर्ज करें',
+    'missing.errLastSeen': 'कृपया अंतिम बार देखे जाने का स्थान बताएं',
+    'missing.errPhotoRequired': 'कृपया स्पष्ट फोटो अपलोड करें (पहचान के लिए आवश्यक)',
+    'missing.errAge': 'कृपया उम्र दर्ज करें (आवश्यक)',
+    'missing.errContactPhone': 'कृपया मान्य 10-अंकों का संपर्क नंबर दें',
+    'missing.registered': 'लापता व्यक्ति सिस्टम में दर्ज हुआ',
+    'missing.previewAlt': 'प्रीव्यू',
+
+    // PfaChat
+    'pfa.topicFlood': 'घर में पानी भरना / बाढ़',
+    'pfa.topicBleeding': 'गंभीर रक्तस्राव की प्राथमिक चिकित्सा',
+    'pfa.topicPanic': 'घबराहट और चिंता से राहत',
+    'pfa.topicTrapped': 'इमारत गिरने से दबे होना',
+    'pfa.topicCardiac': 'सीने में दर्द / हृदय संकट',
+    'pfa.topicElectrical': 'बिजली और तार के खतरों से सुरक्षा',
+    'pfa.topicSnakebite': 'साँप के काटने की प्रक्रिया',
+    'pfa.topicFire': 'आग से बचाव रणनीति',
+    'pfa.greeting': 'नमस्ते! मैं आपदामित्र AI हूँ — आपका 24/7 आपदा जीवन रक्षा, ट्राइएज और संकट साथी। अभी मैं आपकी और आपके परिवार की कैसे मदद कर सकता हूँ?',
+    'chat.unreachable': 'आपदामित्र AI उपलब्ध नहीं',
+    'pfa.callbackSent': 'तत्काल बचाव कॉलबैक का अनुरोध हुआ! रेस्पॉन्डर्स को सूचित किया गया।',
+    'pfa.callbackFailed': 'कॉलबैक का अनुरोध विफल',
+    'pfa.badgeActive': '24/7 सक्रिय',
+    'pfa.tagline': '24/7 बुद्धिमान आपदा जीवन रक्षा मार्गदर्शन, आपातकालीन प्राथमिक चिकित्सा और आघात सहायता।',
+    'pfa.stopCoach': 'ब्रीथ कोच रोकें',
+    'pfa.startCoach': '4-4-4 बॉक्स ब्रीदिंग',
+    'pfa.breathIn': 'सांस लें',
+    'pfa.breathHold': 'रोकें',
+    'pfa.breathOut': 'छोड़ें',
+    'pfa.coachTitle': 'निर्देशित 4-सेकंड बॉक्स ब्रीदिंग',
+    'pfa.breathNow': 'अब',
+    'pfa.modeCritical': 'गंभीर आपातकाल',
+    'pfa.modeSupport': 'सहायता और समर्थन',
+    'pfa.callDesc': 'आपातकालीन डिस्पैच से सीधा टोल-फ्री संपर्क',
+    'pfa.phonePrompt': 'अपना मोबाइल नंबर दर्ज करें — बचाव टीम जितनी जल्दी हो सके आपसे संपर्क करेगी:',
+    'pfa.dispatching': 'भेजा जा रहा है…',
+    'pfa.reachMe': 'मुझ तक पहुँचें',
+    'pfa.dispatchedTitle': 'प्राथमिकता बचाव कॉलबैक भेजा गया!',
+    'pfa.contactInfo': 'संपर्क:',
+    'pfa.trackStatusLink': 'लाइव घटना प्रतिक्रिया स्थिति देखें',
+    'pfa.thinking': 'आपदामित्र AI जीवन रक्षा सलाह तैयार कर रहा है…',
+
+    // Report Damage extras
+    'damage.cat1Title': 'आवासीय घर',
+    'damage.cat1Desc': 'छत गिरना, दीवारों में दरार, बाढ़ से भीगना',
+    'damage.cat2Title': 'वाणिज्यिक / सार्वजनिक',
+    'damage.cat2Desc': 'दुकान क्षतिग्रस्त, सामान डूबा या सार्वजनिक भवन',
+    'damage.cat3Title': 'कृषि फसलें',
+    'damage.cat3Desc': 'खेत डूबे, उपजाऊ मिट्टी कटी, फसल नष्ट',
+    'damage.cat4Title': 'पुल और सड़क',
+    'damage.cat4Desc': 'पुल बह गया, सड़क टूटी या डूबी',
+    'damage.cat5Title': 'बिजली ग्रिड और उपयोगिता',
+    'damage.cat5Desc': 'ट्रांसफॉर्मर गिरा, केबल कटी, खंभे टूटे',
+    'damage.cat6Title': 'अन्य',
+    'damage.cat6Desc': 'कोई अन्य क्षतिग्रस्त संपत्ति या ढांचा',
+    'damage.errMaxImages': 'अधिकतम 5 इमेज मान्य हैं',
+    'damage.errFileImage': 'केवल इमेज फ़ाइलें मान्य हैं',
+    'damage.exceedsLimit': '10MB पार कर गई',
+    'damage.errProcessImage': 'यह इमेज प्रोसेस नहीं हो सकी',
+    'damage.errMinPhotos': 'कृपया कम से कम 1 क्षति फोटो अपलोड करें (अधिकतम 5)',
+    'damage.errAddressRequired': 'संपत्ति का पता आवश्यक है',
+    'damage.errDescription': 'कृपया संरचनात्मक क्षति का वर्णन करें (आवश्यक)',
+    'damage.imagesCount': 'इमेज',
+    'damage.uploadHint': '1–5 जियोटैग्ड फोटो अपलोड करें। हर फोटो अलग स्कोर होता है, फिर औसत से अंतिम दावा बनता है।',
+    'damage.addressPlaceholder': 'जैसे होल्डिंग 42, ब्लॉक B, मेन रोड',
+    'damage.gpsWarn1': 'GPS उपलब्ध नहीं — ',
+    'damage.gpsWarn2': 'जियोटैग के लिए लोकेशन चालू करें। वर्तमान फॉलबैक (कोलकाता) उपयोग नहीं होगा — दावे के लिए सटीक GPS चाहिए।',
+    'damage.ownerPlaceholder': 'जैसे रमेश सेन',
+    'damage.descPlaceholder': 'जैसे 600mm मुख्य पानी पाइपलाइन फटी, तहखाना 1.5m कीचड़ में डूबा, खंभों में दरार…',
+    'damage.successTitle': 'क्षति दावा कमांड सेंटर में दर्ज हुआ',
+    'damage.successDesc': 'आपका दावा AI इंजन द्वारा आकलित और SDRF राहत समीक्षा के लिए दर्ज हुआ।',
+    'damage.claimIdLabel': 'आधिकारिक SDRF दावा ID — इसे सेव करें',
+    'damage.copyId': 'ID कॉपी करें',
+
+    // Report Form extras
+    'report.gpsLockedToast': 'हाई-प्रिसिशन GPS लॉक हुआ',
+    'report.lastKnownLocation': 'अंतिम ज्ञात लोकेशन उपयोग की जा रही है।',
+    'report.locateFail': 'लोकेशन उपलब्ध नहीं। अपना क्षेत्र टाइप करें या नक्शे पर चुनें।',
+    'report.locatingAddress': 'पता खोजा जा रहा है…',
+    'report.landmarkAt': 'लैंडमार्क',
+    'report.micDenied': 'माइक्रोफोन की अनुमति नहीं मिली। आप ऑडियो फ़ाइल अपलोड कर सकते हैं।',
+    'report.fileTooLarge': '5MB सीमा पार कर गई',
+    'report.fileNotAllowed': 'प्रकार मान्य नहीं',
+    'report.errCategory': 'कृपया आपातकाल का प्रकार चुनें',
+    'report.errMediaRequired': 'कृपया फोटो/वीडियो अपलोड करें या वॉयस नोट रिकॉर्ड करें — कम से कम एक आवश्यक',
+    'report.errGpsRequired': 'सबमिट करने से पहले GPS की अनुमति दें या नक्शे पर लोकेशन चुनें',
+    'report.emergencyReport': 'आपातकालीन रिपोर्ट:',
+    'report.reportedSuccess': 'आपातकालीन घटना सफलतापूर्वक दर्ज हुई!',
+    'report.successDesc': 'आपकी रिपोर्ट AI ट्राइएज इंजन द्वारा प्राथमिकता देकर बचाव डिस्पैच कतार में दर्ज हुई।',
+    'report.trackingIdLabel': 'ट्रैकिंग ID — इसे सेव करें',
+    'report.trackStatusLink': 'लाइव बचाव स्थिति देखें',
+    'report.newReport': 'नई रिपोर्ट',
+    'report.estimatedHint': 'लोकेशन अनुमानित — सटीक GPS के लिए Retry दबाएं',
+    'report.lifeThreatWarn': 'जानलेवा शब्द पाए गए — तत्काल डिस्पैच के लिए आपातकालीन SOS का उपयोग करें?',
+    'report.goToSos': 'SOS पर जाएं',
+
+    // Tracker extras
+    'tracker.markerIncident': 'घटना:',
+    'tracker.victimLocation': 'पीड़ित का स्थान',
+    'tracker.rescueUnit': 'बचाव इकाई',
+    'tracker.fieldResponder': 'फील्ड रेस्पॉन्डर',
+    'tracker.enRouteEta': 'रास्ते में — ETA ~',
+    'tracker.routeLabel': 'बचाव मार्ग',
+    'tracker.gpsRecorded': 'GPS निर्देशांक दर्ज',
+    'tracker.gps': 'GPS',
+    'tracker.commandFallback': 'NDRF / SDRF कमांड',
+    'tracker.volunteerQueued': 'वॉलंटियर टीम कतार में',
+    'tracker.notesLabel': 'समाधान और सुरक्षा नोट्स',
+    'common.call112': '112 कॉल करें',
+    'common.call1070': '1070 कॉल करें',
+
+    // Safe Routes extras
+    'routes.min': 'मिनट',
+    'routes.hr': 'घंटा',
+    'routes.floodZone': 'बाढ़ जलमग्नता',
+    'routes.critical': 'गंभीर',
+    'routes.waterDepth': 'पानी',
+    'routes.occupancy': 'ऑक्यूपेंसी:',
+    'routes.liveLocation': 'लाइव लोकेशन',
+    'routes.fastestRoute': 'सबसे तेज़ सड़क मार्ग',
+    'routes.directLineHazard': 'सड़क मार्ग उपलब्ध नहीं — सीधी रेखा दिखाई जा रही है',
+    'routes.followsRoads': 'सड़कों से जाता है — बाढ़ क्षेत्रों से गुजर सकता है',
+    'routes.safeDetour': 'सुरक्षित वैकल्पिक मार्ग (अनुशंसित)',
+    'routes.safeDetourDesc': 'सड़क आधारित सुरक्षित मार्ग — जलमग्न क्षेत्रों से बचता है (300m दूरी)',
+    'routes.regionFallback': 'क्षेत्रीय केंद्र फॉलबैक — लोकेशन उपलब्ध नहीं',
+    'routes.regionHint': 'लोकेशन उपलब्ध नहीं — क्षेत्रीय केंद्र उपयोग हो रहा है। Re-scan GPS दबाएं।',
+    'routes.severity': 'गंभीरता:',
+    'routes.depthSuffix': 'गहराई',
+    'routes.villages': 'गाँव:',
+
+    // Safety Check-in extras
+    'checkin.errName': 'कृपया अपना पूरा नाम दर्ज करें',
+    'checkin.errPhoneDisplay': 'कृपया मान्य 10-अंकों का मोबाइल नंबर दर्ज करें।',
+    'checkin.errPhoneToast': 'मान्य फोन नंबर आवश्यक है',
+    'checkin.errLocation': 'कृपया अपना वर्तमान स्थान / शेल्टर दर्ज करें (आवश्यक)',
+    'checkin.recordedToast': 'सुरक्षा स्थिति सफलतापूर्वक दर्ज हुई',
+    'checkin.namePlaceholder': 'जैसे रमेश चंद्र सेन',
+    'checkin.locationPlaceholder': 'जैसे साल्ट लेक सेक्टर V शेल्टर या घर पर',
+    'checkin.messagePlaceholder': 'जैसे 3 परिवार के साथ, बिजली है, खाना/पानी है।',
+    'checkin.searchLabel': 'नाम, फोन नंबर या स्थान से खोजें',
+    'checkin.searchInputPlaceholder': 'नाम या 10-अंकों का फोन नंबर टाइप करें…',
+    'checkin.checkedInAt': 'चेक-इन हुआ',
+    'checkin.emptySearch': 'आपकी खोज से कोई चेक-इन रिकॉर्ड मेल नहीं खाया।',
+
+    // Shelter Finder extras
+    'shelter.currentLocation': 'वर्तमान स्थान',
+    'shelter.markerFallback': 'आपदा शेल्टर',
+    'shelter.cardFallback': 'आपातकालीन शेल्टर',
+    'shelter.addressFallback': 'रिकॉर्ड पर पता',
+    'shelter.noGps': 'GPS नहीं',
+    'shelter.locationUnavailable': 'लोकेशन उपलब्ध नहीं',
+    'shelter.empty': 'आपकी खोज या फ़िल्टर से कोई शेल्टर मेल नहीं खाया।',
+
+    // SOS extras
+    'sos.syncedToast': 'लंबित ऑफलाइन SOS सफलतापूर्वक सिंक हुआ!',
+    'sos.scanningGps': 'हाई-प्रिसिशन सैटेलाइट के लिए GPS स्कैन हो रहा है...',
+    'sos.gpsWeakToast': 'GPS सिग्नल कमज़ोर, सर्वोत्तम उपलब्ध अनुमान उपयोग हो रहा है।',
+    'sos.gpsFailToast': 'GPS फिक्स नहीं मिला। कृपया स्थान मैन्युअल रूप से जांचें।',
+    'sos.errPhoneRequired': 'आपातकालीन डिस्पैच के लिए मोबाइल नंबर आवश्यक है',
+    'sos.errPhoneInvalid': 'कृपया मान्य 10-अंकों का मोबाइल नंबर दर्ज करें।',
+    'sos.errPhoneFormat': 'मोबाइल नंबर प्रारूप अमान्य',
+    'sos.typeFallback': 'आपातकाल',
+    'sos.pickLocationToast': 'लोकेशन उपलब्ध नहीं — SOS भेजने से पहले नक्शे पर अपनी लोकेशन चुनें',
+    'sos.offlineQueuedToast': 'ऑफलाइन: SOS कतार में! नेटवर्क लौटते ही भेजा जाएगा।',
+    'sos.dispatchLocationLabel': 'बचाव डिस्पैच स्थान',
+    'sos.gpsLive': 'लाइव GPS लॉक',
+    'sos.manuallyVerified': 'मैन्युअल रूप से सत्यापित',
+    'sos.cachedGps': 'कैश्ड GPS',
+    'sos.estimatedArea': 'अनुमानित क्षेत्र',
+    'sos.resolvingAddress': 'गली का पता खोजा जा रहा है...',
+    'sos.defaultCity': 'भुवनेश्वर, ओडिशा, भारत',
+    'sos.acquiring': 'GPS प्राप्त हो रहा है…',
+    'sos.rescan': 'GPS फिर स्कैन करें',
+    'sos.correctArea': 'क्षेत्र सुधारें',
+    'sos.phoneHint': '* बचाव कॉल के लिए मोबाइल आवश्यक',
+    'sos.floorLabel': 'फ्लोर / लैंडमार्क (वैकल्पिक)',
+    'sos.floorPlaceholder': 'जैसे दूसरी मंज़िल, कमरा 204',
+    'sos.sosAria': 'आपातकालीन सैटेलाइट SOS डिस्पैच के लिए दबाएं',
+    'sos.dispatchingSos': 'SOS सिग्नल भेजा जा रहा है…',
+    'sos.sendNow': 'अभी SOS संकट सिग्नल भेजें',
+    'sos.disclaimer': '* तत्काल रेस्पॉन्स यूनिट को अलर्ट करने के लिए टैप करें। आपके सटीक GPS निर्देशांक और फोन NDRF/SDRF कमांड को भेजे जाएंगे।',
+    'sos.offlineOptionsTitle': 'ऑफलाइन फॉलबैक विकल्प',
+    'sos.smsLink': '1-टैप आपातकालीन SMS (112 ऑफलाइन फॉलबैक)',
+    'sos.broadcastTitle': 'SOS संकट सिग्नल प्रसारित हुआ!',
+    'sos.broadcastDesc': 'आपदा नियंत्रण कक्ष और नज़दीकी बचाव इकाइयों को आपके फोन और GPS स्थान के साथ सूचित किया गया।',
+    'sos.trackingIdHeading': 'आपकी घटना ट्रैकिंग ID',
+    'sos.copiedShort': 'कॉपी हुआ',
+    'sos.trackResponse': 'लाइव प्रतिक्रिया स्थिति देखें',
+    'sos.damageCta': 'घर/पाइपलाइन क्षति? AI राहत के लिए अपलोड करें',
+    'sos.anotherSos': 'दूसरा SOS भेजें',
+    'sos.helplinesTitle': 'सीधी आपातकालीन हेल्पलाइन (टोल-फ्री)',
+    'sos.modalTitle': 'आपातकालीन स्थान सुधारें',
+    'sos.modalDesc': 'सुनिश्चित करें कि बचाव टीम आपके सटीक स्थान तक पहुँचे। आप अपना मोहल्ला/पता टाइप कर सकते हैं, त्वरित क्षेत्र चुन सकते हैं, या नक्शे पर टैप करके सटीक पिन लगा सकते हैं।',
+    'sos.addressLabel': 'पता / क्षेत्र / लैंडमार्क और PIN कोड',
+    'sos.addressPlaceholder': 'जैसे फ्लैट 302, गायत्री विहार, सुंदरपदा, भुवनेश्वर - 751002',
+    'sos.modalHint': '* बचाव टीम आपका सटीक पता, भवन का नाम और PIN कोड देखेगी।',
+    'sos.presetsLabel': 'त्वरित क्षेत्र प्रीसेट',
+    'sos.mapLabel': 'पिन हटाने के लिए नक्शे पर टैप करें या खोजें',
+    'sos.savedToast': 'आपातकालीन डिस्पैच स्थान सफलतापूर्वक अपडेट हुआ!',
+    'sos.saveLocation': 'स्थान सेव और लागू करें',
+
+    // MainLayout extras
+    'layout.bulletins': 'सूचनाएं',
+    'layout.viewAll': 'सभी देखें',
+    'layout.noBulletins': 'कोई सक्रिय सूचना नहीं',
+    'layout.navDesktop': 'डेस्कटॉप नेविगेशन',
+    'layout.langSelector': 'भाषा चयनकर्ता',
+    'layout.notifications': 'सूचनाएं',
+    'layout.toggleTheme': 'थीम बदलें',
+    'layout.toggleMenu': 'मोबाइल मेनू खोलें',
+    'layout.navMobile': 'मोबाइल नेविगेशन',
+
+    // ChatWidget extras
+    'chat.greetingShort': 'नमस्ते! मैं आपदामित्र AI हूँ। बताएं आपको किस आपातकाल, चोट या सुरक्षा सहायता की ज़रूरत है।',
+    'chat.openAria': 'आपदामित्र AI सहायक',
+    'chat.openTitle': 'आपदामित्र AI से पूछें',
+    'chat.dialogAria': 'आपदामित्र AI आपदा सहायता',
+    'chat.badgeLive': 'लाइव सहायता',
+    'chat.hotlineCritical': 'गंभीर आपातकाल',
+    'chat.hotlineSupport': 'सहायता हॉटलाइन',
+    'chat.callbackDesc': 'फोन नंबर दर्ज करें — बचाव टीम कॉल करेगी और डिस्पैच होगी:',
+    'chat.reliefDesc': 'राहत वॉलंटियर कॉलबैक के लिए फोन नंबर दर्ज करें:',
+    'chat.phonePlaceholder': '10-अंकों का मोबाइल नंबर',
+    'chat.requestHelp': 'मदद का अनुरोध',
+    'chat.dispatchConfirm': 'आपातकालीन SOS भेजा गया! बचाव टीम को कॉल के लिए सूचित किया गया',
+    'chat.ref': 'संदर्भ:',
+    'chat.thinking': 'आपदामित्र AI सुरक्षा मार्गदर्शन तैयार कर रहा है…',
+    'chat.qWater': 'पानी बढ़ रहा है',
+    'chat.qWound': 'गंभीर घाव',
+    'chat.qDebris': 'मलबे में दबे हैं',
+    'chat.qEvac': 'सुरक्षित निकासी',
+    'chat.sendMsg': 'संदेश भेजें',
+
+    // LandmarkPicker extras
+    'lp.geocodeUnavailable': 'जियोकोडिंग सेवा उपलब्ध नहीं। आप सीधे नक्शे पर टैप कर सकते हैं।',
+    'lp.mapCenterSet': 'नक्शे के केंद्र पर स्थान सेट हुआ, पता:',
+    'lp.acquiringGps': 'हाई-प्रिसिशन GPS लॉक हो रहा है...',
+    'lp.gpsLocked': 'GPS लॉक (सटीकता: ±',
+    'lp.gpsFail': 'हार्डवेयर GPS नहीं मिला। कृपया नक्शे पर अपनी लोकेशन टैप करें।',
+    'lp.searchPlaceholder': 'स्थान, लैंडमार्क या क्षेत्र खोजें (जैसे सुंदरपदा, मास्टर कैंटीन)',
+    'lp.locate': 'खोजें',
+    'lp.gpsTitle': 'डिवाइस के हाई-प्रिसिशन GPS से सटीक स्थान पहचानें',
+    'lp.lockingGps': 'GPS लॉक हो रहा है…',
+    'lp.liveGps': 'लाइव GPS',
+    'lp.areaMatch': 'क्षेत्र मैच',
+    'lp.notIndexed': 'सटीक भवन ऑनलाइन नहीं मिला। आप नक्शे पर पिन लगा सकते हैं या यह पता सीधे चुन सकते हैं:',
+    'lp.useAddress': 'पता उपयोग करें:',
+    'lp.dragHint': 'या नक्शे पर पिन को अपनी सटीक इमारत तक खींचें',
+    'lp.footerHint': '* निर्देशांक बदलने के लिए नक्शे पर कहीं भी क्लिक करें या पिन खींचें',
+
+    // Hero extras
+    'hero.getHelpTitle': 'मदद पाएं — सही तरीका चुनें',
+    'hero.getHelpDesc': 'जानलेवा हालत? आपातकालीन SOS का उपयोग करें। सबूत साझा करना है? घटना रिपोर्ट करें।',
+    'hero.emergencyTitle': 'आपातकालीन SOS',
+    'hero.emergencyDesc': 'जानलेवा • 30 सेकंड • केवल GPS + फोन • तत्काल बचाव डिस्पैच',
+    'hero.reportTitle': 'घटना की रिपोर्ट करें',
+    'hero.reportDesc': 'सबूत-समृद्ध • 2 मिनट • फोटो, आवाज़ और विवरण • ट्राइएज और दावों के लिए',
+
+    // Enum label mappings
+    'shelter.statusOpen': 'खुला',
+    'pfa.phaseInhale': 'श्वास लें',
+    'pfa.phaseHold': 'रोकें',
+    'pfa.phaseExhale': 'छोड़ें',
+    'common.scrollLeft': 'बाएं स्क्रॉल करें',
+    'common.scrollRight': 'दाएं स्क्रॉल करें',
+    'checkin.statusSafe': 'सुरक्षित',
+    'checkin.statusNeedHelp': 'सहायता चाहिए',
   },
 
   bn: {
     // App & Header
+
+    // Navigation
+
+    // About Page
+
+    // Contact Page
+
+    // Common
+
+    // Home Hero Section
+
+    // Home Services Cards
+
+    // Home 3-Step Triage
+
+    // Home Bulletins Feed
+
+    // Home Quick Track & Helplines
+
+
+    // SOS Page
+
+    // Incident Report Form
+
+    // Incident Tracker
+
+    // Shelter Finder
+
+    // Safe Routes
+
+    // Missing Persons
+
+    // Report Damage
+
+    // Safety Checkin
+
+    // Chatbot
+
+    // Shared / Common extras
+
+    // About story section
+
+    // Alerts page
+
+    // Contacts page
+
+    // Missing Persons extras
+
+    // PfaChat
+
+    // Report Damage extras
+
+    // Report Form extras
+
+    // Tracker extras
+
+    // Safe Routes extras
+
+    // Safety Check-in extras
+
+    // Shelter Finder extras
+
+    // SOS extras
+
+    // MainLayout extras
+
+    // ChatWidget extras
+
+    // LandmarkPicker extras
     'app.name': 'আপদাসেতু',
     'app.tagline': 'দুর্যোগ প্রতিক্রিয়া ও AI ট্রায়াজ ইকোসিস্টেম',
     'header.nationalEmergency': 'জাতীয় জরুরি সেবা',
@@ -698,8 +1454,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'header.disasterHelpline': 'দুর্যোগ হেল্পলাইন',
     'header.offlineNotice': 'অফলাইন মোড সক্রিয় — ইন্টারনেট চালু হলে জমা দেওয়া তথ্য স্বয়ংক্রিয়ভাবে সিঙ্ক হবে।',
     'header.callOffline': '১১২ তে অফলাইন কল করুন',
-
-    // Navigation
     'nav.home': 'হোম',
     'nav.sos': '১-ট্যাপ এসওএস',
     'nav.report': 'ঘটনা রিপোর্ট করুন',
@@ -717,8 +1471,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'nav.features': 'বৈশিষ্ট্য',
     'nav.contacts': 'যোগাযোগ',
     'nav.pfa': 'আপদামিত্র AI',
-
-    // About Page
     'about.title': 'আপদাসেতু সম্পর্কে',
     'about.subtitle': 'একটি একীভূত দুর্যোগ প্রতিক্রিয়া এবং AI ট্রাইজ ইকোসিস্টেম।',
     'about.missionTitle': 'আমাদের মিশন',
@@ -740,12 +1492,8 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'about.feature7Desc': 'নিখোঁজ ব্যক্তির বুলেটিন অনুসন্ধান করুন বা ফটো যাচাই সহ রিপোর্ট করুন।',
     'about.feature8Title': 'অফলাইন-ফার্স্ট ডিজাইন',
     'about.feature8Desc': 'দুর্যোগ পরিস্থিতির জন্য ডিজাইন যেখানে সংযোগ অস্থির।',
-
-    // Contact Page
     'contact.title': 'জরুরি যোগাযোগ',
     'contact.subtitle': 'সমস্ত প্রয়োজনীয় জরুরি নম্বর এক জায়গায়। কল করতে ট্যাপ করুন।',
-
-    // Common
     'common.submit': 'জমা দিন',
     'common.loading': 'লোড হচ্ছে…',
     'common.send': 'পাঠান',
@@ -766,8 +1514,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'common.name': 'পুরো নাম',
     'common.required': 'আবশ্যক',
     'common.optional': 'ঐচ্ছিক',
-
-    // Home Hero Section
     'hero.badgeSystem': 'জাতীয় জরুরি প্রতিক্রিয়া সিস্টেম',
     'hero.activeBulletins': 'সক্রিয় সতর্কতা',
     'hero.syncing': 'সিঙ্ক হচ্ছে...',
@@ -778,8 +1524,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'hero.aiCompanion': 'আপদামিত্র AI',
     'hero.quickAccess': 'দ্রুত পরিষেবা',
     'hero.structuredFlows': 'জরুরি প্রতিক্রিয়া ধাপসমূহ',
-
-    // Home Services Cards
     'service.noticeTag': 'জনবিজ্ঞপ্তি',
     'service.checkinDesc': 'প্রিয়জনদের আশ্বস্ত করতে এবং উদ্ধারকারী দলের সময় বাঁচাতে নিজেকে নিরাপদ ঘোষণা করুন।',
     'service.sheltersTag': 'ত্রাণ শিবির',
@@ -797,22 +1541,16 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'service.verificationTag': 'যাচাইকরণ',
     'service.publicSafetyTitle': 'পাবলিক সেফটি রেজিস্ট্রি',
     'service.publicSafetyDesc': 'বন্যা কবলিত এলাকায় পরিবার ও আত্মীয়দের নিরাপত্তা স্ট্যাটাস অনুসন্ধান করুন।',
-
-    // Home 3-Step Triage
     'triage.step1Title': 'জরুরি ট্রায়াজ',
     'triage.step1Desc': 'ঘটনা রিপোর্ট করুন অথবা ১-ট্যাপ এসওএস পাঠিয়ে এআই অগ্রাধিকার সহ কমান্ড সেন্টারে সতর্কবার্তা দিন।',
     'triage.step2Title': 'জিপিএস অবস্থান লক',
     'triage.step2Desc': 'উচ্চ নির্ভুলতার সাথে স্যাটেলাইট বন্যা সীমানার সাথে মিলিয়ে ভৌগোলিক অবস্থান লক করা হয়।',
     'triage.step3Title': 'কমান্ড ডিসপ্যাচ',
     'triage.step3Desc': 'এনডিআরএফ, এসডিআরএফ এবং ফিল্ড স্বেচ্ছাসেবকদের তাৎক্ষণিকভাবে রুট সহ দায়িত্ব প্রদান করা হয়।',
-
-    // Home Bulletins Feed
     'bulletin.title': 'সরকারি সতর্কতা বুলেটিন',
     'bulletin.liveFeed': 'লাইভ বুলেটিন',
     'bulletin.viewAll': 'সমস্ত বুলেটিন',
     'bulletin.noAlerts': 'বর্তমানে আপনার এলাকায় কোনো সক্রিয় লাল সতর্কতা নেই।',
-
-    // Home Quick Track & Helplines
     'track.quickTag': 'দ্রুত অনুসন্ধান',
     'track.quickTitle': 'লাইভ ঘটনা ট্র্যাকিং',
     'track.quickDesc': 'আপনার ট্র্যাকিং আইডি দিয়ে উদ্ধারের বর্তমান স্থিতি ও অগ্রগতি দেখুন।',
@@ -827,8 +1565,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'helpline.ambulance': 'অ্যাম্বুলেন্স',
     'helpline.police': 'পুলিশ',
     'helpline.disaster': 'দুর্যোগ সহায়তা',
-
-    // SOS Page
     'sos.title': 'জরুরি বিপৎকালীন এসওএস সিগন্যাল',
     'sos.subtitle': 'এনডিআরএফ, এসডিআরএফ, পুলিশ এবং উদ্ধারকারী দলের কাছে সরাসরি বিপৎবার্তা পাঠান।',
     'sos.channelBadge': 'উচ্চ অগ্রাধিকার চ্যানেল',
@@ -861,8 +1597,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'sos.smsDesc': 'ইন্টারনেট নেই? সরাসরি জাতীয় জরুরি কেন্দ্রে তৈরি করা এসএমএস পাঠান।',
     'sos.copySms': 'জরুরি এসএমএস কপি করুন',
     'sos.copied': 'কপি হয়েছে!',
-
-    // Incident Report Form
     'report.pageTitle': 'জরুরি ঘটনা রিপোর্ট',
     'report.pageSubtitle': 'উদ্ধারকারী দলের জন্য * চিহ্নিত ক্ষেত্রগুলি পূরণ করা আবশ্যক।',
     'report.categoryLabel': 'জরুরি বিভাগ *',
@@ -899,8 +1633,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'report.submitValidation': '* জরুরি বিভাগ নির্বাচন করুন এবং মোবাইল নম্বর দিন',
     'report.successTitle': 'রিপোর্ট সফলভাবে নথিভুক্ত হয়েছে!',
     'report.trackPrompt': 'কমান্ড ইউনিটে আপনার রিপোর্ট পাঠানো হয়েছে। ট্র্যাকিং আইডি সংরক্ষণ করুন:',
-
-    // Incident Tracker
     'track.pageTitle': 'লাইভ উদ্ধার ও পরিস্থিতি ট্র্যাকার',
     'track.pageSubtitle': 'রিয়েল-টাইমে রেসকিউ অপারেশন ও নির্ধারিত ইউনিট পর্যবেক্ষণ করুন।',
     'track.inputPlaceholder': 'ট্র্যাকিং আইডি লিখুন (যেমন SOS-7890)',
@@ -919,8 +1651,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'track.incidentDetails': 'ঘটনার বিবরণ',
     'track.liveTelemetry': 'লাইভ ভৌগোলিক অবস্থান ও ঘটনাস্থল',
     'track.eta': 'আনুমানিক পৌঁছানোর সময় (ETA)',
-
-    // Shelter Finder
     'shelter.title': 'কাছাকাছি জরুরি আশ্রয়কেন্দ্র',
     'shelter.subtitle': 'আপনার জিপিএস অবস্থান থেকে দূরত্বের ভিত্তিতে সাজানো সরকারি যাচাইকৃত শিবির।',
     'shelter.detectLocation': 'আমার অবস্থান খুঁজুন',
@@ -938,8 +1668,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'shelter.filterFood': 'খাবার সরবরাহ',
     'shelter.filterWater': 'বিশুদ্ধ জল',
     'shelter.filterPower': 'জেনারেটর ব্যাকআপ',
-
-    // Safe Routes
     'routes.title': 'নিরাপদ নির্গমন পথ ও উদ্ধার করিডোর',
     'routes.subtitle': 'বন্যা কবলিত ও বিপজ্জনক রাস্তা এড়িয়ে রিয়েল-টাইমে নিরাপদ পথ।',
     'routes.origin': 'আপনার শুরুর অবস্থান',
@@ -948,8 +1676,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'routes.directDistance': 'সরাসরি রুট (বন্যা কবলিত)',
     'routes.safeDistance': 'নিরাপদ নির্গমন করিডোর',
     'routes.walkingTime': 'আনুমানিক হাঁটার সময়',
-
-    // Missing Persons
     'missing.title': 'নিখোঁজ ব্যক্তি রেজিস্ট্রি ও সন্ধান',
     'missing.subtitle': 'নিখোঁজ ব্যক্তির সন্ধান করুন অথবা পরিবারের নিখোঁজ সদস্যের রিপোর্ট করুন।',
     'missing.tabRegistry': 'জনসাধারণের বুলেটিন রেজিস্ট্রি',
@@ -967,8 +1693,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'missing.female': 'মহিলা',
     'missing.other': 'অন্যান্য',
     'missing.submitReport': 'নিখোঁজ রিপোর্ট জমা দিন',
-
-    // Report Damage
     'damage.title': 'এসডিআরএফ / এনডিএমএ দুর্যোগ ক্ষতিপূরণ মূল্যায়ন',
     'damage.subtitle': 'সরকারি ত্রাণ ও আর্থিক সহায়তার জন্য ছবি সহ ক্ষতির দাবি জমা দিন।',
     'damage.step1Title': '১. ক্ষতিগ্রস্ত অবকাঠামো নির্বাচন করুন',
@@ -988,8 +1712,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'damage.grade': 'AI ক্ষতির গ্রেড',
     'damage.score': 'ক্ষতির তীব্রতা স্কোর',
     'damage.compensation': 'আনুমানিক এসডিআরএফ সরকারি অনুদান',
-
-    // Safety Checkin
     'checkin.title': 'আমি নিরাপদ আছি রেজিস্ট্রি',
     'checkin.subtitle': 'পরিবার ও পরিজনকে আশ্বস্ত করতে আপনার নিরাপত্তা স্ট্যাটাস নিশ্চিত করুন।',
     'checkin.tabCheckin': 'আমার স্ট্যাটাস জানান',
@@ -1012,21 +1734,418 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'checkin.submitCheckin': 'নিরাপত্তা স্ট্যাটাস জমা দিন',
     'checkin.recentCheckins': 'সাম্প্রতিক নিরাপত্তা চেক-ইন',
     'checkin.searchPlaceholder': 'নাম, মোবাইল নম্বর বা এলাকা দিয়ে খুঁজুন…',
-
-    // Chatbot
     'chat.suggestion': 'সাহায্য দরকার? আপদামিত্র AI-এর সাথে কথা বলুন',
     'chat.title': 'আপদামিত্র AI',
     'chat.subtitle': '২৪/৭ দ্রুত দুর্যোগ জীবনরক্ষা ও প্রাথমিক চিকিৎসা সহায়ক',
     'chat.greeting':
-      'নমস্কার! আমি আপদামিত্র AI। জরুরি নির্দেশিকা বা দুর্যোগ সহায়তার জন্য জিজ্ঞাসা করুন।',
+      'নমস্কার! আমি আপদামিত্র AI। জরুরি নির্দেশিকা বা ত্রাণ সহায়তার জন্য জিজ্ঞাসা করুন।',
     'chat.placeholder': 'সুরক্ষা প্রশ্ন জিজ্ঞাসা করুন বা পরিস্থিতি জানান…',
     'chat.callbackPrompt': 'আমাদের দুর্যোগ উদ্ধার দল অবিলম্বে আপনার সাথে যোগাযোগ করতে পারে:',
     'chat.callbackBtn': 'উদ্ধার কলের অনুরোধ করুন',
     'chat.hotlineDial': '১-ট্যাপ জরুরি হটলাইন:',
+
+    // Shared / Common extras
+    'common.youAreHere': 'আপনি এখানে আছেন',
+    'common.gpsAccuracy': 'GPS নির্ভুলতা ±',
+    'common.cancel': 'বাতিল করুন',
+    'common.copiedClipboard': 'ক্লিপবোর্ডে কপি হয়েছে',
+    'common.copyFailed': 'কপি করা যায়নি — অনুগ্রহ করে ID ম্যানুয়ালি লিখে রাখুন',
+    'common.submissionFailed': 'জমা দিতে ব্যর্থ',
+    'common.errPhone10': 'অনুগ্রহ করে বৈধ ১০-সংখ্যার মোবাইল নম্বর দিন',
+    'common.mins': 'মিনিট',
+    'common.km': 'কিমি',
+    'common.age': 'বয়স',
+    'common.call': 'কল করুন',
+    'common.copy': 'কপি',
+    'common.copied': 'কপি হয়েছে!',
+    'common.remove': 'সরান',
+    'common.searching': 'খোঁজা হচ্ছে…',
+    'common.closeDialog': 'ডায়ালগ বন্ধ করুন',
+
+    // About story section
+    'about.storyTitle': 'আমরা কেন আপদাসেতু তৈরি করেছি — গভীর রাত ৩টার সেই ফোন কল যা কখনও জোড়া লায়নি',
+    'about.storyP1': 'প্রকৃত বন্যায় গভীর রাত ৩টায় আপনি সরকারি হেল্পলাইনে ফোন করেন। ঘণ্টা বাজে। তারপর IVR। তারপর একটি বট বলে "১ চাপুন"। তারপর কল কেটে যায়। অথবা ঘণ্টার পর ঘণ্টা লাইন ব্যস্ত থাকে। আমরা সেখানে ছিলাম — হাজার হাজার পরিবারও ছিল।',
+    'about.storyP2Pre': 'আমরা আপদাসেতু তৈরি করেছি সেই লাইন এড়াতে। না লগইন, না ফর্ম, না বট-লুপ। এক ট্যাপেই আপনার ',
+    'about.storyP2Bold': 'লাইভ GPS, ফোন এবং মাঠপর্যায়ের বাস্তবতা',
+    'about.storyP2Post': ' সরাসরি সরকারি কর্মকর্তার কমান্ড ড্যাশবোর্ডে পৌঁছে যায় — শুধু আপনার জেলা নয়, আপনার গলি পর্যন্ত নির্ভুলতার সাথে।',
+    'about.storyP3': 'এটি আপনার উত্তর দেওয়া কোনো চ্যাটবট নয়। এটি একজন প্রকৃত কর্মকর্তা যিনি ম্যাপে আপনাকে দেখতে পারেন, আপনাকে ফিরে কল করতে পারেন, এবং সেকেন্ডের মধ্যে নিকটতম NDRF/SDRF দল পাঠাতে পারেন।',
+
+    // Alerts page
+    'alerts.pageDesc': 'NDMA, SDMA এবং জাতীয় ইনসিডেন্ট কমান্ড থেকে রিয়েল-টাইম জরুরি সম্প্রচার।',
+    'alerts.sevCritical': 'গুরুতর',
+    'alerts.sevWarning': 'সতর্কতা',
+    'alerts.sevInfo': 'তথ্য',
+    'alerts.affectedArea': 'প্রভাবিত এলাকা:',
+    'alerts.empty': 'এই বিভাগে কোনো সক্রিয় জরুরি সতর্কতা নেই।',
+
+    // Contacts page
+    'contacts.nationalSos': 'জাতীয় জরুরি (SOS)',
+    'contacts.ambulance': 'অ্যাম্বুলেন্স',
+    'contacts.police': 'পুলিশ',
+    'contacts.fire': 'ফায়ার ব্রিগেড',
+    'contacts.ndmaHelpline': 'দুর্যোগ হেল্পলাইন (NDMA)',
+    'contacts.floodControl': 'বন্যা নিয়ন্ত্রণ কক্ষ',
+    'contacts.ndrfControl': 'NDRF নিয়ন্ত্রণ কক্ষ',
+
+    // Missing Persons extras
+    'missing.filterOpen': 'খোলা',
+    'missing.filterMatched': 'মিলেছে',
+    'missing.filterResolved': 'সমাধান হয়েছে',
+    'missing.view': 'দেখুন',
+    'missing.genderLabel': 'লিঙ্গ:',
+    'missing.notSpecified': 'উল্লেখ নেই',
+    'missing.unknown': 'অজানা',
+    'missing.empty': 'আপনার অনুসন্ধানের সাথে কোনো নিখোঁজ ব্যক্তির রেকর্ড মেলেনি।',
+    'missing.photoPreviewAlt': 'বড় করা ছবির পরিচয়',
+    'missing.closePreview': 'প্রিভিউ বন্ধ করুন',
+    'missing.optimizing': 'অপ্টিমাইজ হচ্ছে…',
+    'missing.changePhoto': 'ছবি পরিবর্তন করুন',
+    'missing.agePlaceholder': 'যেমন ৩৫',
+    'missing.locationPlaceholder': 'যেমন সল্টলেক বাস স্ট্যান্ডের কাছে',
+    'missing.clothesPlaceholder': 'যেমন নীল শার্ট, কালো জিন্স, চশমা পরেন',
+    'missing.errImageOnly': 'শুধুমাত্র ছবি ফাইল অনুমোদিত',
+    'missing.errImageSize': 'ছবি 5MB সীমা ছাড়িয়ে গেছে',
+    'missing.photoAttached': 'ছবি যুক্ত হয়েছে এবং আপলোডের জন্য অপ্টিমাইজ হয়েছে',
+    'missing.errProcessPhoto': 'ছবি প্রসেস করা যায়নি',
+    'missing.errName': 'অনুগ্রহ করে নিখোঁজ ব্যক্তির নাম লিখুন',
+    'missing.errLastSeen': 'অনুগ্রহ করে শেষ দেখা যাওয়ার স্থান উল্লেখ করুন',
+    'missing.errPhotoRequired': 'অনুগ্রহ করে স্পষ্ট ছবি আপলোড করুন (শনাক্তকরণের জন্য প্রয়োজন)',
+    'missing.errAge': 'অনুগ্রহ করে বয়স লিখুন (প্রয়োজনীয়)',
+    'missing.errContactPhone': 'অনুগ্রহ করে বৈধ ১০-সংখ্যার যোগাযোগ নম্বর দিন',
+    'missing.registered': 'নিখোঁজ ব্যক্তি সিস্টেমে নথিভুক্ত হয়েছে',
+    'missing.previewAlt': 'প্রিভিউ',
+
+    // PfaChat
+    'pfa.topicFlood': 'ঘরে জল ঢোকা / বন্যা',
+    'pfa.topicBleeding': 'প্রবল রক্তক্ষরণের প্রাথমিক চিকিৎসা',
+    'pfa.topicPanic': 'আতঙ্ক ও উদ্বেগ থেকে মুক্তি',
+    'pfa.topicTrapped': 'ভবন ধসে চাপা পড়া',
+    'pfa.topicCardiac': 'বুকে ব্যথা / হৃদযন্ত্রের সংকট',
+    'pfa.topicElectrical': 'বিদ্যুৎ ও তারের বিপদ থেকে সুরক্ষা',
+    'pfa.topicSnakebite': 'সাপে কাটার প্রোটোকল',
+    'pfa.topicFire': 'আগুন থেকে উদ্ধার কৌশল',
+    'pfa.greeting': 'নমস্কার! আমি আপদামিত্র AI — আপনার ২৪/৭ দুর্যোগ জীবনরক্ষা, ট্রায়াজ ও সংকট সঙ্গী। এই মুহূর্তে আমি আপনার ও আপনার পরিবারের কীভাবে সাহায্য করতে পারি?',
+    'chat.unreachable': 'আপদামিত্র AI পৌঁছানো যাচ্ছে না',
+    'pfa.callbackSent': 'জরুরি উদ্ধার কলব্যাকের অনুরোধ হয়েছে! উদ্ধারকারীদের জানানো হয়েছে।',
+    'pfa.callbackFailed': 'কলব্যাকের অনুরোধ ব্যর্থ',
+    'pfa.badgeActive': '২৪/৭ সক্রিয়',
+    'pfa.tagline': '২৪/৭ বুদ্ধিমান দুর্যোগ জীবনরক্ষা নির্দেশনা, জরুরি প্রাথমিক চিকিৎসা ও আঘাত সহায়তা।',
+    'pfa.stopCoach': 'ব্রিথ কোচ বন্ধ করুন',
+    'pfa.startCoach': '৪-৪-৪ বক্স ব্রিদিং',
+    'pfa.breathIn': 'শ্বাস নিন',
+    'pfa.breathHold': 'ধরে রাখুন',
+    'pfa.breathOut': 'ছাড়ুন',
+    'pfa.coachTitle': 'নির্দেশিত ৪-সেকেন্ড বক্স ব্রিদিং',
+    'pfa.breathNow': 'এখন',
+    'pfa.modeCritical': 'গুরুতর জরুরি অবস্থা',
+    'pfa.modeSupport': 'সহায়তা ও সমর্থন',
+    'pfa.callDesc': 'জরুরি ডিসপ্যাচে সরাসরি টোল-ফ্রি সংযোগ',
+    'pfa.phonePrompt': 'আপনার মোবাইল নম্বর দিন — উদ্ধার দল যত দ্রুত সম্ভব আপনার সাথে যোগাযোগ করবে:',
+    'pfa.dispatching': 'পাঠানো হচ্ছে…',
+    'pfa.reachMe': 'আমার কাছে পৌঁছান',
+    'pfa.dispatchedTitle': 'অগ্রাধিকার উদ্ধার কলব্যাক পাঠানো হয়েছে!',
+    'pfa.contactInfo': 'যোগাযোগ:',
+    'pfa.trackStatusLink': 'লাইভ ঘটনা প্রতিক্রিয়া অবস্থা দেখুন',
+    'pfa.thinking': 'আপদামিত্র AI জীবনরক্ষা পরামর্শ প্রস্তুত করছে…',
+
+    // Report Damage extras
+    'damage.cat1Title': 'আবাসিক বাড়ি',
+    'damage.cat1Desc': 'ছাদ ধস, দেয়ালে ফাটল, বন্যায় তলিয়ে যাওয়া',
+    'damage.cat2Title': 'বাণিজ্যিক / পাবলিক',
+    'damage.cat2Desc': 'দোকান ক্ষতিগ্রস্ত, মালপত্র তলিয়েছে বা সরকারি ভবন',
+    'damage.cat3Title': 'কৃষি ফসল',
+    'damage.cat3Desc': 'জমি তলিয়েছে, উপরের মাটি ধুয়ে গেছে, ফসল নষ্ট',
+    'damage.cat4Title': 'সেতু ও রাস্তা',
+    'damage.cat4Desc': 'সেতু ভেসে গেছে, রাস্তা ভেঙেছে বা তলিয়েছে',
+    'damage.cat5Title': 'বিদ্যুৎ গ্রিড ও ইউটিলিটি',
+    'damage.cat5Desc': 'ট্রান্সফরমার পড়েছে, তার কেটেছে, খুঁটি ভেঙেছে',
+    'damage.cat6Title': 'অন্যান্য',
+    'damage.cat6Desc': 'অন্য কোনো ক্ষতিগ্রস্ত সম্পত্তি বা অবকাঠামো',
+    'damage.errMaxImages': 'সর্বোচ্চ ৫টি ছবি অনুমোদিত',
+    'damage.errFileImage': 'শুধুমাত্র ছবি ফাইল অনুমোদিত',
+    'damage.exceedsLimit': '10MB ছাড়িয়ে গেছে',
+    'damage.errProcessImage': 'এই ছবি প্রসেস করা যায়নি',
+    'damage.errMinPhotos': 'অনুগ্রহ করে কমপক্ষে ১টি ক্ষতির ছবি আপলোড করুন (সর্বোচ্চ ৫)',
+    'damage.errAddressRequired': 'সম্পত্তির ঠিকানা প্রয়োজন',
+    'damage.errDescription': 'অনুগ্রহ করে কাঠামোগত ক্ষতির বিবরণ দিন (প্রয়োজনীয়)',
+    'damage.imagesCount': 'ছবি',
+    'damage.uploadHint': '১–৫টি জিওট্যাগ করা ছবি আপলোড করুন। প্রতিটি আলাদাভাবে স্কোর হয়, তারপর গড় করে চূড়ান্ত দাবি হয়।',
+    'damage.addressPlaceholder': 'যেমন হোল্ডিং ৪২, ব্লক B, মেইন রোড',
+    'damage.gpsWarn1': 'GPS পাওয়া যাচ্ছে না — ',
+    'damage.gpsWarn2': 'জিওট্যাগের জন্য লোকেশন চালু করুন। বর্তমান ফলব্যাক (কলকাতা) ব্যবহৃত হবে না — দাবির জন্য নির্ভুল GPS প্রয়োজন।',
+    'damage.ownerPlaceholder': 'যেমন রমেশ সেন',
+    'damage.descPlaceholder': 'যেমন ৬০০mm মূল জলের পাইপলাইন ফেটেছে, বেসমেন্ট ১.৫m কাদায় তলিয়েছে, স্তম্ভে ফাটল…',
+    'damage.successTitle': 'ক্ষতির দাবি কমান্ড সেন্টারে নথিভুক্ত হয়েছে',
+    'damage.successDesc': 'আপনার দাবি AI ইঞ্জিন দ্বারা মূল্যায়িত এবং SDRF ত্রাণ পর্যালোচনার জন্য নথিভুক্ত হয়েছে।',
+    'damage.claimIdLabel': 'সরকারি SDRF দাবি ID — এটি সংরক্ষণ করুন',
+    'damage.copyId': 'ID কপি করুন',
+
+    // Report Form extras
+    'report.gpsLockedToast': 'হাই-প্রিসিশন GPS লক হয়েছে',
+    'report.lastKnownLocation': 'শেষ জানা লোকেশন ব্যবহৃত হচ্ছে।',
+    'report.locateFail': 'লোকেশন পাওয়া যাচ্ছে না। আপনার এলাকা টাইপ করুন বা ম্যাপে নির্বাচন করুন।',
+    'report.locatingAddress': 'ঠিকানা খোঁজা হচ্ছে…',
+    'report.landmarkAt': 'ল্যান্ডমার্ক',
+    'report.micDenied': 'মাইক্রোফোনের অনুমতি দেওয়া হয়নি। আপনি অডিও ফাইল আপলোড করতে পারেন।',
+    'report.fileTooLarge': '5MB সীমা ছাড়িয়ে গেছে',
+    'report.fileNotAllowed': 'ধরন অনুমোদিত নয়',
+    'report.errCategory': 'অনুগ্রহ করে জরুরি ধরন নির্বাচন করুন',
+    'report.errMediaRequired': 'অনুগ্রহ করে ছবি/ভিডিও আপলোড করুন বা ভয়েস নোট রেকর্ড করুন — অন্তত একটি প্রয়োজন',
+    'report.errGpsRequired': 'জমা দেওয়ার আগে GPS অনুমতি দিন বা ম্যাপে লোকেশন নির্বাচন করুন',
+    'report.emergencyReport': 'জরুরি রিপোর্ট:',
+    'report.reportedSuccess': 'জরুরি ঘটনা সফলভাবে রিপোর্ট হয়েছে!',
+    'report.successDesc': 'আপনার রিপোর্ট AI ট্রায়াজ ইঞ্জিন দ্বারা অগ্রাধিকার পেয়ে উদ্ধার ডিসপ্যাচ সারিতে নথিভুক্ত হয়েছে।',
+    'report.trackingIdLabel': 'ট্র্যাকিং ID — এটি সংরক্ষণ করুন',
+    'report.trackStatusLink': 'লাইভ উদ্ধার অবস্থা দেখুন',
+    'report.newReport': 'নতুন রিপোর্ট',
+    'report.estimatedHint': 'লোকেশন আনুমানিক — নির্ভুল GPS-এর জন্য Retry চাপুন',
+    'report.lifeThreatWarn': 'জীবনঘাতী শব্দ শনাক্ত হয়েছে — তাৎক্ষণিক ডিসপ্যাচের জন্য জরুরি SOS ব্যবহার করবেন?',
+    'report.goToSos': 'SOS-এ যান',
+
+    // Tracker extras
+    'tracker.markerIncident': 'ঘটনা:',
+    'tracker.victimLocation': 'ভুক্তভোগীর অবস্থান',
+    'tracker.rescueUnit': 'উদ্ধার ইউনিট',
+    'tracker.fieldResponder': 'ফিল্ড রেসপন্ডার',
+    'tracker.enRouteEta': 'পথে আছে — ETA ~',
+    'tracker.routeLabel': 'উদ্ধার পথ',
+    'tracker.gpsRecorded': 'GPS স্থানাঙ্ক নথিভুক্ত',
+    'tracker.gps': 'GPS',
+    'tracker.commandFallback': 'NDRF / SDRF কমান্ড',
+    'tracker.volunteerQueued': 'ভলান্টিয়ার দল সারিতে',
+    'tracker.notesLabel': 'সমাধান ও সুরক্ষা নোট',
+    'common.call112': '112 কল করুন',
+    'common.call1070': '1070 কল করুন',
+
+    // Safe Routes extras
+    'routes.min': 'মিনিট',
+    'routes.hr': 'ঘণ্টা',
+    'routes.floodZone': 'বন্যায় তলিয়ে যাওয়া এলাকা',
+    'routes.critical': 'গুরুতর',
+    'routes.waterDepth': 'জল',
+    'routes.occupancy': 'দখল:',
+    'routes.liveLocation': 'লাইভ লোকেশন',
+    'routes.fastestRoute': 'দ্রুততম রাস্তার পথ',
+    'routes.directLineHazard': 'রাস্তার পথ পাওয়া যাচ্ছে না — সরলরেখা দেখানো হচ্ছে',
+    'routes.followsRoads': 'রাস্তা ধরে যায় — বন্যার এলাকা অতিক্রম করতে পারে',
+    'routes.safeDetour': 'নিরাপদ বিকল্প পথ (প্রস্তাবিত)',
+    'routes.safeDetourDesc': 'রাস্তা-ভিত্তিক নিরাপদ পথ — তলিয়ে যাওয়া এলাকা এড়িয়ে যায় (300m ব্যবধান)',
+    'routes.regionFallback': 'আঞ্চলিক কেন্দ্র ফলব্যাক — লোকেশন পাওয়া যাচ্ছে না',
+    'routes.regionHint': 'লোকেশন পাওয়া যাচ্ছে না — আঞ্চলিক কেন্দ্র ব্যবহৃত হচ্ছে। Re-scan GPS চাপুন।',
+    'routes.severity': 'তীব্রতা:',
+    'routes.depthSuffix': 'গভীরতা',
+    'routes.villages': 'গ্রাম:',
+
+    // Safety Check-in extras
+    'checkin.errName': 'অনুগ্রহ করে আপনার পূর্ণ নাম লিখুন',
+    'checkin.errPhoneDisplay': 'অনুগ্রহ করে বৈধ ১০-সংখ্যার মোবাইল নম্বর দিন।',
+    'checkin.errPhoneToast': 'বৈধ ফোন নম্বর প্রয়োজন',
+    'checkin.errLocation': 'অনুগ্রহ করে আপনার বর্তমান অবস্থান / শেল্টার লিখুন (প্রয়োজনীয়)',
+    'checkin.recordedToast': 'সুরক্ষা অবস্থা সফলভাবে নথিভুক্ত হয়েছে',
+    'checkin.namePlaceholder': 'যেমন রমেশ চন্দ্র সেন',
+    'checkin.locationPlaceholder': 'যেমন সল্টলেক সেক্টর V শেল্টার বা বাড়িতে',
+    'checkin.messagePlaceholder': 'যেমন ৩ জন পরিবারের সাথে, বিদ্যুৎ আছে, খাবার/জল আছে।',
+    'checkin.searchLabel': 'নাম, ফোন নম্বর বা অবস্থান দিয়ে খুঁজুন',
+    'checkin.searchInputPlaceholder': 'নাম বা ১০-সংখ্যার ফোন নম্বর টাইপ করুন…',
+    'checkin.checkedInAt': 'চেক-ইন হয়েছে',
+    'checkin.emptySearch': 'আপনার অনুসন্ধানের সাথে কোনো চেক-ইন রেকর্ড মেলেনি।',
+
+    // Shelter Finder extras
+    'shelter.currentLocation': 'বর্তমান অবস্থান',
+    'shelter.markerFallback': 'দুর্যোগ শেল্টার',
+    'shelter.cardFallback': 'জরুরি শেল্টার',
+    'shelter.addressFallback': 'রেকর্ডে থাকা ঠিকানা',
+    'shelter.noGps': 'GPS নেই',
+    'shelter.locationUnavailable': 'লোকেশন পাওয়া যাচ্ছে না',
+    'shelter.empty': 'আপনার অনুসন্ধান বা ফিল্টারের সাথে কোনো শেল্টার মেলেনি।',
+
+    // SOS extras
+    'sos.syncedToast': 'অপেক্ষমাণ অফলাইন SOS সফলভাবে সিঙ্ক হয়েছে!',
+    'sos.scanningGps': 'হাই-প্রিসিশন স্যাটেলাইটের জন্য GPS স্ক্যান হচ্ছে...',
+    'sos.gpsWeakToast': 'GPS সিগন্যাল দুর্বল, সর্বোত্তম উপলব্ধ অনুমান ব্যবহৃত হচ্ছে।',
+    'sos.gpsFailToast': 'GPS ফিক্স পাওয়া যায়নি। অনুগ্রহ করে অবস্থান ম্যানুয়ালি যাচাই করুন।',
+    'sos.errPhoneRequired': 'জরুরি ডিসপ্যাচের জন্য মোবাইল নম্বর প্রয়োজন',
+    'sos.errPhoneInvalid': 'অনুগ্রহ করে বৈধ ১০-সংখ্যার মোবাইল নম্বর দিন।',
+    'sos.errPhoneFormat': 'মোবাইল নম্বরের ফর্ম্যাট অবৈধ',
+    'sos.typeFallback': 'জরুরি',
+    'sos.pickLocationToast': 'লোকেশন পাওয়া যাচ্ছে না — SOS পাঠানোর আগে ম্যাপে আপনার অবস্থান নির্বাচন করুন',
+    'sos.offlineQueuedToast': 'অফলাইন: SOS সারিতে! নেটওয়ার্ক ফিরলেই পাঠানো হবে।',
+    'sos.dispatchLocationLabel': 'উদ্ধার ডিসপ্যাচ অবস্থান',
+    'sos.gpsLive': 'লাইভ GPS লক',
+    'sos.manuallyVerified': 'ম্যানুয়ালি যাচাইকৃত',
+    'sos.cachedGps': 'ক্যাশ করা GPS',
+    'sos.estimatedArea': 'আনুমানিক এলাকা',
+    'sos.resolvingAddress': 'রাস্তার ঠিকানা খোঁজা হচ্ছে...',
+    'sos.defaultCity': 'ভুবনেশ্বর, ওড়িশা, ভারত',
+    'sos.acquiring': 'GPS সংগ্রহ করা হচ্ছে…',
+    'sos.rescan': 'GPS আবার স্ক্যান করুন',
+    'sos.correctArea': 'এলাকা সংশোধন করুন',
+    'sos.phoneHint': '* উদ্ধার কলের জন্য মোবাইল প্রয়োজন',
+    'sos.floorLabel': 'ফ্লোর / ল্যান্ডমার্ক (ঐচ্ছিক)',
+    'sos.floorPlaceholder': 'যেমন ২য় তলা, রুম ২০৪',
+    'sos.sosAria': 'জরুরি স্যাটেলাইট SOS ডিসপ্যাচের জন্য চাপুন',
+    'sos.dispatchingSos': 'SOS সিগন্যাল পাঠানো হচ্ছে…',
+    'sos.sendNow': 'এখনই SOS সংকট সিগন্যাল পাঠান',
+    'sos.disclaimer': '* তাৎক্ষণিক প্রতিক্রিয়া ইউনিটকে সতর্ক করতে ট্যাপ করুন। আপনার সঠিক GPS স্থানাঙ্ক ও ফোন NDRF/SDRF কমান্ডে পাঠানো হবে।',
+    'sos.offlineOptionsTitle': 'অফলাইন ফলব্যাক বিকল্প',
+    'sos.smsLink': '১-ট্যাপ জরুরি SMS (112 অফলাইন ফলব্যাক)',
+    'sos.broadcastTitle': 'SOS সংকট সিগন্যাল সম্প্রচারিত হয়েছে!',
+    'sos.broadcastDesc': 'দুর্যোগ নিয়ন্ত্রণ কক্ষ ও নিকটবর্তী উদ্ধার ইউনিটকে আপনার ফোন ও GPS অবস্থান সহ জানানো হয়েছে।',
+    'sos.trackingIdHeading': 'আপনার ঘটনা ট্র্যাকিং ID',
+    'sos.copiedShort': 'কপি হয়েছে',
+    'sos.trackResponse': 'লাইভ প্রতিক্রিয়া অবস্থা দেখুন',
+    'sos.damageCta': 'বাড়ি / পাইপলাইন ক্ষতি? AI ত্রাণের জন্য আপলোড করুন',
+    'sos.anotherSos': 'আরেকটি SOS পাঠান',
+    'sos.helplinesTitle': 'সরাসরি জরুরি হেল্পলাইন (টোল-ফ্রি)',
+    'sos.modalTitle': 'জরুরি অবস্থান সংশোধন করুন',
+    'sos.modalDesc': 'নিশ্চিত করুন উদ্ধার দল আপনার সঠিক অবস্থানে পৌঁছায়। আপনি আপনার পাড়া/ঠিকানা টাইপ করতে পারেন, দ্রুত অঞ্চল বেছে নিতে পারেন, বা ম্যাপে ট্যাপ করে নির্ভুল পিন বসাতে পারেন।',
+    'sos.addressLabel': 'ঠিকানা / এলাকা / ল্যান্ডমার্ক ও PIN কোড',
+    'sos.addressPlaceholder': 'যেমন ফ্ল্যাট ৩০২, গায়ত্রী বিহার, সুন্দরপদা, ভুবনেশ্বর - ৭৫১০০২',
+    'sos.modalHint': '* উদ্ধার দল আপনার সঠিক ঠিকানা, ভবনের নাম ও PIN কোড দেখবে।',
+    'sos.presetsLabel': 'দ্রুত অঞ্চল প্রিসেট',
+    'sos.mapLabel': 'পিন সরাতে ম্যাপে ট্যাপ করুন বা খুঁজুন',
+    'sos.savedToast': 'জরুরি ডিসপ্যাচ অবস্থান সফলভাবে আপডেট হয়েছে!',
+    'sos.saveLocation': 'অবস্থান সংরক্ষণ ও প্রয়োগ করুন',
+
+    // MainLayout extras
+    'layout.bulletins': 'বিজ্ঞপ্তি',
+    'layout.viewAll': 'সব দেখুন',
+    'layout.noBulletins': 'কোনো সক্রিয় বিজ্ঞপ্তি নেই',
+    'layout.navDesktop': 'ডেস্কটপ নেভিগেশন',
+    'layout.langSelector': 'ভাষা নির্বাচক',
+    'layout.notifications': 'বিজ্ঞপ্তি',
+    'layout.toggleTheme': 'থিম পরিবর্তন',
+    'layout.toggleMenu': 'মোবাইল মেনু টগল',
+    'layout.navMobile': 'মোবাইল নেভিগেশন',
+
+    // ChatWidget extras
+    'chat.greetingShort': 'নমস্কার! আমি আপদামিত্র AI। বলুন আপনার কোন জরুরি অবস্থা, আঘাত বা সুরক্ষা সহায়তা প্রয়োজন।',
+    'chat.openAria': 'আপদামিত্র AI সহকারী',
+    'chat.openTitle': 'আপদামিত্র AI-কে জিজ্ঞাসা করুন',
+    'chat.dialogAria': 'আপদামিত্র AI দুর্যোগ সহায়তা',
+    'chat.badgeLive': 'লাইভ সহায়তা',
+    'chat.hotlineCritical': 'গুরুতর জরুরি অবস্থা',
+    'chat.hotlineSupport': 'সহায়তা হটলাইন',
+    'chat.callbackDesc': 'ফোন নম্বর দিন — উদ্ধার দল কল করবে ও ডিসপ্যাচ হবে:',
+    'chat.reliefDesc': 'ত্রাণ ভলান্টিয়ার কলব্যাকের জন্য ফোন নম্বর দিন:',
+    'chat.phonePlaceholder': '১০-সংখ্যার মোবাইল নম্বর',
+    'chat.requestHelp': 'সাহায্যের অনুরোধ',
+    'chat.dispatchConfirm': 'জরুরি SOS পাঠানো হয়েছে! উদ্ধার দলকে কলের জন্য জানানো হয়েছে',
+    'chat.ref': 'রেফ:',
+    'chat.thinking': 'আপদামিত্র AI সুরক্ষা নির্দেশনা প্রস্তুত করছে…',
+    'chat.qWater': 'জল বাড়ছে',
+    'chat.qWound': 'গুরুতর ক্ষত',
+    'chat.qDebris': 'ধ্বংসাবশেষে চাপা',
+    'chat.qEvac': 'নিরাপদ সরিয়ে নেওয়া',
+    'chat.sendMsg': 'বার্তা পাঠান',
+
+    // LandmarkPicker extras
+    'lp.geocodeUnavailable': 'জিওকোডিং পরিষেবা পাওয়া যাচ্ছে না। আপনি সরাসরি ম্যাপে ট্যাপ করতে পারেন।',
+    'lp.mapCenterSet': 'ম্যাপের কেন্দ্রে অবস্থান নির্ধারিত, ঠিকানা:',
+    'lp.acquiringGps': 'হাই-প্রিসিশন GPS লক করা হচ্ছে...',
+    'lp.gpsLocked': 'GPS লক (নির্ভুলতা: ±',
+    'lp.gpsFail': 'হার্ডওয়্যার GPS পাওয়া যায়নি। অনুগ্রহ করে ম্যাপে আপনার অবস্থান ট্যাপ করুন।',
+    'lp.searchPlaceholder': 'স্থান, ল্যান্ডমার্ক বা এলাকা খুঁজুন (যেমন সুন্দরপদা, মাস্টার ক্যান্টিন)',
+    'lp.locate': 'খুঁজুন',
+    'lp.gpsTitle': 'ডিভাইসের হাই-প্রিসিশন GPS দিয়ে সঠিক অবস্থান নির্ণয় করুন',
+    'lp.lockingGps': 'GPS লক হচ্ছে…',
+    'lp.liveGps': 'লাইভ GPS',
+    'lp.areaMatch': 'এলাকা মিল',
+    'lp.notIndexed': 'সঠিক ভবন অনলাইনে পাওয়া যায়নি। আপনি ম্যাপে পিন বসাতে পারেন বা এই ঠিকানা সরাসরি নিতে পারেন:',
+    'lp.useAddress': 'ঠিকানা ব্যবহার করুন:',
+    'lp.dragHint': 'অথবা ম্যাপে পিন টেনে আপনার সঠিক ভবনে নিন',
+    'lp.footerHint': '* স্থানাঙ্ক সমন্বয়ের জন্য ম্যাপের যেকোনো জায়গায় ক্লিক করুন বা পিন টানুন',
+
+    // Hero extras
+    'hero.getHelpTitle': 'সাহায্য নিন — সঠিক পথ বেছে নিন',
+    'hero.getHelpDesc': 'জীবনঘাতী অবস্থা? জরুরি SOS ব্যবহার করুন। প্রমাণ শেয়ার করতে চান? ঘটনা রিপোর্ট করুন।',
+    'hero.emergencyTitle': 'জরুরি SOS',
+    'hero.emergencyDesc': 'জীবনঘাতী • ৩০ সেকেন্ড • শুধু GPS + ফোন • তাৎক্ষণিক উদ্ধার ডিসপ্যাচ',
+    'hero.reportTitle': 'ঘটনা রিপোর্ট করুন',
+    'hero.reportDesc': 'প্রমাণ-সমৃদ্ধ • ২ মিনিট • ছবি, ভয়েস ও বিবরণ • ট্রায়াজ ও দাবির জন্য',
+
+    // Enum label mappings
+    'shelter.statusOpen': 'খোলা',
+    'pfa.phaseInhale': 'শ্বাস নিন',
+    'pfa.phaseHold': 'ধরে রাখুন',
+    'pfa.phaseExhale': 'ছাড়ুন',
+    'common.scrollLeft': 'বামে স্ক্রল করুন',
+    'common.scrollRight': 'ডানে স্ক্রল করুন',
+    'checkin.statusSafe': 'নিরাপদ',
+    'checkin.statusNeedHelp': 'সাহায্য প্রয়োজন',
   },
 
   or: {
     // App & Header
+
+    // Navigation
+
+    // About Page
+
+    // Contact Page
+
+    // Common
+
+    // Home Hero Section
+
+    // Home Services Cards
+
+    // Home 3-Step Triage
+
+    // Home Bulletins Feed
+
+    // Home Quick Track & Helplines
+
+
+    // SOS Page
+
+    // Incident Report Form
+
+    // Incident Tracker
+
+    // Shelter Finder
+
+    // Safe Routes
+
+    // Missing Persons
+
+    // Report Damage
+
+    // Safety Checkin
+
+
+    // Shared / Common extras
+
+    // About story section
+
+    // Alerts page
+
+    // Contacts page
+
+    // Missing Persons extras
+
+    // PfaChat
+
+    // Report Damage extras
+
+    // Report Form extras
+
+    // Tracker extras
+
+    // Safe Routes extras
+
+    // Safety Check-in extras
+
+    // Shelter Finder extras
+
+    // SOS extras
+
+    // MainLayout extras
+
+    // ChatWidget extras
+
+    // LandmarkPicker extras
+
     'app.name': 'ଆପଦାସେତୁ',
     'app.tagline': 'ବିପର୍ଯ୍ୟୟ ପ୍ରତିକ୍ରିୟା ଏବଂ AI ଟ୍ରିଏଜ୍ ଇକୋସିଷ୍ଟମ୍',
     'header.nationalEmergency': 'ଜାତୀୟ ଜରୁରୀକାଳୀନ',
@@ -1034,8 +2153,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'header.disasterHelpline': 'ବିପର୍ଯ୍ୟୟ ହେଲ୍ପଲାଇନ',
     'header.offlineNotice': 'ଅଫଲାଇନ୍ ମୋଡ୍ ସକ୍ରିୟ — ଇଣ୍ଟରନେଟ୍ ଯୋଡ଼ି ହେବା ମାତ୍ରେ ରିପୋର୍ଟ ସ୍ୱୟଂଚାଳିତ ଭାବରେ ସିଙ୍କ୍ ହୋଇଯିବ।',
     'header.callOffline': '୧୧୨ ରେ ଅଫଲାଇନ୍ କଲ୍ କରନ୍ତୁ',
-
-    // Navigation
     'nav.home': 'ମୂଳପୃଷ୍ଠା',
     'nav.sos': '୧-ଟ୍ୟାପ୍ SOS',
     'nav.report': 'ଘଟଣା ରିପୋର୍ଟ କରନ୍ତୁ',
@@ -1053,8 +2170,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'nav.features': 'ବୈଶିଷ୍ଟ୍ୟ',
     'nav.contacts': 'ସମ୍ପର୍କ',
     'nav.pfa': 'ଆପଦାମିତ୍ର AI',
-
-    // About Page
     'about.title': 'ଆପଦାସେତୁ ବିଷୟରେ',
     'about.subtitle': 'ଏକ ଏକୀଭୂତ ବିପଦ ପ୍ରତିକ୍ରିୟା ଏବଂ AI ଟ୍ରାଇଜ ଇକୋସିଷ୍ଟମ।',
     'about.missionTitle': 'ଆମ ମିଶନ',
@@ -1076,12 +2191,8 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'about.feature7Desc': 'ନିଖୋଞ୍ଜ ବ୍ୟକ୍ତି ବୁଲେଟିନ୍ ଅନୁସନ୍ଧାନ କରନ୍ତୁ କିମ୍ବା ଫଟୋ ଯାଚାଇ ସହ ରିପୋର୍ଟ କରନ୍ତୁ।',
     'about.feature8Title': 'ଅଫଲାଇନ୍-ଫାର୍ଷ୍ଟ ଡିଜାଇନ',
     'about.feature8Desc': 'ବିପଦ ପରିସ୍ଥିତି ପାଇଁ ଡିଜାଇନ ଯେଉଁଠାରେ ସଂଯୋଗ ଅସ୍ଥିର।',
-
-    // Contact Page
     'contact.title': 'ଜରୁରୀ ସମ୍ପର୍କ',
     'contact.subtitle': 'ସମସ୍ତ ଆବଶ୍ୟକୀୟ ଜରୁରୀ ନମ୍ବର ଗୋଟିଏ ଜାଗାରେ। କଲ୍ କରିବାକୁ ଟ୍ୟାପ୍ କରନ୍ତୁ।',
-
-    // Common
     'common.submit': 'ଦାଖଲ କରନ୍ତୁ',
     'common.loading': 'ଲୋଡ୍ ହେଉଛି…',
     'common.send': 'ପଠାନ୍ତୁ',
@@ -1102,8 +2213,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'common.name': 'ପୂରା ନାମ',
     'common.required': 'ଆବଶ୍ୟକ',
     'common.optional': 'ଇଚ୍ଛାଧୀନ',
-
-    // Home Hero Section
     'hero.badgeSystem': 'ଜାତୀୟ ବିପର୍ଯ୍ୟୟ ପ୍ରତିକ୍ରିୟା ବ୍ୟବସ୍ଥା',
     'hero.activeBulletins': 'ସକ୍ରିୟ ସତର୍କତା',
     'hero.syncing': 'ସିଙ୍କ୍ ହେଉଛି...',
@@ -1114,8 +2223,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'hero.aiCompanion': 'ଆପଦାମିତ୍ର AI',
     'hero.quickAccess': 'ଦ୍ରୁତ ସେବା',
     'hero.structuredFlows': 'ଜରୁରୀକାଳୀନ ପଦକ୍ଷେପ',
-
-    // Home Services Cards
     'service.noticeTag': 'ଜନସୂଚନା',
     'service.checkinDesc': 'ପରିବାରକୁ ଆଶ୍ୱସ୍ତ କରିବା ଏବଂ ଉଦ୍ଧାରକାରୀ ଦଳର ସମୟ ବଞ୍ଚାଇବା ପାଇଁ ନିଜକୁ ସୁରକ୍ଷିତ ଚିହ୍ନିତ କରନ୍ତୁ।',
     'service.sheltersTag': 'ଆଶ୍ରୟ ଶିବିର',
@@ -1133,22 +2240,16 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'service.verificationTag': 'ଯାଞ୍ଚ',
     'service.publicSafetyTitle': 'ସାର୍ବଜନୀନ ସୁରକ୍ଷା ରେଜିଷ୍ଟ୍ରି',
     'service.publicSafetyDesc': 'ବିପର୍ଯ୍ୟୟ ପ୍ରଭାବିତ ଅଞ୍ଚଳରେ ପରିବାରର ସୁରକ୍ଷା ସ୍ଥିତି ଯାଞ୍ଚ କରନ୍ତୁ।',
-
-    // Home 3-Step Triage
     'triage.step1Title': 'ଜରୁରୀକାଳୀନ ଟ୍ରିଏଜ୍',
     'triage.step1Desc': 'ଘଟଣା ରିପୋର୍ଟ କରନ୍ତୁ ବା ୧-ଟ୍ୟାପ୍ SOS ପଠାଇ AI ପ୍ରାଥମିକତା ସହିତ କମାଣ୍ଡ ସେଣ୍ଟରକୁ ସତର୍କ କରନ୍ତୁ।',
     'triage.step2Title': 'GPS ଅବସ୍ଥିତି ଲକ୍',
     'triage.step2Desc': 'ସାଟେଲାଇଟ୍ ବନ୍ୟା ସୀମା ସହିତ ସଠିକ୍ ଭୌଗୋଳିକ ଅବସ୍ଥିତି ଲକ୍ କରାଯାଏ।',
     'triage.step3Title': 'କମାଣ୍ଡ ଡିସପ୍ୟାଚ୍',
     'triage.step3Desc': 'NDRF, SDRF ଏବଂ ଫିଲ୍ଡ ସ୍ୱେଚ୍ଛାସେବୀଙ୍କୁ ତୁରନ୍ତ ଦାୟିତ୍ୱ ପ୍ରଦାନ କରାଯାଏ।',
-
-    // Home Bulletins Feed
     'bulletin.title': 'ସରକାରୀ ସତର୍କତା ବୁଲେଟିନ୍',
     'bulletin.liveFeed': 'ଲାଇଭ୍ ଫିଡ୍',
     'bulletin.viewAll': 'ସମସ୍ତ ବୁଲେଟିନ୍',
     'bulletin.noAlerts': 'ବର୍ତ୍ତମାନ ଆପଣଙ୍କ ଅଞ୍ଚଳରେ କୌଣସି ସକ୍ରିୟ ଲାଲ୍ ସତର୍କତା ନାହିଁ।',
-
-    // Home Quick Track & Helplines
     'track.quickTag': 'ଦ୍ରୁତ ସନ୍ଧାନ',
     'track.quickTitle': 'ଲାଇଭ୍ ଘଟଣା ସ୍ଥିତି ଟ୍ରାକ୍ କରନ୍ତୁ',
     'track.quickDesc': 'ଉଦ୍ଧାର କାର୍ଯ୍ୟର ଅଗ୍ରଗତି ଜାଣିବା ପାଇଁ ଟ୍ରାକିଂ ID ପ୍ରବେଶ କରନ୍ତୁ।',
@@ -1163,8 +2264,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'helpline.ambulance': 'ଆମ୍ବୁଲାନ୍ସ',
     'helpline.police': 'ପୋଲିସ',
     'helpline.disaster': 'ବିପର୍ଯ୍ୟୟ ହେଲ୍ପଲାଇନ',
-
-    // SOS Page
     'sos.title': 'ଜରୁରୀକାଳୀନ ସଙ୍କଟ SOS ସଙ୍କେତ',
     'sos.subtitle': 'NDRF, SDRF, ପୋଲିସ ଏବଂ ଉଦ୍ଧାରକାରୀ ଦଳଙ୍କୁ ସିଧାସଳଖ ସଙ୍କଟ ବାର୍ତ୍ତା ପଠାନ୍ତୁ।',
     'sos.channelBadge': 'ଉଚ୍ଚ ପ୍ରାଥମିକତା ଚ୍ୟାନେଲ',
@@ -1197,8 +2296,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'sos.smsDesc': 'ଇଣ୍ଟରନେଟ୍ ନାହିଁ? ସିଧାସଳଖ ଜାତୀୟ ଜରୁରୀକାଳୀନ କେନ୍ଦ୍ରକୁ SMS ପଠାନ୍ତୁ।',
     'sos.copySms': 'ଜରୁରୀକାଳୀନ SMS କପି କରନ୍ତୁ',
     'sos.copied': 'କପି ହୋଇଛି!',
-
-    // Incident Report Form
     'report.pageTitle': 'ଜରୁରୀକାଳୀନ ଘଟଣା ରିପୋର୍ଟ',
     'report.pageSubtitle': 'ଉଦ୍ଧାରକାରୀ ଦଳ ମୁତୟନ ପାଇଁ * ଚିହ୍ନିତ ଘରଗୁଡ଼ିକ ପୂରଣ କରିବା ବାଧ୍ୟତାମୂଳକ।',
     'report.categoryLabel': 'ଜରୁରୀକାଳୀନ ବର୍ଗ *',
@@ -1235,8 +2332,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'report.submitValidation': '* ପଠାଇବା ପାଇଁ ଜରୁରୀକାଳୀନ ବର୍ଗ ବାଛନ୍ତୁ ଏବଂ ଫୋନ୍ ନମ୍ବର ଦିଅନ୍ତୁ',
     'report.successTitle': 'ଘଟଣା ସଫଳତାର ସହ ପଞ୍ଜୀକୃତ ହୋଇଛି!',
     'report.trackPrompt': 'କମାଣ୍ଡ ୟୁନିଟ୍‌କୁ ଆପଣଙ୍କ ରିପୋର୍ଟ ପଠାଯାଇଛି। ଟ୍ରାକିଂ ID ସାଇତି ରଖନ୍ତୁ:',
-
-    // Incident Tracker
     'track.pageTitle': 'ଲାଇଭ୍ ଉଦ୍ଧାର ଏବଂ ସ୍ଥିତି ଟ୍ରାକର୍',
     'track.pageSubtitle': 'ପ୍ରକୃତ ସମୟରେ ଉଦ୍ଧାର କାର୍ଯ୍ୟ ଏବଂ ମୁତୟନ ଦଳର ସ୍ଥିତି ଦେଖନ୍ତୁ।',
     'track.inputPlaceholder': 'ଟ୍ରାକିଂ ID ଲେଖନ୍ତୁ (ଯଥା SOS-7890)',
@@ -1255,8 +2350,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'track.incidentDetails': 'ଘଟଣାର ବିସ୍ତୃତ ତଥ୍ୟ',
     'track.liveTelemetry': 'ଲାଇଭ୍ ଭୌଗୋଳିକ ଅବସ୍ଥିତି ଓ ଘଟଣାସ୍ଥଳ',
     'track.eta': 'ଆନୁମାନିକ ପହଞ୍ଚିବା ସମୟ (ETA)',
-
-    // Shelter Finder
     'shelter.title': 'ନିକଟବର୍ତ୍ତୀ ଜରୁରୀକାଳୀନ ଆଶ୍ରୟସ୍ଥଳୀ',
     'shelter.subtitle': 'ଆପଣଙ୍କ GPS ଅବସ୍ଥିତିରୁ ଦୂରତା ଅନୁଯାୟୀ ସରକାରୀ ଯାଞ୍ଚ ହୋଇଥିବା ଶିବିର।',
     'shelter.detectLocation': 'ମୋର ସ୍ଥାନ ଖୋଜନ୍ତୁ',
@@ -1274,8 +2367,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'shelter.filterFood': 'ଖାଦ୍ୟ ଯୋଗାଣ',
     'shelter.filterWater': 'ବିଶୁଦ୍ଧ ଜଳ',
     'shelter.filterPower': 'ଜେନେରେଟର ବ୍ୟାକଅପ୍',
-
-    // Safe Routes
     'routes.title': 'ନିରାପଦ ନିଷ୍କାସନ କରିଡର ଓ ମାର୍ଗ',
     'routes.subtitle': 'ବନ୍ୟା ଏବଂ ବିପଦପୂର୍ଣ୍ଣ ରାସ୍ତାକୁ ଏଡ଼ାଇ ପ୍ରକୃତ ସମୟରେ ନିରାପଦ ରୁଟ୍।',
     'routes.origin': 'ଆରମ୍ଭ ସ୍ଥାନ',
@@ -1284,8 +2375,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'routes.directDistance': 'ସିଧାସଳଖ ମାର୍ଗ (ବନ୍ୟା ପ୍ରଭାବିତ)',
     'routes.safeDistance': 'ନିରାପଦ ନିଷ୍କାସନ କରିଡର',
     'routes.walkingTime': 'ଆନୁମାନିକ ଚାଲିବା ସମୟ',
-
-    // Missing Persons
     'missing.title': 'ନିଖୋଜ ବ୍ୟକ୍ତି ରେଜିଷ୍ଟ୍ରି ଓ ସନ୍ଧାନ',
     'missing.subtitle': 'ନିଖୋଜ ବ୍ୟକ୍ତିଙ୍କ ତଥ୍ୟ ଖୋଜନ୍ତୁ କିମ୍ବା ପରିବାରର ନିଖୋଜ ସଦସ୍ୟଙ୍କ ରିପୋର୍ଟ ଦିଅନ୍ତୁ।',
     'missing.tabRegistry': 'ସର୍ବସାଧାରଣ ବୁଲେଟିନ୍ ରେଜିଷ୍ଟ୍ରି',
@@ -1303,8 +2392,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'missing.female': 'ମହିଳା',
     'missing.other': 'ଅନ୍ୟାନ୍ୟ',
     'missing.submitReport': 'ନିଖୋଜ ରିପୋର୍ଟ ଦାଖଲ କରନ୍ତୁ',
-
-    // Report Damage
     'damage.title': 'SDRF / NDMA ବିପର୍ଯ୍ୟୟ କ୍ଷତିପୂରଣ ମୂଲ୍ୟାଙ୍କନ',
     'damage.subtitle': 'ସରକାରୀ ସହାୟତା ପାଇଁ ଫଟୋ ସହିତ କ୍ଷୟକ୍ଷତି ଦାବି ଦାଖଲ କରନ୍ତୁ।',
     'damage.step1Title': '୧. ପ୍ରଭାବିତ ଭିତ୍ତିଭୂମି ବାଛନ୍ତୁ',
@@ -1324,8 +2411,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'damage.grade': 'AI କ୍ଷତି ଗ୍ରେଡ୍',
     'damage.score': 'କ୍ଷତି ପ୍ରଭାବ ସ୍କୋର',
     'damage.compensation': 'ଆନୁମାନିକ SDRF ସରକାରୀ ଅନୁଦାନ',
-
-    // Safety Checkin
     'checkin.title': 'ମୁଁ ସୁରକ୍ଷିତ ଅଛି ରେଜିଷ୍ଟ୍ରି',
     'checkin.subtitle': 'ପରିବାରକୁ ଜଣାଇବା ପାଇଁ ନିଜ ସୁରକ୍ଷା ସ୍ଥିତି ଦାଖଲ କରନ୍ତୁ।',
     'checkin.tabCheckin': 'ମୋର ସ୍ଥିତି ଦାଖଲ କରନ୍ତୁ',
@@ -1348,8 +2433,6 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'checkin.submitCheckin': 'ସୁରକ୍ଷା ସ୍ଥିତି ଦାଖଲ କରନ୍ତୁ',
     'checkin.recentCheckins': 'ସାମ୍ପ୍ରତିକ ସୁରକ୍ଷା ଚେକ୍-ଇନ୍',
     'checkin.searchPlaceholder': 'ନାମ, ଫୋନ୍ ନମ୍ବର ବା ଅଞ୍ଚଳ ଦ୍ୱାରା ଖୋଜନ୍ତୁ…',
-
-    // Chatbot
     'chat.suggestion': 'ସାହାଯ୍ୟ ଦରକାର? ଆପଦାମିତ୍ର AI ସହିତ କଥା ହୁଅନ୍ତୁ',
     'chat.title': 'ଆପଦାମିତ୍ର AI',
     'chat.subtitle': '୨୪/୭ ତ୍ୱରିତ ଜୀବନ ରକ୍ଷା ଓ ଟ୍ରିଏଜ୍ ସହାୟକ',
@@ -1359,6 +2442,336 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'chat.callbackPrompt': 'ଆମର ବିପର୍ଯ୍ୟୟ ଉଦ୍ଧାରକାରୀ ଦଳ ତୁରନ୍ତ ଆପଣଙ୍କୁ ଯୋଗାଯୋଗ କରିପାରିବେ:',
     'chat.callbackBtn': 'ଉଦ୍ଧାର କଲ୍ ପାଇଁ ଅନୁରୋଧ କରନ୍ତୁ',
     'chat.hotlineDial': '୧-ଟ୍ୟାପ୍ ଜରୁରୀକାଳୀନ ହେଲ୍ପଲାଇନ:',
+
+    // Shared / Common extras
+    'common.youAreHere': 'ଆପଣ ଏଠାରେ ଅଛନ୍ତି',
+    'common.gpsAccuracy': 'GPS ସଠିକତା ±',
+    'common.cancel': 'ବାତିଲ କରନ୍ତୁ',
+    'common.copiedClipboard': 'କ୍ଲିପବୋର୍ଡକୁ କପି ହୋଇଗଲା',
+    'common.copyFailed': 'କପି ହୋଇପାରିଲା ନାହିଁ — ଦୟାକରି ID ମାନୁଆଲ୍ ଭାବରେ ଲେଖି ରଖନ୍ତୁ',
+    'common.submissionFailed': 'ଦାଖଲ କରିବାରେ ବିଫଳ',
+    'common.errPhone10': 'ଦୟାକରି ବୈଧ ୧୦-ଅଙ୍କର ମୋବାଇଲ୍ ନମ୍ବର ଦିଅନ୍ତୁ',
+    'common.mins': 'ମିନିଟ୍',
+    'common.km': 'କିମି',
+    'common.age': 'ବୟସ',
+    'common.call': 'କଲ୍ କରନ୍ତୁ',
+    'common.copy': 'କପି',
+    'common.copied': 'କପି ହୋଇଗଲା!',
+    'common.remove': 'ହଟାନ୍ତୁ',
+    'common.searching': 'ଖୋଜାଯାଉଛି…',
+    'common.closeDialog': 'ଡାଏଲଗ୍ ବନ୍ଦ କରନ୍ତୁ',
+
+    // About story section
+    'about.storyTitle': 'ଆମେ କାହିଁକି ଆପଦାସେତୁ ନିର୍ମାଣ କଲୁ — ଗଭୀର ରାତି ୩ଟାର ସେହି କଲ୍ ଯାହା କେବେ ଜୁଡ଼ିଲା ନାହିଁ',
+    'about.storyP1': 'ପ୍ରକୃତ ବନ୍ୟାରେ ଗଭୀର ରାତି ୩ଟାରେ ଆପଣ ସରକାରୀ ହେଲ୍ପଲାଇନରେ ଫୋନ୍ କରନ୍ତି। ଘଣ୍ଟ ବାଜେ। ତାପରେ IVR। ତାପରେ ଏକ ବଟ୍ "୧ ଦବାନ୍ତୁ" କହେ। ତାପରେ କଲ୍ କଟିଯାଏ। କିମ୍ବା ଘଣ୍ଟା ଘଣ୍ଟା ଲାଇନ୍ ବ୍ୟସ୍ତ ରହେ। ଆମେ ସେଠାରେ ଥିଲୁ — ହଜାର ହଜାର ପରିବାର ମଧ୍ୟ ଥିଲେ।',
+    'about.storyP2Pre': 'ଆମେ ଆପଦାସେତୁ ନିର୍ମାଣ କଲୁ ସେହି ଧାଡ଼ି ଏଡ଼ାଇବା ପାଇଁ। ନା ଲଗଇନ୍, ନା ଫର୍ମ, ନା ବଟ୍-ଲୁପ୍। ଗୋଟିଏ ଟ୍ୟାପ୍‌ରେ ଆପଣଙ୍କର ',
+    'about.storyP2Bold': 'ଲାଇଭ୍ GPS, ଫୋନ୍ ଏବଂ ମାଠିଆ ବାସ୍ତବତା',
+    'about.storyP2Post': ' ସିଧା ସରକାରୀ ଅଧିକାରୀଙ୍କ କମାଣ୍ଡ ଡ୍ୟାସବୋର୍ଡରେ ପହଞ୍ଚେ — କେବଳ ଆପଣଙ୍କ ଜିଲ୍ଲା ନୁହେଁ, ଆପଣଙ୍କ ଗଳି ପର୍ଯ୍ୟନ୍ତ ସଠିକତା ସହ।',
+    'about.storyP3': 'ଏହା ଆପଣଙ୍କୁ ଉତ୍ତର ଦେଉଥିବା କୌଣସି ଚାଟବଟ୍ ନୁହେଁ। ଏହା ଜଣେ ପ୍ରକୃତ ଅଧିକାରୀ ଯିଏ ମ୍ୟାପରେ ଆପଣଙ୍କୁ ଦେଖିପାରନ୍ତି, ଆପଣଙ୍କୁ ଫେରି କଲ୍ କରିପାରନ୍ତି, ଏବଂ ସେକେଣ୍ଡ ମଧ୍ୟରେ ନିକଟତମ NDRF/SDRF ଟିମ୍ ପଠାଇପାରନ୍ତି।',
+
+    // Alerts page
+    'alerts.pageDesc': 'NDMA, SDMA ଏବଂ ଜାତୀୟ ଇନସିଡେଣ୍ଟ କମାଣ୍ଡରୁ ରିଅଲ୍-ଟାଇମ୍ ଜରୁରୀକାଳୀନ ପ୍ରସାରଣ।',
+    'alerts.sevCritical': 'ଗମ୍ଭୀର',
+    'alerts.sevWarning': 'ଚେତାବନୀ',
+    'alerts.sevInfo': 'ସୂଚନା',
+    'alerts.affectedArea': 'ପ୍ରଭାବିତ ଅଞ୍ଚଳ:',
+    'alerts.empty': 'ଏହି ବିଭାଗରେ କୌଣସି ସକ୍ରିୟ ଜରୁରୀକାଳୀନ ଆଲର୍ଟ ନାହିଁ।',
+
+    // Contacts page
+    'contacts.nationalSos': 'ଜାତୀୟ ଜରୁରୀକାଳୀନ (SOS)',
+    'contacts.ambulance': 'ଆମ୍ବୁଲାନ୍ସ',
+    'contacts.police': 'ପୋଲିସ',
+    'contacts.fire': 'ଫାୟାର୍ ବ୍ରିଗେଡ୍',
+    'contacts.ndmaHelpline': 'ଦୁର୍ଯ୍ୟୋଗ ହେଲ୍ପଲାଇନ୍ (NDMA)',
+    'contacts.floodControl': 'ବନ୍ୟା ନିୟନ୍ତ୍ରଣ କକ୍ଷ',
+    'contacts.ndrfControl': 'NDRF ନିୟନ୍ତ୍ରଣ କକ୍ଷ',
+
+    // Missing Persons extras
+    'missing.filterOpen': 'ଖୋଲା',
+    'missing.filterMatched': 'ମେଳ ହୋଇଛି',
+    'missing.filterResolved': 'ସମାଧାନ ହୋଇଛି',
+    'missing.view': 'ଦେଖନ୍ତୁ',
+    'missing.genderLabel': 'ଲିଙ୍ଗ:',
+    'missing.notSpecified': 'ଉଲ୍ଲେଖ ନାହିଁ',
+    'missing.unknown': 'ଅଜଣା',
+    'missing.empty': 'ଆପଣଙ୍କ ଖୋଜା ସହ କୌଣସି ନିଖୋଜ ବ୍ୟକ୍ତି ରେକର୍ଡ ମେଳ ହୋଇନାହିଁ।',
+    'missing.photoPreviewAlt': 'ବଡ଼ କରାଯାଇଥିବା ଫଟୋ ପରିଚୟ',
+    'missing.closePreview': 'ପ୍ରିଭ୍ୟୁ ବନ୍ଦ କରନ୍ତୁ',
+    'missing.optimizing': 'ଅପ୍ଟିମାଇଜ୍ ହେଉଛି…',
+    'missing.changePhoto': 'ଫଟୋ ବଦଳାନ୍ତୁ',
+    'missing.agePlaceholder': 'ଯଥା ୩୫',
+    'missing.locationPlaceholder': 'ଯଥା ସାଲ୍ଟ୍ ଲେକ୍ ବସ୍ ଷ୍ଟାଣ୍ଡ ପାଖରେ',
+    'missing.clothesPlaceholder': 'ଯଥା ନୀଳ ଶାର୍ଟ, କଳା ଜିନ୍ସ, ଚଶମା ପିନ୍ଧନ୍ତି',
+    'missing.errImageOnly': 'କେବଳ ଫଟୋ ଫାଇଲ୍ ଅନୁମୋଦିତ',
+    'missing.errImageSize': 'ଫଟୋ 5MB ସୀମା ଅତିକ୍ରମ କରିଛି',
+    'missing.photoAttached': 'ଫଟୋ ଯୋଡ଼ାଗଲା ଏବଂ ଅପଲୋଡ୍ ପାଇଁ ଅପ୍ଟିମାଇଜ୍ ହୋଇଗଲା',
+    'missing.errProcessPhoto': 'ଫଟୋ ପ୍ରସେସ୍ ହୋଇପାରିଲା ନାହିଁ',
+    'missing.errName': 'ଦୟାକରି ନିଖୋଜ ବ୍ୟକ୍ତିଙ୍କ ନାମ ଲେଖନ୍ତୁ',
+    'missing.errLastSeen': 'ଦୟାକରି ଶେଷ ଦେଖାଯିବା ସ୍ଥାନ ଉଲ୍ଲେଖ କରନ୍ତୁ',
+    'missing.errPhotoRequired': 'ଦୟାକରି ସ୍ପଷ୍ଟ ଫଟୋ ଅପଲୋଡ୍ କରନ୍ତୁ (ପରିଚୟ ପାଇଁ ଆବଶ୍ୟକ)',
+    'missing.errAge': 'ଦୟାକରି ବୟସ ଲେଖନ୍ତୁ (ଆବଶ୍ୟକ)',
+    'missing.errContactPhone': 'ଦୟାକରି ବୈଧ ୧୦-ଅଙ୍କର ଯୋଗାଯୋଗ ନମ୍ବର ଦିଅନ୍ତୁ',
+    'missing.registered': 'ନିଖୋଜ ବ୍ୟକ୍ତି ସିଷ୍ଟମରେ ପଞ୍ଜୀକୃତ ହୋଇଛି',
+    'missing.previewAlt': 'ପ୍ରିଭ୍ୟୁ',
+
+    // PfaChat
+    'pfa.topicFlood': 'ଘରକୁ ପାଣି ପ୍ରବେଶ / ବନ୍ୟା',
+    'pfa.topicBleeding': 'ପ୍ରବଳ ରକ୍ତସ୍ରାବର ପ୍ରାଥମିକ ଚିକିତ୍ସା',
+    'pfa.topicPanic': 'ଆତଙ୍କ ଓ ଉଦ୍‌ବେଗରୁ ମୁକ୍ତି',
+    'pfa.topicTrapped': 'ଅଟ୍ଟାଳିକା ଭାଙ୍ଗି ଚାପି ପଡ଼ିବା',
+    'pfa.topicCardiac': 'ଛାତି ଯନ୍ତ୍ରଣା / ହୃଦୟ ସଙ୍କଟ',
+    'pfa.topicElectrical': 'ବିଦ୍ୟୁତ୍ ଓ ତାର ବିପଦରୁ ସୁରକ୍ଷା',
+    'pfa.topicSnakebite': 'ସାପ କାମୁଡ଼ିବା ପ୍ରୋଟୋକଲ୍',
+    'pfa.topicFire': 'ନିଆଁରୁ ବଞ୍ଚିବା କୌଶଳ',
+    'pfa.greeting': 'ନମସ୍କାର! ମୁଁ ଆପଦାମିତ୍ର AI — ଆପଣଙ୍କର ୨୪/୭ ଦୁର୍ଯ୍ୟୋଗ ଜୀବନରକ୍ଷା, ଟ୍ରାଇଏଜ୍ ଓ ସଙ୍କଟ ସାଥୀ। ଏହି ମୁହୂର୍ତ୍ତରେ ମୁଁ ଆପଣଙ୍କ ଓ ପରିବାରଙ୍କୁ କିପରି ସହାୟତା କରିପାରିବି?',
+    'chat.unreachable': 'ଆପଦାମିତ୍ର AI ପହଞ୍ଚୁନାହିଁ',
+    'pfa.callbackSent': 'ତାତ୍‌କ୍ଷଣିକ ଉଦ୍ଧାର କଲବ୍ୟାକ୍ ଅନୁରୋଧ ହୋଇଛି! ଉଦ୍ଧାରକର୍ତ୍ତାଙ୍କୁ ଜଣାଣାଯାଇଛି।',
+    'pfa.callbackFailed': 'କଲବ୍ୟାକ୍ ଅନୁରୋଧ ବିଫଳ',
+    'pfa.badgeActive': '୨୪/୭ ସକ୍ରିୟ',
+    'pfa.tagline': '୨୪/୭ ବୁଦ୍ଧିମାନ ଦୁର୍ଯ୍ୟୋଗ ଜୀବନରକ୍ଷା ନିର୍ଦ୍ଦେଶନା, ଜରୁରୀକାଳୀନ ପ୍ରାଥମିକ ଚିକିତ୍ସା ଓ ଆଘାତ ସହାୟତା।',
+    'pfa.stopCoach': 'ବ୍ରିଥ୍ କୋଚ୍ ବନ୍ଦ କରନ୍ତୁ',
+    'pfa.startCoach': '୪-୪-୪ ବକ୍ସ୍ ବ୍ରିଦିଂ',
+    'pfa.breathIn': 'ନିଶ୍ୱାସ ନିଅନ୍ତୁ',
+    'pfa.breathHold': 'ଧରି ରଖନ୍ତୁ',
+    'pfa.breathOut': 'ଛାଡ଼ନ୍ତୁ',
+    'pfa.coachTitle': 'ନିର୍ଦ୍ଦେଶିତ ୪-ସେକେଣ୍ଡ ବକ୍ସ୍ ବ୍ରିଦିଂ',
+    'pfa.breathNow': 'ଏବେ',
+    'pfa.modeCritical': 'ଗମ୍ଭୀର ଜରୁରୀକାଳୀନ',
+    'pfa.modeSupport': 'ସହାୟତା ଓ ସମର୍ଥନ',
+    'pfa.callDesc': 'ଜରୁରୀକାଳୀନ ଡିସପ୍ୟାଚରେ ସିଧା ଟୋଲ୍-ଫ୍ରି ସଂଯୋଗ',
+    'pfa.phonePrompt': 'ଆପଣଙ୍କ ମୋବାଇଲ୍ ନମ୍ବର ଦିଅନ୍ତୁ — ଉଦ୍ଧାର ଦଳ ଯଥାଶୀଘ୍ର ଆପଣଙ୍କୁ ଯୋଗାଯୋଗ କରିବେ:',
+    'pfa.dispatching': 'ପଠାଯାଉଛି…',
+    'pfa.reachMe': 'ମୋ ପାଖକୁ ପହଞ୍ଚନ୍ତୁ',
+    'pfa.dispatchedTitle': 'ପ୍ରାଥମିକତା ଉଦ୍ଧାର କଲବ୍ୟାକ୍ ପଠାଯାଇଛି!',
+    'pfa.contactInfo': 'ଯୋଗାଯୋଗ:',
+    'pfa.trackStatusLink': 'ଲାଇଭ୍ ଘଟଣା ପ୍ରତିକ୍ରିୟା ସ୍ଥିତି ଦେଖନ୍ତୁ',
+    'pfa.thinking': 'ଆପଦାମିତ୍ର AI ଜୀବନରକ୍ଷା ପରାମର୍ଶ ପ୍ରସ୍ତୁତ କରୁଛି…',
+
+    // Report Damage extras
+    'damage.cat1Title': 'ଆବାସିକ ଘର',
+    'damage.cat1Desc': 'ଛାତ ଭାଙ୍ଗିବା, ଦେଶରେ ଫାଟ, ବନ୍ୟାରେ ତଳେଇଯିବା',
+    'damage.cat2Title': 'ବାଣିଜ୍ୟିକ / ଜନସାଧାରଣ',
+    'damage.cat2Desc': 'ଦୋକାନ କ୍ଷତିଗ୍ରସ୍ତ, ମାଲ ତଳେଇଗଲା ବା ସରକାରୀ ଅଟ୍ଟାଳିକା',
+    'damage.cat3Title': 'କୃଷି ଫସଲ',
+    'damage.cat3Desc': 'ଜମି ତଳେଇଗଲା, ଉପରି ମାଟି ଧୋଇଗଲା, ଫସଲ ନଷ୍ଟ',
+    'damage.cat4Title': 'ପୁଲ୍ ଓ ରାସ୍ତା',
+    'damage.cat4Desc': 'ପୁଲ୍ ଭସିଗଲା, ରାସ୍ତା ଭାଙ୍ଗିଲା ବା ତଳେଇଗଲା',
+    'damage.cat5Title': 'ବିଦ୍ୟୁତ୍ ଗ୍ରିଡ୍ ଓ ୟୁଟିଲିଟି',
+    'damage.cat5Desc': 'ଟ୍ରାନ୍ସଫର୍ମର ପଡ଼ିଗଲା, ତାର କଟିଗଲା, ଖୁଣ୍ଟ ଭାଙ୍ଗିଲା',
+    'damage.cat6Title': 'ଅନ୍ୟାନ୍ୟ',
+    'damage.cat6Desc': 'ଅନ୍ୟ କୌଣସି କ୍ଷତିଗ୍ରସ୍ତ ସମ୍ପତ୍ତି ବା ଅବକାଠାମୋ',
+    'damage.errMaxImages': 'ସର୍ବାଧିକ ୫ଟି ଫଟୋ ଅନୁମୋଦିତ',
+    'damage.errFileImage': 'କେବଳ ଫଟୋ ଫାଇଲ୍ ଅନୁମୋଦିତ',
+    'damage.exceedsLimit': '10MB ଅତିକ୍ରମ କରିଛି',
+    'damage.errProcessImage': 'ଏହି ଫଟୋ ପ୍ରସେସ୍ ହୋଇପାରିଲା ନାହିଁ',
+    'damage.errMinPhotos': 'ଦୟାକରି ଅତି କମରେ ୧ଟି କ୍ଷତିର ଫଟୋ ଅପଲୋଡ୍ କରନ୍ତୁ (ସର୍ବାଧିକ ୫)',
+    'damage.errAddressRequired': 'ସମ୍ପତ୍ତିର ଠିକଣା ଆବଶ୍ୟକ',
+    'damage.errDescription': 'ଦୟାକରି କାଠାମୋ କ୍ଷତିର ବର୍ଣ୍ଣନା ଦିଅନ୍ତୁ (ଆବଶ୍ୟକ)',
+    'damage.imagesCount': 'ଫଟୋ',
+    'damage.uploadHint': '୧–୫ଟି ଜିଓଟ୍ୟାଗ୍ ଫଟୋ ଅପଲୋଡ୍ କରନ୍ତୁ। ପ୍ରତ୍ୟେକ ଅଲଗା ସ୍କୋର ହୁଏ, ତାପରେ ହାରାହାରିରୁ ଚୂଡ଼ାନ୍ତ ଦାବି ହୁଏ।',
+    'damage.addressPlaceholder': 'ଯଥା ହୋଲ୍ଡିଂ ୪୨, ବ୍ଲକ୍ B, ମେନ୍ ରୋଡ୍',
+    'damage.gpsWarn1': 'GPS ମିଳୁନାହିଁ — ',
+    'damage.gpsWarn2': 'ଜିଓଟ୍ୟାଗ୍ ପାଇଁ ଲୋକେସନ୍ ଚାଲୁ କରନ୍ତୁ। ବର୍ତ୍ତମାନର ଫଲବ୍ୟାକ୍ (କଲିକତା) ବ୍ୟବହୃତ ହେବ ନାହିଁ — ଦାବି ପାଇଁ ସଠିକ୍ GPS ଆବଶ୍ୟକ।',
+    'damage.ownerPlaceholder': 'ଯଥା ରମେଶ ସେନ',
+    'damage.descPlaceholder': 'ଯଥା ୬୦୦mm ମୁଖ୍ୟ ପାଣି ପାଇପ୍‌ଲାଇନ୍ ଫାଟିଗଲା, ତଳ ଘର ୧.୫m କାଦୁଅଁରେ ତଳେଇଗଲା, ଖୁଣ୍ଟରେ ଫାଟ…',
+    'damage.successTitle': 'କ୍ଷତି ଦାବି କମାଣ୍ଡ ସେଣ୍ଟରରେ ପଞ୍ଜୀକୃତ ହୋଇଛି',
+    'damage.successDesc': 'ଆପଣଙ୍କ ଦାବି AI ଇଞ୍ଜିନ୍ ଦ୍ୱାରା ମୂଲ୍ୟାଙ୍କିତ ଏବଂ SDRF ରାହତ ସମୀକ୍ଷା ପାଇଁ ପଞ୍ଜୀକୃତ ହୋଇଛି।',
+    'damage.claimIdLabel': 'ସରକାରୀ SDRF ଦାବି ID — ଏହା ସଂରକ୍ଷଣ କରନ୍ତୁ',
+    'damage.copyId': 'ID କପି କରନ୍ତୁ',
+
+    // Report Form extras
+    'report.gpsLockedToast': 'ହାଇ-ପ୍ରିସିସନ୍ GPS ଲକ୍ ହୋଇଛି',
+    'report.lastKnownLocation': 'ଶେଷ ଜଣା ଲୋକେସନ୍ ବ୍ୟବହୃତ ହେଉଛି।',
+    'report.locateFail': 'ଲୋକେସନ୍ ମିଳୁନାହିଁ। ଆପଣଙ୍କ ଅଞ୍ଚଳ ଟାଇପ୍ କରନ୍ତୁ ବା ମ୍ୟାପରେ ବାଛନ୍ତୁ।',
+    'report.locatingAddress': 'ଠିକଣା ଖୋଜାଯାଉଛି…',
+    'report.landmarkAt': 'ଲ୍ୟାଣ୍ଡମାର୍କ',
+    'report.micDenied': 'ମାଇକ୍ରୋଫୋନ୍ ଅନୁମତି ମିଳିଲା ନାହିଁ। ଆପଣ ଅଡିଓ ଫାଇଲ୍ ଅପଲୋଡ୍ କରିପାରିବେ।',
+    'report.fileTooLarge': '5MB ସୀମା ଅତିକ୍ରମ କରିଛି',
+    'report.fileNotAllowed': 'ପ୍ରକାର ଅନୁମୋଦିତ ନୁହେଁ',
+    'report.errCategory': 'ଦୟାକରି ଜରୁରୀକାଳୀନ ପ୍ରକାର ବାଛନ୍ତୁ',
+    'report.errMediaRequired': 'ଦୟାକରି ଫଟୋ/ଭିଡିଓ ଅପଲୋଡ୍ କରନ୍ତୁ ବା ଭଏସ୍ ନୋଟ୍ ରେକର୍ଡ କରନ୍ତୁ — ଅତି କମରେ ଗୋଟିଏ ଆବଶ୍ୟକ',
+    'report.errGpsRequired': 'ଦାଖଲ କରିବା ପୂର୍ବରୁ GPS ଅନୁମତି ଦିଅନ୍ତୁ ବା ମ୍ୟାପରେ ଲୋକେସନ୍ ବାଛନ୍ତୁ',
+    'report.emergencyReport': 'ଜରୁରୀକାଳୀନ ରିପୋର୍ଟ:',
+    'report.reportedSuccess': 'ଜରୁରୀକାଳୀନ ଘଟଣା ସଫଳତାର ସହ ରିପୋର୍ଟ ହୋଇଛି!',
+    'report.successDesc': 'ଆପଣଙ୍କ ରିପୋର୍ଟ AI ଟ୍ରାଇଏଜ୍ ଇଞ୍ଜିନ୍ ଦ୍ୱାରା ପ୍ରାଥମିକତା ପାଇ ଉଦ୍ଧାର ଡିସପ୍ୟାଚ ଧାଡ଼ିରେ ପଞ୍ଜୀକୃତ ହୋଇଛି।',
+    'report.trackingIdLabel': 'ଟ୍ରାକିଂ ID — ଏହା ସଂରକ୍ଷଣ କରନ୍ତୁ',
+    'report.trackStatusLink': 'ଲାଇଭ୍ ଉଦ୍ଧାର ସ୍ଥିତି ଦେଖନ୍ତୁ',
+    'report.newReport': 'ନୂଆ ରିପୋର୍ଟ',
+    'report.estimatedHint': 'ଲୋକେସନ୍ ଆନୁମାନିକ — ସଠିକ୍ GPS ପାଇଁ Retry ଦବାନ୍ତୁ',
+    'report.lifeThreatWarn': 'ଜୀବନଘାତୀ ଶବ୍ଦ ଚିହ୍ନଟ ହୋଇଛି — ତାତ୍‌କ୍ଷଣିକ ଡିସପ୍ୟାଚ ପାଇଁ ଜରୁରୀକାଳୀନ SOS ବ୍ୟବହାର କରିବେ?',
+    'report.goToSos': 'SOSକୁ ଯାଆନ୍ତୁ',
+
+    // Tracker extras
+    'tracker.markerIncident': 'ଘଟଣା:',
+    'tracker.victimLocation': 'ଭୁକ୍ତଭୋଗୀଙ୍କ ଅବସ୍ଥାନ',
+    'tracker.rescueUnit': 'ଉଦ୍ଧାର ୟୁନିଟ୍',
+    'tracker.fieldResponder': 'ଫିଲ୍ଡ ରେସପଣ୍ଡର',
+    'tracker.enRouteEta': 'ରାସ୍ତାରେ ଅଛି — ETA ~',
+    'tracker.routeLabel': 'ଉଦ୍ଧାର ପଥ',
+    'tracker.gpsRecorded': 'GPS ସ୍ଥାନାଙ୍କ ପଞ୍ଜୀକୃତ',
+    'tracker.gps': 'GPS',
+    'tracker.commandFallback': 'NDRF / SDRF କମାଣ୍ଡ',
+    'tracker.volunteerQueued': 'ଭଲଣ୍ଟିଅର ଟିମ୍ ଧାଡ଼ିରେ',
+    'tracker.notesLabel': 'ସମାଧାନ ଓ ସୁରକ୍ଷା ନୋଟ୍',
+    'common.call112': '112 କଲ୍ କରନ୍ତୁ',
+    'common.call1070': '1070 କଲ୍ କରନ୍ତୁ',
+
+    // Safe Routes extras
+    'routes.min': 'ମିନିଟ୍',
+    'routes.hr': 'ଘଣ୍ଟା',
+    'routes.floodZone': 'ବନ୍ୟାରେ ତଳେଇଯାଇଥିବା ଅଞ୍ଚଳ',
+    'routes.critical': 'ଗମ୍ଭୀର',
+    'routes.waterDepth': 'ପାଣି',
+    'routes.occupancy': 'ଅକ୍ୟୁପାନ୍ସି:',
+    'routes.liveLocation': 'ଲାଇଭ୍ ଲୋକେସନ୍',
+    'routes.fastestRoute': 'ଦ୍ରୁତତମ ରାସ୍ତା ପଥ',
+    'routes.directLineHazard': 'ରାସ୍ତା ପଥ ମିଳୁନାହିଁ — ସିଧା ରେଖା ଦେଖାଯାଉଛି',
+    'routes.followsRoads': 'ରାସ୍ତା ଦେଇ ଯାଏ — ବନ୍ୟା ଅଞ୍ଚଳ ଦେଇ ଯାଇପାରେ',
+    'routes.safeDetour': 'ନିରାପଦ ବିକଲ୍ପ ପଥ (ସୁପାରିଶ)',
+    'routes.safeDetourDesc': 'ରାସ୍ତା-ଆଧାରିତ ନିରାପଦ ପଥ — ତଳେଇଯାଇଥିବା ଅଞ୍ଚଳ ଏଡ଼ାଏ (300m ବ୍ୟବଧାନ)',
+    'routes.regionFallback': 'ଆଞ୍ଚଳିକ କେନ୍ଦ୍ର ଫଲବ୍ୟାକ୍ — ଲୋକେସନ୍ ମିଳୁନାହିଁ',
+    'routes.regionHint': 'ଲୋକେସନ୍ ମିଳୁନାହିଁ — ଆଞ୍ଚଳିକ କେନ୍ଦ୍ର ବ୍ୟବହୃତ ହେଉଛି। Re-scan GPS ଦବାନ୍ତୁ।',
+    'routes.severity': 'ତୀବ୍ରତା:',
+    'routes.depthSuffix': 'ଗଭୀରତା',
+    'routes.villages': 'ଗାଁ:',
+
+    // Safety Check-in extras
+    'checkin.errName': 'ଦୟାକରି ଆପଣଙ୍କ ପୂରା ନାମ ଲେଖନ୍ତୁ',
+    'checkin.errPhoneDisplay': 'ଦୟାକରି ବୈଧ ୧୦-ଅଙ୍କର ମୋବାଇଲ୍ ନମ୍ବର ଦିଅନ୍ତୁ।',
+    'checkin.errPhoneToast': 'ବୈଧ ଫୋନ୍ ନମ୍ବର ଆବଶ୍ୟକ',
+    'checkin.errLocation': 'ଦୟାକରି ଆପଣଙ୍କ ବର୍ତ୍ତମାନ ଅବସ୍ଥାନ / ଶେଲ୍ଟର ଲେଖନ୍ତୁ (ଆବଶ୍ୟକ)',
+    'checkin.recordedToast': 'ସୁରକ୍ଷା ସ୍ଥିତି ସଫଳତାର ସହ ପଞ୍ଜୀକୃତ ହୋଇଛି',
+    'checkin.namePlaceholder': 'ଯଥା ରମେଶ ଚନ୍ଦ୍ର ସେନ',
+    'checkin.locationPlaceholder': 'ଯଥା ସାଲ୍ଟ୍ ଲେକ୍ ସେକ୍ଟର V ଶେଲ୍ଟର ବା ଘରେ',
+    'checkin.messagePlaceholder': 'ଯଥା ୩ ଜଣ ପରିବାର ସହ, ବିଦ୍ୟୁତ୍ ଅଛି, ଖାଦ୍ୟ/ପାଣି ଅଛି।',
+    'checkin.searchLabel': 'ନାମ, ଫୋନ୍ ନମ୍ବର ବା ଅବସ୍ଥାନ ଦ୍ୱାରା ଖୋଜନ୍ତୁ',
+    'checkin.searchInputPlaceholder': 'ନାମ ବା ୧୦-ଅଙ୍କର ଫୋନ୍ ନମ୍ବର ଟାଇପ୍ କରନ୍ତୁ…',
+    'checkin.checkedInAt': 'ଚେକ୍-ଇନ୍ ହୋଇଛି',
+    'checkin.emptySearch': 'ଆପଣଙ୍କ ଖୋଜା ସହ କୌଣସି ଚେକ୍-ଇନ୍ ରେକର୍ଡ ମେଳ ହୋଇନାହିଁ।',
+
+    // Shelter Finder extras
+    'shelter.currentLocation': 'ବର୍ତ୍ତମାନ ଅବସ୍ଥାନ',
+    'shelter.markerFallback': 'ଦୁର୍ଯ୍ୟୋଗ ଶେଲ୍ଟର',
+    'shelter.cardFallback': 'ଜରୁରୀକାଳୀନ ଶେଲ୍ଟର',
+    'shelter.addressFallback': 'ରେକର୍ଡରେ ଥିବା ଠିକଣା',
+    'shelter.noGps': 'GPS ନାହିଁ',
+    'shelter.locationUnavailable': 'ଲୋକେସନ୍ ମିଳୁନାହିଁ',
+    'shelter.empty': 'ଆପଣଙ୍କ ଖୋଜା ବା ଫିଲ୍ଟର ସହ କୌଣସି ଶେଲ୍ଟର ମେଳ ହୋଇନାହିଁ।',
+
+    // SOS extras
+    'sos.syncedToast': 'ଅପେକ୍ଷମାଣ ଅଫଲାଇନ୍ SOS ସଫଳତାର ସହ ସିଙ୍କ୍ ହୋଇଛି!',
+    'sos.scanningGps': 'ହାଇ-ପ୍ରିସିସନ୍ ସାଟେଲାଇଟ୍ ପାଇଁ GPS ସ୍କାନ୍ ହେଉଛି...',
+    'sos.gpsWeakToast': 'GPS ସିଗ୍ନାଲ୍ ଦୁର୍ବଳ, ସର୍ବୋତ୍ତମ ଉପଲବ୍ଧ ଆନୁମାନିକ ଅବସ୍ଥାନ ବ୍ୟବହୃତ ହେଉଛି।',
+    'sos.gpsFailToast': 'GPS ଫିକ୍ସ୍ ମିଳିଲା ନାହିଁ। ଦୟାକରି ଅବସ୍ଥାନ ମାନୁଆଲ୍ ଯାଞ୍ଚ କରନ୍ତୁ।',
+    'sos.errPhoneRequired': 'ଜରୁରୀକାଳୀନ ଡିସପ୍ୟାଚ ପାଇଁ ମୋବାଇଲ୍ ନମ୍ବର ଆବଶ୍ୟକ',
+    'sos.errPhoneInvalid': 'ଦୟାକରି ବୈଧ ୧୦-ଅଙ୍କର ମୋବାଇଲ୍ ନମ୍ବର ଦିଅନ୍ତୁ।',
+    'sos.errPhoneFormat': 'ମୋବାଇଲ୍ ନମ୍ବର ଫର୍ମାଟ୍ ଅବୈଧ',
+    'sos.typeFallback': 'ଜରୁରୀକାଳୀନ',
+    'sos.pickLocationToast': 'ଲୋକେସନ୍ ମିଳୁନାହିଁ — SOS ପଠାଇବା ପୂର୍ବରୁ ମ୍ୟାପରେ ଆପଣଙ୍କ ଅବସ୍ଥାନ ବାଛନ୍ତୁ',
+    'sos.offlineQueuedToast': 'ଅଫଲାଇନ୍: SOS ଧାଡ଼ିରେ! ନେଟୱାର୍କ ଫେରିବା ମାତ୍ରେ ପଠାଯିବ।',
+    'sos.dispatchLocationLabel': 'ଉଦ୍ଧାର ଡିସପ୍ୟାଚ ଅବସ୍ଥାନ',
+    'sos.gpsLive': 'ଲାଇଭ୍ GPS ଲକ୍',
+    'sos.manuallyVerified': 'ମାନୁଆଲ୍ ଯାଞ୍ଚିତ',
+    'sos.cachedGps': 'କ୍ୟାଶ୍ ହୋଇଥିବା GPS',
+    'sos.estimatedArea': 'ଆନୁମାନିକ ଅଞ୍ଚଳ',
+    'sos.resolvingAddress': 'ରାସ୍ତା ଠିକଣା ଖୋଜାଯାଉଛି...',
+    'sos.defaultCity': 'ଭୁବନେଶ୍ୱର, ଓଡ଼ିଶା, ଭାରତ',
+    'sos.acquiring': 'GPS ସଂଗ୍ରହ ହେଉଛି…',
+    'sos.rescan': 'GPS ପୁଣି ସ୍କାନ୍ କରନ୍ତୁ',
+    'sos.correctArea': 'ଅଞ୍ଚଳ ସଂଶୋଧନ କରନ୍ତୁ',
+    'sos.phoneHint': '* ଉଦ୍ଧାର କଲ୍ ପାଇଁ ମୋବାଇଲ୍ ଆବଶ୍ୟକ',
+    'sos.floorLabel': 'ଫ୍ଲୋର୍ / ଲ୍ୟାଣ୍ଡମାର୍କ (ଐଚ୍ଛିକ)',
+    'sos.floorPlaceholder': 'ଯଥା ୨ୟ ମହଲା, ରୁମ୍ ୨୦୪',
+    'sos.sosAria': 'ଜରୁରୀକାଳୀନ ସାଟେଲାଇଟ୍ SOS ଡିସପ୍ୟାଚ ପାଇଁ ଦବାନ୍ତୁ',
+    'sos.dispatchingSos': 'SOS ସିଗ୍ନାଲ୍ ପଠାଯାଉଛି…',
+    'sos.sendNow': 'ଏବେ SOS ସଙ୍କଟ ସିଗ୍ନାଲ୍ ପଠାନ୍ତୁ',
+    'sos.disclaimer': '* ତାତ୍‌କ୍ଷଣିକ ପ୍ରତିକ୍ରିୟା ୟୁନିଟ୍‌କୁ ସତର୍କ କରିବା ପାଇଁ ଟ୍ୟାପ୍ କରନ୍ତୁ। ଆପଣଙ୍କ ସଠିକ୍ GPS ସ୍ଥାନାଙ୍କ ଓ ଫୋନ୍ NDRF/SDRF କମାଣ୍ଡକୁ ପଠାଯିବ।',
+    'sos.offlineOptionsTitle': 'ଅଫଲାଇନ୍ ଫଲବ୍ୟାକ୍ ବିକଳ୍ପ',
+    'sos.smsLink': '୧-ଟ୍ୟାପ୍ ଜରୁରୀକାଳୀନ SMS (112 ଅଫଲାଇନ୍ ଫଲବ୍ୟାକ୍)',
+    'sos.broadcastTitle': 'SOS ସଙ୍କଟ ସିଗ୍ନାଲ୍ ପ୍ରସାରିତ ହୋଇଛି!',
+    'sos.broadcastDesc': 'ଦୁର୍ଯ୍ୟୋଗ ନିୟନ୍ତ୍ରଣ କକ୍ଷ ଓ ନିକଟସ୍ଥ ଉଦ୍ଧାର ୟୁନିଟ୍‌କୁ ଆପଣଙ୍କ ଫୋନ୍ ଓ GPS ଅବସ୍ଥାନ ସହ ଜଣାଣାଯାଇଛି।',
+    'sos.trackingIdHeading': 'ଆପଣଙ୍କ ଘଟଣା ଟ୍ରାକିଂ ID',
+    'sos.copiedShort': 'କପି ହୋଇଛି',
+    'sos.trackResponse': 'ଲାଇଭ୍ ପ୍ରତିକ୍ରିୟା ସ୍ଥିତି ଦେଖନ୍ତୁ',
+    'sos.damageCta': 'ଘର / ପାଇପ୍‌ଲାଇନ୍ କ୍ଷତି? AI ରାହତ ପାଇଁ ଅପଲୋଡ୍ କରନ୍ତୁ',
+    'sos.anotherSos': 'ଅନ୍ୟ ଏକ SOS ପଠାନ୍ତୁ',
+    'sos.helplinesTitle': 'ସିଧା ଜରୁରୀକାଳୀନ ହେଲ୍ପଲାଇନ୍ (ଟୋଲ୍-ଫ୍ରି)',
+    'sos.modalTitle': 'ଜରୁରୀକାଳୀନ ଅବସ୍ଥାନ ସଂଶୋଧନ କରନ୍ତୁ',
+    'sos.modalDesc': 'ନିଶ୍ଚିତ କରନ୍ତୁ ଉଦ୍ଧାର ଦଳ ଆପଣଙ୍କ ସଠିକ୍ ଅବସ୍ଥାନରେ ପହଞ୍ଚନ୍ତି। ଆପଣ ନିଜ ଅଞ୍ଚଳ/ଠିକଣା ଟାଇପ୍ କରିପାରିବେ, ଦ୍ରୁତ ଅଞ୍ଚଳ ବାଛିପାରିବେ, ବା ମ୍ୟାପରେ ଟ୍ୟାପ୍ କରି ସଠିକ୍ ପିନ୍ ରଖିପାରିବେ।',
+    'sos.addressLabel': 'ଠିକଣା / ଅଞ୍ଚଳ / ଲ୍ୟାଣ୍ଡମାର୍କ ଓ PIN କୋଡ୍',
+    'sos.addressPlaceholder': 'ଯଥା ଫ୍ଲାଟ୍ ୩୦୨, ଗାୟତ୍ରୀ ବିହାର, ସୁନ୍ଦରପଦା, ଭୁବନେଶ୍ୱର - ୭୫୧୦୦୨',
+    'sos.modalHint': '* ଉଦ୍ଧାର ଦଳ ଆପଣଙ୍କ ସଠିକ୍ ଠିକଣା, ଅଟ୍ଟାଳିକା ନାମ ଓ PIN କୋଡ୍ ଦେଖିବେ।',
+    'sos.presetsLabel': 'ଦ୍ରୁତ ଅଞ୍ଚଳ ପ୍ରିସେଟ୍',
+    'sos.mapLabel': 'ପିନ୍ ଘୁଞ୍ଚାଇବା ପାଇଁ ମ୍ୟାପରେ ଟ୍ୟାପ୍ କରନ୍ତୁ ବା ଖୋଜନ୍ତୁ',
+    'sos.savedToast': 'ଜରୁରୀକାଳୀନ ଡିସପ୍ୟାଚ ଅବସ୍ଥାନ ସଫଳତାର ସହ ଅପଡେଟ୍ ହୋଇଛି!',
+    'sos.saveLocation': 'ଅବସ୍ଥାନ ସଂରକ୍ଷଣ ଓ ପ୍ରୟୋଗ କରନ୍ତୁ',
+
+    // MainLayout extras
+    'layout.bulletins': 'ବିଜ୍ଞପ୍ତି',
+    'layout.viewAll': 'ସବୁ ଦେଖନ୍ତୁ',
+    'layout.noBulletins': 'କୌଣସି ସକ୍ରିୟ ବିଜ୍ଞପ୍ତି ନାହିଁ',
+    'layout.navDesktop': 'ଡେସ୍କଟପ୍ ନେଭିଗେସନ୍',
+    'layout.langSelector': 'ଭାଷା ଚୟନକାରୀ',
+    'layout.notifications': 'ବିଜ୍ଞପ୍ତି',
+    'layout.toggleTheme': 'ଥିମ୍ ବଦଳାନ୍ତୁ',
+    'layout.toggleMenu': 'ମୋବାଇଲ୍ ମେନୁ ଟୋଗଲ୍',
+    'layout.navMobile': 'ମୋବାଇଲ୍ ନେଭିଗେସନ୍',
+
+    // ChatWidget extras
+    'chat.greetingShort': 'ନମସ୍କାର! ମୁଁ ଆପଦାମିତ୍ର AI। କୁହନ୍ତୁ ଆପଣଙ୍କୁ କେଉଁ ଜରୁରୀକାଳୀନ, ଆଘାତ ବା ସୁରକ୍ଷା ସହାୟତା ଦରକାର।',
+    'chat.openAria': 'ଆପଦାମିତ୍ର AI ସହାୟକ',
+    'chat.openTitle': 'ଆପଦାମିତ୍ର AIଙ୍କୁ ପଚାରନ୍ତୁ',
+    'chat.dialogAria': 'ଆପଦାମିତ୍ର AI ଦୁର୍ଯ୍ୟୋଗ ସହାୟତା',
+    'chat.badgeLive': 'ଲାଇଭ୍ ସହାୟତା',
+    'chat.hotlineCritical': 'ଗମ୍ଭୀର ଜରୁରୀକାଳୀନ',
+    'chat.hotlineSupport': 'ସହାୟତା ହଟଲାଇନ୍',
+    'chat.callbackDesc': 'ଫୋନ୍ ନମ୍ବର ଦିଅନ୍ତୁ — ଉଦ୍ଧାର ଦଳ କଲ୍ କରିବେ ଓ ଡିସପ୍ୟାଚ ହେବେ:',
+    'chat.reliefDesc': 'ରାହତ ଭଲଣ୍ଟିଅର କଲବ୍ୟାକ୍ ପାଇଁ ଫୋନ୍ ନମ୍ବର ଦିଅନ୍ତୁ:',
+    'chat.phonePlaceholder': '୧୦-ଅଙ୍କର ମୋବାଇଲ୍ ନମ୍ବର',
+    'chat.requestHelp': 'ସହାୟତା ଅନୁରୋଧ',
+    'chat.dispatchConfirm': 'ଜରୁରୀକାଳୀନ SOS ପଠାଯାଇଛି! ଉଦ୍ଧାର ଦଳଙ୍କୁ କଲ୍ ପାଇଁ ଜଣାଣାଯାଇଛି',
+    'chat.ref': 'ରେଫ୍:',
+    'chat.thinking': 'ଆପଦାମିତ୍ର AI ସୁରକ୍ଷା ନିର୍ଦ୍ଦେଶନା ପ୍ରସ୍ତୁତ କରୁଛି…',
+    'chat.qWater': 'ପାଣି ବଢ଼ୁଛି',
+    'chat.qWound': 'ଗମ୍ଭୀର କ୍ଷତ',
+    'chat.qDebris': 'ମଳବା ତଳେ ଚାପି ପଡ଼ିଛି',
+    'chat.qEvac': 'ନିରାପଦ ସ୍ଥାନାନ୍ତରଣ',
+    'chat.sendMsg': 'ବାର୍ତ୍ତା ପଠାନ୍ତୁ',
+
+    // LandmarkPicker extras
+    'lp.geocodeUnavailable': 'ଜିଓକୋଡିଂ ସେବା ମିଳୁନାହିଁ। ଆପଣ ସିଧା ମ୍ୟାପରେ ଟ୍ୟାପ୍ କରିପାରିବେ।',
+    'lp.mapCenterSet': 'ମ୍ୟାପର କେନ୍ଦ୍ରରେ ଅବସ୍ଥାନ ନିର୍ଧାରିତ, ଠିକଣା:',
+    'lp.acquiringGps': 'ହାଇ-ପ୍ରିସିସନ୍ GPS ଲକ୍ ହେଉଛି...',
+    'lp.gpsLocked': 'GPS ଲକ୍ (ସଠିକତା: ±',
+    'lp.gpsFail': 'ହାର୍ଡୱେର୍ GPS ମିଳିଲା ନାହିଁ। ଦୟାକରି ମ୍ୟାପରେ ଆପଣଙ୍କ ଅବସ୍ଥାନ ଟ୍ୟାପ୍ କରନ୍ତୁ।',
+    'lp.searchPlaceholder': 'ସ୍ଥାନ, ଲ୍ୟାଣ୍ଡମାର୍କ ବା ଅଞ୍ଚଳ ଖୋଜନ୍ତୁ (ଯଥା ସୁନ୍ଦରପଦା, ମାଷ୍ଟର କ୍ୟାଣ୍ଟିନ୍)',
+    'lp.locate': 'ଖୋଜନ୍ତୁ',
+    'lp.gpsTitle': 'ଡିଭାଇସର ହାଇ-ପ୍ରିସିସନ୍ GPS ଦ୍ୱାରା ସଠିକ୍ ଅବସ୍ଥାନ ଚିହ୍ନଟ କରନ୍ତୁ',
+    'lp.lockingGps': 'GPS ଲକ୍ ହେଉଛି…',
+    'lp.liveGps': 'ଲାଇଭ୍ GPS',
+    'lp.areaMatch': 'ଅଞ୍ଚଳ ମେଳ',
+    'lp.notIndexed': 'ସଠିକ୍ ଅଟ୍ଟାଳିକା ଅନଲାଇନରେ ମିଳିଲା ନାହିଁ। ଆପଣ ମ୍ୟାପରେ ପିନ୍ ରଖିପାରିବେ ବା ଏହି ଠିକଣା ସିଧା ନିଇପାରିବେ:',
+    'lp.useAddress': 'ଠିକଣା ବ୍ୟବହାର କରନ୍ତୁ:',
+    'lp.dragHint': 'ବା ମ୍ୟାପରେ ପିନ୍ ଟାଣି ଆପଣଙ୍କ ସଠିକ୍ ଅଟ୍ଟାଳିକାରେ ନିଅନ୍ତୁ',
+    'lp.footerHint': '* ସ୍ଥାନାଙ୍କ ସମାୟୋଜନ ପାଇଁ ମ୍ୟାପର ଯେକୌଣସି ସ୍ଥାନରେ କ୍ଲିକ୍ କରନ୍ତୁ ବା ପିନ୍ ଟାଣନ୍ତୁ',
+
+    // Hero extras
+    'hero.getHelpTitle': 'ସହାୟତା ନିଅନ୍ତୁ — ସଠିକ୍ ଉପାୟ ବାଛନ୍ତୁ',
+    'hero.getHelpDesc': 'ଜୀବନଘାତୀ ପରିସ୍ଥିତି? ଜରୁରୀକାଳୀନ SOS ବ୍ୟବହାର କରନ୍ତୁ। ପ୍ରମାଣ ଦେବାକୁ ଚାହୁଁଛନ୍ତି? ଘଟଣା ରିପୋର୍ଟ କରନ୍ତୁ।',
+    'hero.emergencyTitle': 'ଜରୁରୀକାଳୀନ SOS',
+    'hero.emergencyDesc': 'ଜୀବନଘାତୀ • ୩୦ ସେକେଣ୍ଡ • କେବଳ GPS + ଫୋନ୍ • ତାତ୍‌କ୍ଷଣିକ ଉଦ୍ଧାର ଡିସପ୍ୟାଚ',
+    'hero.reportTitle': 'ଘଟଣା ରିପୋର୍ଟ କରନ୍ତୁ',
+    'hero.reportDesc': 'ପ୍ରମାଣ-ସମୃଦ୍ଧ • ୨ ମିନିଟ୍ • ଫଟୋ, ଭଏସ୍ ଓ ବିବରଣୀ • ଟ୍ରିଏଜ୍ ଓ ଦାବି ପାଇଁ',
+
+    // Enum label mappings
+    'shelter.statusOpen': 'ଖୋଲା',
+    'pfa.phaseInhale': 'ନିଶ୍ୱାସ ନିଅନ୍ତୁ',
+    'pfa.phaseHold': 'ଧରି ରଖନ୍ତୁ',
+    'pfa.phaseExhale': 'ଛାଡ଼ନ୍ତୁ',
+    'common.scrollLeft': 'ବାମକୁ ସ୍କ୍ରୋଲ୍ କରନ୍ତୁ',
+    'common.scrollRight': 'ଡାହାଣକୁ ସ୍କ୍ରୋଲ୍ କରନ୍ତୁ',
+    'checkin.statusSafe': 'ସୁରକ୍ଷିତ',
+    'checkin.statusNeedHelp': 'ସହାୟତା ଦରକାର',
   },
 }
 
