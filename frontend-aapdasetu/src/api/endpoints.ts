@@ -216,10 +216,21 @@ export function updateReport(
 ): Promise<Report> {
   const realCall = () => {
     if (patch.assignedVolunteerId !== undefined || patch.assignedAgencyId !== undefined) {
-      return apiCall<RawReport>('POST', `/api/v1/admin/reports/${encodeURIComponent(id)}/assign`, {
+      const assigned = apiCall<RawReport>('POST', `/api/v1/admin/reports/${encodeURIComponent(id)}/assign`, {
         volunteerId: patch.assignedVolunteerId,
         agencyId: patch.assignedAgencyId,
       }).then(toReport)
+      // The /assign route only takes ids — chain a status update so
+      // status/resolutionNotes chosen in the dispatch modal are not lost.
+      if (patch.status !== undefined || patch.resolutionNotes !== undefined) {
+        return assigned.then(() =>
+          apiCall<RawReport>('PATCH', `/api/v1/admin/reports/${encodeURIComponent(id)}/status`, {
+            status: patch.status,
+            resolutionNotes: patch.resolutionNotes,
+          }).then(toReport),
+        )
+      }
+      return assigned
     }
     return apiCall<RawReport>('PATCH', `/api/v1/admin/reports/${encodeURIComponent(id)}/status`, {
       status: patch.status,
@@ -296,7 +307,7 @@ export function createSafetyCheckin(
 /** GET /api/v1/shelters?status= — shelter list (public; distance computed client-side). */
 export function listShelters(status?: string, includeHidden = false): Promise<Shelter[]> {
   return withMockFallback(
-    () => apiCall<Shelter[]>(`GET`, `/api/v1/shelters${status ? `?status=${status}` : ''}`),
+    () => apiCall<Shelter[]>(`GET`, `/api/v1/shelters${status || includeHidden ? `?${new URLSearchParams({ ...(status ? { status } : {}), ...(includeHidden ? { includeHidden: 'true' } : {}) }).toString()}` : ''}`),
     () => mocks.listShelters(status, includeHidden),
   )
 }

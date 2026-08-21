@@ -20,6 +20,7 @@ import { useToast } from '../../components/common/Toast'
 import { fileToDataUrl, reverseGeocode } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
 import { useGeoLocation } from '../../hooks/useLocation'
+import type { GeoLocationCoordinatesLike } from '../../hooks/useLocation'
 import type { GeoPoint, IncidentType, MediaPayload, Report, ReportInput } from '../../types'
 
 const emergencyTypeOptions: { value: IncidentType; key: string }[] = [
@@ -35,7 +36,7 @@ const emergencyTypeOptions: { value: IncidentType; key: string }[] = [
 export default function ReportForm() {
   const { t } = useLanguage()
   const { toast } = useToast()
-  const { coords, address: detectedAddress, accuracy, source, isFallback, locateHighAccuracy } = useGeoLocation() as ReturnType<typeof useGeoLocation> & { source: string; isFallback: boolean; locateHighAccuracy: () => Promise<any> }
+  const { coords, address: detectedAddress, accuracy, source, isFallback, locateHighAccuracy } = useGeoLocation() as ReturnType<typeof useGeoLocation> & { source: string; isFallback: boolean; locateHighAccuracy: () => Promise<GeoLocationCoordinatesLike | null> }
 
   const [selectedType, setSelectedType] = useState<string>('')
   const [gpsAddress, setGpsAddress] = useState<string>(detectedAddress || '')

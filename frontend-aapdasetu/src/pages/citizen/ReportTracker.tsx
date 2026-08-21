@@ -15,7 +15,7 @@ import { Field } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import PriorityBadge from '../../components/common/PriorityBadge'
 import LeafletMap, { type MapMarker, type MapPolyline } from '../../components/map/LeafletMap'
-import { formatDateTime, getNavigationUrl } from '../../lib/helpers'
+import { formatDateTime, getNavigationUrl, haversineKm } from '../../lib/helpers'
 import { fetchOsrmRoute } from '../../lib/routing'
 import { useLanguage } from '../../lib/i18n'
 import type { Report } from '../../types'
@@ -140,7 +140,8 @@ export default function ReportTracker() {
         setRouteEta(Math.max(2, Math.round(r.durationMin)))
       } else {
         setRoutePoints([responderPoint, incidentPoint])
-        const fallbackKm = 0.9
+        // OSRM failed — fall back to the true great-circle distance instead of a fabricated constant
+        const fallbackKm = haversineKm(responderPoint, incidentPoint)
         setRouteKm(fallbackKm)
         setRouteEta(Math.max(2, Math.round((fallbackKm / 25) * 60)))
       }
@@ -418,7 +419,7 @@ export default function ReportTracker() {
           <div className="space-y-2 rounded-xl border border-slate-100 bg-[#f4f4f5] p-4 text-xs dark:border-white/[0.08] dark:bg-[#151515]">
             <InfoRow label={t('report.categoryLabel')} value={report.type.toUpperCase()} />
             <InfoRow label={t('common.landmark')} value={report.landmark ?? 'GPS Coordinates Recorded'} />
-            {report.latitude && report.longitude && (
+            {report.latitude != null && report.longitude != null && (
               <InfoRow
                 label="GPS"
                 value={`${report.latitude.toFixed(4)}°N, ${report.longitude.toFixed(4)}°E`}

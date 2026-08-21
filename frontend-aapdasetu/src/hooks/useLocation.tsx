@@ -113,6 +113,9 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
 
   const saveLocation = useCallback(
     (c: GeoLocationCoordinatesLike, src: LocationSource, skipReverseGeocode = false) => {
+      // A manually pinned location must never be clobbered by a late-resolving
+      // one-shot GPS/IP promise (detect() can still be in flight for ~10s).
+      if (isManualRef.current && src !== 'manual') return
       setCoords(c)
       setAccuracy(c.accuracy)
       setSource(src)
@@ -211,7 +214,9 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
     if (watchIdRef.current !== null) {
       try {
         navigator.geolocation.clearWatch(watchIdRef.current)
-      } catch {}
+      } catch {
+        // watch may already be cleared by the browser or another cleanup pass
+      }
       watchIdRef.current = null
     }
 
@@ -258,7 +263,9 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
     return () => {
       try {
         navigator.geolocation.clearWatch(watchId)
-      } catch {}
+      } catch {
+        // watch may already be cleared by the browser or another cleanup pass
+      }
       if (watchIdRef.current === watchId) watchIdRef.current = null
     }
   }, [fallbackToIp, saveLocation])
@@ -268,7 +275,9 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
     if (watchIdRef.current !== null) {
       try {
         navigator.geolocation.clearWatch(watchIdRef.current)
-      } catch {}
+      } catch {
+        // watch may already be cleared by the browser or another cleanup pass
+      }
       watchIdRef.current = null
     }
     if (manualResetTimerRef.current) {
@@ -305,7 +314,7 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
     const onVis = () => {
       if (document.hidden) {
         if (watchIdRef.current !== null) {
-          try { navigator.geolocation.clearWatch(watchIdRef.current) } catch {}
+          try { navigator.geolocation.clearWatch(watchIdRef.current) } catch { /* already cleared */ }
           watchIdRef.current = null
         }
       } else if (watchIdRef.current === null && source === 'gps') {

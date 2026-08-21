@@ -437,6 +437,7 @@ export default function DamageAssessment() {
             { id: 'road_bridge', label: 'Roads & Bridges' },
             { id: 'electrical_power', label: 'Power Grid' },
             { id: 'commercial_public', label: 'Commercial' },
+            { id: 'agricultural', label: 'Agricultural' },
           ].map((cat) => (
             <button
               key={cat.id}

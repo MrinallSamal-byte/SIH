@@ -226,7 +226,7 @@ export default function ShelterFinder() {
                 : null
             const point = toPoint(s)
             const distance = userPos && point ? haversineKm(userPos, point) : null
-            const cap = s.capacity || 100
+            const cap = s.capacity ?? 100
             const occ = s.occupancy ?? 0
             const pct = Math.round((occ / cap) * 100)
             const facilitiesList = Array.isArray(s.facilities) ? s.facilities : []

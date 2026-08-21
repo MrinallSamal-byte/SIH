@@ -15,6 +15,10 @@ const colors: Record<string, string> = {
   pending: 'bg-slate-100 text-slate-700 border border-slate-200 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300',
   verified_valid: 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:border-emerald-900/50 dark:bg-emerald-950/60 dark:text-emerald-300',
   flagged_fraud_risk: 'bg-red-50 text-red-800 border border-red-200 dark:border-red-900/50 dark:bg-red-950/60 dark:text-red-300',
+  flagged_fraud: 'bg-red-50 text-red-800 border border-red-200 dark:border-red-900/50 dark:bg-red-950/60 dark:text-red-300',
+  available: 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:border-emerald-900/50 dark:bg-emerald-950/60 dark:text-emerald-300',
+  on_duty: 'bg-amber-50 text-amber-800 border border-amber-200 dark:border-amber-900/50 dark:bg-amber-950/60 dark:text-amber-300',
+  offline: 'bg-slate-100 text-slate-600 border border-slate-200 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400',
 }
 
 export default function Badge({ value, children }: { value?: string; children?: ReactNode }) {

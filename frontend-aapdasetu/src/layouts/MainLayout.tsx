@@ -60,6 +60,7 @@ const mobileBottomTabs = [
   {
     to: '/',
     labelKey: 'nav.home',
+    end: true,
     icon: HomeIcon,
   },
   {
@@ -429,6 +430,7 @@ export default function MainLayout() {
             <NavLink
               key={tab.to}
               to={tab.to}
+              end={'end' in tab ? Boolean((tab as { end?: boolean }).end) : undefined}
               className={({ isActive }) =>
                 tab.isSos
                   ? `relative -top-3 flex flex-col items-center justify-center rounded-full bg-red-600 p-3.5 text-white shadow-lg ring-4 ring-white transition active:scale-95 dark:ring-slate-950 ${
@@ -457,7 +459,8 @@ export default function MainLayout() {
         })}
       </nav>
 
-      <ChatWidget />
+      {/* Hide the floating widget on the dedicated PFA chat page to avoid two chat UIs at once */}
+      {location.pathname !== '/pfa-chat' && <ChatWidget />}
     </div>
   )
 }

@@ -878,10 +878,19 @@ export const mocks = {
   updateReport(id: string, patch: Partial<Report>): Report | undefined {
     const rep = reportsStore.find((r) => r.id === id || r.trackingId === id)
     if (!rep) return undefined
+    const isAssignment = patch.assignedVolunteerId !== undefined || patch.assignedAgencyId !== undefined
     Object.assign(rep, patch)
+    if (isAssignment) {
+      // Mirror assignVolunteer semantics: resolve names and move pending → in_progress
+      const vol = patch.assignedVolunteerId ? volunteersStore.find((v) => v.id === patch.assignedVolunteerId) : undefined
+      if (vol) rep.assignedVolunteerName = vol.name
+      const agency = patch.assignedAgencyId ? agenciesStore.find((a) => a.id === patch.assignedAgencyId) : undefined
+      if (agency) rep.assignedAgencyName = agency.name
+      if (patch.status === undefined && rep.status === 'pending') rep.status = 'in_progress'
+    }
     rep.updatedAt = new Date().toISOString()
     saveLocal(STORAGE_KEY_REPORTS, reportsStore)
-    emitRealtimeUpdate('report_updated', rep.id, rep)
+    emitRealtimeUpdate(isAssignment ? 'report_assigned' : 'report_updated', rep.id, rep)
     return rep
   },
 

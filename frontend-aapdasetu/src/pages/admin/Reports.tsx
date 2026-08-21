@@ -115,14 +115,16 @@ export default function Reports() {
     }
   }
 
-  // Pagination slice
+  // Pagination slice (clamped so realtime list shrinkage can't yield an empty page)
   const totalCount = reports?.length ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+  const safePage = Math.min(page, totalPages)
+  if (safePage !== page) setPage(safePage)
   const paginatedReports = useMemo(() => {
     if (!reports) return []
-    const start = (page - 1) * pageSize
+    const start = (safePage - 1) * pageSize
     return reports.slice(start, start + pageSize)
-  }, [reports, page, pageSize])
+  }, [reports, safePage, pageSize])
 
   if (!reports) return <Loader />
 

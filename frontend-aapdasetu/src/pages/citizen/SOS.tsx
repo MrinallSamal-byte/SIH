@@ -44,7 +44,6 @@ export default function SOS() {
     accuracy,
     locateHighAccuracy,
     source,
-    isFallback,
   } = useGeoLocation() as ReturnType<typeof useGeoLocation> & { isFallback: boolean }
 
   const [name, setName] = useState('')
@@ -69,29 +68,43 @@ export default function SOS() {
     }
   }, [phone, phoneError])
 
-  // Track online/offline status
+  // Track online/offline status + flush pending offline SOS queue
   useEffect(() => {
-    const handleOnline = () => {
-      setIsOffline(false)
-      // Check for pending offline SOS
+    const flushPendingSos = async () => {
       try {
-        const pending = localStorage.getItem('aapdasetu_pending_sos')
-        if (pending) {
-          const parsed = JSON.parse(pending) as ReportInput
-          createReport(parsed)
-            .then(() => {
-              localStorage.removeItem('aapdasetu_pending_sos')
-              toast('Pending offline SOS synced successfully!', 'success')
-            })
-            .catch(() => {
-              // Retry on next online cycle
-            })
+        const raw = localStorage.getItem('aapdasetu_pending_sos')
+        if (!raw) return
+        // Support both the legacy single-object format and the array format
+        const parsed = JSON.parse(raw) as ReportInput | ReportInput[]
+        const queue = Array.isArray(parsed) ? parsed : [parsed]
+        if (queue.length === 0) return
+        const remaining: ReportInput[] = []
+        for (const item of queue) {
+          try {
+            await createReport(item)
+            toast('Pending offline SOS synced successfully!', 'success')
+          } catch {
+            remaining.push(item)
+          }
+        }
+        if (remaining.length > 0) {
+          localStorage.setItem('aapdasetu_pending_sos', JSON.stringify(remaining))
+        } else {
+          localStorage.removeItem('aapdasetu_pending_sos')
         }
       } catch {
         // Storage access error
       }
     }
+    const handleOnline = () => {
+      setIsOffline(false)
+      void flushPendingSos()
+    }
     const handleOffline = () => setIsOffline(true)
+
+    // Flush on mount too — a queued SOS from a previous session must sync
+    // even if the network never transitions offline→online while we're mounted.
+    if (navigator.onLine) void flushPendingSos()
 
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
@@ -145,8 +158,11 @@ export default function SOS() {
       const foundType = emergencyTypes.find((e) => e.type === selectedType)
       const typeLabel = foundType ? t(foundType.labelKey) : 'Emergency'
 
-      let lat = coords?.latitude
-      let lng = coords?.longitude
+      // coords is never null (hook seeds a hardcoded fallback), so gate on provenance:
+      // only trust gps/manual/cached/ip fixes — never the fabricated default location.
+      const hasTrustedFix = source === 'gps' || source === 'manual' || source === 'cached'
+      let lat = hasTrustedFix ? coords?.latitude : undefined
+      let lng = hasTrustedFix ? coords?.longitude : undefined
 
       if (lat === undefined || lng === undefined) {
         try {
@@ -180,7 +196,16 @@ export default function SOS() {
       }
 
       if (!navigator.onLine) {
-        localStorage.setItem('aapdasetu_pending_sos', JSON.stringify(input))
+        // Queue as an array so multiple offline SOS reports are never lost
+        try {
+          const raw = localStorage.getItem('aapdasetu_pending_sos')
+          const parsed = raw ? (JSON.parse(raw) as ReportInput | ReportInput[]) : []
+          const queue = Array.isArray(parsed) ? parsed : [parsed]
+          queue.push(input)
+          localStorage.setItem('aapdasetu_pending_sos', JSON.stringify(queue))
+        } catch {
+          localStorage.setItem('aapdasetu_pending_sos', JSON.stringify([input]))
+        }
         toast('Offline: SOS queued! Will dispatch as soon as network reconnects.', 'info')
         setTriggering(false)
         return
@@ -230,8 +255,11 @@ export default function SOS() {
   }
 
   const emergencySmsLink = generateEmergencySms({
-    lat: !isFallback ? coords?.latitude : undefined,
-    lng: !isFallback ? coords?.longitude : undefined,
+    // Include coordinates for trusted fixes (gps/manual/cached); exclude only
+    // IP-derived or fabricated-default positions. isFallback === source !== 'gps',
+    // so manual pins were previously stripped from the SMS.
+    lat: source === 'ip' || source === 'default' ? undefined : coords?.latitude,
+    lng: source === 'ip' || source === 'default' ? undefined : coords?.longitude,
     name: name.trim() || undefined,
     type: selectedType,
     phone: phone.trim() || undefined,

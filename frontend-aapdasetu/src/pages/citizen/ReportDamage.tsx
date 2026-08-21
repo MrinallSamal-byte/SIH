@@ -81,14 +81,21 @@ export default function ReportDamage() {
         toast(`${file.name} exceeds 10MB`, 'error')
         continue
       }
-      const compressed = await compressImage(file, 800, 0.75)
-      newPhotos.push(compressed)
+      try {
+        const compressed = await compressImage(file, 800, 0.75)
+        newPhotos.push(compressed)
+      } catch {
+        toast(`${file.name}: Could not process this image`, 'error')
+      }
     }
     setPhotos((prev) => [...prev, ...newPhotos])
   }
 
   const removePhoto = (idx: number) => {
     setPhotos((prev) => prev.filter((_, i) => i !== idx))
+    // Stored per-image scores are indexed by photo position — clear them so
+    // badges can't show another photo's score after removal.
+    setPerImageVerdicts([])
   }
 
   const assess = async () => {
@@ -141,7 +148,6 @@ export default function ReportDamage() {
         huggingFaceModel: 'aapdasetu-ensemble',
         infrastructureType: infraType,
       }
-      setVerdict(v)
 
       const saved = await createDamageAssessment({
         claimantName: ownerName.trim() || undefined,
@@ -159,6 +165,9 @@ export default function ReportDamage() {
         confidence: v.confidence,
       })
 
+      // Only show the "Claim Registered" card once the claim actually persisted —
+      // otherwise a failed save would render a success screen with no claim ID.
+      setVerdict(v)
       setClaimId(saved.claimId)
       toast(t('damage.claimCreated'), 'success')
 
@@ -179,11 +188,14 @@ export default function ReportDamage() {
 
   const copyClaimReceipt = () => {
     if (!claimId) return
-    navigator.clipboard.writeText(claimId).then(() => {
-      setCopied(true)
-      toast('Claim ID copied to clipboard')
-      setTimeout(() => setCopied(false), 3000)
-    })
+    navigator.clipboard
+      .writeText(claimId)
+      .then(() => {
+        setCopied(true)
+        toast('Claim ID copied to clipboard')
+        setTimeout(() => setCopied(false), 3000)
+      })
+      .catch(() => toast('Could not copy — please note the ID manually', 'error'))
   }
 
   return (
@@ -258,7 +270,10 @@ export default function ReportDamage() {
               type="file"
               accept="image/*"
               multiple
-              onChange={(e) => onFiles(e.target.files)}
+              onChange={(e) => {
+                onFiles(e.target.files)
+                e.target.value = ''
+              }}
               className="block w-full text-sm file:mr-4 file:rounded-xl file:border-0 file:bg-zinc-800 file:px-4 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-slate-800 dark:file:bg-slate-100 dark:file:text-zinc-800 cursor-pointer"
             />
           </div>

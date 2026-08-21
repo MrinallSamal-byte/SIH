@@ -557,13 +557,11 @@ export function generateEmergencySms(options: {
   return `sms:112?body=${body}`
 }
 
-/** Privacy masking for phone numbers in public registries (e.g. +91-98765***12). */
+/** Privacy masking for phone numbers in public registries — reveals at most the last 4 digits. */
 export function maskPhone(phone: string | null | undefined): string {
   if (!phone) return '—'
   const clean = phone.trim()
-  if (clean.length <= 5) return '*****'
-  const start = clean.slice(0, clean.length - 5)
-  const end = clean.slice(-2)
-  return `${start}***${end}`
+  if (clean.length <= 4) return '••••••'
+  return `••••••${clean.slice(-4)}`
 }
 

@@ -145,7 +145,9 @@ function MapController({
     const t = setTimeout(() => {
       try {
         map.invalidateSize()
-      } catch {}
+      } catch {
+        // map may be unmounted/destroyed between the timeout scheduling and firing
+      }
     }, 120)
     return () => clearTimeout(t)
   }, [map, height])
@@ -156,7 +158,9 @@ function MapController({
         setTimeout(() => {
           try {
             map.invalidateSize()
-          } catch {}
+          } catch {
+            // map may be unmounted/destroyed before the visibility timeout fires
+          }
         }, 100)
       }
     }
@@ -197,7 +201,9 @@ function MapController({
     const t = setTimeout(() => {
       try {
         map.invalidateSize()
-      } catch {}
+      } catch {
+        // map may be unmounted/destroyed between the timeout scheduling and firing
+      }
     }, 150)
     return () => clearTimeout(t)
   }, [map, markers.length, polylines.length, polygons.length])
@@ -337,7 +343,7 @@ export default function LeafletMap({
         center={[center.lat, center.lng]}
         zoom={zoom}
         minZoom={5}
-        maxZoom={18}
+        maxZoom={19}
         maxBounds={INDIA_BOUNDS}
         maxBoundsViscosity={1.0}
         worldCopyJump={false}

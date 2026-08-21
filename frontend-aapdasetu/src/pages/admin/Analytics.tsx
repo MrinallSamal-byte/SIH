@@ -229,7 +229,7 @@ export default function Analytics() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                <XAxis dataKey="time" fontSize={11} tickLine={false} />
+                <XAxis dataKey="date" fontSize={11} tickLine={false} />
                 <YAxis allowDecimals={false} fontSize={11} tickLine={false} />
                 <Tooltip
                   contentStyle={{
