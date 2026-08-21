@@ -15,6 +15,7 @@ import {
   ChevronRight
 } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
+import { openChatWidget } from '../../components/ChatWidget'
 
 interface ServiceCard {
   to: string
@@ -23,6 +24,7 @@ interface ServiceCard {
   titleKey: string
   descKey: string
   icon: typeof ShieldCheck
+  action?: 'chat'
 }
 
 const emergencyServices: ServiceCard[] = [
@@ -65,6 +67,7 @@ const emergencyServices: ServiceCard[] = [
     titleKey: 'nav.pfa',
     descKey: 'service.pfaDesc',
     icon: Bot,
+    action: 'chat',
   },
 ]
 
@@ -145,12 +148,8 @@ export default function Home() {
         <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide -mx-1 px-1">
           {emergencyServices.map((item) => {
             const Icon = item.icon
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className="group relative flex min-w-[260px] max-w-[300px] flex-1 flex-col justify-between rounded-2xl border border-zinc-200/80 bg-white p-4 sm:p-6 text-left transition-all duration-200 hover:border-slate-400 active:scale-[0.98] snap-start dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:hover:border-slate-600/80 cursor-pointer"
-              >
+            const inner = (
+              <>
                 <div>
                   <div className="flex items-start justify-between w-full mb-4">
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-800 text-white transition-transform duration-200 group-hover:scale-105 dark:bg-slate-100 dark:text-zinc-800">
@@ -176,6 +175,25 @@ export default function Home() {
                     </p>
                   </div>
                 </div>
+              </>
+            )
+            // The AI card opens the floating chat widget instead of navigating away
+            return item.action === 'chat' ? (
+              <button
+                key={item.to}
+                type="button"
+                onClick={openChatWidget}
+                className="group relative flex min-w-[260px] max-w-[300px] flex-1 flex-col justify-between rounded-2xl border border-zinc-200/80 bg-white p-4 sm:p-6 text-left transition-all duration-200 hover:border-slate-400 active:scale-[0.98] snap-start dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:hover:border-slate-600/80 cursor-pointer"
+              >
+                {inner}
+              </button>
+            ) : (
+              <Link
+                key={item.to}
+                to={item.to}
+                className="group relative flex min-w-[260px] max-w-[300px] flex-1 flex-col justify-between rounded-2xl border border-zinc-200/80 bg-white p-4 sm:p-6 text-left transition-all duration-200 hover:border-slate-400 active:scale-[0.98] snap-start dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:hover:border-slate-600/80 cursor-pointer"
+              >
+                {inner}
               </Link>
             )
           })}
