@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { MapContainer, Marker, Polygon, Polyline, Popup, TileLayer, useMap } from 'react-leaflet'
+import { MapContainer, Marker, Polygon, Polyline, Popup, TileLayer, useMap, ScaleControl } from 'react-leaflet'
 import L from 'leaflet'
 import { Layers, Globe, Mountain, Map as MapIcon, Moon } from 'lucide-react'
 import type { GeoPoint } from '../../types'
@@ -29,6 +29,12 @@ export interface MapPolyline {
   label?: string
 }
 
+export const INDIA_BOUNDS: [[number, number], [number, number]] = [
+  [6.0, 68.0],
+  [37.5, 97.5],
+]
+export const INDIA_CENTER: GeoPoint = { lat: 22.0, lng: 79.0 }
+
 export type MapLayerMode = 'satellite' | 'terrain' | 'streets' | 'dark'
 
 const MAP_LAYERS: Record<
@@ -51,15 +57,15 @@ const MAP_LAYERS: Record<
     overlayAttribution: 'Labels &copy; Esri',
   },
   streets: {
-    name: 'Streets',
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: 'abcd',
+    name: 'Streets (OSM)',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    subdomains: 'abc',
   },
   terrain: {
     name: 'Terrain',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community',
+    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    attribution: 'Map data &copy; OpenStreetMap contributors, SRTM | &copy; OpenTopoMap (CC-BY-SA)',
     subdomains: 'abc',
   },
   dark: {
@@ -121,6 +127,7 @@ function MapController({
   polygons = [],
   polylines = [],
   autoFit = false,
+  height,
 }: {
   center: GeoPoint
   zoom?: number
@@ -128,10 +135,34 @@ function MapController({
   polygons?: MapPolygon[]
   polylines?: MapPolyline[]
   autoFit?: boolean
+  height?: string
 }) {
   const map = useMap()
   const hasFittedRef = useRef(false)
   const lastCenterRef = useRef(`${center?.lat?.toFixed(4) ?? '0'},${center?.lng?.toFixed(4) ?? '0'}`)
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        map.invalidateSize()
+      } catch {}
+    }, 120)
+    return () => clearTimeout(t)
+  }, [map, height])
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        setTimeout(() => {
+          try {
+            map.invalidateSize()
+          } catch {}
+        }, 100)
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [map])
 
   // 1. Fit bounds on mount or when points change
   useEffect(() => {
@@ -161,6 +192,15 @@ function MapController({
       }
     }
   }, [map, markers, polygons, polylines, autoFit])
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        map.invalidateSize()
+      } catch {}
+    }, 150)
+    return () => clearTimeout(t)
+  }, [map, markers.length, polylines.length, polygons.length])
 
   // 2. Recenter smoothly
   useEffect(() => {
@@ -296,9 +336,15 @@ export default function LeafletMap({
       <MapContainer
         center={[center.lat, center.lng]}
         zoom={zoom}
+        minZoom={5}
+        maxZoom={18}
+        maxBounds={INDIA_BOUNDS}
+        maxBoundsViscosity={1.0}
+        worldCopyJump={false}
         attributionControl={false}
         style={{ height: '100%', width: '100%', zIndex: 1 }}
       >
+        <ScaleControl position="bottomleft" imperial={false} />
         {/* Base Layer */}
         <TileLayer
           key={layerMode}
@@ -326,6 +372,7 @@ export default function LeafletMap({
           polygons={polygons}
           polylines={polylines}
           autoFit={autoFit}
+          height={height}
         />
 
         {/* Hazard Polygons */}
@@ -350,7 +397,7 @@ export default function LeafletMap({
             </Polygon>
           ))}
 
-        {/* Routes Polylines */}
+        {/* Road-following Routes (OSRM) */}
         {(polylines ?? [])
           .filter((p) => p && Array.isArray(p.points) && p.points.length >= 2)
           .map((p) => (
@@ -358,9 +405,11 @@ export default function LeafletMap({
               key={p.id}
               pathOptions={{
                 color: p.color ?? '#3b82f6',
-                weight: 4.5,
-                opacity: 0.95,
-                dashArray: p.dashed ? '6 6' : undefined,
+                weight: 5,
+                opacity: 0.92,
+                lineCap: 'round',
+                lineJoin: 'round',
+                dashArray: p.dashed ? '10 10' : undefined,
               }}
               positions={p.points.map((pt) => [pt.lat, pt.lng] as [number, number])}
             >

@@ -7,9 +7,6 @@ import {
   Wheat,
   Warehouse,
   Flame,
-  ShieldCheck,
-  ExternalLink,
-  Cpu
 } from 'lucide-react'
 import { aiDamageAssessment, type DamageVerdict } from '../../api/ai'
 import { createDamageAssessment } from '../../api/endpoints'
@@ -50,55 +47,111 @@ const DISTRICT_LIST = [
 export default function ReportDamage() {
   const { t } = useLanguage()
   const { toast } = useToast()
-  const { coords: geoCoords } = useGeoLocation()
+  const { coords: geoCoords, isFallback, source } = useGeoLocation() as ReturnType<typeof useGeoLocation> & { isFallback: boolean; source: string }
   const [infraType, setInfraType] = useState<DamageInfrastructureType>('broken_home')
   const [district, setDistrict] = useState('North 24 Parganas')
-  const [photo, setPhoto] = useState<string | null>(null)
-  const [preview, setPreview] = useState<string | null>(null)
+  const [photos, setPhotos] = useState<string[]>([])
   const [ownerName, setOwnerName] = useState('')
   const [ownerPhone, setOwnerPhone] = useState('')
   const [address, setAddress] = useState('')
   const [description, setDescription] = useState('')
   const [busy, setBusy] = useState(false)
   const [verdict, setVerdict] = useState<DamageVerdict | null>(null)
+  const [perImageVerdicts, setPerImageVerdicts] = useState<DamageVerdict[]>([])
   const [claimId, setClaimId] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-  const coords = geoCoords ? { lat: geoCoords.latitude, lng: geoCoords.longitude } : { lat: 22.5726, lng: 88.3639 }
+  const hasGps = Boolean(geoCoords && !isFallback && source === 'gps')
+  const coords = hasGps && geoCoords ? { lat: geoCoords.latitude, lng: geoCoords.longitude } : null
 
-  const onFile = async (file: File | undefined) => {
-    if (!file) return
-    const compressed = await compressImage(file, 800, 0.75)
-    setPhoto(compressed)
-    setPreview(compressed)
+  const onFiles = async (files: FileList | null) => {
+    if (!files) return
+    const remaining = 5 - photos.length
+    if (remaining <= 0) {
+      toast('Maximum 5 images allowed', 'error')
+      return
+    }
+    const selected = Array.from(files).slice(0, remaining)
+    const newPhotos: string[] = []
+    for (const file of selected) {
+      if (!file.type.startsWith('image/')) {
+        toast(`${file.name}: Only image files allowed`, 'error')
+        continue
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast(`${file.name} exceeds 10MB`, 'error')
+        continue
+      }
+      const compressed = await compressImage(file, 800, 0.75)
+      newPhotos.push(compressed)
+    }
+    setPhotos((prev) => [...prev, ...newPhotos])
+  }
+
+  const removePhoto = (idx: number) => {
+    setPhotos((prev) => prev.filter((_, i) => i !== idx))
   }
 
   const assess = async () => {
-    if (!photo) return
-    if (!ownerPhone.trim()) {
-      toast('Contact mobile number is mandatory for SDRF claim verification', 'error')
+    if (photos.length === 0) {
+      toast('Please upload at least 1 damage photo (max 5)', 'error')
+      return
+    }
+    const cleanPhone = ownerPhone.replace(/\D/g, '')
+    if (!cleanPhone || cleanPhone.length < 10) {
+      toast('Enter a valid 10-digit mobile number', 'error')
+      return
+    }
+    if (!address.trim()) {
+      toast('Property address is required', 'error')
+      return
+    }
+    if (!hasGps) {
+      toast('Location unavailable — please enable GPS or allow location', 'error')
+      return
+    }
+    if (!description.trim()) {
+      toast('Please describe the structural failure (required)', 'error')
       return
     }
 
     setBusy(true)
     try {
-      const v = await aiDamageAssessment(
-        photo,
-        coords?.lat,
-        coords?.lng,
-        description,
-        infraType
+      const verdicts = await Promise.all(
+        photos.map((p) =>
+          aiDamageAssessment(p, coords!.lat, coords!.lng, description, infraType)
+        )
       )
+      setPerImageVerdicts(verdicts)
+      const avgScore = Math.round(verdicts.reduce((a, v) => a + v.damageScore, 0) / verdicts.length)
+      const avgComp = Math.round(verdicts.reduce((a, v) => a + v.compensationInr, 0) / verdicts.length)
+      const avgConf = Math.round((verdicts.reduce((a, v) => a + v.confidence, 0) / verdicts.length) * 10) / 10
+      const gradeCounts = verdicts.reduce((acc, v) => { acc[v.damageGrade] = (acc[v.damageGrade] || 0) + 1; return acc }, {} as Record<string, number>)
+      const avgGrade = (Object.entries(gradeCounts).sort((a, b) => b[1] - a[1])[0]?.[0] as DamageVerdict['damageGrade']) || verdicts[0].damageGrade
+      const allFactors = [...new Set(verdicts.flatMap((v) => v.factors))].slice(0, 6)
+      const v: DamageVerdict = {
+        claimedDamage: true,
+        verified: verdicts.every((x) => x.verified),
+        duplicate: false,
+        exifValid: true,
+        damageGrade: avgGrade,
+        damageScore: avgScore,
+        confidence: avgConf,
+        compensationInr: avgComp,
+        factors: allFactors,
+        huggingFaceModel: 'aapdasetu-ensemble',
+        infrastructureType: infraType,
+      }
       setVerdict(v)
 
       const saved = await createDamageAssessment({
         claimantName: ownerName.trim() || undefined,
-        claimantPhone: ownerPhone.trim(),
+        claimantPhone: cleanPhone,
         infrastructureType: infraType,
-        propertyAddress: address.trim() || 'Sector On-Record',
+        propertyAddress: address.trim(),
         district,
-        latitude: coords?.lat ?? 22.5726,
-        longitude: coords?.lng ?? 88.3639,
-        photoUrl: photo,
+        latitude: coords!.lat,
+        longitude: coords!.lng,
+        photoUrl: photos[0],
         structuralDamage: v.damageGrade === 'DESTROYED' || v.damageGrade === 'MAJOR',
         estimatedLossInr: v.compensationInr,
         damageGrade: v.damageGrade,
@@ -126,7 +179,7 @@ export default function ReportDamage() {
 
   const copyClaimReceipt = () => {
     if (!claimId || !verdict) return
-    const text = `SDRF RELIEF CLAIM RECEIPT\nClaim ID: ${claimId}\nClaimant: ${ownerName || 'Citizen'}\nPhone: ${ownerPhone}\nInfra: ${infraType.toUpperCase()}\nDistrict: ${district}\nAI Damage Grade: ${verdict.damageGrade} (${verdict.damageScore}/100)\nEstimated Relief: INR ${verdict.compensationInr.toLocaleString('en-IN')}\nVerified By: HuggingFace ResNet-50 (${verdict.huggingFaceModel})`
+    const text = `SDRF RELIEF CLAIM RECEIPT\nClaim ID: ${claimId}\nClaimant: ${ownerName || 'Citizen'}\nPhone: ${ownerPhone}\nInfra: ${infraType.toUpperCase()}\nDistrict: ${district}\nImages: ${photos.length}\nAI Damage Grade: ${verdict.damageGrade} (${verdict.damageScore}/100 avg of ${perImageVerdicts.length} images)\nEstimated Relief: INR ${verdict.compensationInr.toLocaleString('en-IN')}\nVerified By: AI Ensemble`
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true)
       toast('Claim details copied to clipboard')
@@ -137,39 +190,25 @@ export default function ReportDamage() {
   return (
     <div className="mx-auto max-w-3xl text-left">
       {/* Top Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400">
-            <FileSpreadsheet className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-800 dark:text-slate-300">
-              {t('damage.title')}
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {t('damage.subtitle')}
-            </p>
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400">
+          <FileSpreadsheet className="h-5 w-5" />
         </div>
-
-        {/* HuggingFace Model Badge */}
-        <a
-          href="https://huggingface.co/Divyanshu-Kumar19/aapdasetu-damage-assessment"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-full border border-yellow-500/30 bg-yellow-500/10 px-3 py-1 text-[11px] font-semibold text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/20 transition-colors"
-        >
-          <Cpu className="h-3.5 w-3.5" />
-          <span>HuggingFace ResNet-50</span>
-          <ExternalLink className="h-2.5 w-2.5 opacity-70" />
-        </a>
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-800 dark:text-slate-300">
+            {t('damage.title')}
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {t('damage.subtitle')}
+          </p>
+        </div>
       </div>
 
       <div className="mt-4 space-y-5 rounded-2xl border border-zinc-200/80 bg-white p-4 sm:p-6 shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
         {/* Step 1: Select Infrastructure Type */}
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-slate-300 mono mb-2">
-            {t('damage.step1Title')}
+            {t('damage.step1Title')} <span className="text-red-600">*</span>
           </label>
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
             {INFRASTRUCTURE_CATEGORIES.map((cat) => {
@@ -209,27 +248,36 @@ export default function ReportDamage() {
           </div>
         </div>
 
-        {/* Step 2: Photo Upload */}
+        {/* Step 2: Photo Upload (max 5) */}
         <div className="space-y-2">
           <label htmlFor="damage-photo" className="block text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-slate-300 mono">
-            {t('damage.step2Title')}
+            {t('damage.step2Title')} <span className="text-red-600">*</span> <span className="font-normal normal-case text-slate-400">({photos.length}/5 images)</span>
           </label>
           <div className="relative">
             <input
               id="damage-photo"
               type="file"
               accept="image/*"
-              onChange={(e) => onFile(e.target.files?.[0])}
+              multiple
+              onChange={(e) => onFiles(e.target.files)}
               className="block w-full text-sm file:mr-4 file:rounded-xl file:border-0 file:bg-zinc-800 file:px-4 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-slate-800 dark:file:bg-slate-100 dark:file:text-zinc-800 cursor-pointer"
             />
           </div>
-          {preview && (
-            <div className="relative mt-2 overflow-hidden rounded-xl border border-zinc-200/80 dark:border-white/[0.1] bg-slate-950">
-              <img src={preview} alt="Damage preview" className="max-h-72 w-full object-cover" />
-              <div className="absolute bottom-2 left-2 rounded-md bg-black/70 px-2.5 py-1 text-[11px] font-mono text-white backdrop-blur-xs flex items-center gap-1.5">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-                <span>Geotag & aHash Prepared</span>
-              </div>
+          <p className="text-[11px] text-slate-500">Upload 1–5 geotagged photos. Each is scored individually, then averaged for final claim.</p>
+          {photos.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
+              {photos.map((p, idx) => (
+                <div key={idx} className="relative overflow-hidden rounded-xl border border-zinc-200/80 dark:border-white/[0.1] bg-slate-950">
+                  <img src={p} alt={`Damage ${idx + 1}`} className="h-32 w-full object-cover" />
+                  <button type="button" onClick={() => removePhoto(idx)} className="absolute top-1.5 right-1.5 rounded-full bg-black/70 px-2 py-1 text-[10px] font-bold text-white hover:bg-red-600">
+                    Remove
+                  </button>
+                  <div className="absolute bottom-1 left-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-mono text-white">#{idx + 1}</div>
+                  {perImageVerdicts[idx] && (
+                    <div className="absolute bottom-1 right-1 rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold text-white">{perImageVerdicts[idx].damageScore}</div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -262,6 +310,11 @@ export default function ReportDamage() {
           </Field>
         </div>
 
+        {!hasGps && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30">
+            <span className="font-bold">GPS unavailable — </span>Enable location to geotag damage claim. Current fallback (Kolkata) not used — your claim requires precise GPS.
+          </div>
+        )}
         {/* Step 4: Claimant Details */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label={t('damage.ownerName')}>
@@ -285,7 +338,7 @@ export default function ReportDamage() {
         {/* Step 5: Damage Description */}
         <div className="space-y-1.5">
           <label htmlFor="damage-description" className="block text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-slate-300 mono">
-            {t('damage.description')}
+            {t('damage.description')} <span className="text-red-600">*</span>
           </label>
           <textarea
             id="damage-description"
@@ -300,7 +353,7 @@ export default function ReportDamage() {
         {/* Action Button */}
         <Button
           onClick={assess}
-          disabled={!photo || busy || !ownerPhone.trim()}
+          disabled={photos.length === 0 || busy || !ownerPhone.trim()}
           className="w-full py-3 text-sm font-bold shadow-md cursor-pointer"
         >
           {busy ? (
@@ -381,10 +434,23 @@ export default function ReportDamage() {
               </div>
             </div>
 
+            {perImageVerdicts.length > 1 && (
+              <div className="border-t border-zinc-200/80 pt-3 dark:border-white/[0.08]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mono">
+                  Per-image scores (averaged):
+                </span>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {perImageVerdicts.map((v, i) => (
+                    <span key={i} className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-xs font-mono font-bold dark:border-white/[0.08] dark:bg-[#1a1a1a]">#{i + 1}: {v.damageScore} ({v.damageGrade})</span>
+                  ))}
+                </div>
+                <div className="mt-1 text-[11px] text-slate-500">Final = average of {perImageVerdicts.length} images</div>
+              </div>
+            )}
             {/* Assessment Factors */}
             <div className="border-t border-zinc-200/80 pt-3 dark:border-white/[0.08]">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mono">
-                ResNet-50 Structural Observations:
+                AI Structural Observations (averaged):
               </span>
               <ul className="mt-1.5 list-inside list-disc space-y-1 text-xs text-zinc-500 dark:text-slate-300">
                 {verdict.factors.map((f, i) => (

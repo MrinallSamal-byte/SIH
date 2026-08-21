@@ -1,7 +1,7 @@
 # 🛡️ AapdaSetu (आपदासेतु / આપદાસେતુ / ଆପଦାସେତୁ / आपदाসেতু)
 
 > **The Ultimate Disaster Response, AI Triage, and Multi-Agency Incident Command Ecosystem.**  
-> *Architected with React 19, TypeScript, Vite 6, Tailwind CSS, Leaflet.js GIS, Realtime Event Bus, Prisma 6 PostgreSQL, FastAPI AI Microservices, and Offline BLE Mesh Networking.*
+> *Architected with React 19, TypeScript, Vite 6, Tailwind CSS, Leaflet.js GIS + OSRM Road Routing, Realtime Event Bus, Prisma 6 PostgreSQL, FastAPI AI Microservices, and Offline-First PWA.*
 
 [![Initiative](https://img.shields.io/badge/Initiative-SIH%20Disaster%20Management-orange.svg)](https://github.com/MrinallSamal-byte/SIH)
 [![Web Architecture](https://img.shields.io/badge/Architecture-React%2019%20%2B%20TypeScript%20%2B%20FastAPI%20AI-blue.svg)](https://github.com/MrinallSamal-byte/SIH)
@@ -13,7 +13,7 @@
 ## 📑 Table of Contents
 1. [🌐 Live Deployments & Repositories](#-live-deployments--repositories)
 2. [📌 Executive Overview](#-executive-overview)
-3. [🏗️ Master System Architecture & Flow Diagrams](#️-master-system-architecture--flow-diagrams)
+3. [🏗️ Master System Architecture & Complete User Journey](#️-master-system-architecture--complete-user-journey)
 4. [📱 Comprehensive Citizen (User) Features](#-comprehensive-citizen-user-features)
 5. [🚨 Comprehensive Command Center (Admin) Features](#-comprehensive-command-center-admin-features)
 6. [🧑‍🚒 Comprehensive Field Responder (Volunteer) Features](#-comprehensive-field-responder-volunteer-features)
@@ -30,104 +30,142 @@
 ## 🌐 Live Deployments & Repositories
 
 - **Live Web Application:** [https://sih-ochre-xi.vercel.app/](https://sih-ochre-xi.vercel.app/)
-- **Local Dev Server:** `http://localhost:5173/`
+- **Local Dev Server:** `http://localhost:5173/` (Vite) + `http://localhost:4000` (Express) + `http://localhost:8080` (FastAPI AI)
+- **One-Command Dev:** `npm run dev` (concurrently runs frontend + backend)
 - **GitHub Repository:** [https://github.com/MrinallSamal-byte/SIH](https://github.com/MrinallSamal-byte/SIH)
 
 ---
 
 ## 📌 Executive Overview
 
-During major natural catastrophes (cyclones, flash floods, earthquakes, industrial explosions), public response systems break down due to telecom network congestion, server crashes, lack of geo-spatial coordination, illiteracy, and language barriers.
+During cyclones, flash floods, earthquakes, and industrial explosions, public helplines collapse under telecom congestion, servers crash, and citizens face language barriers and fake bot replies.
 
-**AapdaSetu (आपदासेतु)** solves the critical "last-mile" disaster response gap by combining:
-1. **Zero-Authentication Citizen Portal:** Immediate, frictionless life-saving tools (1-Tap SOS, dynamic hazard pathfinding, voice/video incident reporting, shelter locator, missing persons registry, and anti-fraud property damage claims).
-2. **AapdaMitra AI Crisis Lifeline:** 24/7 Psychological First Aid (PFA) and disaster survival assistant with interactive box breathing, grounding protocols, and automatic one-tap emergency callback dispatch.
-3. **Multi-Agency Incident Command Center:** Real-time WebSocket command dashboard with audible siren alerts for `RED` critical incidents, skill-matched responder auto-dispatch, shelter resource tracking, and multi-channel broadcast messaging.
-4. **Volunteer Responder Portal:** Mobile-optimized field triage dashboard with turn-by-turn GPS navigation to incident sites and milestone updating.
-5. **FastAPI AI Microservices:** Automated multi-factor urgency scoring, Sentinel-1 SAR satellite radar flood mapping, and computer vision damage grading.
-6. **Decentralized BLE Mesh App (`bitchat-android`):** Offline peer-to-peer mesh messaging for complete cellular blackout scenarios.
+**AapdaSetu** solves the last-mile gap with:
+1. **Zero-Auth Citizen Portal:** 1-Tap Emergency SOS (`SOS.tsx` + `useGeoLocation` high-accuracy watch), evidence-rich reporting (`ReportForm.tsx` with `LandmarkPicker` + `compressImage` + voice/video), live shelter/safe-route GIS, missing registry, SDRF damage claims (1–5 images averaged), safety check-ins, and alerts.
+2. **AapdaMitra AI Lifeline:** `PfaChat.tsx` + global `ChatWidget.tsx` — 24/7 PFA with 4-4-4 Box Breathing, trauma grounding, scope-limited to disaster/website topics (blocks `reverse string`/`py code`), OpenRouter 7-model fallback → `mocks.aiPfaChat` with trapped/collapse priority.
+3. **Command Center:** 11 views under `AdminLayout` (`/admin`) — Live SOS siren (`LiveSOS.tsx` 880/440Hz), incident queue (`Reports.tsx`), GIS map, shelters, damage approvals, volunteers, agencies, broadcast (`Communications.tsx`), analytics (`Analytics.tsx`), audit logs, settings.
+4. **Volunteer Portal:** `VolunteerLayout` (`/volunteer`) — Dashboard, AssignedTasks (strict `assignedVolunteerId` filter, no auto-impersonation), CheckIn with GPS.
+5. **AI Engine:** `src/api/ai.ts` + `apps/ai-engine/app/*.py` — triage scoring, flood GeoJSON, ResNet-50 damage grading (now ensemble avg).
+6. **Real Infrastructure:** `LeafletMap.tsx` + `lib/routing.ts` (`fetchOsrmRoute` via `router.project-osrm.org` with `foot`/`driving`, India bounds `[6,68]-[37.5,97.5]`), OSM/OpenTopoMap tiles, `ScaleControl`.
 
 ---
 
-## 🏗️ Master System Architecture & Flow Diagrams
+## 🏗️ Master System Architecture & Complete User Journey
 
-### 1. Complete Website Workflow & User Journey
+### 1. Complete Website Workflow & User Journey (Actual Implementation)
 
 ```mermaid
-flowchart LR
-    subgraph C1["1. Citizen Portal"]
-        A1["1-Tap SOS / Report"]
-        A2["Safe Routes & PFA"]
+flowchart TD
+    classDef entry fill:#f8fafc,stroke:#0f172a,stroke-width:2px,color:#0f172a;
+    classDef citizen fill:#eff6ff,stroke:#3b82f6,stroke-width:2px,color:#1e3a8a;
+    classDef triage fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#78350f;
+    classDef realtime fill:#eef2ff,stroke:#6366f1,stroke-width:2px,color:#312e81;
+    classDef volunteer fill:#f0fdf4,stroke:#10b981,stroke-width:2px,color:#064e3b;
+    classDef admin fill:#fef2f2,stroke:#ef4444,stroke-width:2px,color:#7f1d1d;
+    classDef pfa fill:#faf5ff,stroke:#a855f7,stroke-width:2px,color:#581c87;
+    classDef storage fill:#fff7ed,stroke:#f97316,stroke-width:1.5px,color:#7c2d12;
+
+    A["🌐 Entry: HashRouter App.tsx<br/>MainLayout.tsx<br/>i18n 4-lang, theme, offline banner,<br/>bulletins listAlerts, bell 160+ alerts"]:::entry
+    A --> B{"User Role / Intent?"}
+    B -->|"Citizen (no login)"| C:::citizen
+    B -->|"Volunteer"| V:::volunteer
+    B -->|"Admin"| AD:::admin
+
+    subgraph Citizen ["📱 CITIZEN — Zero-Auth (/) — src/pages/citizen/*"]
+        C["Home.tsx<br/>Hero + Get Help wizard<br/>Quick Services carousel"]:::citizen
+        C --> C1["🚨 Emergency SOS (/sos)<br/>SOS.tsx<br/>inputs: phone*, type, name, landmark<br/>hooks: useGeoLocation (watchPosition<br/>highAccuracy, isFallback, visibility pause)<br/>helpers: getHighPrecisionPosition,<br/>reverseGeocode, generateEmergencySms<br/>offline: localStorage aapdasetu_pending_sos<br/>early-return, no fake queued"]:::citizen
+        C --> C2["📋 Report Incident (/report)<br/>ReportForm.tsx<br/>LandmarkPicker (MapContainer India maxBounds)<br/>Media: Upload 3 max 5MB + MediaRecorder<br/>voice 30s (audioStreamRef)<br/>GPS: isFallback hidden, locateHighAccuracy<br/>validation: type*, phone 10d, description*"]:::citizen
+        C --> C3["🏕️ Shelters (/shelters)<br/>ShelterFinder.tsx<br/>useRealtime(listShelters,5000)<br/>Haversine sort, facilities filter<br/>260+280 BBSR dummy shelters<br/>markers stable id, no || fallback"]:::citizen
+        C --> C4["🧭 Safe Routes (/safe-routes)<br/>SafeRoutes.tsx<br/>aiSatelliteFloodMap(center,radius30)<br/>lib/routing.ts fetchOsrmRoute (OSRM foot/driving)<br/>Polygon MultiPolygon handling,<br/>LeafletMap IndiaBounds OSM/Topo"]:::citizen
+        C --> C5["👥 Missing (/missing-persons)<br/>photo* age* gender* lastSeen* phone*<br/>compressImage, maskPhone"]:::citizen
+        C --> C6["🛡️ Safety Check-in<br/>SafetyCheckin.tsx<br/>fullName* phone* locationName*<br/>maskPhone, slice 100/200/500"]:::citizen
+        C --> C7["🏚️ Damage Claim (/report-damage)<br/>1-5 images, per-image aiDamageAssessment<br/>avgScore/avgComp/avgGrade<br/>createDamageAssessment → realtime"]:::citizen
+        C --> C8["🔍 Track (/track)<br/>ReportTracker.tsx<br/>getReport(trackingId)<br/>useRealtime poll 5s, abortRef<br/>OSRM driving route responder→incident<br/>no Math.random, hasCoords !=null"]:::citizen
+        C --> C9["🤖 PFA Chat (/pfa-chat + ChatWidget)<br/>aiPfaChat → callOpenRouter 7 models<br/>(Nemotron/Gemma/GPT-OSS) 10s abort<br/>scopeLimit blocks reverse/py code<br/>mocks.aiPfaChat trapped/collapse priority<br/>cleanAiOutput, breathing coach"]:::pfa
+        C --> C0["📢 Alerts / Contacts / About<br/>Alerts.tsx useRealtime 8s<br/>About story 3AM call"]:::citizen
     end
 
-    subgraph C2["2. AI Triage Engine"]
-        B1["Multi-Factor Scoring<br/>(RED / YELLOW / GREEN)"]
-        B2["Satellite & Damage Vision"]
+    subgraph Triage ["🧠 AI & Logic — src/api/ai.ts, lib/triage.ts"]
+        C1 & C2 --> T1["computeTriage / aiTriage<br/>POST /ai/triage<br/>W_type (Earthquake +25 etc)<br/>W_nlp multi-lang trapped/drown/bleed<br/>W_demo child/senior/pregnant<br/>→ score 1-100 → RED/YELLOW/GREEN"]:::triage
+        C7 --> T2["aiDamageAssessment per image<br/>POST /ai/damage-assessment<br/>Grade DESTROYED/MAJOR/MINOR<br/>Score, confidence, compensation<br/>→ avg across 5 images"]:::triage
+        C4 --> T3["aiSatelliteFloodMap<br/>POST /ai/satelliteflood-map<br/>center+radius vs district<br/>GeoJSON Polygon/MultiPolygon"]:::triage
+        C9 --> T4["callOpenRouter<br/>system: AAPDAMITRA_PROMPT<br/>history -6 cleanAiOutput<br/>for model in 7 with 10s abort<br/>isReasoningContaminated check<br/>→ fallback mocks.aiPfaChat"]:::pfa
     end
 
-    subgraph C3["3. Command Center"]
-        C_Admin["Live Siren Alert &<br/>Smart Auto-Dispatch"]
+    subgraph Store ["💾 Client Store & Transport"]
+        T1 & T2 & T3 & T4 --> S1["api/client.ts<br/>fetchWithTimeout 6s + 3 retries backoff<br/>withMockFallback: only 5xx/TypeError/Abort<br/>auth: admin header only /admin<br/>config trailing slash strip"]:::storage
+        S1 --> S2["mocks.ts v6<br/>1500 reports, 270 shelters (10 BBSR safes),<br/>520 volunteers, 160 alerts<br/>localStorage keys:<br/>aapdasetu_mock_*_v6,<br/>aapdasetu_tracked_reports,<br/>aapdasetu_last_coords"]:::storage
+        S1 --> S3["realtimeEventBus.ts<br/>emitRealtimeUpdate / subscribeRealtimeUpdates<br/>BroadcastChannel + visibility"]:::realtime
+        S1 --> S4["useRealtime.ts<br/>poll intervalMs (5s) + bus<br/>hidden pause, abort race"]:::realtime
     end
 
-    subgraph C4["4. Field Responder"]
-        D1["Turn-by-Turn GPS"]
-        D2["Rescue & Status Update"]
+    subgraph AdminFlow ["🚨 ADMIN — /admin — AdminLayout guard useIsAdminAuthed (storage event)"]
+        S3 & S4 --> AD1["Overview.tsx KPIs<br/>Live SOS siren Web Audio 880/440Hz<br/>useRealtime"]:::admin
+        AD1 --> AD2["Reports.tsx<br/>listReports (type/priority/status/q)<br/>client pagination 20, haversine falsy fix<br/>rankedVolunteers skill+distance"]:::admin
+        AD2 --> AD3["Shelters.tsx / Volunteers.tsx<br/>create/update with isFallback guard<br/>closed→open fix"]:::admin
+        S3 --> AD4["Communications.tsx broadcast<br/>SMS/WhatsApp/Web, audit_logs"]:::admin
+        T2 --> AD5["DamageAssessment.tsx<br/>avg scores table, centroid fix,<br/>pagination 620 rows"]:::admin
+        AD1 --> AD6["Analytics.tsx<br/>XAxis dataKey date fix<br/>hardcoded 14.2m"]:::admin
     end
 
-    A1 --> B1
-    A2 --> B2
-    B1 --> C_Admin
-    B2 --> C_Admin
-    C_Admin --> D1
-    D1 --> D2
-    D2 -.->|Live Milestone Sync| A1
+    subgraph VolunteerFlow ["🧑‍🚒 VOLUNTEER — /volunteer — VolunteerLayout"]
+        S3 --> V1["Dashboard.tsx<br/>NO auto vols[0], empty if no session<br/>login prompt"]:::volunteer
+        V1 --> V2["AssignedTasks.tsx<br/>strict assignedVolunteerId === id<br/>empty if no session (no disclosure)<br/>updateReport status"]:::volunteer
+        V1 --> V3["CheckIn.tsx<br/>no vols[0] fallback<br/>catch null"]:::volunteer
+    end
 
-    classDef default fill:#ffffff,stroke:#475569,stroke-width:1.5px,color:#0f172a;
-    classDef citizen fill:#eff6ff,stroke:#3b82f6,stroke-width:1.5px,color:#1e3a8a;
-    classDef ai fill:#fef3c7,stroke:#f59e0b,stroke-width:1.5px,color:#78350f;
-    classDef admin fill:#fef2f2,stroke:#ef4444,stroke-width:1.5px,color:#7f1d1d;
-    classDef volunteer fill:#f0fdf4,stroke:#10b981,stroke-width:1.5px,color:#064e3b;
+    V2 -->|"status resolved"| S3
+    AD2 -->|"assignVolunteer(report, volunteer)"| V2
+    C8 -.->|"poll getReport + OSRM route"| S3
 
-    class A1,A2 citizen;
-    class B1,B2 ai;
-    class C_Admin admin;
-    class D1,D2 volunteer;
+    S2 -.->|"offline queue"| S1
 ```
 
----
+### 2. Detailed Route Map (Actual Files)
 
-### 2. Global Multi-Tier System Architecture
+| Path | File | Auth | Key Logic |
+|------|------|------|-----------|
+| `/` | `Home.tsx` | public | Hero, Get Help wizard removed, 5 service cards, carousel `scrollBy 280` |
+| `/sos` | `SOS.tsx` | public | `useGeoLocation` `isFallback` → `generateEmergencySms` without coords if fallback, `navigator.onLine` early-return queued, `aiTriage` after, `copyTrackingId` |
+| `/report` | `ReportForm.tsx` | public | `LandmarkPicker` India bounds, `fileToDataUrl` 5MB, `MediaRecorder` + `audioStreamRef`, `report.gpsTitle*`, `report.descLabel*` required, `reverseGeocode` |
+| `/track?id=SOS-xxx` | `ReportTracker.tsx` | public | `getReport` + `abortRef`, `hasCoords != null`, `fetchOsrmRoute(responder→incident, driving)` dashed false, `timeAgo` |
+| `/shelters` | `ShelterFinder.tsx` | public | `useRealtime(listShelters,5000)` `Haversine` sort, `typeof lat==='number'` filter, `shel-fallback-${i}` |
+| `/safe-routes` | `SafeRoutes.tsx` | public | `aiSatelliteFloodMap({center,radiusKm:30})` vs district, `polygonPaths` MultiPolygon flatMap, `fetchOsrmRoute` foot/driving, `LeafletMap` India `minZoom5 maxBounds` |
+| `/missing-persons` | `MissingPersons.tsx` | public | `listMissingPersons` cancelled flag, `photo* age*` required, `startsWith https/data:image` check, `compressImage` |
+| `/report-damage` | `ReportDamage.tsx` | public | 1–5 images `onFiles` + `removePhoto`, `perImageVerdicts` avg, `createDamageAssessment` realtime |
+| `/pfa-chat` + widget | `PfaChat.tsx` `ChatWidget.tsx` | public | `aiPfaChat` scope `unrelatedPattern` vs `scopePattern` block, 7 models 10s abort, `cleanAiOutput` strip `* # emoji <think>` |
+| `/admin/*` | `pages/admin/*` | `useIsAdminAuthed` `localStorage` + `storage` event | 11 views, `listReports` pagination, `haversineKm` falsy fix, `XAxis dataKey="date"` |
+| `/volunteer/*` | `pages/volunteer/*` | `useIsVolunteerAuthed` | No `vols[0]` auto-login, empty if no session, `useRealtime` missing (known) |
+| `*` | `App.tsx` `HashRouter` | — | Lazy `Suspense RouteFallback` + `ErrorBoundary` only MainLayout, `vercel.json` rewrite `/(.*)→/index.html` |
+
+### 3. Global Multi-Tier System Architecture
 
 ```mermaid
 graph TB
     subgraph ClientLayer["🌐 CLIENT INTERFACES"]
-        Citizen["📱 Citizen Emergency Portal\n(1-Tap SOS, Reports, Shelters, Routes)"]
-        AIWidget["🤖 AapdaMitra AI Widget\n(Circular Floating Bot, PFA Chat)"]
-        Admin["🚨 Command Center Dashboard\n(Live SOS, GIS Map, Dispatch, Shelters)"]
-        Volunteer["🧑‍🚒 Volunteer Portal\n(Task Queue, Navigation, Check-In)"]
-        MeshApp["📡 BitChat Android App\n(Offline BLE / Wi-Fi Mesh)"]
+        Citizen["📱 Citizen Portal (Zero-Auth)<br/>SOS, Report(India bounds), Shelters(270), Routes(OSRM)"]
+        AIWidget["🤖 AapdaMitra Widget<br/>Bottom 20 right-4 (mobile left vs right fix)<br/>Scope-limited"]
+        Admin["🚨 Command Center<br/>/admin Live SOS siren, 1500 reports"]
+        Volunteer["🧑‍🚒 Volunteer Portal<br/>No auto-impersonation"]
+        MeshApp["📡 BitChat Android<br/>BLE/Wi-Fi Aware"]
     end
-
     subgraph CoreEngineLayer["⚡ CORE LOGIC & EVENT BUS"]
-        PWAEngine["PWA Service Worker & Cache\n(sw.js + IndexedDB Outbox)"]
-        I18nEngine["i18n Multi-Lingual Engine\n(English, Hindi, Bengali, Odia)"]
-        EventBus["Realtime Event Bus & WebSockets\n(pub-sub event distribution)"]
-        TSTriage["TypeScript Triage Engine\n(lib/triage.ts)"]
-        GISRouting["Leaflet GIS Pathfinding\n(Hazard avoidance geometry)"]
+        PWAEngine["PWA sw.js CacheFirst/NetworkFirst<br/>IndexedDB aapdasetu_offline_queue<br/>visibility pause"]
+        I18nEngine["i18n 4-lang EN/HI/BN/OR<br/>dictionaries in lib/i18n.tsx"]
+        EventBus["RealtimeEventBus<br/>emitRealtimeUpdate / subscribe<br/>BroadcastChannel"]
+        TSTriage["lib/triage.ts<br/>P_total = clamp(1,100,30+Wtype+Wnlp+Wdemo+Wgps)"]
+        GISRouting["lib/routing.ts<br/>OSRM router.project-osrm.org<br/>foot/driving, haversineRouteLength"]
     end
-
-    subgraph AIEngineLayer["🧠 PYTHON FASTAPI AI ENGINE"]
-        PyTriage["Explainable Urgency Triage\n(triage.py)"]
-        VisionDamage["Computer Vision Damage Classifier\n(damage_service.py)"]
-        SARMapper["Sentinel-1 SAR Satellite Flood Mapper\n(satellite_flood_mapping.py)"]
-        PFABot["Psychological First Aid AI\n(pfa_chatbot.py)"]
+    subgraph AIEngineLayer["🧠 PYTHON FASTAPI AI (8000→8080)"]
+        PyTriage["triage.py /ai/triage"]
+        VisionDamage["damage_service.py /ai/damage-assessment<br/>pHash X, ensemble avg 5 images"]
+        SARMapper["satellite_flood_mapping.py /ai/satelliteflood-map<br/>Sentinel-1 SAR Otsu → GeoJSON"]
+        PFABot["pfa_chatbot.py /ai/pfa-chat<br/>OpenRouter 7 models fallback"]
     end
-
-    subgraph PersistenceLayer["🗄️ DATABASE & STORAGE"]
-        DB[(PostgreSQL 16 Database\nPrisma 6 ORM)]
-        Tables["Incidents, Shelters, Volunteers, Agencies,\nDamageClaims, MissingPersons, Checkins, Alerts, AuditLogs"]
+    subgraph PersistenceLayer["🗄️ STORAGE"]
+        DB[(PostgreSQL 16 Prisma 6<br/>Incident, Shelter, Volunteer, Agency<br/>DamageClaim, MissingPerson, Alert, AuditLog)]
+        LocalStore[(Browser localStorage<br/>aapdasetu_mock_*_v6, tracked_reports,<br/>pending_sos, volunteer_session)]
     end
-
     Citizen --> PWAEngine
     Citizen --> I18nEngine
     Citizen --> TSTriage
@@ -135,99 +173,60 @@ graph TB
     AIWidget --> PFABot
     Admin --> EventBus
     Volunteer --> EventBus
-    
     TSTriage --> EventBus
     EventBus --> Admin
     EventBus --> Volunteer
-    
     VisionDamage --> Admin
     SARMapper --> GISRouting
-    
     EventBus <--> DB
-    Admin <--> DB
-    Volunteer <--> DB
+    EventBus <--> LocalStore
 ```
 
----
-
-### 3. End-to-End Emergency SOS & Multi-Agency Dispatch Flow
+### 4. End-to-End Emergency SOS & Dispatch (Sequence — Real Code)
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Victim as 🆘 Citizen in Distress
-    participant App as 📱 Citizen Web App
-    participant Triage as 🧠 AI Triage Engine
-    participant EventBus as ⚡ Realtime Event Bus
-    actor Admin as 🚨 Command Center Operator
-    actor Volunteer as 🧑‍🚒 Field Responder
+    actor Victim as 🆘 Citizen
+    participant App as 📱 SOS.tsx
+    participant Geo as 🛰️ useGeoLocation<br/>watchPosition highAccuracy
+    participant Loc as 📍 helpers<br/>reverseGeocode / getHighPrecision
+    participant Triage as 🧠 aiTriage<br/>POST /ai/triage
+    participant Client as 🌐 api/client<br/>fetchWithTimeout 6s retry3
+    participant Bus as ⚡ realtimeEventBus
+    actor Admin as 🚨 Admin LiveSOS
+    actor Vol as 🧑‍🚒 Volunteer
 
-    Victim->>App: 1. Click 1-Tap SOS / Submit Report Form
-    App->>App: 2. Auto-fetch GPS Coordinates & reverse geocode
-    App->>Triage: 3. Compute multi-factor urgency score
-    Triage-->>App: 4. Returns { score: 88, label: 'RED', factors: [...] }
-    App->>EventBus: 5. Broadcast IncidentRegistered event with Tracking ID (e.g. SOS-7K2X9)
-    EventBus-->>Admin: 6. Real-time audible siren + Live SOS stream highlight
-    EventBus-->>Victim: 7. Instant Tracking ID issued with direct live tracker link
-    Admin->>EventBus: 8. Assign skill-matched nearest volunteer (e.g. Swimmer / Medical)
-    EventBus-->>Volunteer: 9. Push dispatch notification with GPS coordinates & route
-    Volunteer->>App: 10. Update status to 'On Scene' -> 'Evacuated'
-    EventBus-->>Victim: 11. Live tracker reflects rescue progress in real time
-```
-
----
-
-### 4. Multi-Factor AI Urgency Triage Pipeline
-
-```mermaid
-flowchart TD
-    InputPayload["Incident Payload:<br/>Category, Description, Demographics, Landmark, Media Transcripts"] --> BaseScore["Initialize Base Priority: S = 30 Points"]
-
-    BaseScore --> TypeWeight{"Stage 1: Disaster Category Weight (W_type)"}
-    TypeWeight -->|Earthquake / Building Collapse| W1["+25 Points"]
-    TypeWeight -->|Fire / Explosion| W2["+20 Points"]
-    TypeWeight -->|Flood / Water Rising| W3["+18 Points"]
-    TypeWeight -->|Critical Medical / Cardiac| W4["+18 Points"]
-    TypeWeight -->|Missing Person Search| W5["+15 Points"]
-    TypeWeight -->|Transit / Road Accident| W6["+12 Points"]
-    TypeWeight -->|Other / General| W7["+5 Points"]
-
-    W1 --> NLPMatrix
-    W2 --> NLPMatrix
-    W3 --> NLPMatrix
-    W4 --> NLPMatrix
-    W5 --> NLPMatrix
-    W6 --> NLPMatrix
-    W7 --> NLPMatrix
-
-    NLPMatrix{"Stage 2: Multi-Lingual NLP Keyword Matrix (W_nlp)"}
-
-    subgraph Keywords["Multi-Lingual Keyword Scanning (EN / HI / BN / OR)"]
-        K1["Critical: drowning, trapped, submerged, roof collapsed"] -->|"+30 Pts Each (Max +40)"| Acc["Accumulator"]
-        K2["Severe: severe bleeding, infant, cardiac, explosion"] -->|"+25 Pts Each"| Acc
-        K3["Moderate: water rising fast, unconscious, snakebite"] -->|"+20 Pts Each"| Acc
-        K4["Vulnerable: elderly, senior citizen, diabetic, asthma"] -->|"+15 Pts Each"| Acc
+    Victim->>App: click Emergency SOS (phone* + type)
+    App->>Geo: coords, isFallback, source
+    alt isFallback
+        App->>App: toast "Location unavailable → Correct Area modal"
+        App-->>Victim: show LandmarkPicker India maxBounds
+    else gps granted
+        Geo-->>App: {lat:20.27,lng:85.83,accuracy:5}
     end
-
-    NLPMatrix --> Keywords
-    Acc --> DemoCheck{"Stage 3: Demographic Multipliers (W_demo)"}
-
-    DemoCheck -->|Child 12 yrs or younger| Age1["+20 to +25 Points"]
-    DemoCheck -->|Senior Citizen 60 yrs or older| Age2["+20 Points"]
-    DemoCheck -->|Pregnancy / Chronic Illness| Med["+20 to +30 Points"]
-
-    Age1 --> Normalizer
-    Age2 --> Normalizer
-    Med --> Normalizer
-    DemoCheck --> Normalizer
-
-    Normalizer["Score Normalizer: Clamp between 1 and 100"]
-
-    Normalizer --> BadgeClass{"Stage 4: Priority Badge Classification"}
-    BadgeClass -->|Score 80 to 100| RED["RED / CRITICAL ALERT<br/>- Command Center Siren Active<br/>- Immediate Boat / Heli / Ambulance Dispatch"]
-    BadgeClass -->|Score 50 to 79| YELLOW["YELLOW / URGENT<br/>- High Priority Dispatch Queue<br/>- Field Volunteer Mobilization"]
-    BadgeClass -->|Score below 50| GREEN["GREEN / ADVISORY<br/>- Standard Queue<br/>- Scheduled Relief Supply Distribution"]
+    App->>Loc: reverseGeocode → address
+    alt offline !navigator.onLine
+        App->>App: localStorage aapdasetu_pending_sos, toast queued, return (no aiTriage/createReport)
+    else online
+        App->>Triage: aiTriage(input) → {score,label}
+        App->>Client: createReport(input) → {trackingId SOS-xxxx, priorityLabel}
+        Note over Client: withMockFallback only 5xx/TypeError/Abort mocks, 4xx throws
+        Client->>Bus: emitRealtimeUpdate report_created
+        Bus-->>Admin: LiveSOS audible 880/440Hz siren if RED
+        Bus-->>Victim: Confirmation + PriorityBadge + copy TrackingID
+        Admin->>Bus: assignVolunteer(report, nearest skill+distance haversine)
+        Bus-->>Vol: AssignedTasks (strict filter)
+        Vol->>Client: updateReport resolved
+        Bus-->>Victim: /track live poll 5s + OSRM route responder→incident
+    end
 ```
+
+### 5. AI Triage, Routing & Damage Pipelines
+
+- **Triage:** `lib/triage.ts` `computeTriage` — base 30 + W_type (Earthquake +25, Fire +20, Flood/Medical +18, Missing +15, Accident +12, Other +5) + W_nlp (trapped/drown +30, bleed/cardiac +25 etc capped 40) + W_demo (child ≤12 +25, senior ≥60 +20, pregnancy +30) + GPS bonus 5 → clamp 1-100 → RED≥80 YELLOW≥50 else GREEN.
+- **Routing:** `lib/routing.ts` `fetchOsrmRoute(from,to,waypoints, foot|driving)` → `https://router.project-osrm.org/route/v1/${profile}/${lng,lat;...}?overview=full&geometries=geojson` 8s abort → points + distanceKm + durationMin. SafeRoutes uses driving for fastest, foot with flood waypoints (0.003° offset vertex) → average.
+- **Damage:** Citizen 1–5 images `compressImage 800 0.75` → `Promise.all(aiDamageAssessment per image)` → avgScore/avgComp/avgConf/grade majority → `createDamageAssessment` → `damageStore` + `emitRealtimeUpdate damage_assessed` → Admin `/admin/damage-assessment` realtime.
 
 ---
 

@@ -19,16 +19,15 @@ export default function Dashboard() {
       setAllVolunteers(vols)
 
       const savedId = localStorage.getItem('aapdasetu_volunteer_session')
-      const matched = vols.find((v) => v.id === savedId) || vols[0] || null
+      const matched = vols.find((v) => v.id === savedId) || null
       setVolunteer(matched)
 
-      if (matched) {
-        localStorage.setItem('aapdasetu_volunteer_session', matched.id)
-      }
-
-      // Load tasks
       const reports = await listReports({ status: 'in_progress' })
-      setActiveTasks(reports.filter((r) => !matched || r.assignedVolunteerId === matched.id))
+      if (!matched) {
+        setActiveTasks([])
+      } else {
+        setActiveTasks(reports.filter((r) => r.assignedVolunteerId === matched.id))
+      }
     } catch {
       toast('Failed to load volunteer data', 'error')
     } finally {
@@ -66,6 +65,13 @@ export default function Dashboard() {
   }
 
   if (loading) return <Loader />
+  if (!volunteer) {
+    return (
+      <div className="rounded-2xl border border-amber-300 bg-amber-50 p-6 text-center text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+        No active volunteer session. Please <Link to="/volunteer/login" className="font-bold underline">log in</Link> to view your dashboard.
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

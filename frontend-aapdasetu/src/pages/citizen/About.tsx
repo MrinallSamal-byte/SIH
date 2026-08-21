@@ -46,6 +46,24 @@ export default function About() {
         </p>
       </div>
 
+      {/* Why we built it — short story */}
+      <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-6 shadow-sm dark:border-amber-900/30 dark:from-amber-950/20 dark:to-[#1a1a1a] sm:p-8">
+        <h2 className="mb-3 text-xl font-bold text-zinc-800 dark:text-slate-200">
+          Why we built AapdaSetu — the 3 AM call that never connects
+        </h2>
+        <div className="space-y-3 leading-relaxed text-sm text-zinc-600 dark:text-slate-300">
+          <p>
+            In a real flood at 3 AM, you dial the official helpline. It rings. Then an IVR. Then a bot says “press 1”. Then it cuts. Or the line is busy for hours. We’ve been there — and so have thousands of families.
+          </p>
+          <p>
+            We built AapdaSetu to skip that queue. No login, no forms, no bot loop. One tap sends your <span className="font-bold text-zinc-800 dark:text-white">live GPS, phone and ground reality</span> straight to a government officer’s command dashboard — with precision down to your lane, not just your district.
+          </p>
+          <p className="font-medium text-zinc-800 dark:text-slate-100">
+            It’s not a chatbot answering you. It’s a real official who can see you on the map, call you back, and dispatch the nearest NDRF/SDRF team in seconds.
+          </p>
+        </div>
+      </div>
+
       {/* Features */}
       <div className="space-y-6">
         <h2 className="text-center text-2xl font-bold tracking-tight text-zinc-800 dark:text-slate-300 sm:text-3xl">

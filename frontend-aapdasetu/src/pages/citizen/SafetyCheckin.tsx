@@ -69,16 +69,20 @@ export default function SafetyCheckinPage() {
       toast('Valid phone number is required', 'error')
       return
     }
+    if (!locationName.trim()) {
+      toast('Please enter your current location / shelter (required)', 'error')
+      return
+    }
 
     setPhoneError(null)
     setSending(true)
     try {
       const input: Omit<SafetyCheckin, 'id' | 'createdAt'> = {
-        fullName: fullName.trim(),
-        phone: phone.trim(),
+        fullName: fullName.trim().slice(0, 100),
+        phone: phone.replace(/\D/g, ''),
         status,
-        locationName: locationName.trim() || undefined,
-        notes: notes.trim() || undefined,
+        locationName: locationName.trim().slice(0, 200) || undefined,
+        notes: notes.trim().slice(0, 500) || undefined,
         latitude: coords?.latitude,
         longitude: coords?.longitude,
       }
@@ -193,6 +197,7 @@ export default function SafetyCheckinPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
+                  maxLength={100}
                   placeholder="e.g. Ramesh Chandra Sen"
                 />
               </Field>
@@ -215,11 +220,12 @@ export default function SafetyCheckinPage() {
                 )}
               </div>
 
-              <Field label={t('checkin.locationName')}>
+              <Field label={`${t('checkin.locationName')} *`}>
                 <Input
                   value={locationName}
                   onChange={(e) => setLocationName(e.target.value)}
                   placeholder="e.g. Salt Lake Sector V Shelter or At Home"
+                  required
                 />
               </Field>
 
@@ -236,7 +242,7 @@ export default function SafetyCheckinPage() {
                 className="w-full py-3 font-bold"
                 variant={status === 'safe' ? 'primary' : 'danger'}
                 onClick={submit}
-                disabled={sending || !fullName.trim() || !phone.trim()}
+                disabled={sending || !fullName.trim() || !phone.trim() || !locationName.trim()}
               >
                 {sending ? t('common.loading') : t('checkin.submitCheckin')}
               </Button>

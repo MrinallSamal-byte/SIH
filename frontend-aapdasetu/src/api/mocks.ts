@@ -51,7 +51,7 @@ function saveLocal<T>(key: string, val: T): void {
   }
 }
 
-const STORAGE_VERSION = 'v5'
+const STORAGE_VERSION = 'v6'
 const STORAGE_KEY_VERSION = 'aapdasetu_data_version'
 const STORAGE_KEY_REPORTS = `aapdasetu_mock_reports_${STORAGE_VERSION}`
 const STORAGE_KEY_SHELTERS = `aapdasetu_mock_shelters_${STORAGE_VERSION}`
@@ -99,6 +99,14 @@ const DISASTER_SECTORS = [
   { city: 'Bhubaneswar - Kalinga Nagar Sector 4', district: 'Khordha', state: 'Odisha', lat: 20.2934, lng: 85.817 },
   { city: 'Bhubaneswar - Patia Infocity', district: 'Khordha', state: 'Odisha', lat: 20.355, lng: 85.818 },
   { city: 'Bhubaneswar - Rasulgarh Highway', district: 'Khordha', state: 'Odisha', lat: 20.301, lng: 85.865 },
+  { city: 'Bhubaneswar - Sundarpada Housing Board', district: 'Khordha', state: 'Odisha', lat: 20.2371, lng: 85.8114 },
+  { city: 'Bhubaneswar - Old Town Lingaraj', district: 'Khordha', state: 'Odisha', lat: 20.2365, lng: 85.8336 },
+  { city: 'Bhubaneswar - KIIT Patia Campus', district: 'Khordha', state: 'Odisha', lat: 20.3534, lng: 85.8225 },
+  { city: 'Bhubaneswar - Nayapalli Jaydev Vihar', district: 'Khordha', state: 'Odisha', lat: 20.2969, lng: 85.8123 },
+  { city: 'Bhubaneswar - Chandrasekharpur', district: 'Khordha', state: 'Odisha', lat: 20.3165, lng: 85.8182 },
+  { city: 'Bhubaneswar - Saheed Nagar', district: 'Khordha', state: 'Odisha', lat: 20.2706, lng: 85.8334 },
+  { city: 'Bhubaneswar - Khandagiri Udayagiri', district: 'Khordha', state: 'Odisha', lat: 20.261, lng: 85.78 },
+  { city: 'Bhubaneswar - Mancheswar Industrial', district: 'Khordha', state: 'Odisha', lat: 20.325, lng: 85.845 },
   { city: 'Cuttack - Badambadi & Mahanadi', district: 'Cuttack', state: 'Odisha', lat: 20.4625, lng: 85.883 },
   { city: 'Cuttack - CDA Sector 6', district: 'Cuttack', state: 'Odisha', lat: 20.485, lng: 85.845 },
   { city: 'Puri - Coastal Relief & Grand Road', district: 'Puri', state: 'Odisha', lat: 19.8135, lng: 85.8312 },
@@ -410,6 +418,32 @@ function generate250Shelters(): Shelter[] {
       status,
     })
   }
+  const bhubaneswarSafes: Array<{ name: string; address: string; lat: number; lng: number; capacity: number; occupancy: number; facilities: string[]; phone: string }> = [
+    { name: 'Bhubaneswar - Sundarpada Safe Shelter — Community Relief Center', address: 'Housing Board Colony, Sundarpada, Bhubaneswar, Khordha, Odisha - 751002', lat: 20.2371, lng: 85.8114, capacity: 800, occupancy: 210, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-674-23570101' },
+    { name: 'Bhubaneswar - Patia KIIT Safe Shelter — College Campus Evacuation Wing', address: 'KIIT Campus, Patia, Bhubaneswar - 751024', lat: 20.3534, lng: 85.8225, capacity: 1200, occupancy: 340, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-674-23570102' },
+    { name: 'Bhubaneswar - Nayapalli Safe Shelter — Municipal Town Hall Disaster Hub', address: 'Jaydev Vihar, Nayapalli, Bhubaneswar - 751015', lat: 20.2969, lng: 85.8123, capacity: 650, occupancy: 180, facilities: ['food', 'water', 'medical_station'], phone: '+91-674-23570103' },
+    { name: 'Bhubaneswar - Old Town Lingaraj Safe Shelter — Multi-Purpose Cyclone Shelter', address: 'Lingaraj Temple Area, Old Town, Bhubaneswar - 751002', lat: 20.2365, lng: 85.8336, capacity: 500, occupancy: 95, facilities: ['food', 'water', 'medical_station'], phone: '+91-674-23570104' },
+    { name: 'Bhubaneswar - Chandrasekharpur Safe Shelter — Higher Secondary Model School', address: 'Chandrasekharpur, Near Infocity, Bhubaneswar - 751016', lat: 20.3165, lng: 85.8182, capacity: 900, occupancy: 260, facilities: ['food', 'water', 'power_generator'], phone: '+91-674-23570105' },
+    { name: 'Bhubaneswar - Saheed Nagar Safe Shelter — Indoor Sports Stadium Camp', address: 'Saheed Nagar, Bhubaneswar - 751007', lat: 20.2706, lng: 85.8334, capacity: 700, occupancy: 150, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-674-23570106' },
+    { name: 'Bhubaneswar - Khandagiri Safe Shelter — Youth Hostel & Sports Complex', address: 'Khandagiri Hill Road, Bhubaneswar - 751030', lat: 20.261, lng: 85.78, capacity: 550, occupancy: 120, facilities: ['food', 'water', 'medical_station'], phone: '+91-674-23570107' },
+    { name: 'Bhubaneswar - Mancheswar Safe Shelter — Sub-Divisional Hospital Relief Ward', address: 'Mancheswar Industrial Estate, Bhubaneswar - 751017', lat: 20.325, lng: 85.845, capacity: 600, occupancy: 200, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-674-23570108' },
+    { name: 'Bhubaneswar - Rasulgarh Safe Shelter — Community Relief Center', address: 'Rasulgarh Highway, Bhubaneswar - 751010', lat: 20.301, lng: 85.865, capacity: 750, occupancy: 310, facilities: ['food', 'water', 'medical_station'], phone: '+91-674-23570109' },
+    { name: 'Bhubaneswar - Kalinga Nagar Safe Shelter — Municipal Town Hall Disaster Hub', address: 'Kalinga Nagar, Sector 4, Bhubaneswar - 751003', lat: 20.2934, lng: 85.817, capacity: 850, occupancy: 275, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-674-23570110' },
+  ]
+  bhubaneswarSafes.forEach((s, idx) => {
+    list.push({
+      id: `shel-bbsr-${(idx + 1).toString().padStart(2, '0')}`,
+      name: s.name,
+      address: s.address,
+      latitude: s.lat,
+      longitude: s.lng,
+      capacity: s.capacity,
+      occupancy: s.occupancy,
+      facilities: s.facilities,
+      contactPhone: s.phone,
+      status: 'open',
+    })
+  })
   return list
 }
 
@@ -1132,6 +1166,16 @@ export const mocks = {
     let dangerLevel: 'CRITICAL' | 'MODERATE' | 'LOW' = 'LOW'
     let exerciseType: string | undefined = undefined
 
+    const scopePattern = /\b(flood|bleed|cut|drown|sinking|cardiac|heart|snake|burn|fracture|chok|help|rescue|shelter|track|sos|report|aapdasetu|emergency|danger|pain|hurt|wound|panic|water|food|medicine|hospital|ambulance|fire|earthquake|collapse|trapped|missing|damage|helpline|112|108)\b/i
+    const unrelatedPattern = /\b(reverse|py\s*code|python|java\s*code|javascript|programming|algorithm|leetcode|homework|essay|poem|joke|song|movie|game|translate|write\s*code|give\s*code|code\s*snippet|reverse\s*string)\b/i
+    if (unrelatedPattern.test(lower) && !scopePattern.test(lower)) {
+      if (isHindi) reply = 'मैं केवल आपदा, आपातकाल और AapdaSetu वेबसाइट से संबंधित सहायता दे सकता हूँ। कृपया बाढ़, चोट, आश्रय या ट्रैकिंग के बारे में पूछें।'
+      else if (isBengali) reply = 'আমি কেবল দুর্যোগ, জরুরি এবং AapdaSetu সম্পর্কিত সহায়তা দিতে পারি। বন্যা, আহত, আশ্রয় বা ট্র্যাকিং সম্পর্কে জিজ্ঞাসা করুন।'
+      else if (isOdia) reply = 'ମୁଁ କେବଳ ବିପର୍ଯ୍ୟୟ ଏବଂ AapdaSetu ସମ୍ବନ୍ଧୀୟ ସହାୟତା ଦେଇପାରେ। ବନ୍ୟା, ଆହତ, ଆଶ୍ରୟ ବିଷୟରେ ପଚାରନ୍ତୁ।'
+      else reply = 'I can only help with disaster, emergency, and AapdaSetu website topics (SOS, Report, Shelter, Track, Medical guidance). Please ask about flood, injury, shelter, or tracking. Example: "water entering house" or "severe bleeding".'
+      return { reply, exerciseType, isCritical: false, dangerLevel: 'LOW', helpline: undefined, safetyChecklist: ['National Emergency: 112 | Ambulance: 108'] }
+    }
+
     // 1. Drowning / Water Rescue / Sinking / Swallowed Water
     if (/\b(drowning|drown|sinking|swimming|swept away|deep water|current pulling|water in lungs|पानी में डूब|ডুব|ବୁଡ଼ିବା)\b/i.test(lower)) {
       isCritical = true
@@ -1212,7 +1256,21 @@ export const mocks = {
         reply = '1. Deliver 5 firm back blows between shoulder blades with heel of hand. 2. If object is not cleared, perform 5 quick abdominal thrusts (Heimlich Maneuver) inwards and upwards above navel. Alternate 5 back blows + 5 thrusts until airway clears.'
       }
     }
-    // 8. Flood / Rising Water / Roof Trapped / Submerged
+    // 8. TRAPPED UNDER DEBRIS / COLLAPSED WALL — PRIORITY BEFORE GENERIC HELP
+    else if (/\b(trapped|collapse|collapsed|debris|buried|stuck.*wall|wall.*collapse|under.*wall|under.*debris|concrete.*trapped|trapped.*wall|फंसा|मलबा|धंसना|আটকে|ধ্বংসস্তূপ|ଫସି|ଭୁଶୁଡ଼ି)\b/i.test(lower)) {
+      isCritical = true
+      dangerLevel = 'CRITICAL'
+      if (isHindi) {
+        reply = '1. बिल्कुल न हिलें — धूल से बचने के लिए नाक-मुंह को कपड़े से ढकें। 2. जोर से चिल्लाने के बजाय पास की पाइप/दीवार को थपथपाएं या टॉर्च/फोन की लाइट से सिग्नल दें। 3. धीरे-धीरे सांस लें, ऊर्जा बचाएं, पानी न हो तो मुंह नम रखें। तुरंत 112 पर कॉल करें या SOS भेजें।'
+      } else if (isBengali) {
+        reply = '১. নড়াচড়া করবেন না — ধুলো এড়াতে নাক-মুখ কাপড়ে ঢাকুন। ২. চিৎকার না করে পাইপ/দেয়ালে টোকা দিন, টর্চ/ফোনের আলো দিয়ে সংকেত দিন। ৩. ধীরে শ্বাস নিন, শক্তি বাঁচান। অবিলম্বে ১১২-এ কল করুন।'
+      } else if (isOdia) {
+        reply = '୧. ହଲଚଲ କରନ୍ତୁ ନାହିଁ — ଧୂଳିରୁ ନାକ-ମୁହଁ ଘୋଡାନ୍ତୁ। ୨. ଚିତ୍କାର ବଦଳରେ ପାଇପ୍/କାନ୍ଥରେ ବାଡ଼େଇ ଶବ୍ଦ କରନ୍ତୁ। ୩. ଧୀରେ ନିଶ୍ୱାସ ନିଅନ୍ତୁ। ତୁରନ୍ତ ୧୧୨ କୁ କଲ୍ କରନ୍ତୁ।'
+      } else {
+        reply = '1. DO NOT MOVE — cover nose/mouth with cloth to avoid dust. 2. Do NOT shout loudly (save energy); TAP on nearby pipe/wall, use flashlight/phone light to signal rescuers. 3. Breathe slowly, stay still, conserve energy. Call 112 or trigger 1-Tap SOS with GPS immediately.'
+      }
+    }
+    // 9. Flood / Rising Water / Roof Trapped / Submerged
     else if (/\b(flood|water level|submerged|sinking|roof|inundat|water inside|बाढ़|पानी भर|ডুব|বন্যা|ବନ୍ୟା)\b/i.test(lower)) {
       isCritical = true
       dangerLevel = 'CRITICAL'
@@ -1222,7 +1280,7 @@ export const mocks = {
         reply = '1. Move immediately to highest available floor or reinforced rooftop. 2. Disconnect main electrical breaker and LPG cylinder valves. 3. Do NOT walk or drive into moving floodwaters. Dial 112 or trigger 1-Tap SOS for NDRF boat rescue.'
       }
     }
-    // 9. Earthquake / Tremors / Building Shaking
+    // 10. Earthquake / Tremors / Building Shaking
     else if (/\b(earthquake|tremor|quake|aftershock|भूकंप|ভূমিকম্প|ଭୂମିକମ୍ପ)\b/i.test(lower)) {
       dangerLevel = 'MODERATE'
       if (isHindi) {
@@ -1268,12 +1326,12 @@ export const mocks = {
         reply = '1. Boil water vigorously for at least 1 full minute before drinking. 2. If boiling is not possible, add 3-4 drops of unscented household chlorine bleach or 1 purification tablet per litre and wait 30 minutes before consuming.'
       }
     }
-    // 14. Find Shelters / Relief Camps / Food Rations
-    else if (/\b(shelter|relief camp|food|ration|stay|bed|hungry|राहत शिविर|खाना|राशन|রিলিফ ক্যাম্প|ଶିବିର)\b/i.test(lower)) {
+    // 14. Find Shelters / Relief Camps / Food Rations / Water / Medicine
+    else if (/\b(shelter|relief camp|food|ration|stay|bed|hungry|water|drinking water|clean water|medicine|medical|hospital|doctor|खाना|पानी|दवाई|राशन|राहत शिविर|জল|খাবার|ପାଣି|ଖାଦ୍ୟ)\b/i.test(lower)) {
       if (isHindi) {
-        reply = '1. निकटतम सरकारी राहत शिविर, भोजन और बिस्तर की लाइव क्षमता देखने के लिए ऊपर "Find Shelters" टैब पर जाएं। 2. वहां आपको जीपीएस नेविगेशन और राहत केंद्र के फोन नंबर मिल जाएंगे।'
+        reply = '1. निकटतम सरकारी राहत शिविर, भोजन, पानी और दवा की लाइव क्षमता देखने के लिए "Find Shelters" टैब पर जाएं। 2. वहां आपको जीपीएस नेविगेशन और राहत केंद्र के फोन नंबर मिल जाएंगे। साफ पानी के लिए उबालें या क्लोरीन डालें।'
       } else {
-        reply = '1. Open the "Find Shelters" tab in AapdaSetu to view live capacity, food supply status, and turn-by-turn GPS directions to the nearest verified disaster relief camp.'
+        reply = '1. Open the "Find Shelters" tab to view live capacity, food/water/medicine status, and GPS directions to the nearest verified relief camp. 2. For safe drinking water: boil 1 minute or add chlorine (3–4 drops/litre, wait 30 min).'
       }
     }
     // 15. Damage Claim / Compensation / SDRF
@@ -1345,16 +1403,17 @@ export const mocks = {
         reply = '1. Keep the injured area supported and immobilized. 2. If bleeding, apply firm pressure with a clean cloth. 3. If bruised or painful, apply cold compress wrapped in cloth. In severe pain or deformity, call 108.'
       }
     }
-    // 23. Dynamic Fallback
+    // 23. Dynamic Fallback - Helpful menu instead of vague prompt
     else {
+      const nameSuffix = victimName && victimName !== 'Friend' ? ` ${victimName}` : ''
       if (isHindi) {
-        reply = `मैं आपकी सहायता के लिए तैयार हूँ ${victimName && victimName !== 'Friend' ? victimName : ''}। कृपया अपनी स्थिति का विवरण दें (जैसे: चोट, पानी का स्तर, आग, या राहत सामग्री)। आपातकाल में तुरंत 112 या 108 पर संपर्क करें।`
+        reply = `मैं आपकी सहायता के लिए तैयार हूँ${nameSuffix}। आप इनमें से किसी बारे में पूछ सकते हैं:\n1. बाढ़/आग/भूकंप से बचाव\n2. खून, जलना, हड्डी टूटना, सांप काटना\n3. आश्रय, खाना-पानी, दवा\n4. घबराहट के लिए 4-4-4 साँस\nकृपया अपना सवाल स्पष्ट लिखें। आपातकाल में 112 / 108 पर कॉल करें।`
       } else if (isBengali) {
-        reply = 'আমি আপনার পাশে আছি। আপনার কি ধরনের সহায়তা প্রয়োজন বিস্তারিত লিখুন (যেমন: আঘাত, বন্যা, আশ্রয় বা ওষুধ)। জরুরি পরিস্থিতিতে ১১২ বা ১০৮ নম্বরে যোগাযোগ করুন।'
+        reply = `আমি আপনার পাশে আছি${nameSuffix}। আপনি জিজ্ঞাসা করতে পারেন:\n1. বন্যা/আগুন/ভূমিকম্প থেকে বাঁচার উপায়\n2. রক্তপাত, পোড়া, হাড় ভাঙা, সাপে কাটা\n3. আশ্রয়, খাবার-জল, ওষুধ\n4. আতঙ্কের জন্য 4-4-4 শ্বাস\nপ্রশ্নটি স্পষ্ট লিখুন। জরুরিতে 112 / 108 কল করুন।`
       } else if (isOdia) {
-        reply = 'ମୁଁ ଆପଣଙ୍କ ସହାୟତା ପାଇଁ ପ୍ରସ୍ତୁତ। ଆପଣଙ୍କ ସମସ୍ୟା ବିଷୟରେ ଜଣାନ୍ତୁ। ଜରୁରୀକାଳୀନ ପରିସ୍ଥିତିରେ ୧୧୨ କୁ କଲ୍ କରନ୍ତୁ।'
+        reply = `ମୁଁ ଆପଣଙ୍କ ସହାୟତା ପାଇଁ ପ୍ରସ୍ତୁତ${nameSuffix}। ଆପଣ ପଚାରିପାରନ୍ତି:\n1. ବନ୍ୟା/ନିଆଁ/ଭୂମିକମ୍ପରୁ ରକ୍ଷା\n2. ରକ୍ତସ୍ରାବ, ପୋଡ଼ା, ହାଡ଼ ଭଙ୍ଗା, ସାପ କାମୁଡ଼ା\n3. ଆଶ୍ରୟ, ଖାଦ୍ୟ-ପାଣି, ଔଷଧ\n4. ଭୟ ପାଇଁ 4-4-4 ଶ୍ୱାସ\nଜରୁରୀରେ 112 / 108 କୁ କଲ୍ କରନ୍ତୁ।`
       } else {
-        reply = `I am here with you ${victimName && victimName !== 'Friend' ? victimName : ''}. Please tell me your specific emergency, injury, flood level, or relief requirement so I can provide precise step-by-step guidance. In life-threatening danger, call 112 or 108 immediately.`
+        reply = `I am here with you${nameSuffix}. Ask me about:\n1. Flood / Fire / Earthquake survival\n2. Bleeding, Burns, Fracture, Snakebite, Choking\n3. Shelters, Food/Water, Medicine\n4. Panic relief: 4-4-4 breathing\nTry: "water entering house", "severe bleeding", or "need shelter". In danger call 112 / 108.`
       }
     }
 

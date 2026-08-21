@@ -15,9 +15,11 @@ import { Field } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import PriorityBadge from '../../components/common/PriorityBadge'
 import LeafletMap, { type MapMarker, type MapPolyline } from '../../components/map/LeafletMap'
-import { formatDateTime, haversineKm, getNavigationUrl } from '../../lib/helpers'
+import { formatDateTime, getNavigationUrl } from '../../lib/helpers'
+import { fetchOsrmRoute } from '../../lib/routing'
 import { useLanguage } from '../../lib/i18n'
 import type { Report } from '../../types'
+import type { GeoPoint } from '../../types'
 
 export default function ReportTracker() {
   const { t } = useLanguage()
@@ -78,46 +80,76 @@ export default function ReportTracker() {
     [trackingId, searchParams, setSearchParams]
   )
 
-  // Auto-search on mount or when query param changes from external navigation
   const queryParamId = searchParams.get('id')?.trim() || ''
+  const abortRef = useRef<AbortController | null>(null)
   useEffect(() => {
     if (queryParamId && queryParamId !== lastSearchedRef.current) {
       setTrackingId(queryParamId)
+      abortRef.current?.abort()
+      abortRef.current = new AbortController()
       lookup(queryParamId)
     }
-  }, [queryParamId, lookup])
+  }, [queryParamId])
 
-  // Auto-refresh polling every 5 seconds when incident is active
+  const reportIdRef = useRef<string | null>(null)
+  const reportStatusRef = useRef<string | null>(null)
   useEffect(() => {
-    if (!autoRefresh || !report || report.status === 'resolved') return
+    reportIdRef.current = report?.trackingId ?? null
+    reportStatusRef.current = report?.status ?? null
+  }, [report?.trackingId, report?.status])
 
+  useEffect(() => {
+    if (!autoRefresh || !reportIdRef.current || reportStatusRef.current === 'resolved') return
     const interval = setInterval(() => {
-      if (report.trackingId) {
-        getReport(report.trackingId)
+      const id = reportIdRef.current
+      if (id) {
+        getReport(id)
           .then((updated) => setReport(updated))
           .catch(() => {})
       }
     }, 5000)
-
     return () => clearInterval(interval)
-  }, [autoRefresh, report])
+  }, [autoRefresh, report?.trackingId, report?.status])
 
   const currentStepIdx = report ? (report.status === 'resolved' ? 2 : report.status === 'in_progress' ? 1 : 0) : -1
 
-  // Live Map Coordinates & Markers
-  const hasCoords = Boolean(report?.latitude && report?.longitude)
-  const incidentPoint = hasCoords ? { lat: report!.latitude!, lng: report!.longitude! } : { lat: 22.5726, lng: 88.3639 }
+  const hasCoords = report?.latitude != null && report?.longitude != null
+  const incidentPoint: GeoPoint = hasCoords ? { lat: report!.latitude!, lng: report!.longitude! } : { lat: 22.5726, lng: 88.3639 }
 
-  // Synthetic responder telemetry for visual real-time approach when in_progress
-  const responderPoint = (hasCoords && report?.status === 'in_progress')
+  const responderPoint: GeoPoint | null = (hasCoords && report?.status === 'in_progress')
     ? { lat: report!.latitude! + 0.007, lng: report!.longitude! + 0.006 }
     : null
 
-  const distanceKm = (hasCoords && responderPoint)
-    ? haversineKm(incidentPoint, responderPoint)
-    : null
+  const [routePoints, setRoutePoints] = useState<GeoPoint[]>([])
+  const [routeKm, setRouteKm] = useState<number | null>(null)
+  const [routeEta, setRouteEta] = useState<number | null>(null)
 
-  const estimatedEtaMins = distanceKm ? Math.max(2, Math.round((distanceKm / 25) * 60)) : null
+  useEffect(() => {
+    if (!hasCoords || !responderPoint) {
+      setRoutePoints([])
+      setRouteKm(null)
+      setRouteEta(null)
+      return
+    }
+    let cancelled = false
+    fetchOsrmRoute(responderPoint, incidentPoint, [], 'driving').then((r) => {
+      if (cancelled) return
+      if (r) {
+        setRoutePoints(r.points)
+        setRouteKm(r.distanceKm)
+        setRouteEta(Math.max(2, Math.round(r.durationMin)))
+      } else {
+        setRoutePoints([responderPoint, incidentPoint])
+        const fallbackKm = 0.9
+        setRouteKm(fallbackKm)
+        setRouteEta(Math.max(2, Math.round((fallbackKm / 25) * 60)))
+      }
+    })
+    return () => { cancelled = true }
+  }, [hasCoords, responderPoint?.lat, responderPoint?.lng, incidentPoint.lat, incidentPoint.lng])
+
+  const distanceKm = routeKm
+  const estimatedEtaMins = routeEta
 
   const mapMarkers: MapMarker[] = []
   if (hasCoords) {
@@ -136,7 +168,7 @@ export default function ReportTracker() {
       id: 'responder',
       position: responderPoint,
       title: `Rescue Unit: ${report?.assignedVolunteerName ?? 'Field Responder'}`,
-      subtitle: `En Route — ETA ~${estimatedEtaMins} mins`,
+      subtitle: `En Route — ETA ~${estimatedEtaMins ?? '?'} mins`,
       color: '#2563eb',
     })
   }
@@ -145,10 +177,10 @@ export default function ReportTracker() {
   if (hasCoords && responderPoint) {
     mapPolylines.push({
       id: 'route',
-      points: [responderPoint, incidentPoint],
-      color: '#3b82f6',
-      dashed: true,
-      label: `Rescue Route (~${distanceKm?.toFixed(1)} km)`,
+      points: routePoints.length >= 2 ? routePoints : [responderPoint, incidentPoint],
+      color: '#2563eb',
+      dashed: false,
+      label: `Rescue Route (~${distanceKm?.toFixed(1) ?? '0.9'} km)`,
     })
   }
 
@@ -203,7 +235,6 @@ export default function ReportTracker() {
           </div>
           <Button
             type="submit"
-            onClick={() => lookup()}
             disabled={!trackingId.trim() || loading}
             className="h-10 shrink-0 font-bold"
           >

@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react'
 import L from 'leaflet'
-import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
+import { MapContainer, Marker, TileLayer, useMap, useMapEvents, ScaleControl } from 'react-leaflet'
 import { Search, MapPin, Crosshair, Sparkles } from 'lucide-react'
 import { searchPlaces, reverseGeocode, getHighPrecisionPosition, type PlaceSearchResult } from '../../lib/helpers'
 import type { GeoPoint } from '../../types'
 
+const INDIA_BOUNDS: [[number, number], [number, number]] = [
+  [6.0, 68.0],
+  [37.5, 97.5],
+]
 const DEFAULT_CENTER: GeoPoint = { lat: 22.5726, lng: 88.3639 }
 
 function pickIcon() {
@@ -117,15 +121,12 @@ export default function LandmarkPicker({
   }
 
   const handleMapPick = async (p: GeoPoint) => {
-    onChange(p)
     try {
       const addr = await reverseGeocode(p)
-      if (addr) {
-        onChange(p, addr)
-        setQuery(addr)
-      }
+      onChange(p, addr || undefined)
+      if (addr) setQuery(addr)
     } catch {
-      // Keep existing
+      onChange(p)
     }
   }
 
@@ -218,10 +219,16 @@ export default function LandmarkPicker({
       <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-inner dark:border-slate-800">
         <MapContainer
           center={[center.lat, center.lng]}
-          zoom={value ? 16 : view ? view.zoom : 13}
+          zoom={view?.zoom ?? (value ? 16 : 13)}
+          minZoom={5}
+          maxZoom={18}
+          maxBounds={INDIA_BOUNDS}
+          maxBoundsViscosity={1.0}
+          worldCopyJump={false}
           attributionControl={false}
           style={{ height, width: '100%' }}
         >
+          <ScaleControl position="bottomleft" imperial={false} />
           <TileLayer
             attribution=""
             url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
@@ -238,15 +245,12 @@ export default function LandmarkPicker({
                 dragend: async (e) => {
                   const ll = e.target.getLatLng() as L.LatLng
                   const p = { lat: ll.lat, lng: ll.lng }
-                  onChange(p)
                   try {
                     const addr = await reverseGeocode(p)
-                    if (addr) {
-                      onChange(p, addr)
-                      setQuery(addr)
-                    }
+                    onChange(p, addr || undefined)
+                    if (addr) setQuery(addr)
                   } catch {
-                    // Keep
+                    onChange(p)
                   }
                 },
               }}

@@ -45,7 +45,8 @@ export default function SOS() {
     accuracy,
     locateHighAccuracy,
     source,
-  } = useGeoLocation()
+    isFallback,
+  } = useGeoLocation() as ReturnType<typeof useGeoLocation> & { isFallback: boolean }
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -145,7 +146,6 @@ export default function SOS() {
       const foundType = emergencyTypes.find((e) => e.type === selectedType)
       const typeLabel = foundType ? t(foundType.labelKey) : 'Emergency'
 
-      // Resilient GPS coordinates retrieval with high accuracy
       let lat = coords?.latitude
       let lng = coords?.longitude
 
@@ -155,9 +155,17 @@ export default function SOS() {
           lat = pos.coords.latitude
           lng = pos.coords.longitude
         } catch {
-          lat = 20.2961
-          lng = 85.8245
+          toast('Location unavailable — please pick your location on the map before sending SOS', 'error')
+          setShowLocationModal(true)
+          setTriggering(false)
+          return
         }
+      }
+      if (lat === undefined || lng === undefined) {
+        toast('Location unavailable — please pick your location on the map', 'error')
+        setShowLocationModal(true)
+        setTriggering(false)
+        return
       }
 
       const fullLandmark = [address, landmark.trim()].filter(Boolean).join(' | ') || undefined
@@ -172,18 +180,26 @@ export default function SOS() {
         landmark: fullLandmark,
       }
 
-      // Offline handling
       if (!navigator.onLine) {
         localStorage.setItem('aapdasetu_pending_sos', JSON.stringify(input))
-        toast('Offline: SOS queued! Will dispatch as soon as network reconnects.', 'error')
+        toast('Offline: SOS queued! Will dispatch as soon as network reconnects.', 'info')
+        setTriggering(false)
+        return
       }
 
-      // AI urgency triage
-      const triage = await aiTriage(input)
+      let triage: { score: number; label: Report['priorityLabel'] } | null = null
+      try {
+        triage = await aiTriage(input)
+      } catch {
+        triage = null
+      }
       const report = await createReport({ ...input, description: input.description })
-      const finalReport = report.priorityLabel
-        ? report
-        : { ...report, priorityScore: triage.score, priorityLabel: triage.label }
+      const finalReport =
+        report.priorityLabel
+          ? report
+          : triage
+            ? { ...report, priorityScore: triage.score, priorityLabel: triage.label }
+            : report
 
       setResult(finalReport)
 
@@ -215,8 +231,8 @@ export default function SOS() {
   }
 
   const emergencySmsLink = generateEmergencySms({
-    lat: coords?.latitude,
-    lng: coords?.longitude,
+    lat: !isFallback ? coords?.latitude : undefined,
+    lng: !isFallback ? coords?.longitude : undefined,
     name: name.trim() || undefined,
     type: selectedType,
     phone: phone.trim() || undefined,

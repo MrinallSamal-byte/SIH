@@ -18,7 +18,7 @@ import { aiTriage } from '../../api/ai'
 import PriorityBadge from '../../components/common/PriorityBadge'
 import LandmarkPicker from '../../components/map/LandmarkPicker'
 import { useToast } from '../../components/common/Toast'
-import { fileToDataUrl, getHighPrecisionPosition, reverseGeocode } from '../../lib/helpers'
+import { fileToDataUrl, reverseGeocode } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
 import { useGeoLocation } from '../../hooks/useLocation'
 import type { GeoPoint, IncidentType, MediaPayload, Report, ReportInput } from '../../types'
@@ -36,7 +36,7 @@ const emergencyTypeOptions: { value: IncidentType; key: string }[] = [
 export default function ReportForm() {
   const { t } = useLanguage()
   const { toast } = useToast()
-  const { coords, address: detectedAddress, accuracy, refresh: refreshGps } = useGeoLocation()
+  const { coords, address: detectedAddress, accuracy, source, isFallback, locateHighAccuracy } = useGeoLocation() as ReturnType<typeof useGeoLocation> & { source: string; isFallback: boolean; locateHighAccuracy: () => Promise<any> }
 
   const [selectedType, setSelectedType] = useState<string>('')
   const [gpsAddress, setGpsAddress] = useState<string>(detectedAddress || '')
@@ -56,50 +56,54 @@ export default function ReportForm() {
   const [isRecordingAudio, setIsRecordingAudio] = useState(false)
   const [audioSeconds, setAudioSeconds] = useState(0)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioStreamRef = useRef<MediaStream | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
   const audioInputRef = useRef<HTMLInputElement>(null)
 
-  // Sync detected address and coordinates from context
   useEffect(() => {
     if (detectedAddress && !gpsAddress) {
       setGpsAddress(detectedAddress)
     }
-  }, [detectedAddress, gpsAddress])
+  }, [detectedAddress])
 
-  // Auto-detect and reverse-geocode coords on change
   useEffect(() => {
-    if (coords && (!customPoint || !gpsAddress)) {
+    if (coords && !customPoint) {
       const point: GeoPoint = { lat: coords.latitude, lng: coords.longitude }
       setCustomPoint(point)
       setGpsError(null)
-      reverseGeocode(point)
-        .then((addr) => {
-          if (addr) setGpsAddress(addr)
-          else if (!gpsAddress) setGpsAddress(`${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
-        })
-        .catch(() => {
-          if (!gpsAddress) setGpsAddress(`${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
-        })
+      if (!gpsAddress) {
+        reverseGeocode(point)
+          .then((addr) => {
+            if (addr) setGpsAddress(addr)
+            else setGpsAddress(`${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
+          })
+          .catch(() => {
+            setGpsAddress(`${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
+          })
+      }
     }
-  }, [coords, customPoint, gpsAddress])
+  }, [coords])
 
   const handleRetryGps = async () => {
     setLocatingGps(true)
     setGpsError(null)
     try {
-      refreshGps()
-      const pos = await getHighPrecisionPosition()
-      const point: GeoPoint = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-      setCustomPoint(point)
-      const addr = await reverseGeocode(point)
-      setGpsAddress(addr ?? `${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
-      toast(`High-precision GPS locked (±${Math.round(pos.coords.accuracy ?? 5)}m)`, 'success')
+      const pos = await locateHighAccuracy()
+      if (pos) {
+        const point: GeoPoint = { lat: pos.latitude, lng: pos.longitude }
+        setCustomPoint(point)
+        const addr = await reverseGeocode(point)
+        setGpsAddress(addr ?? `${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
+        toast(`High-precision GPS locked (±${Math.round(pos.accuracy ?? 5)}m)`, 'success')
+      } else {
+        throw new Error('no gps')
+      }
     } catch {
-      if (coords) {
+      if (coords && !isFallback) {
         setCustomPoint({ lat: coords.latitude, lng: coords.longitude })
-        toast('Using regional / IP estimated location.', 'info')
+        toast('Using last known location.', 'info')
       } else {
         setGpsError('Location unavailable. Type your area or pick on map.')
         toast('Location unavailable. Please pick on map or enter manually.', 'info')
@@ -129,6 +133,7 @@ export default function ReportForm() {
   const startAudioRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      audioStreamRef.current = stream
       const recorder = new MediaRecorder(stream)
       mediaRecorderRef.current = recorder
       audioChunksRef.current = []
@@ -176,6 +181,22 @@ export default function ReportForm() {
     }
   }
 
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+      try {
+        audioStreamRef.current?.getTracks().forEach((t) => t.stop())
+      } catch {
+        /* ignore */
+      }
+      try {
+        if (mediaRecorderRef.current?.state === 'recording') mediaRecorderRef.current.stop()
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [])
+
   const stopAudioRecording = () => {
     if (mediaRecorderRef.current && isRecordingAudio) {
       mediaRecorderRef.current.stop()
@@ -184,8 +205,18 @@ export default function ReportForm() {
 
   const handleFiles = async (files: FileList | null) => {
     if (!files) return
+    const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime', 'audio/webm', 'audio/mp3', 'audio/mpeg', 'audio/wav']
+    const MAX = 5 * 1024 * 1024
     const items: MediaPayload[] = []
     for (const file of Array.from(files).slice(0, 3 - media.length)) {
+      if (file.size > MAX) {
+        toast(`File ${file.name} exceeds 5MB limit`, 'error')
+        continue
+      }
+      if (file.type && !ALLOWED.includes(file.type) && !file.type.startsWith('image/') && !file.type.startsWith('video/') && !file.type.startsWith('audio/')) {
+        toast(`File ${file.name} type not allowed`, 'error')
+        continue
+      }
       const dataUrl = await fileToDataUrl(file)
       items.push({
         kind: file.type.startsWith('video') ? 'video' : file.type.startsWith('audio') ? 'audio' : 'image',
@@ -214,17 +245,23 @@ export default function ReportForm() {
       toast('Please enter a valid 10-digit mobile number for emergency contact', 'error')
       return
     }
+    if (!description.trim()) {
+      toast('Please describe the emergency (required to identify the problem)', 'error')
+      return
+    }
+
+    let finalLocation = customPoint
+    if (!finalLocation && coords) {
+      finalLocation = { lat: coords.latitude, lng: coords.longitude }
+    }
+    if (!finalLocation) {
+      toast('Please allow GPS or pick your location on the map before submitting', 'error')
+      setSending(false)
+      return
+    }
 
     setSending(true)
     try {
-      let finalLocation = customPoint
-      if (!finalLocation && coords) {
-        finalLocation = { lat: coords.latitude, lng: coords.longitude }
-      }
-      if (!finalLocation) {
-        finalLocation = { lat: 22.5726, lng: 88.3639 }
-      }
-
       const input: ReportInput = {
         type: selectedType as IncidentType,
         description: description.trim() || `Emergency Report: ${selectedType.toUpperCase()}`,
@@ -235,9 +272,16 @@ export default function ReportForm() {
         media,
       }
 
-      const triage = await aiTriage(input)
       const report = await createReport(input)
-      const finalReport = report.priorityLabel ? report : { ...report, priorityScore: triage.score, priorityLabel: triage.label }
+      let finalReport = report
+      if (!report.priorityLabel) {
+        try {
+          const triage = await aiTriage(input)
+          finalReport = { ...report, priorityScore: triage.score, priorityLabel: triage.label }
+        } catch {
+          finalReport = report
+        }
+      }
       setResult(finalReport)
 
       // Save to localStorage
@@ -348,7 +392,16 @@ Track: ${typeof window !== 'undefined' ? window.location.origin : ''}/track?id=$
           </a>
           <button
             type="button"
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              setResult(null)
+              setSelectedType('')
+              setReporterName('')
+              setReporterPhone('')
+              setDescription('')
+              setMedia([])
+              setCustomPoint(null)
+              setGpsAddress('')
+            }}
             className="rounded-xl border border-zinc-200 bg-white px-5 py-3.5 text-sm font-bold text-zinc-600 hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200"
           >
             New Report
@@ -405,7 +458,7 @@ Track: ${typeof window !== 'undefined' ? window.location.origin : ''}/track?id=$
         {/* 2. GPS Location Card */}
         <div>
           <label className="block text-xs font-bold text-zinc-700 dark:text-slate-200 mb-1.5 mono uppercase">
-            {t('report.gpsTitle')}
+            {t('report.gpsTitle')} <span className="text-red-600">*</span>
           </label>
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-white/[0.1] dark:bg-[#1a1a1a] shadow-xs space-y-3">
             <div className="flex items-center justify-between text-xs">
@@ -423,8 +476,8 @@ Track: ${typeof window !== 'undefined' ? window.location.origin : ''}/track?id=$
                 ) : (
                   <>
                     <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-emerald-700 dark:text-emerald-400 font-semibold">
-                      {t('report.gpsAutoDetected')} {accuracy ? `(±${Math.round(accuracy)}m)` : ''}
+                    <span className={`font-semibold ${isFallback || (accuracy && accuracy >= 1000) ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                      {isFallback || source !== 'gps' ? 'Location estimated — tap Retry for precise GPS' : <>{t('report.gpsAutoDetected')} {accuracy && accuracy < 1000 ? `(±${Math.round(accuracy)}m)` : ''}</>}
                     </span>
                   </>
                 )}
@@ -601,7 +654,7 @@ Track: ${typeof window !== 'undefined' ? window.location.origin : ''}/track?id=$
         {/* 6. Description */}
         <div>
           <label className="block text-xs font-bold text-zinc-700 dark:text-slate-200 mb-1.5 mono uppercase">
-            {t('report.descLabel')}
+            {t('report.descLabel')} <span className="text-red-600">*</span>
           </label>
           <textarea
             rows={4}
@@ -612,11 +665,22 @@ Track: ${typeof window !== 'undefined' ? window.location.origin : ''}/track?id=$
           />
         </div>
 
+        {(() => {
+          const lower = description.toLowerCase()
+          const isCriticalDesc = ['bleed','blood','trapped','drown','sinking','heart attack','chest pain','stroke','electrocute','severe burn','fire','choking','snake','poison','collapse','debris','fracture','dying','flood rising'].some(k=>lower.includes(k))
+          return isCriticalDesc ? (
+            <div className="rounded-xl border border-red-300 bg-red-50 p-3 text-xs text-red-800 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300 flex items-center justify-between gap-3">
+              <span className="font-bold">Life-threatening keywords detected — use Emergency SOS for immediate dispatch?</span>
+              <a href="#/sos" className="shrink-0 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700">Go to SOS</a>
+            </div>
+          ) : null
+        })()}
+
         {/* 7. Submit Button */}
         <div className="pt-2 space-y-2">
           <button
             type="submit"
-            disabled={sending || !selectedType || !reporterPhone.trim()}
+            disabled={sending || !selectedType || !reporterPhone.trim() || !description.trim()}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-800 py-4 text-base font-bold text-white shadow-md transition hover:bg-zinc-700 active:scale-[0.98] disabled:bg-slate-200 disabled:text-slate-400 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white dark:disabled:bg-slate-800 dark:disabled:text-zinc-500 cursor-pointer"
           >
             {sending ? (

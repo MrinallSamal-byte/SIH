@@ -13,6 +13,7 @@ import LeafletMap from '../../components/map/LeafletMap'
 import { useGeoLocation } from '../../hooks/useLocation'
 import { useLanguage } from '../../lib/i18n'
 import { getNavigationUrl } from '../../lib/helpers'
+import { fetchOsrmRoute, haversineRouteLength } from '../../lib/routing'
 import type { FloodGeoJson, GeoPoint, Shelter } from '../../types'
 
 const EARTH_RADIUS_KM = 6371
@@ -137,21 +138,27 @@ export default function SafeRoutes() {
   const [flood, setFlood] = useState<FloodGeoJson | null>(null)
   const [shelters, setShelters] = useState<Shelter[] | null>(null)
   const [destinationId, setDestinationId] = useState<string>('')
+  const [osrmFastest, setOsrmFastest] = useState<{ points: GeoPoint[]; distanceKm: number; durationMin: number } | null>(null)
+  const [osrmSafe, setOsrmSafe] = useState<{ points: GeoPoint[]; distanceKm: number; durationMin: number } | null>(null)
+  const [routingLoading, setRoutingLoading] = useState(false)
+  const [routingFallback, setRoutingFallback] = useState(false)
 
+  const hasGps = Boolean(coords)
   const origin: GeoPoint = useMemo(
     () => (coords ? { lat: coords.latitude, lng: coords.longitude } : DEFAULT_CENTER),
     [coords],
   )
 
   useEffect(() => {
-    aiSatelliteFloodMap({ district: 'North 24 Parganas' })
+    const district = coords ? undefined : 'North 24 Parganas'
+    aiSatelliteFloodMap(district ? { district } : { center: origin, radiusKm: 30 })
       .then((res) => setFlood(res || { type: 'FeatureCollection', features: [] }))
       .catch(() => setFlood({ type: 'FeatureCollection', features: [] }))
 
     listShelters('open')
       .then((res) => setShelters(res || []))
       .catch(() => setShelters([]))
-  }, [])
+  }, [coords, origin.lat, origin.lng])
 
   useEffect(() => {
     if (shelters && shelters.length > 0) setDestinationId((id) => id || shelters[0].id)
@@ -161,9 +168,19 @@ export default function SafeRoutes() {
     if (!flood || !Array.isArray(flood.features)) return []
     return flood.features
       .filter((f) => f && f.geometry && Array.isArray(f.geometry.coordinates) && f.geometry.coordinates.length > 0)
-      .map((f) =>
-        (f.geometry.coordinates[0] ?? []).map(([lng, lat]) => ({ lat, lng }) as GeoPoint),
-      )
+      .flatMap((f) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const geom: any = f.geometry
+        if (geom.type === 'Polygon') {
+          const rings: number[][][] = geom.coordinates as number[][][]
+          return rings.map((ring) => ring.map(([lng, lat]) => ({ lat, lng }) as GeoPoint))
+        }
+        if (geom.type === 'MultiPolygon') {
+          const polys: number[][][][] = geom.coordinates as number[][][][]
+          return polys.flatMap((poly) => poly.map((ring) => ring.map(([lng, lat]) => ({ lat, lng }) as GeoPoint)))
+        }
+        return [(geom.coordinates[0] ?? []).map(([lng, lat]: number[]) => ({ lat, lng }) as GeoPoint)]
+      })
   }, [flood])
 
   const polygons = useMemo(() => {
@@ -217,32 +234,68 @@ export default function SafeRoutes() {
     [shelters, destinationId],
   )
 
-  const fastestRoute = useMemo<GeoPoint[]>(
+  const destPoint = useMemo(
     () =>
       destination && typeof destination.latitude === 'number' && typeof destination.longitude === 'number'
-        ? buildFastestRoute(origin, { lat: destination.latitude, lng: destination.longitude })
-        : [],
-    [origin, destination],
+        ? ({ lat: destination.latitude, lng: destination.longitude } as GeoPoint)
+        : null,
+    [destination],
   )
 
-  const safeRoute = useMemo<GeoPoint[]>(
-    () =>
-      destination && typeof destination.latitude === 'number' && typeof destination.longitude === 'number'
-        ? buildSafeRoute(origin, { lat: destination.latitude, lng: destination.longitude }, polygonPaths)
-        : [],
-    [origin, destination, polygonPaths],
+  const fastestFallback = useMemo<GeoPoint[]>(
+    () => (destPoint ? buildFastestRoute(origin, destPoint) : []),
+    [origin, destPoint],
   )
+
+  const safeFallback = useMemo<GeoPoint[]>(
+    () => (destPoint ? buildSafeRoute(origin, destPoint, polygonPaths) : []),
+    [origin, destPoint, polygonPaths],
+  )
+
+  useEffect(() => {
+    if (!destPoint) return
+    let cancelled = false
+    setRoutingLoading(true)
+    setRoutingFallback(false)
+    setOsrmFastest(null)
+    setOsrmSafe(null)
+    ;(async () => {
+      const fastest = await fetchOsrmRoute(origin, destPoint, [], 'driving')
+      if (!cancelled) {
+        if (fastest) setOsrmFastest(fastest)
+        else setRoutingFallback(true)
+      }
+      const safeWaypoints = safeFallback.length > 2 ? safeFallback.slice(1, -1) : []
+      const safe =
+        safeWaypoints.length > 0
+          ? await fetchOsrmRoute(origin, destPoint, safeWaypoints, 'foot')
+          : await fetchOsrmRoute(origin, destPoint, [], 'foot')
+      if (!cancelled) {
+        if (safe) setOsrmSafe(safe)
+        else if (!fastest) setRoutingFallback(true)
+      }
+      if (!cancelled) setRoutingLoading(false)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [origin.lat, origin.lng, destPoint?.lat, destPoint?.lng, safeFallback])
+
+  const fastestRoute = useMemo(() => osrmFastest?.points ?? fastestFallback, [osrmFastest, fastestFallback])
+  const safeRoute = useMemo(() => osrmSafe?.points ?? safeFallback, [osrmSafe, safeFallback])
 
   const routes = useMemo(
     () => [
       {
         id: 'fastest',
-        label: 'Direct route',
+        label: 'Fastest road route',
         points: fastestRoute ?? [],
         color: '#f59e0b',
         dashed: false,
-        hazard: 'May cross flooded zones',
+        hazard: routingFallback ? 'Road routing unavailable — showing direct line' : 'Follows roads — may cross flooded zones',
         safe: false,
+        distanceKm: osrmFastest?.distanceKm ?? haversineRouteLength(fastestRoute),
+        durationMin: osrmFastest?.durationMin ?? (haversineRouteLength(fastestRoute) / WALK_SPEED_KMPH) * 60,
       },
       {
         id: 'safe',
@@ -250,11 +303,13 @@ export default function SafeRoutes() {
         points: safeRoute ?? [],
         color: '#10b981',
         dashed: true,
-        hazard: 'Safely avoids inundation zones (300m clearance)',
+        hazard: 'Road-based safe route — avoids inundation zones (300m clearance)',
         safe: true,
+        distanceKm: osrmSafe?.distanceKm ?? haversineRouteLength(safeRoute),
+        durationMin: osrmSafe?.durationMin ?? (haversineRouteLength(safeRoute) / WALK_SPEED_KMPH) * 60,
       },
     ],
-    [fastestRoute, safeRoute],
+    [fastestRoute, safeRoute, osrmFastest, osrmSafe, routingFallback],
   )
 
   if (!flood || !shelters) return <Loader />
@@ -276,8 +331,9 @@ export default function SafeRoutes() {
           <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 text-xs dark:border-white/[0.08] dark:bg-[#1a1a1a] shadow-xs">
             <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mono">{t('routes.origin')}</label>
             <div className="mt-1 font-medium text-zinc-600 dark:text-slate-200">
-              {coords ? `GPS: ${origin.lat.toFixed(4)}°N, ${origin.lng.toFixed(4)}°E` : 'Regional Center Fallback'}
+              {coords ? `GPS: ${origin.lat.toFixed(4)}°N, ${origin.lng.toFixed(4)}°E` : 'Regional Center Fallback — Location unavailable'}
             </div>
+            {!hasGps && <div className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">Location unavailable — using regional center. Tap Re-scan GPS.</div>}
             <button
               type="button"
               onClick={refresh}
@@ -332,9 +388,9 @@ export default function SafeRoutes() {
                 <div className="mt-1 text-zinc-500 dark:text-slate-400 leading-relaxed">{r.hazard}</div>
               </div>
               <div className="shrink-0 text-right">
-                <div className="font-bold text-zinc-800 dark:text-slate-300 mono text-sm">{routeLengthKm(r.points).toFixed(1)} km</div>
+                <div className="font-bold text-zinc-800 dark:text-slate-300 mono text-sm">{r.distanceKm.toFixed(1)} km{r.distanceKm !== routeLengthKm(r.points) ? '' : routingFallback ? ' ~' : ''}</div>
                 <div className="text-slate-500 dark:text-slate-400">
-                  ~{formatEta((routeLengthKm(r.points) / WALK_SPEED_KMPH) * 60)} {t('routes.walkingTime')}
+                  ~{formatEta(r.durationMin)} {t('routes.walkingTime')}{routingLoading ? ' · loading…' : ''}
                 </div>
               </div>
             </div>

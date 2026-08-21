@@ -30,7 +30,19 @@ export default function MissingPersons() {
   const [enlargedPhoto, setEnlargedPhoto] = useState<string | null>(null)
 
   useEffect(() => {
-    listMissingPersons().then(setPersons).catch(() => setPersons([]))
+    let cancelled = false
+    listMissingPersons()
+      .then((d) => {
+        if (!cancelled) setPersons(d)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPersons([])
+        }
+      })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const filteredPersons = (persons ?? []).filter((p) => {
@@ -112,7 +124,11 @@ export default function MissingPersons() {
                     {p.photoUrl ? (
                       <button
                         type="button"
-                        onClick={() => setEnlargedPhoto(p.photoUrl ?? null)}
+                        onClick={() => {
+                          const url = p.photoUrl
+                          if (url && (url.startsWith('data:image/') || url.startsWith('https://') || url.startsWith('http://')))
+                            setEnlargedPhoto(url)
+                        }}
                         className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-zinc-200/80 bg-slate-100 dark:border-white/[0.1] dark:bg-[#222222]"
                       >
                         <img src={p.photoUrl} alt={p.name} className="h-full w-full object-cover transition" />
@@ -231,7 +247,16 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
   const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
+    if (!file.type.startsWith('image/')) {
+      toast('Only image files allowed', 'error')
+      e.target.value = ''
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast('Image exceeds 5MB limit', 'error')
+      e.target.value = ''
+      return
+    }
     setCompressing(true)
     try {
       const compressed = await compressImage(file, 800, 0.75)
@@ -241,6 +266,7 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
       toast('Could not process photo', 'error')
     } finally {
       setCompressing(false)
+      e.target.value = ''
     }
   }
 
@@ -251,6 +277,14 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
     }
     if (!lastSeenLocation.trim()) {
       toast('Please specify the last seen location', 'error')
+      return
+    }
+    if (!photoDataUrl) {
+      toast('Please upload a clear photo (required for identification)', 'error')
+      return
+    }
+    if (!age.trim()) {
+      toast('Please enter age (required)', 'error')
       return
     }
     if (!contactPhone.trim() || contactPhone.replace(/\D/g, '').length < 10) {
@@ -269,10 +303,16 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
         gender,
         lastSeenLocation: lastSeenLocation.trim(),
         clothes: clothes.trim() || undefined,
-        contactPhone: contactPhone.trim(),
+        contactPhone: contactPhone.replace(/\D/g, ''),
         photoUrl: photoDataUrl || undefined,
       })
       toast('Missing person registered in system')
+      setName('')
+      setAge('')
+      setLastSeenLocation('')
+      setClothes('')
+      setContactPhone('')
+      setPhotoDataUrl(null)
       onSubmitted(person)
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Submission failed', 'error')
@@ -290,7 +330,7 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
       {/* Photo Upload with preview */}
       <div>
         <label className="block text-xs font-bold text-zinc-600 dark:text-slate-300 mb-1.5">
-          {t('missing.uploadPhoto')}
+          {t('missing.uploadPhoto')} <span className="text-red-600">*</span>
         </label>
         <div className="flex items-center gap-3">
           {photoDataUrl ? (
@@ -330,10 +370,10 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label={t('missing.age')}>
-          <Input type="number" min="0" max="120" value={age} onChange={(e) => setAge(e.target.value)} placeholder="e.g. 35" />
+        <Field label={`${t('missing.age')} *`}>
+          <Input type="number" min="0" max="120" value={age} onChange={(e) => setAge(e.target.value)} placeholder="e.g. 35" required />
         </Field>
-        <Field label={t('missing.gender')}>
+        <Field label={`${t('missing.gender')} *`}>
           <select
             value={gender}
             onChange={(e) => setGender(e.target.value)}
@@ -376,7 +416,7 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
       <Button
         variant="danger"
         onClick={submit}
-        disabled={sending || !name.trim() || !lastSeenLocation.trim() || !contactPhone.trim()}
+        disabled={sending || compressing || !name.trim() || !photoDataUrl || !age.trim() || !lastSeenLocation.trim() || !contactPhone.trim()}
         className="w-full py-3 font-bold"
       >
         {sending ? t('common.loading') : t('missing.submitReport')}

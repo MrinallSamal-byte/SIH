@@ -33,8 +33,8 @@ const STORAGE_KEY_LOCATION = 'aapdasetu_last_coords'
 const STORAGE_KEY_ADDRESS = 'aapdasetu_last_address'
 
 const DEFAULT_FALLBACK_LOCATION: GeoLocationCoordinatesLike = {
-  latitude: 22.5726,
-  longitude: 88.3639,
+  latitude: 20.2706,
+  longitude: 85.8334,
   altitude: null,
   accuracy: 1000,
   altitudeAccuracy: null,
@@ -144,8 +144,15 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
     []
   )
 
+  const watchIdRef = useRef<number | null>(null)
+  const manualResetTimerRef = useRef<number | null>(null)
+
   const setManualLocation = useCallback((point: GeoPoint, customAddress?: string) => {
     isManualRef.current = true
+    if (manualResetTimerRef.current) window.clearTimeout(manualResetTimerRef.current)
+    manualResetTimerRef.current = window.setTimeout(() => {
+      isManualRef.current = false
+    }, 30000)
     const manualCoords: GeoLocationCoordinatesLike = {
       latitude: point.lat,
       longitude: point.lng,
@@ -201,7 +208,13 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
       return () => {}
     }
 
-    // 1. High-precision hardware GPS fetch
+    if (watchIdRef.current !== null) {
+      try {
+        navigator.geolocation.clearWatch(watchIdRef.current)
+      } catch {}
+      watchIdRef.current = null
+    }
+
     getHighPrecisionPosition()
       .then((pos) => {
         saveLocation(pos.coords, 'gps', isManualRef.current)
@@ -211,7 +224,6 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
         if (err && (err as GeolocationPositionError).code === 1) {
           fallbackToIp(true)
         } else {
-          // Standard accuracy attempt before IP fallback
           getCurrentPosition(false, 8000, 30000)
             .then((pos) => {
               saveLocation(pos.coords, 'gps', isManualRef.current)
@@ -221,10 +233,8 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
         }
       })
 
-    // 2. High-precision continuous watcher
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        // Only update if not manually locked by user
         if (!isManualRef.current) {
           saveLocation(pos.coords, 'gps')
           setStatus('granted')
@@ -234,7 +244,6 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
         if (err.code === err.PERMISSION_DENIED) {
           fallbackToIp(true)
         } else {
-          // If already granted, preserve
           setStatus((prev) => (prev === 'granted' ? 'granted' : 'fallback'))
         }
       },
@@ -244,24 +253,37 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
         maximumAge: 0,
       },
     )
+    watchIdRef.current = watchId
 
     return () => {
-      navigator.geolocation.clearWatch(watchId)
+      try {
+        navigator.geolocation.clearWatch(watchId)
+      } catch {}
+      if (watchIdRef.current === watchId) watchIdRef.current = null
     }
   }, [fallbackToIp, saveLocation])
 
   const locateHighAccuracy = useCallback(async (): Promise<GeoLocationCoordinatesLike | null> => {
     setStatus('locating')
+    if (watchIdRef.current !== null) {
+      try {
+        navigator.geolocation.clearWatch(watchIdRef.current)
+      } catch {}
+      watchIdRef.current = null
+    }
+    if (manualResetTimerRef.current) {
+      window.clearTimeout(manualResetTimerRef.current)
+      manualResetTimerRef.current = null
+    }
+    isManualRef.current = false
     try {
       const pos = await getHighPrecisionPosition()
-      isManualRef.current = false
       saveLocation(pos.coords, 'gps')
       setStatus('granted')
       return pos.coords
     } catch {
       try {
         const pos = await getCurrentPosition(false, 8000, 10000)
-        isManualRef.current = false
         saveLocation(pos.coords, 'gps')
         setStatus('granted')
         return pos.coords
@@ -278,6 +300,22 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
       if (typeof cleanup === 'function') cleanup()
     }
   }, [detect])
+
+  useEffect(() => {
+    const onVis = () => {
+      if (document.hidden) {
+        if (watchIdRef.current !== null) {
+          try { navigator.geolocation.clearWatch(watchIdRef.current) } catch {}
+          watchIdRef.current = null
+        }
+      } else if (watchIdRef.current === null && source === 'gps') {
+        const c = detect()
+        void c
+      }
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [detect, source])
 
   const value = useMemo<LocationValue>(
     () => ({

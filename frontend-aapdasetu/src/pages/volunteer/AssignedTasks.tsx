@@ -22,10 +22,11 @@ export default function AssignedTasks() {
   const loadTasks = useCallback(async () => {
     try {
       const reports = await listReports({ status: 'in_progress' })
-      // Filter for this volunteer, or fallback to all in_progress if none set
-      const relevant = activeVolunteerId
-        ? reports.filter((r) => !r.assignedVolunteerId || r.assignedVolunteerId === activeVolunteerId)
-        : reports
+      if (!activeVolunteerId) {
+        setTasks([])
+        return
+      }
+      const relevant = reports.filter((r) => r.assignedVolunteerId === activeVolunteerId)
       setTasks(relevant)
     } catch {
       toast('Failed to load assigned tasks', 'error')
@@ -52,6 +53,13 @@ export default function AssignedTasks() {
   }
 
   if (!tasks) return <Loader />
+  if (!activeVolunteerId) {
+    return (
+      <div className="rounded-2xl border border-amber-300 bg-amber-50 p-6 text-center text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+        No volunteer session. Please <a href="#/volunteer/login" className="font-bold underline">log in</a> to view assigned tasks.
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">

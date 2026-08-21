@@ -43,8 +43,9 @@ export default function ShelterFinder() {
 
   const filteredAndSorted = useMemo(() => {
     if (!shelters || !Array.isArray(shelters)) return []
-    const toPoint = (s: Shelter): GeoPoint => ({ lat: s.latitude || 22.5726, lng: s.longitude || 88.3639 })
-    
+    const toPoint = (s: Shelter): GeoPoint | null =>
+      typeof s.latitude === 'number' && typeof s.longitude === 'number' ? { lat: s.latitude, lng: s.longitude } : null
+
     return shelters
       .filter((s) => {
         if (!s) return false
@@ -63,14 +64,20 @@ export default function ShelterFinder() {
       })
       .sort((a, b) => {
         if (!userPos) return 0
-        return haversineKm(userPos, toPoint(a)) - haversineKm(userPos, toPoint(b))
+        const pa = toPoint(a)
+        const pb = toPoint(b)
+        if (!pa && !pb) return 0
+        if (!pa) return 1
+        if (!pb) return -1
+        return haversineKm(userPos, pa) - haversineKm(userPos, pb)
       })
   }, [shelters, userPos, searchQuery, selectedFacility])
 
   const center: GeoPoint = useMemo(() => {
     if (userPos) return userPos
-    if (filteredAndSorted.length > 0) {
-      return { lat: filteredAndSorted[0].latitude || 22.5726, lng: filteredAndSorted[0].longitude || 88.3639 }
+    const firstValid = filteredAndSorted.find((s) => typeof s.latitude === 'number' && typeof s.longitude === 'number')
+    if (firstValid) {
+      return { lat: firstValid.latitude as number, lng: firstValid.longitude as number }
     }
     return { lat: 22.5726, lng: 88.3639 }
   }, [userPos, filteredAndSorted])
@@ -87,14 +94,16 @@ export default function ShelterFinder() {
         isSos: true,
       })
     }
-    for (const s of filteredAndSorted) {
+    for (let i = 0; i < filteredAndSorted.length; i++) {
+      const s = filteredAndSorted[i]
       if (!s) continue
+      if (typeof s.latitude !== 'number' || typeof s.longitude !== 'number') continue
       const statusStr = (s.status || 'open').toUpperCase()
       const occ = s.occupancy ?? 0
       const cap = s.capacity ?? 100
       list.push({
-        id: s.id || `shel-${Math.random()}`,
-        position: { lat: s.latitude || 22.5726, lng: s.longitude || 88.3639 },
+        id: s.id || `shel-fallback-${i}`,
+        position: { lat: s.latitude, lng: s.longitude },
         title: s.name || 'Disaster Shelter',
         subtitle: `${statusStr} · Occupancy: ${occ}/${cap} beds (${s.address ?? ''})`,
         color: s.status === 'open' ? '#10b981' : '#f59e0b',
@@ -210,8 +219,13 @@ export default function ShelterFinder() {
       {/* Shelter Cards — full width grid */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filteredAndSorted.map((s) => {
-            const toPoint = (shelter: Shelter): GeoPoint => ({ lat: shelter.latitude || 22.5726, lng: shelter.longitude || 88.3639 })
-            const distance = userPos ? haversineKm(userPos, toPoint(s)) : null
+            const hasCoords = typeof s.latitude === 'number' && typeof s.longitude === 'number'
+            const toPoint = (shelter: Shelter): GeoPoint | null =>
+              typeof shelter.latitude === 'number' && typeof shelter.longitude === 'number'
+                ? { lat: shelter.latitude as number, lng: shelter.longitude as number }
+                : null
+            const point = toPoint(s)
+            const distance = userPos && point ? haversineKm(userPos, point) : null
             const cap = s.capacity || 100
             const occ = s.occupancy ?? 0
             const pct = Math.round((occ / cap) * 100)
@@ -267,16 +281,20 @@ export default function ShelterFinder() {
                 </div>
 
                 <div className="mt-4 flex items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-white/[0.08]">
-                  <span className="text-[10px] text-slate-400 mono">{(s.latitude || 22.5726).toFixed(4)}, {(s.longitude || 88.3639).toFixed(4)}</span>
-                  <a
-                    href={getNavigationUrl(s.latitude || 22.5726, s.longitude || 88.3639)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white cursor-pointer"
-                  >
-                    <Navigation className="h-3 w-3" />
-                    <span>{t('common.directions')}</span>
-                  </a>
+                  <span className="text-[10px] text-slate-400 mono">{hasCoords ? `${(s.latitude as number).toFixed(4)}, ${(s.longitude as number).toFixed(4)}` : 'Location unavailable'}</span>
+                  {hasCoords ? (
+                    <a
+                      href={getNavigationUrl(s.latitude as number, s.longitude as number)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white cursor-pointer"
+                    >
+                      <Navigation className="h-3 w-3" />
+                      <span>{t('common.directions')}</span>
+                    </a>
+                  ) : (
+                    <span className="text-[11px] font-bold text-slate-400">No GPS</span>
+                  )}
                 </div>
               </Card>
             )

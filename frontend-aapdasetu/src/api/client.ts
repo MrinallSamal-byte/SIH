@@ -62,21 +62,33 @@ async function apiCall<T>(method: string, path: string, body?: unknown): Promise
   const headers: Record<string, string> = {}
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   const token = getAdminToken()
-  if (token) headers.Authorization = `Bearer ${token}`
+  if (token && path.startsWith('/api/v1/admin')) headers.Authorization = `Bearer ${token}`
 
-  const res = await fetchWithTimeout(`${config.apiUrl}${path}`, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  })
-  const payload = (await res.json().catch(() => null)) as
-    | { success: boolean; data?: T; error?: { message?: string } }
-    | null
+  const base = config.apiUrl.replace(/\/$/, '')
+  let lastErr: unknown
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetchWithTimeout(`${base}${path}`, {
+        method,
+        headers,
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      })
+      const payload = (await res.json().catch(() => null)) as
+        | { success: boolean; data?: T; error?: { message?: string } }
+        | null
 
-  if (!res.ok || !payload?.success) {
-    throw new ApiError(res.status, payload?.error?.message ?? `${method} ${path} failed (${res.status})`)
+      if (!res.ok || !payload?.success) {
+        throw new ApiError(res.status, payload?.error?.message ?? `${method} ${path} failed (${res.status})`)
+      }
+      return payload.data as T
+    } catch (err) {
+      lastErr = err
+      if (err instanceof ApiError && err.status >= 400 && err.status < 500) throw err
+      if (attempt === 2) throw err
+      await new Promise((r) => setTimeout(r, 300 * (attempt + 1) + Math.random() * 200))
+    }
   }
-  return payload.data as T
+  throw lastErr as Error
 }
 
 /**
@@ -107,7 +119,20 @@ export async function withMockFallback<T>(
   }
   try {
     return await realCall()
-  } catch {
+  } catch (err) {
+    if (err instanceof ApiError && err.status >= 400 && err.status < 500) throw err
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      notifyFallback()
+      return mock()
+    }
+    if (err instanceof TypeError) {
+      notifyFallback()
+      return mock()
+    }
+    if (err instanceof ApiError && err.status >= 500) {
+      notifyFallback()
+      return mock()
+    }
     notifyFallback()
     return mock()
   }

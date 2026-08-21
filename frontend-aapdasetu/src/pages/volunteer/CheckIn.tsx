@@ -14,11 +14,13 @@ export default function CheckIn() {
   const [sending, setSending] = useState(false)
 
   useEffect(() => {
-    listVolunteers().then((vols) => {
-      const savedId = localStorage.getItem('aapdasetu_volunteer_session')
-      const matched = vols.find((v) => v.id === savedId) || vols[0] || null
-      setVolunteer(matched)
-    })
+    listVolunteers()
+      .then((vols) => {
+        const savedId = localStorage.getItem('aapdasetu_volunteer_session')
+        const matched = vols.find((v) => v.id === savedId) || null
+        setVolunteer(matched)
+      })
+      .catch(() => setVolunteer(null))
   }, [])
 
   const submit = async () => {

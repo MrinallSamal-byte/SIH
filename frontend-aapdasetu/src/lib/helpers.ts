@@ -316,7 +316,6 @@ export async function searchPlaces(
         signal: controller.signal,
         headers: {
           Accept: 'application/json',
-          'User-Agent': 'AapdaSetu-Emergency/2.0',
         },
       })
       clearTimeout(timer)
@@ -353,7 +352,6 @@ export async function searchPlaces(
         signal: controller.signal,
         headers: {
           Accept: 'application/json',
-          'User-Agent': 'AapdaSetu-Emergency/2.0',
         },
       })
       clearTimeout(timer)
@@ -487,12 +485,11 @@ export async function reverseGeocode(point: GeoPoint): Promise<string | null> {
     const timer = setTimeout(() => controller.abort(), 4500)
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&lat=${point.lat}&lon=${point.lng}`
     const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'AapdaSetu-Emergency/2.0',
-      },
-    })
+        signal: controller.signal,
+        headers: {
+          Accept: 'application/json',
+        },
+      })
     clearTimeout(timer)
     if (res.ok) {
       const data = await res.json()

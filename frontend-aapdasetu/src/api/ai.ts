@@ -16,9 +16,7 @@ export function aiTriage(input: ReportInput): Promise<TriageResult> {
 // =============================================================================
 // OPENROUTER AI INTEGRATION (High Quality Free Tier Models)
 // =============================================================================
-const OPENROUTER_API_KEY =
-  import.meta.env.VITE_OPENROUTER_API_KEY ||
-  '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'
+const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY as string | undefined
 
 export const OPENROUTER_FREE_MODELS = [
   'nvidia/nemotron-3-nano-30b-a3b:free',
@@ -191,9 +189,14 @@ async function callOpenRouter(
     { role: 'user', content: message },
   ]
 
+  if (!OPENROUTER_API_KEY) {
+    throw new Error('OpenRouter API key not configured')
+  }
   let lastError: unknown = null
 
   for (const model of OPENROUTER_FREE_MODELS) {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10000)
     try {
       const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -203,6 +206,7 @@ async function callOpenRouter(
           'HTTP-Referer': 'https://aapdasetu.in',
           'X-Title': 'AapdaSetu Disaster Response Ecosystem',
         },
+        signal: controller.signal,
         body: JSON.stringify({
           model,
           messages: openRouterMessages,
@@ -210,6 +214,7 @@ async function callOpenRouter(
           max_tokens: 220,
         }),
       })
+      clearTimeout(timeout)
 
       if (!res.ok) {
         const errorBody = await res.text()
@@ -227,6 +232,7 @@ async function callOpenRouter(
         }
       }
     } catch (err) {
+      clearTimeout(timeout)
       lastError = err
       console.warn(`[AapdaMitra AI] Error requesting model ${model}:`, err)
     }
@@ -241,6 +247,19 @@ export async function aiPfaChat(
   history: ChatHistoryItem[] = [],
   victimName = 'Friend'
 ): Promise<PfaChatResponse> {
+  const lowerScope = message.toLowerCase()
+  const scopePattern = /\b(flood|bleed|cut|drown|sinking|cardiac|heart|snake|burn|fracture|chok|help|rescue|shelter|track|sos|report|aapdasetu|emergency|danger|pain|hurt|wound|panic|water|food|medicine|hospital|ambulance|fire|earthquake|collapse|trapped|missing|damage|helpline|112|108)\b/i
+  const unrelatedPattern = /\b(reverse|py\s*code|python|java\s*code|javascript|programming|algorithm|leetcode|homework|essay|poem|joke|song|movie|game|translate|write\s*code|give\s*code|code\s*snippet|reverse\s*string)\b/i
+  if (unrelatedPattern.test(lowerScope) && !scopePattern.test(lowerScope)) {
+    return {
+      reply: 'I can only help with disaster, emergency, and AapdaSetu website topics (SOS, Report, Shelter, Track, Medical guidance). Please ask about flood, injury, shelter, or tracking. Example: "water entering house" or "severe bleeding".',
+      exerciseType: undefined,
+      isCritical: false,
+      dangerLevel: 'LOW',
+      helpline: undefined,
+      safetyChecklist: ['National Emergency: 112 | Ambulance: 108'],
+    }
+  }
   try {
     const aiReply = await callOpenRouter(message, history)
     const dangerLevel = detectDangerLevel(message) || detectDangerLevel(aiReply)
