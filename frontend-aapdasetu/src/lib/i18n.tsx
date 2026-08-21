@@ -86,6 +86,7 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'common.address': 'Physical Address',
     'common.landmark': 'Nearby Landmark',
     'common.name': 'Full Name',
+    'common.required': 'REQUIRED',
     'common.optional': 'OPTIONAL',
 
     // Home Hero Section
@@ -425,6 +426,7 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'common.address': 'भौतिक पता',
     'common.landmark': 'निकटतम लैंडमार्क',
     'common.name': 'पूरा नाम',
+    'common.required': 'आवश्यक',
     'common.optional': 'ऐच्छिक',
 
     // Home Hero Section
@@ -758,6 +760,7 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'common.address': 'ঠিকানা',
     'common.landmark': 'কাছাকাছি ল্যান্ডমার্ক',
     'common.name': 'পুরো নাম',
+    'common.required': 'আবশ্যক',
     'common.optional': 'ঐচ্ছিক',
 
     // Home Hero Section
@@ -1091,6 +1094,7 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'common.address': 'ଠିକଣା',
     'common.landmark': 'ନିକଟବର୍ତ୍ତୀ ସ୍ଥାନ',
     'common.name': 'ପୂରା ନାମ',
+    'common.required': 'ଆବଶ୍ୟକ',
     'common.optional': 'ଇଚ୍ଛାଧୀନ',
 
     // Home Hero Section

@@ -567,7 +567,7 @@ Track: ${typeof window !== 'undefined' ? window.location.origin : ''}/track?id=$
               {t('report.mediaTitle')} <span className="text-red-600">*</span>
             </label>
             <span className="text-[10px] font-bold uppercase tracking-wider text-red-500 mono">
-              REQUIRED
+              {t('common.required')}
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 leading-relaxed">
@@ -590,7 +590,7 @@ Track: ${typeof window !== 'undefined' ? window.location.origin : ''}/track?id=$
             className="hidden"
           />
 
-          <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-white/[0.1] dark:bg-[#1a1a1a] shadow-xs space-y-3">
+          <div className={`rounded-2xl border bg-white p-4 dark:bg-[#1a1a1a] shadow-xs space-y-3 ${media.length === 0 ? 'border-red-200 dark:border-red-900/40' : 'border-zinc-200 dark:border-white/[0.1]'}`}>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
