@@ -527,7 +527,7 @@ export default function ReportForm() {
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 leading-relaxed">
-            {t('report.mediaDesc')} <span className="font-semibold text-zinc-700 dark:text-slate-300">At least one photo/video or voice note is required.</span>
+            {t('report.mediaDesc')} <span className="font-semibold text-zinc-700 dark:text-slate-300">{t('report.mediaRequiredHint')}</span>
           </p>
 
           <input
@@ -659,7 +659,7 @@ export default function ReportForm() {
 
           {(!selectedType || !reporterPhone.trim() || media.length === 0) && (
             <p className="text-center text-xs font-medium text-red-500 dark:text-red-400">
-              {media.length === 0 ? '* Upload photo/video or record a voice note to dispatch' : t('report.submitValidation')}
+              {media.length === 0 ? t('report.mediaValidation') : t('report.submitValidation')}
             </p>
           )}
         </div>

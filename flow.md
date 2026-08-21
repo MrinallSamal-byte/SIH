@@ -109,9 +109,9 @@ flowchart TD
     
     Step2 --> Step3["Step 3: Reporter Name & Contact\n- Full Name (Optional)\n- 10-Digit Mobile Number (Mandatory for dispatch)"]
     
-    Step3 --> Step4["Step 4: Media Proof Capture\n- Live HTML5 Audio Voice Recording\n- Live HTML5 Video Proof Recording\n- Photo upload"]
+    Step3 --> Step4["Step 4: Media Proof Capture (REQUIRED — at least one)\n- Live HTML5 Audio Voice Recording\n- Live HTML5 Video Proof Recording\n- Photo upload\n- Submission blocked until ≥1 item attached"]
 
-    Step4 --> Step5["Step 5: Vulnerability & Description\n- Trapped / drowning / unconscious flags\n- Demographic tags: Infant, Child, Pregnant, Senior, Disabled"]
+    Step4 --> Step5["Step 5: Vulnerability & Description (Description OPTIONAL)\n- Trapped / drowning / unconscious flags\n- Demographic tags: Infant, Child, Pregnant, Senior, Disabled"]
 
     Step5 --> ProcessPayload["Compile Form Payload & Execute Local Triage Scoring"]
     ProcessPayload --> Submit["Submit to Backend & Realtime Event Bus"]

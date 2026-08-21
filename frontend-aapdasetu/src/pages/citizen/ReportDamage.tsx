@@ -7,11 +7,11 @@ import {
   Wheat,
   Warehouse,
   Flame,
+  CheckCircle2,
 } from 'lucide-react'
 import { aiDamageAssessment, type DamageVerdict } from '../../api/ai'
 import { createDamageAssessment } from '../../api/endpoints'
 import Button from '../../components/common/Button'
-import Badge from '../../components/common/Badge'
 import Loader from '../../components/common/Loader'
 import { Field, Input } from '../../components/common/Input'
 import { useToast } from '../../components/common/Toast'
@@ -178,11 +178,10 @@ export default function ReportDamage() {
   }
 
   const copyClaimReceipt = () => {
-    if (!claimId || !verdict) return
-    const text = `SDRF RELIEF CLAIM RECEIPT\nClaim ID: ${claimId}\nClaimant: ${ownerName || 'Citizen'}\nPhone: ${ownerPhone}\nInfra: ${infraType.toUpperCase()}\nDistrict: ${district}\nImages: ${photos.length}\nAI Damage Grade: ${verdict.damageGrade} (${verdict.damageScore}/100 avg of ${perImageVerdicts.length} images)\nEstimated Relief: INR ${verdict.compensationInr.toLocaleString('en-IN')}\nVerified By: AI Ensemble`
-    navigator.clipboard.writeText(text).then(() => {
+    if (!claimId) return
+    navigator.clipboard.writeText(claimId).then(() => {
       setCopied(true)
-      toast('Claim details copied to clipboard')
+      toast('Claim ID copied to clipboard')
       setTimeout(() => setCopied(false), 3000)
     })
   }
@@ -368,96 +367,37 @@ export default function ReportDamage() {
 
         {/* Verdict Output Card */}
         {verdict && (
-          <div className="space-y-4 rounded-2xl border border-zinc-200/80 bg-[#f4f4f5] p-5 dark:border-white/[0.08] dark:bg-[#151515]">
+          <div className="space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-xs dark:border-emerald-900/50 dark:bg-emerald-950/40">
+            <div className="flex items-center gap-3 text-emerald-800 dark:text-emerald-300">
+              <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <div>
+                <h2 className="text-sm font-bold">Damage Claim Registered with Command Center</h2>
+                <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
+                  Your claim has been assessed by the AI engine and logged for SDRF relief review.
+                </p>
+              </div>
+            </div>
+
             {claimId && (
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200/80 pb-3 dark:border-white/[0.08]">
-                <div>
-                  <span className="text-[10px] text-slate-500 uppercase tracking-wider mono font-bold">
-                    Official SDRF Claim ID
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200/80 bg-[#f4f4f5] p-4 dark:border-white/[0.08] dark:bg-[#151515]">
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">
+                    Official SDRF Claim ID — Save this
                   </span>
-                  <div className="font-mono text-base font-bold text-zinc-800 dark:text-slate-300">
+                  <div className="font-mono text-lg sm:text-xl font-bold text-zinc-800 dark:text-slate-300 break-all">
                     {claimId}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge value={verdict.verified ? 'VERIFIED_VALID' : 'FLAGGED_FRAUD_RISK'} />
-                  <button
-                    type="button"
-                    onClick={copyClaimReceipt}
-                    className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs font-bold text-zinc-600 shadow-xs hover:bg-zinc-100 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 cursor-pointer"
-                  >
-                    <Copy className="h-3 w-3" />
-                    <span>{copied ? 'Copied' : t('damage.copyClaim')}</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={copyClaimReceipt}
+                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-2 text-xs font-bold text-white transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white cursor-pointer"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  <span>{copied ? 'Copied!' : 'Copy ID'}</span>
+                </button>
               </div>
             )}
-
-            {/* AI Scoring Summary Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              <div className="rounded-xl border border-zinc-200/80 bg-white p-3 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
-                <div className="text-[10px] uppercase font-bold text-slate-500 mono">{t('damage.score')}</div>
-                <div className="text-lg font-bold font-mono text-red-600 dark:text-red-400">
-                  {verdict.damageScore} / 100
-                </div>
-                <div className="text-[10px] text-slate-400">Severity Points</div>
-              </div>
-
-              <div className="rounded-xl border border-zinc-200/80 bg-white p-3 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
-                <div className="text-[10px] uppercase font-bold text-slate-500 mono">{t('damage.grade')}</div>
-                <div className={`text-sm font-bold font-mono ${
-                  verdict.damageGrade === 'DESTROYED'
-                    ? 'text-red-600 dark:text-red-400'
-                    : verdict.damageGrade === 'MAJOR'
-                    ? 'text-amber-600 dark:text-amber-400'
-                    : 'text-emerald-600 dark:text-emerald-400'
-                }`}>
-                  {verdict.damageGrade}
-                </div>
-                <div className="text-[10px] text-slate-400">{verdict.confidence}% Confidence</div>
-              </div>
-
-              <div className="rounded-xl border border-zinc-200/80 bg-white p-3 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
-                <div className="text-[10px] uppercase font-bold text-slate-500 mono">{t('damage.compensation')}</div>
-                <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                  ₹{verdict.compensationInr.toLocaleString('en-IN')}
-                </div>
-                <div className="text-[10px] text-slate-400">Gov Compensation</div>
-              </div>
-
-              <div className="rounded-xl border border-zinc-200/80 bg-white p-3 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
-                <div className="text-[10px] uppercase font-bold text-slate-500 mono">Sector Match</div>
-                <div className="text-xs font-bold text-zinc-700 dark:text-slate-200 truncate">
-                  {district}
-                </div>
-                <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">GPS Verified</div>
-              </div>
-            </div>
-
-            {perImageVerdicts.length > 1 && (
-              <div className="border-t border-zinc-200/80 pt-3 dark:border-white/[0.08]">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mono">
-                  Per-image scores (averaged):
-                </span>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {perImageVerdicts.map((v, i) => (
-                    <span key={i} className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-xs font-mono font-bold dark:border-white/[0.08] dark:bg-[#1a1a1a]">#{i + 1}: {v.damageScore} ({v.damageGrade})</span>
-                  ))}
-                </div>
-                <div className="mt-1 text-[11px] text-slate-500">Final = average of {perImageVerdicts.length} images</div>
-              </div>
-            )}
-            {/* Assessment Factors */}
-            <div className="border-t border-zinc-200/80 pt-3 dark:border-white/[0.08]">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mono">
-                AI Structural Observations (averaged):
-              </span>
-              <ul className="mt-1.5 list-inside list-disc space-y-1 text-xs text-zinc-500 dark:text-slate-300">
-                {verdict.factors.map((f, i) => (
-                  <li key={i}>{f}</li>
-                ))}
-              </ul>
-            </div>
           </div>
         )}
       </div>

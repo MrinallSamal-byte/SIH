@@ -74,7 +74,7 @@ flowchart TD
     subgraph Citizen ["📱 CITIZEN — Zero-Auth (/) — src/pages/citizen/*"]
         C["Home.tsx<br/>Hero + Get Help wizard<br/>Quick Services carousel"]:::citizen
         C --> C1["🚨 Emergency SOS (/sos)<br/>SOS.tsx<br/>inputs: phone*, type, name, landmark<br/>hooks: useGeoLocation (watchPosition<br/>highAccuracy, isFallback, visibility pause)<br/>helpers: getHighPrecisionPosition,<br/>reverseGeocode, generateEmergencySms<br/>offline: localStorage aapdasetu_pending_sos<br/>early-return, no fake queued"]:::citizen
-        C --> C2["📋 Report Incident (/report)<br/>ReportForm.tsx<br/>LandmarkPicker (MapContainer India maxBounds)<br/>Media: Upload 3 max 5MB + MediaRecorder<br/>voice 30s (audioStreamRef)<br/>GPS: isFallback hidden, locateHighAccuracy<br/>validation: type*, phone 10d, description*"]:::citizen
+        C --> C2["📋 Report Incident (/report)<br/>ReportForm.tsx<br/>LandmarkPicker (MapContainer India maxBounds)<br/>Media: Upload 3 max 5MB + MediaRecorder<br/>voice 30s (audioStreamRef)<br/>GPS: isFallback hidden, locateHighAccuracy<br/>validation: type*, phone 10d, media ≥1 (photo/video/voice)*, description optional"]:::citizen
         C --> C3["🏕️ Shelters (/shelters)<br/>ShelterFinder.tsx<br/>useRealtime(listShelters,5000)<br/>Haversine sort, facilities filter<br/>260+280 BBSR dummy shelters<br/>markers stable id, no || fallback"]:::citizen
         C --> C4["🧭 Safe Routes (/safe-routes)<br/>SafeRoutes.tsx<br/>aiSatelliteFloodMap(center,radius30)<br/>lib/routing.ts fetchOsrmRoute (OSRM foot/driving)<br/>Polygon MultiPolygon handling,<br/>LeafletMap IndiaBounds OSM/Topo"]:::citizen
         C --> C5["👥 Missing (/missing-persons)<br/>photo* age* gender* lastSeen* phone*<br/>compressImage, maskPhone"]:::citizen
@@ -127,7 +127,7 @@ flowchart TD
 |------|------|------|-----------|
 | `/` | `Home.tsx` | public | Hero, Get Help wizard removed, 5 service cards, carousel `scrollBy 280` |
 | `/sos` | `SOS.tsx` | public | `useGeoLocation` `isFallback` → `generateEmergencySms` without coords if fallback, `navigator.onLine` early-return queued, `aiTriage` after, `copyTrackingId` |
-| `/report` | `ReportForm.tsx` | public | `LandmarkPicker` India bounds, `fileToDataUrl` 5MB, `MediaRecorder` + `audioStreamRef`, `report.gpsTitle*`, `report.descLabel*` required, `reverseGeocode` |
+| `/report` | `ReportForm.tsx` | public | `LandmarkPicker` India bounds, `fileToDataUrl` 5MB, `MediaRecorder` + `audioStreamRef`, `report.gpsTitle*`, media (photo/video OR voice note) required, `report.descLabel` optional, `reverseGeocode` |
 | `/track?id=SOS-xxx` | `ReportTracker.tsx` | public | `getReport` + `abortRef`, `hasCoords != null`, `fetchOsrmRoute(responder→incident, driving)` dashed false, `timeAgo` |
 | `/shelters` | `ShelterFinder.tsx` | public | `useRealtime(listShelters,5000)` `Haversine` sort, `typeof lat==='number'` filter, `shel-fallback-${i}` |
 | `/safe-routes` | `SafeRoutes.tsx` | public | `aiSatelliteFloodMap({center,radiusKm:30})` vs district, `polygonPaths` MultiPolygon flatMap, `fetchOsrmRoute` foot/driving, `LeafletMap` India `minZoom5 maxBounds` |
@@ -214,7 +214,7 @@ sequenceDiagram
         Note over Client: withMockFallback only 5xx/TypeError/Abort mocks, 4xx throws
         Client->>Bus: emitRealtimeUpdate report_created
         Bus-->>Admin: LiveSOS audible 880/440Hz siren if RED
-        Bus-->>Victim: Confirmation + PriorityBadge + copy TrackingID
+        Bus-->>Victim: Confirmation + Tracking ID + Copy ID button
         Admin->>Bus: assignVolunteer(report, nearest skill+distance haversine)
         Bus-->>Vol: AssignedTasks (strict filter)
         Vol->>Client: updateReport resolved
@@ -237,7 +237,7 @@ The citizen portal is completely **zero-authentication**—no sign-up, email, or
 | Feature & Route | Detailed Description & Capabilities | User Inputs & Automations | System Output & Value |
 | :--- | :--- | :--- | :--- |
 | **1-Tap Emergency SOS**<br>`#/sos` | One-touch instant distress trigger designed for extreme emergencies. Auto-detects GPS coordinates, calculates urgency, alerts the control room, and provides offline SMS fallback. | Auto-acquired GPS coordinates, accuracy radius (meters), physical landmark input. | Instant Tracking ID, live response link, emergency hotline fast-dial (112, 108, 1070). |
-| **Intelligent Incident Report**<br>`#/report` | Multi-step structured emergency reporting for complex incidents. Supports 7 emergency categories, interactive landmark picker, media evidence, and demographic vulnerability flags. | Emergency type, GPS picker, reporter phone, live audio voice recording, live video recording, victim count, special conditions. | AI triage priority calculation, verified incident dossier, tracking ID generation. |
+| **Intelligent Incident Report**<br>`#/report` | Multi-step structured emergency reporting for complex incidents. Supports 7 emergency categories, interactive landmark picker, mandatory media evidence (photo/video or voice note), and demographic vulnerability flags. | Emergency type, GPS picker, reporter phone, live audio voice recording, live video recording, victim count, special conditions. | AI triage priority calculation (visible on `/track`), tracking ID generation with one-tap copy. |
 | **Live Incident Tracker**<br>`#/track` | Real-time tracking portal allowing victims and families to track the exact progress of their rescue in real time. | Incident Tracking ID (e.g. `SOS-7K2X9`). | Live milestone status (`Distress Registered` $\rightarrow$ `Dispatched` $\rightarrow$ `Resolved`), responder card, live ETA, GPS map telemetry. |
 | **Nearby Shelter Finder**<br>`#/shelters` | Live relief camp locator sorted in real time by geodesic distance using the Haversine formula. Shows open bed availability and amenities. | GPS location, search query, facility filters (Medical Station, Food, Clean Water, Power Generator). | Distance in km, capacity/occupancy meter, status (Open/Full/Closed), one-tap phone call, turn-by-turn directions. |
 | **Safe Evacuation Corridors**<br>`#/safe-routes` | Dynamic GIS navigation engine that computes safe walking evacuation corridors by detecting and avoiding Sentinel-1 SAR flood polygons and blocked infrastructure. | Starting GPS location, destination relief camp. | Comparison of direct route vs. AI safe detour, flood hazard boundary visualization, turn-by-turn walking steps. |
