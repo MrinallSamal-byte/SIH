@@ -245,8 +245,8 @@ export default function ReportForm() {
       toast('Please enter a valid 10-digit mobile number for emergency contact', 'error')
       return
     }
-    if (!description.trim()) {
-      toast('Please describe the emergency (required to identify the problem)', 'error')
+    if (media.length === 0) {
+      toast('Please upload a photo/video or record a voice note — at least one is required', 'error')
       return
     }
 
@@ -560,18 +560,18 @@ Track: ${typeof window !== 'undefined' ? window.location.origin : ''}/track?id=$
           </div>
         </div>
 
-        {/* 5. Video or Voice Proof Upload */}
+        {/* 5. Video or Voice Proof Upload — Required */}
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="text-xs font-bold text-zinc-700 dark:text-slate-200 mono uppercase">
-              {t('report.mediaTitle')}
+              {t('report.mediaTitle')} <span className="text-red-600">*</span>
             </label>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">
-              {t('common.optional')}
+            <span className="text-[10px] font-bold uppercase tracking-wider text-red-500 mono">
+              REQUIRED
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 leading-relaxed">
-            {t('report.mediaDesc')}
+            {t('report.mediaDesc')} <span className="font-semibold text-zinc-700 dark:text-slate-300">At least one photo/video or voice note is required.</span>
           </p>
 
           <input
@@ -651,11 +651,16 @@ Track: ${typeof window !== 'undefined' ? window.location.origin : ''}/track?id=$
           </div>
         </div>
 
-        {/* 6. Description */}
+        {/* 6. Description — Now Optional */}
         <div>
-          <label className="block text-xs font-bold text-zinc-700 dark:text-slate-200 mb-1.5 mono uppercase">
-            {t('report.descLabel')} <span className="text-red-600">*</span>
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs font-bold text-zinc-700 dark:text-slate-200 mono uppercase">
+              {t('report.descLabel')}
+            </label>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">
+              {t('common.optional')}
+            </span>
+          </div>
           <textarea
             rows={4}
             value={description}
@@ -680,7 +685,7 @@ Track: ${typeof window !== 'undefined' ? window.location.origin : ''}/track?id=$
         <div className="pt-2 space-y-2">
           <button
             type="submit"
-            disabled={sending || !selectedType || !reporterPhone.trim() || !description.trim()}
+            disabled={sending || !selectedType || !reporterPhone.trim() || media.length === 0}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-800 py-4 text-base font-bold text-white shadow-md transition hover:bg-zinc-700 active:scale-[0.98] disabled:bg-slate-200 disabled:text-slate-400 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white dark:disabled:bg-slate-800 dark:disabled:text-zinc-500 cursor-pointer"
           >
             {sending ? (
@@ -696,9 +701,9 @@ Track: ${typeof window !== 'undefined' ? window.location.origin : ''}/track?id=$
             )}
           </button>
 
-          {(!selectedType || !reporterPhone.trim()) && (
+          {(!selectedType || !reporterPhone.trim() || media.length === 0) && (
             <p className="text-center text-xs font-medium text-red-500 dark:text-red-400">
-              {t('report.submitValidation')}
+              {media.length === 0 ? '* Upload photo/video or record a voice note to dispatch' : t('report.submitValidation')}
             </p>
           )}
         </div>
