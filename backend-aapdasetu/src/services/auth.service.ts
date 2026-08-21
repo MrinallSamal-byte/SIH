@@ -95,8 +95,11 @@ export async function changeAdminPassword(input: {
 }
 
 export async function getAdminSession(adminId: string) {
-  return prisma.adminUser.findUnique({
+  const admin = await prisma.adminUser.findUnique({
     where: { id: adminId },
-    select: { id: true, email: true, name: true, role: true, lastLoginAt: true },
+    select: { id: true, email: true, name: true, role: true, lastLoginAt: true, isActive: true },
   });
+  if (!admin || !admin.isActive) return null;
+  const { isActive, ...session } = admin;
+  return session;
 }
