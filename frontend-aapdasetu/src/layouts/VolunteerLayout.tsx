@@ -2,14 +2,16 @@ import { Link, NavLink, Navigate, Outlet, useNavigate } from 'react-router-dom'
 import { User, LogOut, ArrowRight } from 'lucide-react'
 import AapdaSetuLogo from '../components/common/AapdaSetuLogo'
 import { useIsVolunteerAuthed, useVolunteerAuth } from '../hooks/useVolunteerAuth'
+import { useLanguage } from '../lib/i18n'
 
 const links = [
-  { to: '/volunteer', label: 'Operational Dashboard', end: true },
-  { to: '/volunteer/tasks', label: 'Assigned Rescue Tasks' },
-  { to: '/volunteer/check-in', label: 'Safety Check-in' },
+  { to: '/volunteer', labelKey: 'volNav.dashboard', end: true },
+  { to: '/volunteer/tasks', labelKey: 'volNav.tasks' },
+  { to: '/volunteer/check-in', labelKey: 'volNav.checkin' },
 ]
 
 export default function VolunteerLayout() {
+  const { t } = useLanguage()
   const authed = useIsVolunteerAuthed()
   const { logout, user } = useVolunteerAuth()
   const navigate = useNavigate()
@@ -31,9 +33,9 @@ export default function VolunteerLayout() {
             </Link>
             <div>
               <div className="text-sm font-bold tracking-tight text-zinc-800 dark:text-slate-100">
-                AapdaSetu Volunteer Force
+                {t('volNav.title')}
               </div>
-              <div className="text-[10px] text-slate-400">Field Responders & Medical Volunteers</div>
+              <div className="text-[10px] text-slate-400">{t('volNav.subtitle')}</div>
             </div>
           </div>
 
@@ -52,7 +54,7 @@ export default function VolunteerLayout() {
                     }`
                   }
                 >
-                  {l.label}
+                  {t(l.labelKey)}
                 </NavLink>
               ))}
             </nav>
@@ -68,7 +70,7 @@ export default function VolunteerLayout() {
               to="/"
               className="flex items-center gap-1 rounded-lg border border-zinc-200/80 px-2.5 py-1 text-xs font-medium text-slate-500 hover:bg-zinc-100 dark:border-white/[0.1] dark:text-slate-400 dark:hover:bg-zinc-700"
             >
-              <span>Public App</span>
+              <span>{t('volNav.publicApp')}</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
 
@@ -78,7 +80,7 @@ export default function VolunteerLayout() {
               className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-100 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-900/60"
             >
               <LogOut className="h-3.5 w-3.5" />
-              <span>Exit</span>
+              <span>{t('volNav.exit')}</span>
             </button>
           </div>
         </div>
@@ -98,13 +100,13 @@ export default function VolunteerLayout() {
                 }`
               }
             >
-              {l.label}
+              {t(l.labelKey)}
             </NavLink>
           ))}
         </div>
       </header>
 
-      <main className="mx-auto flex-1 w-full max-w-6xl px-4 py-6">
+      <main className="mx-auto flex-1 w-full max-w-6xl p-4 md:p-6">
         <Outlet />
       </main>
     </div>

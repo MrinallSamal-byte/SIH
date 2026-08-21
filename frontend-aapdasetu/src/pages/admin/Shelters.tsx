@@ -44,8 +44,10 @@ export default function AdminShelters() {
     power_generator: t('sh.facilityPower'),
   }
 
-  const statusText = (st: ShelterStatus) =>
-    st === 'open' ? t('sh.open') : st === 'full' ? t('sh.full') : t('sh.closed')
+  const statusText = useCallback(
+    (st: ShelterStatus) => (st === 'open' ? t('sh.open') : st === 'full' ? t('sh.full') : t('sh.closed')),
+    [t],
+  )
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -227,7 +229,7 @@ export default function AdminShelters() {
       color: s.status === 'open' ? '#10b981' : s.status === 'full' ? '#f59e0b' : '#ef4444',
       isShelter: true,
     }))
-  }, [filtered])
+  }, [filtered, statusText, t])
 
   const mapCenter: GeoPoint = useMemo(() => {
     if (filtered.length > 0) {

@@ -16,9 +16,11 @@ import Loader from '../../components/common/Loader'
 import Modal from '../../components/common/Modal'
 import { useRealtime } from '../../hooks/useRealtime'
 import { useToast } from '../../components/common/Toast'
+import { useLanguage } from '../../lib/i18n'
 import type { MissingPerson } from '../../types'
 
 export default function MissingPersons() {
+  const { t } = useLanguage()
   const { toast } = useToast()
   const fetchPersons = useCallback(() => listMissingPersons(), [])
   const persons = useRealtime<MissingPerson[]>(fetchPersons, 6000)
@@ -30,9 +32,9 @@ export default function MissingPersons() {
   const update = async (id: string, patch: Partial<MissingPerson>) => {
     try {
       await updateMissingPerson(id, patch)
-      toast(`Missing person record status updated to: ${patch.status?.toUpperCase()}`, 'success')
+      toast(`${t('mp_admin.statusUpdated')}: ${patch.status?.toUpperCase()}`, 'success')
     } catch {
-      toast('Failed to update missing person record', 'error')
+      toast(t('mp_admin.updateFailed'), 'error')
     }
   }
 
@@ -67,52 +69,52 @@ export default function MissingPersons() {
           <div className="flex items-center gap-2">
             <Search className="h-6 w-6 text-slate-900 dark:text-slate-100" />
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-              Missing Persons Case Management
+              {t('mp_admin.title')}
             </h1>
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Investigative case review, photo facial verification, guardian lead contacts, and rescue cross-referencing.
+            {t('mp_admin.subtitle')}
           </p>
         </div>
 
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300 mono">
-          {totalCount} Total Cases
+          {totalCount} {t('mp_admin.totalCases')}
         </span>
       </div>
 
       {/* KPI Metrics */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">Total Cases</div>
+          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">{t('mp_admin.totalCases')}</div>
           <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-slate-100">{totalCount}</div>
-          <div className="text-[11px] text-slate-400">Registered bulletins</div>
+          <div className="text-[11px] text-slate-400">{t('mp_admin.registeredBulletins')}</div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 mono flex items-center gap-1">
             <AlertCircle className="h-3.5 w-3.5" />
-            <span>Active Searches</span>
+            <span>{t('mp_admin.activeSearches')}</span>
           </div>
           <div className="mt-1 text-2xl font-bold font-mono text-red-600 dark:text-red-400">{openCount}</div>
-          <div className="text-[11px] text-slate-400">Investigation pending</div>
+          <div className="text-[11px] text-slate-400">{t('mp_admin.investigationPending')}</div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mono flex items-center gap-1">
             <Eye className="h-3.5 w-3.5" />
-            <span>Sightings / Matched</span>
+            <span>{t('mp_admin.sightingsMatched')}</span>
           </div>
           <div className="mt-1 text-2xl font-bold font-mono text-amber-600 dark:text-amber-400">{matchedCount}</div>
-          <div className="text-[11px] text-slate-400">Identity match identified</div>
+          <div className="text-[11px] text-slate-400">{t('mp_admin.identityMatchIdentified')}</div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mono flex items-center gap-1">
             <CheckCircle2 className="h-3.5 w-3.5" />
-            <span>Reunited & Safe</span>
+            <span>{t('mp_admin.reunitedSafe')}</span>
           </div>
           <div className="mt-1 text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">{resolvedCount}</div>
-          <div className="text-[11px] text-slate-400">Case closed successfully</div>
+          <div className="text-[11px] text-slate-400">{t('mp_admin.caseClosedSuccess')}</div>
         </div>
       </div>
 
@@ -123,7 +125,7 @@ export default function MissingPersons() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search cases by missing person name, last seen location, clothes, or phone…"
+            placeholder={t('mp_admin.searchPlaceholder')}
             className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3.5 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
           />
         </div>
@@ -140,7 +142,7 @@ export default function MissingPersons() {
                   : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
               }`}
             >
-              {st}
+              {st === 'all' ? t('mp_admin.statusAll') : st === 'open' ? t('mp_admin.statusOpen') : st === 'matched' ? t('mp_admin.statusMatched') : t('mp_admin.statusResolved')}
             </button>
           ))}
         </div>
@@ -176,7 +178,7 @@ export default function MissingPersons() {
                   <div>
                     <div className="font-bold text-base text-slate-900 dark:text-slate-100">{p.name}</div>
                     <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      {p.age !== undefined ? `Age ${p.age}` : 'Age unknown'} · <span className="capitalize">{p.gender || 'Not specified'}</span>
+                      {p.age !== undefined ? `${t('mp_admin.age')} ${p.age}` : t('mp_admin.ageUnknown')} · <span className="capitalize">{p.gender || t('mp_admin.genderNotSpecified')}</span>
                     </div>
                   </div>
                 </div>
@@ -188,17 +190,17 @@ export default function MissingPersons() {
               <div className="mt-4 space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
                 <div className="flex items-start gap-1.5">
                   <MapPin className="h-3.5 w-3.5 shrink-0 text-red-500 mt-0.5" />
-                  <span>Last Seen: <strong>{p.lastSeenLocation || 'Location unspecified'}</strong></span>
+                  <span>{t('mp_admin.lastSeen')}: <strong>{p.lastSeenLocation || t('mp_admin.locationUnspecified')}</strong></span>
                 </div>
                 {p.clothes && (
                   <div className="text-slate-500 dark:text-slate-400 text-[11px]">
-                    Wearing: <span className="italic">{p.clothes}</span>
+                    {t('mp_admin.wearing')}: <span className="italic">{p.clothes}</span>
                   </div>
                 )}
                 {p.contactPhone && (
                   <div className="flex items-center gap-1.5 pt-1">
                     <Phone className="h-3.5 w-3.5 text-emerald-600" />
-                    <span>Guardian Contact: <a href={`tel:${p.contactPhone}`} className="font-mono font-bold text-slate-900 dark:text-slate-100 underline hover:text-emerald-600">{p.contactPhone}</a></span>
+                    <span>{t('mp_admin.guardianContact')}: <a href={`tel:${p.contactPhone}`} className="font-mono font-bold text-slate-900 dark:text-slate-100 underline hover:text-emerald-600">{p.contactPhone}</a></span>
                   </div>
                 )}
               </div>
@@ -212,9 +214,9 @@ export default function MissingPersons() {
                   onChange={(e) => update(p.id, { status: e.target.value as MissingPerson['status'] })}
                   className="w-full py-1 text-xs font-bold"
                 >
-                  <option value="open">Open Case (Searching)</option>
-                  <option value="matched">Matched Sighting</option>
-                  <option value="resolved">Resolved & Reunited</option>
+                  <option value="open">{t('mp_admin.optOpen')}</option>
+                  <option value="matched">{t('mp_admin.optMatched')}</option>
+                  <option value="resolved">{t('mp_admin.optResolved')}</option>
                 </Select>
               </div>
 
@@ -224,7 +226,7 @@ export default function MissingPersons() {
                   className="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300 transition"
                 >
                   <Phone className="h-3.5 w-3.5" />
-                  <span>Call</span>
+                  <span>{t('mp_admin.btnCall')}</span>
                 </a>
               )}
             </div>
@@ -233,18 +235,18 @@ export default function MissingPersons() {
 
         {filtered.length === 0 && (
           <div className="col-span-full rounded-2xl border border-dashed border-slate-300 p-12 text-center text-xs text-slate-400 dark:border-slate-800">
-            No missing person cases matched your search query.
+            {t('mp_admin.noCases')}
           </div>
         )}
       </div>
 
       {/* Photo Preview Modal */}
       {previewPhoto && (
-        <Modal open title="Missing Person Photo" onClose={() => setPreviewPhoto(null)}>
+        <Modal open title={t('mp_admin.modalPhotoTitle')} onClose={() => setPreviewPhoto(null)}>
           <div className="flex flex-col items-center">
             <img src={previewPhoto} alt="Preview" className="max-h-96 w-auto rounded-xl object-contain shadow-md" />
             <Button variant="secondary" className="mt-4" onClick={() => setPreviewPhoto(null)}>
-              Close Preview
+              {t('mp_admin.btnClosePreview')}
             </Button>
           </div>
         </Modal>

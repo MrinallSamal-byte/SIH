@@ -3,8 +3,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import Button from '../../components/common/Button'
 import { Field, Input } from '../../components/common/Input'
 import { useAuth } from '../../hooks/useAuth'
+import { useLanguage } from '../../lib/i18n'
 
 export default function AdminLogin() {
+  const { t } = useLanguage()
   const { login, loading, error } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('admin@aapdasetu.org')
@@ -33,39 +35,39 @@ export default function AdminLogin() {
             </div>
             <div>
               <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                AapdaSetu Command
+                {t('adminNav.title')}
               </span>
               <span className="ml-1.5 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-white/[0.1]">
-                Official
+                {t('adminLogin.badgeOfficial')}
               </span>
             </div>
           </div>
 
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            Admin Login
+            {t('adminLogin.title')}
           </h1>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            Authorized disaster response personnel and incident commanders only.
+            {t('adminLogin.subtitle')}
           </p>
 
           <div className="mt-6 space-y-4">
-            <Field label="Admin Email">
+            <Field label={t('adminLogin.emailLabel')}>
               <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@aapdasetu.example"
+                placeholder={t('adminLogin.emailPlaceholder')}
                 autoComplete="username"
                 required
               />
             </Field>
 
-            <Field label="Password">
+            <Field label={t('adminLogin.passwordLabel')}>
               <Input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder={t('adminLogin.passwordPlaceholder')}
                 autoComplete="current-password"
                 required
               />
@@ -82,7 +84,7 @@ export default function AdminLogin() {
               className="w-full font-bold"
               disabled={loading || !email.trim() || !password.trim()}
             >
-              {loading ? 'Signing in…' : 'Sign in to Command'}
+              {loading ? t('adminLogin.signingIn') : t('adminLogin.signIn')}
             </Button>
           </div>
 
@@ -91,7 +93,7 @@ export default function AdminLogin() {
               to="/"
               className="text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             >
-              ← Return to Citizen Homepage
+              {t('adminLogin.returnHome')}
             </Link>
           </div>
         </form>

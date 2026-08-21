@@ -14,9 +14,11 @@ import Loader from '../../components/common/Loader'
 import LeafletMap, { type MapMarker } from '../../components/map/LeafletMap'
 import { useRealtime } from '../../hooks/useRealtime'
 import { formatDateTime, maskPhone } from '../../lib/helpers'
+import { useLanguage } from '../../lib/i18n'
 import type { GeoPoint, SafetyCheckin } from '../../types'
 
 export default function SafetyRegistry() {
+  const { t } = useLanguage()
   const fetchCheckins = useCallback(() => listSafetyCheckins(), [])
   const checkins = useRealtime<SafetyCheckin[]>(fetchCheckins, 5000)
 
@@ -51,12 +53,12 @@ export default function SafetyRegistry() {
       .map((c) => ({
         id: c.id,
         position: { lat: c.latitude!, lng: c.longitude! },
-        title: `${c.fullName || 'Citizen'} (${c.status === 'safe' ? 'SAFE' : 'NEEDS ASSISTANCE'})`,
-        subtitle: `${c.locationName || 'GPS Location'} · ${c.notes || ''}`,
+        title: `${c.fullName || t('sr.anonymousCitizen')} (${c.status === 'safe' ? t('sr.safeCaps') : t('sr.needAssistanceCaps')})`,
+        subtitle: `${c.locationName || t('sr.gpsLocation')} · ${c.notes || ''}`,
         color: c.status === 'safe' ? '#10b981' : '#dc2626',
         isSos: c.status === 'need_assistance',
       }))
-  }, [filtered])
+  }, [filtered, t])
 
   const mapCenter: GeoPoint = useMemo(() => {
     if (markers.length > 0) return markers[0].position
@@ -76,10 +78,10 @@ export default function SafetyRegistry() {
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                Citizen Safety Registry & Check-ins
+                {t('sr.title')}
               </h1>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Real-time stream of citizen self-checkins, distress flags, and family welfare verifications.
+                {t('sr.subtitle')}
               </p>
             </div>
           </div>
@@ -87,7 +89,7 @@ export default function SafetyRegistry() {
 
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300 mono">
-            {totalCount} Total Submissions
+            {totalCount} {t('sr.totalSubmissions')}
           </span>
         </div>
       </div>
@@ -95,37 +97,37 @@ export default function SafetyRegistry() {
       {/* KPI Summary Cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">Total Check-Ins</div>
+          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">{t('sr.totalCheckIns')}</div>
           <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-slate-100">{totalCount}</div>
-          <div className="text-[11px] text-slate-400">Registered citizens</div>
+          <div className="text-[11px] text-slate-400">{t('sr.registeredCitizens')}</div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mono flex items-center gap-1">
             <UserCheck className="h-3.5 w-3.5" />
-            <span>Marked Safe</span>
+            <span>{t('sr.markedSafe')}</span>
           </div>
           <div className="mt-1 text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">{safeCount}</div>
           <div className="text-[11px] text-slate-400">
-            {totalCount > 0 ? Math.round((safeCount / totalCount) * 100) : 0}% of all records
+            {totalCount > 0 ? Math.round((safeCount / totalCount) * 100) : 0}% {t('sr.ofAllRecords')}
           </div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 mono flex items-center gap-1">
             <AlertTriangle className="h-3.5 w-3.5" />
-            <span>Needs Assistance</span>
+            <span>{t('sr.needsAssistance')}</span>
           </div>
           <div className="mt-1 text-2xl font-bold font-mono text-red-600 dark:text-red-400">{needHelpCount}</div>
-          <div className="text-[11px] text-slate-400">Urgent rescue/relief queue</div>
+          <div className="text-[11px] text-slate-400">{t('sr.urgentRescueQueue')}</div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">GPS Mapped</div>
+          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">{t('sr.gpsMapped')}</div>
           <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-slate-100">
             {markers.length}
           </div>
-          <div className="text-[11px] text-slate-400">Geotagged coordinates</div>
+          <div className="text-[11px] text-slate-400">{t('sr.geotaggedCoords')}</div>
         </div>
       </div>
 
@@ -133,8 +135,8 @@ export default function SafetyRegistry() {
       {markers.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
-            <span>Safety Checkin Geolocation Map ({markers.length} Mapped Pins)</span>
-            <span className="text-[11px] text-slate-400">Green = Safe · Red = Needs Assistance</span>
+            <span>{t('sr.mapTitle')} ({markers.length} {t('sr.mappedPins')})</span>
+            <span className="text-[11px] text-slate-400">{t('sr.mapLegend')}</span>
           </div>
           <div className="h-64 rounded-2xl overflow-hidden shadow-xs border border-slate-200 dark:border-slate-800">
             <LeafletMap center={mapCenter} markers={markers} height="100%" autoFit />
@@ -149,7 +151,7 @@ export default function SafetyRegistry() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search check-ins by citizen name, phone, locality, or notes…"
+            placeholder={t('sr.searchPlaceholder')}
             className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3.5 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-white/[0.1] dark:bg-slate-950 dark:text-slate-100"
           />
         </div>
@@ -165,7 +167,7 @@ export default function SafetyRegistry() {
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
               }`}
             >
-              {st === 'need_assistance' ? 'Needs Assistance' : st}
+              {st === 'all' ? t('sr.filterAll') : st === 'safe' ? t('sr.filterSafe') : t('sr.filterNeedAssistance')}
             </button>
           ))}
         </div>
@@ -176,20 +178,20 @@ export default function SafetyRegistry() {
         <table className="w-full text-left text-xs">
           <thead className="border-b bg-slate-50 dark:bg-slate-800 text-[10px] uppercase text-slate-500 dark:text-slate-400 mono font-bold">
             <tr>
-              <th className="px-4 py-3">Citizen Name</th>
-              <th className="px-4 py-3">Contact Phone</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Location / Locality</th>
-              <th className="px-4 py-3">Check-In Notes</th>
-              <th className="px-4 py-3">Timestamp</th>
-              <th className="px-4 py-3 text-right">Action</th>
+              <th className="px-4 py-3">{t('sr.thCitizenName')}</th>
+              <th className="px-4 py-3">{t('sr.thContactPhone')}</th>
+              <th className="px-4 py-3">{t('sr.thStatus')}</th>
+              <th className="px-4 py-3">{t('sr.thLocation')}</th>
+              <th className="px-4 py-3">{t('sr.thNotes')}</th>
+              <th className="px-4 py-3">{t('sr.thTimestamp')}</th>
+              <th className="px-4 py-3 text-right">{t('sr.thAction')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {filtered.map((c) => (
               <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
                 <td className="px-4 py-3 font-semibold text-slate-900 dark:text-slate-100">
-                  {c.fullName || 'Anonymous Citizen'}
+                  {c.fullName || t('sr.anonymousCitizen')}
                 </td>
                 <td className="px-4 py-3 mono text-slate-600 dark:text-slate-400">
                   {c.phone ? maskPhone(c.phone) : '—'}
@@ -200,7 +202,7 @@ export default function SafetyRegistry() {
                 <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
                   <div className="flex items-center gap-1">
                     <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
-                    <span>{c.locationName || (c.latitude ? `${c.latitude.toFixed(4)}, ${c.longitude?.toFixed(4)}` : 'GPS Verified')}</span>
+                    <span>{c.locationName || (c.latitude ? `${c.latitude.toFixed(4)}, ${c.longitude?.toFixed(4)}` : t('sr.gpsVerified'))}</span>
                   </div>
                 </td>
                 <td className="px-4 py-3 text-slate-600 dark:text-slate-300 max-w-xs truncate">
@@ -219,14 +221,14 @@ export default function SafetyRegistry() {
                       className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200"
                     >
                       <Phone className="h-3 w-3" />
-                      <span>Contact</span>
+                      <span>{t('sr.btnContact')}</span>
                     </a>
                   ) : (
                     <button
                       onClick={() => setSelectedCheckin(c)}
                       className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
                     >
-                      Inspect
+                      {t('sr.btnInspect')}
                     </button>
                   )}
                 </td>
@@ -237,7 +239,7 @@ export default function SafetyRegistry() {
 
         {filtered.length === 0 && (
           <div className="p-12 text-center text-xs text-slate-400">
-            No safety check-in records matched your search.
+            {t('sr.noRecords')}
           </div>
         )}
       </div>
@@ -253,29 +255,29 @@ export default function SafetyRegistry() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-              Safety Record Details
+              {t('sr.modalTitle')}
             </h3>
             <div className="mt-4 space-y-2 text-xs">
               <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
-                <span className="text-slate-500">Citizen:</span>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{selectedCheckin.fullName || 'Anonymous'}</span>
+                <span className="text-slate-500">{t('sr.modalCitizen')}</span>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{selectedCheckin.fullName || t('sr.anonymousCitizen')}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
-                <span className="text-slate-500">Contact Phone:</span>
+                <span className="text-slate-500">{t('sr.modalPhone')}</span>
                 <span className="font-mono font-bold text-slate-900 dark:text-slate-100">{selectedCheckin.phone || 'None'}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
-                <span className="text-slate-500">Status:</span>
+                <span className="text-slate-500">{t('sr.modalStatus')}</span>
                 <Badge value={selectedCheckin.status} />
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
-                <span className="text-slate-500">Reported Locality:</span>
+                <span className="text-slate-500">{t('sr.modalLocality')}</span>
                 <span className="font-semibold text-slate-900 dark:text-slate-100">{selectedCheckin.locationName || 'N/A'}</span>
               </div>
               <div className="py-1">
-                <span className="text-slate-500">Notes:</span>
+                <span className="text-slate-500">{t('sr.modalNotes')}</span>
                 <p className="mt-1 text-slate-800 dark:text-slate-200 leading-relaxed bg-slate-50 p-2.5 rounded-xl dark:bg-slate-800">
-                  {selectedCheckin.notes || 'No additional details submitted.'}
+                  {selectedCheckin.notes || t('sr.modalNoNotes')}
                 </p>
               </div>
             </div>
@@ -284,7 +286,7 @@ export default function SafetyRegistry() {
               onClick={() => setSelectedCheckin(null)}
               className="mt-4 w-full rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer"
             >
-              Close
+              {t('sr.btnClose')}
             </button>
           </div>
         </div>

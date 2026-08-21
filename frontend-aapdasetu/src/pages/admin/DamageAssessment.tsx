@@ -20,6 +20,7 @@ import {
 import LeafletMap, { type MapMarker } from '../../components/map/LeafletMap'
 import { listDamageAssessments, updateDamageAssessmentStatus } from '../../api/endpoints'
 import { useToast } from '../../components/common/Toast'
+import { useLanguage } from '../../lib/i18n'
 import { subscribeRealtimeUpdates } from '../../lib/realtimeEventBus'
 import type { DamageAssessmentReport, DamageInfrastructureType } from '../../types'
 
@@ -33,18 +34,20 @@ const INFRA_ICONS: Record<DamageInfrastructureType, typeof Home> = {
   other: HelpCircle,
 }
 
-const INFRA_LABELS: Record<DamageInfrastructureType, string> = {
-  broken_home: 'Broken Home / Residential',
-  gov_pipeline: 'Gov Water/Gas Pipeline',
-  road_bridge: 'Road, Culvert & Bridge',
-  electrical_power: 'Power Grid Feeder',
-  commercial_public: 'Commercial / Public Wing',
-  agricultural: 'Agricultural / Farmland',
-  other: 'Other',
-}
-
 export default function DamageAssessment() {
+  const { t } = useLanguage()
   const { toast } = useToast()
+
+  const INFRA_LABELS: Record<DamageInfrastructureType, string> = useMemo(() => ({
+    broken_home: t('dm.infraBrokenHome'),
+    gov_pipeline: t('dm.infraGovPipeline'),
+    road_bridge: t('dm.infraRoadBridge'),
+    electrical_power: t('dm.infraPowerGrid'),
+    commercial_public: t('dm.infraCommercial'),
+    agricultural: t('dm.infraAgricultural'),
+    other: t('dm.infraOther'),
+  }), [t])
+
   const [items, setItems] = useState<DamageAssessmentReport[]>([])
   const [infraFilter, setInfraFilter] = useState<string>('all')
   const [gradeFilter, setGradeFilter] = useState<string>('all')
@@ -58,9 +61,9 @@ export default function DamageAssessment() {
       const data = await listDamageAssessments()
       setItems(data)
     } catch {
-      toast('Failed to load damage assessments', 'error')
+      toast(t('dm.loadFailed'), 'error')
     }
-  }, [toast])
+  }, [toast, t])
 
   useEffect(() => {
     loadData()
@@ -111,7 +114,7 @@ export default function DamageAssessment() {
     >()
 
     items.forEach((item) => {
-      const dist = item.district || 'Unassigned Sector'
+      const dist = item.district || t('dm.unassignedSector')
       const existing = map.get(dist) || {
         district: dist,
         totalScore: 0,
@@ -132,7 +135,7 @@ export default function DamageAssessment() {
     })
 
     return Array.from(map.values()).sort((a, b) => b.totalScore - a.totalScore)
-  }, [items])
+  }, [items, t])
 
   const worstSector = sectorAggregation[0]
 
@@ -160,7 +163,7 @@ export default function DamageAssessment() {
         isSos: isDestroyed,
       }
     })
-  }, [filtered])
+  }, [filtered, INFRA_LABELS])
 
   const handleStatusChange = async (id: string, newStatus: DamageAssessmentReport['status']) => {
     try {
@@ -169,9 +172,9 @@ export default function DamageAssessment() {
       if (selectedReport?.id === id) {
         setSelectedReport((prev) => (prev ? { ...prev, status: newStatus } : null))
       }
-      toast(`Claim status updated to ${newStatus}`)
+      toast(`${t('dm.statusUpdated')}: ${newStatus}`)
     } catch {
-      toast('Failed to update status', 'error')
+      toast(t('dm.statusUpdateFailed'), 'error')
     }
   }
 
@@ -191,10 +194,10 @@ export default function DamageAssessment() {
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                Disaster Damage Intelligence & Hotspot Command
+                {t('dm.title')}
               </h1>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Automated damage assessment powered by HuggingFace ResNet-50 vision classifier with regional severity ranking.
+                {t('dm.subtitle')}
               </p>
             </div>
           </div>
@@ -217,7 +220,7 @@ export default function DamageAssessment() {
             className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
           >
             <RefreshCw className="h-3.5 w-3.5" />
-            <span>Sync</span>
+            <span>{t('dm.sync')}</span>
           </button>
         </div>
       </div>
@@ -226,54 +229,54 @@ export default function DamageAssessment() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">
-            Worst-Hit Sector
+            {t('dm.worstHitSector')}
           </div>
           <div className="mt-1 text-base font-bold text-red-600 dark:text-red-400 truncate">
             {worstSector ? worstSector.district : 'N/A'}
           </div>
           <div className="text-[11px] font-mono text-slate-400">
-            {worstSector ? `${worstSector.totalScore.toFixed(0)} total damage pts` : 'No data'}
+            {worstSector ? `${worstSector.totalScore.toFixed(0)} ${t('dm.totalDamagePts')}` : t('dm.noData')}
           </div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">
-            Total Assessed Claims
+            {t('dm.totalAssessedClaims')}
           </div>
           <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-slate-100">
             {totalReportsCount}
           </div>
-          <div className="text-[11px] text-slate-400">Avg Score: {avgDamageScore} / 100 pts</div>
+          <div className="text-[11px] text-slate-400">{t('dm.avgScore')}: {avgDamageScore} / 100 pts</div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">
-            Fully Destroyed
+            {t('dm.fullyDestroyed')}
           </div>
           <div className="mt-1 text-2xl font-bold font-mono text-red-600 dark:text-red-400">
             {totalDestroyed}
           </div>
-          <div className="text-[11px] text-slate-400">90–100 Severity Scale</div>
+          <div className="text-[11px] text-slate-400">{t('dm.severityScale90')}</div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">
-            Pipeline Breaches
+            {t('dm.pipelineBreaches')}
           </div>
           <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-slate-100">
             {totalPipelines}
           </div>
-          <div className="text-[11px] text-slate-400">Gov Water & Gas Mains</div>
+          <div className="text-[11px] text-slate-400">{t('dm.govWaterGas')}</div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">
-            SDRF Relief Loss
+            {t('dm.sdrfReliefLoss')}
           </div>
           <div className="mt-1 text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400 truncate">
             ₹{totalCompensationInr.toLocaleString('en-IN')}
           </div>
-          <div className="text-[11px] text-slate-400">Automated Relief Math</div>
+          <div className="text-[11px] text-slate-400">{t('dm.automatedReliefMath')}</div>
         </div>
       </div>
 
@@ -285,22 +288,22 @@ export default function DamageAssessment() {
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-red-600 dark:text-red-400" />
               <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 mono">
-                Geospatial Damage Points ({markers.length} Active Pins)
+                {t('dm.geospatialPoints')} ({markers.length} {t('dm.activePins')})
               </h2>
             </div>
 
             <div className="flex items-center gap-3 text-[11px] font-semibold text-slate-500">
               <span className="flex items-center gap-1">
                 <span className="h-2.5 w-2.5 rounded-full bg-red-600 animate-pulse"></span>
-                <span>Destroyed (90-100)</span>
+                <span>{t('dm.legendDestroyed')}</span>
               </span>
               <span className="flex items-center gap-1">
                 <span className="h-2.5 w-2.5 rounded-full bg-amber-500"></span>
-                <span>Major (60-85)</span>
+                <span>{t('dm.legendMajor')}</span>
               </span>
               <span className="flex items-center gap-1">
                 <span className="h-2.5 w-2.5 rounded-full bg-slate-500"></span>
-                <span>Minor (20-45)</span>
+                <span>{t('dm.legendMinor')}</span>
               </span>
             </div>
           </div>
@@ -323,10 +326,10 @@ export default function DamageAssessment() {
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-slate-900 dark:text-slate-100" />
               <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 mono">
-                Max Damage Sectors
+                {t('dm.maxDamageSectors')}
               </h2>
             </div>
-            <span className="text-[11px] text-slate-400">By Damage Points</span>
+            <span className="text-[11px] text-slate-400">{t('dm.byDamagePoints')}</span>
           </div>
 
           <div className="h-[440px] space-y-2.5 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3.5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
@@ -385,7 +388,7 @@ export default function DamageAssessment() {
 
                   <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
                     <span>
-                      {sec.count} reports ({sec.destroyedCount} destroyed)
+                      {sec.count} {t('dm.reports')} ({sec.destroyedCount} {t('dm.destroyed')})
                     </span>
                     <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
                       ₹{sec.totalCompensation.toLocaleString('en-IN')}
@@ -408,7 +411,7 @@ export default function DamageAssessment() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search Claim ID, Claimant, Phone, Address, Sector…"
+              placeholder={t('dm.searchPlaceholder')}
               className="w-full rounded-xl border border-slate-300 bg-slate-50 pl-10 pr-4 py-2 text-xs font-medium text-slate-900 outline-none transition focus:border-slate-900 focus:bg-white dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-300"
             />
           </div>
@@ -419,7 +422,7 @@ export default function DamageAssessment() {
             onChange={(e) => setDistrictFilter(e.target.value)}
             className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200"
           >
-            <option value="all">All Disaster Sectors ({items.length})</option>
+            <option value="all">{t('dm.allSectors')} ({items.length})</option>
             {sectorAggregation.map((s) => (
               <option key={s.district} value={s.district}>
                 {s.district} ({s.count})
@@ -431,16 +434,16 @@ export default function DamageAssessment() {
         {/* Filter Pills */}
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mono mr-1">
-            Category:
+            {t('dm.categoryLabel')}
           </span>
           {[
-            { id: 'all', label: 'All Infra' },
-            { id: 'broken_home', label: 'Broken Homes' },
-            { id: 'gov_pipeline', label: 'Gov Pipelines' },
-            { id: 'road_bridge', label: 'Roads & Bridges' },
-            { id: 'electrical_power', label: 'Power Grid' },
-            { id: 'commercial_public', label: 'Commercial' },
-            { id: 'agricultural', label: 'Agricultural' },
+            { id: 'all', label: t('dm.allInfra') },
+            { id: 'broken_home', label: t('dm.infraBrokenHomes') },
+            { id: 'gov_pipeline', label: t('dm.infraGovPipelines') },
+            { id: 'road_bridge', label: t('dm.infraRoadsBridges') },
+            { id: 'electrical_power', label: t('dm.infraPowerGrid') },
+            { id: 'commercial_public', label: t('dm.infraCommercial') },
+            { id: 'agricultural', label: t('dm.infraAgricultural') },
           ].map((cat) => (
             <button
               key={cat.id}
@@ -456,10 +459,10 @@ export default function DamageAssessment() {
           ))}
 
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mono ml-3 mr-1">
-            Grade:
+            {t('dm.gradeLabel')}
           </span>
           {[
-            { id: 'all', label: 'All Grades' },
+            { id: 'all', label: t('dm.allGrades') },
             { id: 'DESTROYED', label: 'DESTROYED (90-100)' },
             { id: 'MAJOR', label: 'MAJOR (60-85)' },
             { id: 'MINOR', label: 'MINOR (20-45)' },
@@ -483,23 +486,23 @@ export default function DamageAssessment() {
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900">
         <div className="border-b border-slate-200 px-5 py-3.5 dark:border-slate-800 flex items-center justify-between">
           <div className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mono">
-            Individual Damage Claims & ResNet-50 Score Breakdown ({filtered.length})
+            {t('dm.claimsTableTitle')} ({filtered.length})
           </div>
-          <span className="text-[11px] text-slate-400">Click row to inspect on map & verify</span>
+          <span className="text-[11px] text-slate-400">{t('dm.clickRowToInspect')}</span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="border-b border-slate-200 bg-slate-50 font-bold uppercase tracking-wider text-slate-500 mono text-[10px] dark:border-slate-800 dark:bg-slate-950">
               <tr>
-                <th className="px-4 py-3">Claim ID</th>
-                <th className="px-4 py-3">Infrastructure Type</th>
-                <th className="px-4 py-3">Sector & Address</th>
-                <th className="px-4 py-3 text-center">AI Damage Score</th>
-                <th className="px-4 py-3">ResNet-50 Grade</th>
-                <th className="px-4 py-3">SDRF Relief</th>
-                <th className="px-4 py-3">Claimant Contact</th>
-                <th className="px-4 py-3">Status & Action</th>
+                <th className="px-4 py-3">{t('dm.thClaimId')}</th>
+                <th className="px-4 py-3">{t('dm.thInfraType')}</th>
+                <th className="px-4 py-3">{t('dm.thSectorAddress')}</th>
+                <th className="px-4 py-3 text-center">{t('dm.thAiScore')}</th>
+                <th className="px-4 py-3">{t('dm.thGrade')}</th>
+                <th className="px-4 py-3">{t('dm.thSdrfRelief')}</th>
+                <th className="px-4 py-3">{t('dm.thClaimantContact')}</th>
+                <th className="px-4 py-3">{t('dm.thStatusAction')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
@@ -603,7 +606,7 @@ export default function DamageAssessment() {
                               : 'border border-slate-300 bg-white text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300'
                           }`}
                         >
-                          Approve
+                          {t('dm.btnApprove')}
                         </button>
                         <button
                           onClick={() => handleStatusChange(item.id, 'flagged_fraud')}
@@ -613,7 +616,7 @@ export default function DamageAssessment() {
                               : 'border border-slate-300 bg-white text-slate-700 hover:bg-red-50 hover:text-red-700 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300'
                           }`}
                         >
-                          Flag
+                          {t('dm.btnFlag')}
                         </button>
                       </div>
                     </td>
@@ -623,6 +626,12 @@ export default function DamageAssessment() {
             </tbody>
           </table>
         </div>
+
+        {filtered.length === 0 && (
+          <div className="p-12 text-center text-xs text-slate-400 dark:text-slate-500">
+            {t('dm.noClaimsMatched')}
+          </div>
+        )}
       </div>
 
       {/* Photo Inspection & AI Modal */}
@@ -638,7 +647,7 @@ export default function DamageAssessment() {
             <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mono">
-                  Damage Claim Telemetry
+                  {t('dm.modalTelemetry')}
                 </span>
                 <div className="font-mono text-lg font-bold text-slate-900 dark:text-slate-100">
                   {selectedReport.claimId}
@@ -667,19 +676,19 @@ export default function DamageAssessment() {
               {/* Metrics Grid */}
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-950">
-                  <div className="text-[10px] uppercase font-bold text-slate-400 mono">Score</div>
+                  <div className="text-[10px] uppercase font-bold text-slate-400 mono">{t('dm.modalScore')}</div>
                   <div className="font-mono text-base font-bold text-red-600 dark:text-red-400">
                     {selectedReport.damageScore} / 100
                   </div>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-950">
-                  <div className="text-[10px] uppercase font-bold text-slate-400 mono">Class</div>
+                  <div className="text-[10px] uppercase font-bold text-slate-400 mono">{t('dm.modalClass')}</div>
                   <div className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100">
                     {selectedReport.damageGrade}
                   </div>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-950">
-                  <div className="text-[10px] uppercase font-bold text-slate-400 mono">SDRF Relief</div>
+                  <div className="text-[10px] uppercase font-bold text-slate-400 mono">{t('dm.modalRelief')}</div>
                   <div className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
                     ₹{selectedReport.compensationInr.toLocaleString('en-IN')}
                   </div>
@@ -689,25 +698,25 @@ export default function DamageAssessment() {
               {/* Details List */}
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
-                  <span className="text-slate-500">Infrastructure:</span>
+                  <span className="text-slate-500">{t('dm.modalInfra')}</span>
                   <span className="font-semibold text-slate-900 dark:text-slate-100">
                     {INFRA_LABELS[selectedReport.infrastructureType]}
                   </span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
-                  <span className="text-slate-500">Location:</span>
+                  <span className="text-slate-500">{t('dm.modalLocation')}</span>
                   <span className="font-semibold text-slate-900 dark:text-slate-100 text-right">
                     {selectedReport.propertyAddress}, {selectedReport.district}
                   </span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
-                  <span className="text-slate-500">Claimant:</span>
+                  <span className="text-slate-500">{t('dm.modalClaimant')}</span>
                   <span className="font-semibold text-slate-900 dark:text-slate-100">
                     {selectedReport.claimantName || 'Citizen'} ({selectedReport.claimantPhone})
                   </span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
-                  <span className="text-slate-500">AI Model:</span>
+                  <span className="text-slate-500">{t('dm.modalAiModel')}</span>
                   <span className="font-mono text-[11px] font-semibold text-yellow-700 dark:text-yellow-400">
                     {selectedReport.huggingFaceModel || 'Divyanshu-Kumar19/aapdasetu-damage-assessment'}
                   </span>
@@ -717,7 +726,7 @@ export default function DamageAssessment() {
               {/* Factors */}
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mono">
-                  Observed Structural Factors:
+                  {t('dm.modalStructuralFactors')}
                 </span>
                 <ul className="mt-1 list-inside list-disc space-y-0.5 text-xs text-slate-600 dark:text-slate-300">
                   {selectedReport.factors.map((f, i) => (
@@ -732,13 +741,13 @@ export default function DamageAssessment() {
                   onClick={() => handleStatusChange(selectedReport.id, 'flagged_fraud')}
                   className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2 text-xs font-bold text-red-700 hover:bg-red-100 dark:border-red-900 dark:bg-red-950/60 dark:text-red-300 cursor-pointer"
                 >
-                  Flag for Inspection
+                  {t('dm.btnFlagInspection')}
                 </button>
                 <button
                   onClick={() => handleStatusChange(selectedReport.id, 'approved')}
                   className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 cursor-pointer shadow-sm"
                 >
-                  Approve SDRF Relief Claim
+                  {t('dm.btnApproveSdrf')}
                 </button>
               </div>
             </div>

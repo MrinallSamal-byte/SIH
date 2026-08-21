@@ -107,7 +107,7 @@ export default function LiveSOS() {
         color: r.priorityLabel === 'RED' ? '#dc2626' : '#f59e0b',
         isSos: true,
       }))
-  }, [reports])
+  }, [reports, t])
 
   const mapCenter: GeoPoint = useMemo(() => {
     if (markers.length > 0) return markers[0].position

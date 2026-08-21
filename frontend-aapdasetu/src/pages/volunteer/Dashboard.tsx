@@ -35,7 +35,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, [toast, t])
 
   useEffect(() => {
     load()

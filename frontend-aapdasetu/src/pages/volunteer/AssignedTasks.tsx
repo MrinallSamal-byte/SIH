@@ -33,7 +33,7 @@ export default function AssignedTasks() {
     } catch {
       toast(t('vt.loadFailed'), 'error')
     }
-  }, [activeVolunteerId, toast])
+  }, [activeVolunteerId, toast, t])
 
   useEffect(() => {
     loadTasks()
