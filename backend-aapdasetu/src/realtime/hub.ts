@@ -12,6 +12,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import type { Server } from 'http';
 import { env } from '../config/env.js';
 import { logger } from '../lib/logger.js';
+import { verifyAdminToken } from '../lib/jwt.js';
 
 export type RealtimeEventType =
   | 'system:connected'
@@ -54,7 +55,27 @@ export class RealtimeHub {
         try {
           const msg = JSON.parse(raw.toString());
           if (msg && msg.action === 'subscribe' && Array.isArray(msg.channels)) {
-            meta.channels = new Set(msg.channels.filter((c: string) => c === 'admin' || c === 'public'));
+            const requestedChannels: string[] = msg.channels;
+            const granted = new Set<Channel>();
+
+            if (requestedChannels.includes('public')) {
+              granted.add('public');
+            }
+
+            if (requestedChannels.includes('admin')) {
+              if (typeof msg.token === 'string') {
+                try {
+                  verifyAdminToken(msg.token);
+                  granted.add('admin');
+                } catch {
+                  logger.warn('Unauthorized attempt to subscribe to realtime admin channel');
+                }
+              } else {
+                logger.warn('Missing JWT token for realtime admin channel subscription');
+              }
+            }
+
+            meta.channels = granted;
             this.send(socket, {
               type: 'system:connected' as RealtimeEventType,
               payload: { channels: [...meta.channels] },
