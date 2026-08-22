@@ -1,13 +1,21 @@
 import { useEffect, useState, useRef } from 'react'
+import { readSnapshot, writeSnapshot } from '../api/client'
 import { subscribeRealtimeUpdates } from '../lib/realtimeEventBus'
 
 /**
  * Realtime data hook with zero-latency event bus integration and tab visibility awareness.
  * Re-fetches immediately when any real-time mutation occurs across tabs or locally,
  * and maintains periodic polling fallback.
+ *
+ * Pass `snapshotKey` to seed the UI instantly from the last successful fetch
+ * (localStorage) so repeat visits never wait on the network for first paint.
  */
-export function useRealtime<T>(fetcher: () => Promise<T>, intervalMs = 5000): T | null {
-  const [data, setData] = useState<T | null>(null)
+export function useRealtime<T>(
+  fetcher: () => Promise<T>,
+  intervalMs = 5000,
+  snapshotKey?: string,
+): T | null {
+  const [data, setData] = useState<T | null>(() => (snapshotKey ? readSnapshot<T>(snapshotKey) : null))
   const fetcherRef = useRef(fetcher)
   fetcherRef.current = fetcher
 
@@ -19,7 +27,9 @@ export function useRealtime<T>(fetcher: () => Promise<T>, intervalMs = 5000): T 
       if (document.hidden) return
       try {
         const result = await fetcherRef.current()
-        if (!cancelled) setData(result)
+        if (cancelled) return
+        setData(result)
+        if (snapshotKey) writeSnapshot(snapshotKey, result)
       } catch {
         // Keep last known valid state on transient network glitch
       }
@@ -50,7 +60,7 @@ export function useRealtime<T>(fetcher: () => Promise<T>, intervalMs = 5000): T 
       document.removeEventListener('visibilitychange', handleVisibility)
       unsubscribeBus()
     }
-  }, [intervalMs])
+  }, [intervalMs, snapshotKey])
 
   return data
 }

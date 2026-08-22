@@ -29,9 +29,10 @@ export default function ShelterFinder() {
   const { t } = useLanguage()
   const { coords, status, accuracy, refresh } = useGeoLocation()
   
-  // Real-time shelter feed: only fetches active/allowed shelters (not closed)
+  // Real-time shelter feed: only fetches active/allowed shelters (not closed).
+  // Snapshot cache paints last known list instantly on repeat visits.
   const fetchActiveShelters = useCallback(() => listShelters(undefined, false), [])
-  const shelters = useRealtime<Shelter[]>(fetchActiveShelters, 5000)
+  const shelters = useRealtime<Shelter[]>(fetchActiveShelters, 5000, 'shelters')
 
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedFacility, setSelectedFacility] = useState<string | null>(null)

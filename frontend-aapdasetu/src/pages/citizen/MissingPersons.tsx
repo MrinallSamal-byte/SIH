@@ -9,6 +9,7 @@ import {
   X
 } from 'lucide-react'
 import { createMissingPerson, listMissingPersons } from '../../api/endpoints'
+import { readSnapshot, writeSnapshot } from '../../api/client'
 import { Field, Input } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import Badge from '../../components/common/Badge'
@@ -24,7 +25,11 @@ type StatusFilter = 'all' | 'open' | 'matched' | 'resolved'
 export default function MissingPersons() {
   const { t } = useLanguage()
   const [tab, setTab] = useState<Tab>('registry')
-  const [persons, setPersons] = useState<MissingPerson[] | null>(null)
+  // Snapshot cache: registry paints instantly from last visit while the fresh
+  // fetch runs in background (no spinner on repeat visits).
+  const [persons, setPersons] = useState<MissingPerson[] | null>(() =>
+    readSnapshot<MissingPerson[]>('missing-persons'),
+  )
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<StatusFilter>('all')
   const [enlargedPhoto, setEnlargedPhoto] = useState<string | null>(null)
@@ -33,12 +38,14 @@ export default function MissingPersons() {
     let cancelled = false
     listMissingPersons()
       .then((d) => {
-        if (!cancelled) setPersons(d)
+        if (!cancelled) {
+          setPersons(d)
+          writeSnapshot('missing-persons', d)
+        }
       })
       .catch(() => {
-        if (!cancelled) {
-          setPersons([])
-        }
+        // Keep last known snapshot on failure instead of wiping it
+        if (!cancelled) setPersons((prev) => prev ?? [])
       })
     return () => {
       cancelled = true
@@ -202,7 +209,9 @@ export default function MissingPersons() {
       {tab === 'report' && (
         <ReportMissingForm
           onSubmitted={(p) => {
-            setPersons((prev) => (prev ? [p, ...prev] : [p]))
+            const next = [p, ...(persons ?? [])]
+            setPersons(next)
+            writeSnapshot('missing-persons', next)
             setTab('registry')
           }}
         />
