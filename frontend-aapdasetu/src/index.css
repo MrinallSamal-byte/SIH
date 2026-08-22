@@ -156,15 +156,34 @@
   color-scheme: dark;
 }
 
-/* Clean Map Controls - Hide cluttered attribution banners & links on all maps */
+/* Map attribution — kept visible per the OSM/Leaflet license requirement, styled unobtrusively */
 .leaflet-control-attribution {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  height: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
+  font-size: 10px;
+  line-height: 1.4;
+  padding: 1px 6px;
+  background: rgba(255, 255, 255, 0.75);
+  color: #71717a;
+}
+
+.leaflet-control-attribution a {
+  color: inherit;
+}
+
+.dark .leaflet-control-attribution {
+  background: rgba(17, 17, 17, 0.75);
+  color: #a1a1aa;
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 .leaflet-container {

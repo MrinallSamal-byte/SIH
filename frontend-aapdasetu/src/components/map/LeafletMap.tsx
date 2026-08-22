@@ -4,6 +4,11 @@ import L from 'leaflet'
 import { Layers, Globe, Mountain, Map as MapIcon, Moon } from 'lucide-react'
 import type { GeoPoint } from '../../types'
 
+export interface MapPopupAction {
+  label: string
+  onClick: () => void
+}
+
 export interface MapMarker {
   id: string
   position: GeoPoint
@@ -12,6 +17,7 @@ export interface MapMarker {
   color?: string
   isSos?: boolean
   isShelter?: boolean
+  popupActions?: MapPopupAction[]
 }
 
 export interface MapPolygon {
@@ -76,47 +82,58 @@ const MAP_LAYERS: Record<
   },
 }
 
-function markerIcon(color: string, isSos = false, isShelter = false) {
+function markerIcon(color: string, isSos = false, isShelter = false, selected = false) {
   if (isSos) {
+    const size = selected ? 44 : 32
+    const core = selected ? 24 : 18
     return L.divIcon({
       className: '',
       html: `
-        <div style="position:relative;display:flex;align-items:center;justify-content:center;width:32px;height:32px;">
-          <div style="position:absolute;width:32px;height:32px;border-radius:50%;background:#ef4444;opacity:0.6;animation:ping 1s cubic-bezier(0,0,0.2,1) infinite;"></div>
-          <div style="position:relative;width:18px;height:18px;border-radius:50%;background:#dc2626;border:2.5px solid white;box-shadow:0 3px 8px rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;">
-            <div style="width:5px;height:5px;border-radius:50%;background:white;"></div>
+        <div style="position:relative;display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;">
+          <div style="position:absolute;width:${size}px;height:${size}px;border-radius:50%;background:#ef4444;opacity:${selected ? '0.75' : '0.6'};animation:ping 1s cubic-bezier(0,0,0.2,1) infinite;"></div>
+          ${
+            selected
+              ? `<div style="position:absolute;width:${core + 12}px;height:${core + 12}px;border-radius:50%;border:3px solid rgba(220,38,38,0.55);"></div>`
+              : ''
+          }
+          <div style="position:relative;width:${core}px;height:${core}px;border-radius:50%;background:#dc2626;border:2.5px solid white;box-shadow:0 3px 8px rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;">
+            <div style="width:${selected ? 7 : 5}px;height:${selected ? 7 : 5}px;border-radius:50%;background:white;"></div>
           </div>
         </div>
       `,
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
     })
   }
 
   if (isShelter) {
+    const size = selected ? 34 : 28
+    const box = selected ? 30 : 24
     return L.divIcon({
       className: '',
       html: `
-        <div style="position:relative;display:flex;align-items:center;justify-content:center;width:28px;height:28px;">
-          <div style="width:24px;height:24px;border-radius:8px;background:${color};border:2px solid white;box-shadow:0 3px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;font-size:12px;">
+        <div style="position:relative;display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;">
+          <div style="width:${box}px;height:${box}px;border-radius:8px;background:${color};border:2px solid white;box-shadow:${selected ? `0 0 0 3px rgba(59,130,246,0.45), ` : ''}0 3px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;font-size:12px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           </div>
         </div>
       `,
-      iconSize: [28, 28],
-      iconAnchor: [14, 14],
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
     })
   }
 
+  const size = selected ? 30 : 22
+  const dotSize = selected ? 22 : 16
   return L.divIcon({
     className: '',
     html: `
-      <div style="position:relative;display:flex;align-items:center;justify-content:center;width:22px;height:22px;">
-        <div style="width:16px;height:16px;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.5);"></div>
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;">
+        <div style="width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:${selected ? `0 0 0 3px rgba(59,130,246,0.45), ` : ''}0 2px 6px rgba(0,0,0,0.5);"></div>
       </div>
     `,
-    iconSize: [22, 22],
-    iconAnchor: [11, 11],
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
   })
 }
 
@@ -234,6 +251,8 @@ export default function LeafletMap({
   height = '420px',
   autoFit = false,
   defaultLayer = 'satellite',
+  popupActions,
+  selectedId = null,
 }: {
   center: GeoPoint
   zoom?: number
@@ -243,6 +262,8 @@ export default function LeafletMap({
   height?: string
   autoFit?: boolean
   defaultLayer?: MapLayerMode
+  popupActions?: MapPopupAction[]
+  selectedId?: string | null
 }) {
   const [layerMode, setLayerMode] = useState<MapLayerMode>(() => {
     try {
@@ -436,20 +457,42 @@ export default function LeafletMap({
               typeof m.position.lat === 'number' &&
               typeof m.position.lng === 'number',
           )
-          .map((m) => (
-            <Marker
-              key={m.id}
-              position={[m.position.lat, m.position.lng]}
-              icon={markerIcon(m.color ?? '#3b82f6', m.isSos, m.isShelter)}
-            >
-              <Popup>
-                <div className="p-1">
-                  <div className="text-sm font-bold text-slate-900">{m.title}</div>
-                  {m.subtitle && <div className="mt-0.5 text-xs text-slate-600 leading-tight">{m.subtitle}</div>}
-                </div>
-              </Popup>
-            </Marker>
-          ))}
+          .map((m) => {
+            const isSelected = selectedId != null && m.id === selectedId
+            const actions = m.popupActions ?? popupActions ?? []
+            return (
+              <Marker
+                key={m.id}
+                position={[m.position.lat, m.position.lng]}
+                icon={markerIcon(m.color ?? '#3b82f6', m.isSos, m.isShelter, isSelected)}
+                zIndexOffset={isSelected ? 1000 : 0}
+              >
+                <Popup>
+                  <div className="min-w-[180px] p-1">
+                    <div className="text-sm font-bold text-slate-900">{m.title}</div>
+                    {m.subtitle && <div className="mt-0.5 text-xs text-slate-600 leading-tight">{m.subtitle}</div>}
+                    {actions.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {actions.map((action) => (
+                          <button
+                            key={action.label}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              action.onClick()
+                            }}
+                            className="rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-bold text-white transition hover:bg-slate-700 cursor-pointer"
+                          >
+                            {action.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Popup>
+              </Marker>
+            )
+          })}
       </MapContainer>
     </div>
   )

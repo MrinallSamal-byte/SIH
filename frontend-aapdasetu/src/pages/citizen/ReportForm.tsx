@@ -11,13 +11,15 @@ import {
   User,
   Loader2,
   RefreshCw,
-  Copy
+  Copy,
+  AlertTriangle
 } from 'lucide-react'
 import { createReport } from '../../api/endpoints'
 import { aiTriage } from '../../api/ai'
 import LandmarkPicker from '../../components/map/LandmarkPicker'
+import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
-import { fileToDataUrl, reverseGeocode } from '../../lib/helpers'
+import { compressImage, fileToDataUrl, reverseGeocode } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
 import { useGeoLocation } from '../../hooks/useLocation'
 import type { GeoLocationCoordinatesLike } from '../../hooks/useLocation'
@@ -36,12 +38,20 @@ const emergencyTypeOptions: { value: IncidentType; key: string }[] = [
 export default function ReportForm() {
   const { t } = useLanguage()
   const { toast } = useToast()
-  const { coords, address: detectedAddress, accuracy, source, isFallback, locateHighAccuracy } = useGeoLocation() as ReturnType<typeof useGeoLocation> & { source: string; isFallback: boolean; locateHighAccuracy: () => Promise<GeoLocationCoordinatesLike | null> }
+  const { coords, address: detectedAddress, accuracy, source, isFallback, locateHighAccuracy, setManualLocation, setAddress } = useGeoLocation() as ReturnType<typeof useGeoLocation> & { source: string; isFallback: boolean; locateHighAccuracy: () => Promise<GeoLocationCoordinatesLike | null> }
+
+  // coords is never null (hook seeds a hardcoded fallback), so gate on
+  // provenance: only trust gps/manual/cached fixes — never the fabricated
+  // default estimate. Same source gating as SOS.
+  const hasTrustedFix = source === 'gps' || source === 'manual' || source === 'cached'
 
   const [selectedType, setSelectedType] = useState<string>('')
   const [gpsAddress, setGpsAddress] = useState<string>(detectedAddress || '')
   const [customPoint, setCustomPoint] = useState<GeoPoint | null>(null)
   const [showMap, setShowMap] = useState(false)
+  const [showLocationModal, setShowLocationModal] = useState(false)
+  const [editAddressText, setEditAddressText] = useState('')
+  const [editPoint, setEditPoint] = useState<GeoPoint | null>(null)
   const [locatingGps, setLocatingGps] = useState(false)
   const [gpsError, setGpsError] = useState<string | null>(null)
   const [reporterName, setReporterName] = useState('')
@@ -111,6 +121,38 @@ export default function ReportForm() {
     } finally {
       setLocatingGps(false)
     }
+  }
+
+  // Auto-open the location-correction modal while only a fallback estimate is
+  // available — submission stays blocked until a real location is confirmed.
+  useEffect(() => {
+    if (!hasTrustedFix) {
+      setEditPoint(coords ? { lat: coords.latitude, lng: coords.longitude } : null)
+      setEditAddressText(detectedAddress || '')
+      setShowLocationModal(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasTrustedFix])
+
+  const applyManualLocation = () => {
+    if (editPoint) {
+      const point = editPoint
+      const addrText = editAddressText.trim()
+      setCustomPoint(point)
+      if (addrText) {
+        setGpsAddress(addrText)
+        setManualLocation(point, addrText)
+      } else {
+        setGpsAddress(t('report.locatingAddress'))
+        setManualLocation(point)
+        reverseGeocode(point).then((addr) => { if (addr) setGpsAddress(addr) })
+      }
+    } else if (editAddressText.trim()) {
+      setAddress(editAddressText.trim())
+      setCustomPoint(null)
+    }
+    setShowLocationModal(false)
+    toast(t('sos.savedToast'), 'success')
   }
 
   const handleLandmarkPick = async (p: GeoPoint, address?: string) => {
@@ -217,13 +259,30 @@ export default function ReportForm() {
         toast(`${file.name}: ${t('report.fileNotAllowed')}`, 'error')
         continue
       }
-      const dataUrl = await fileToDataUrl(file)
-      items.push({
-        kind: file.type.startsWith('video') ? 'video' : file.type.startsWith('audio') ? 'audio' : 'image',
-        name: file.name,
-        mime: file.type,
-        dataUrl,
-      })
+      try {
+        if (file.type.startsWith('image/')) {
+          // Client-side compression keeps uploads viable on congested 2G/3G
+          // disaster networks (same as ReportDamage/MissingPersons).
+          const compressed = await compressImage(file, 800, 0.75)
+          items.push({
+            kind: 'image',
+            name: file.name,
+            mime: 'image/jpeg',
+            dataUrl: compressed,
+          })
+        } else {
+          const dataUrl = await fileToDataUrl(file)
+          items.push({
+            kind: file.type.startsWith('video') ? 'video' : 'audio',
+            name: file.name,
+            mime: file.type,
+            dataUrl,
+          })
+        }
+      } catch {
+        toast(`${file.name}: ${t('damage.errProcessImage')}`, 'error')
+        continue
+      }
     }
     setMedia((prev) => [...prev, ...items])
   }
@@ -245,8 +304,11 @@ export default function ReportForm() {
       toast(t('common.errPhone10'), 'error')
       return
     }
-    if (media.length === 0) {
-      toast(t('report.errMediaRequired'), 'error')
+    if (!hasTrustedFix) {
+      toast(t('report.locationUnverified'), 'error')
+      setEditPoint(coords ? { lat: coords.latitude, lng: coords.longitude } : null)
+      setEditAddressText(detectedAddress || '')
+      setShowLocationModal(true)
       return
     }
 
@@ -480,6 +542,27 @@ export default function ReportForm() {
           </div>
         </div>
 
+        {/* Unverified-location warning strip — submission blocked until confirmed */}
+        {!hasTrustedFix && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400 bg-amber-50 p-3 text-xs font-semibold text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300">
+            <span className="flex min-w-0 items-start gap-2 leading-relaxed">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{t('report.locationUnverified')}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setEditPoint(coords ? { lat: coords.latitude, lng: coords.longitude } : null)
+                setEditAddressText(detectedAddress || '')
+                setShowLocationModal(true)
+              }}
+              className="shrink-0 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-700 cursor-pointer"
+            >
+              {t('sos.correctArea')}
+            </button>
+          </div>
+        )}
+
         {/* 3. Your Name */}
         <div>
           <label className="block text-xs font-bold text-zinc-700 dark:text-slate-200 mb-1.5 mono uppercase">
@@ -517,18 +600,18 @@ export default function ReportForm() {
           </div>
         </div>
 
-        {/* 5. Video or Voice Proof Upload — Required */}
+        {/* 5. Video or Voice Proof Upload — Optional */}
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="text-xs font-bold text-zinc-700 dark:text-slate-200 mono uppercase">
-              {t('report.mediaTitle')} <span className="text-red-600">*</span>
+              {t('report.mediaTitle')}
             </label>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-red-500 mono">
-              {t('common.required')}
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">
+              {t('common.optional')}
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 leading-relaxed">
-            {t('report.mediaDesc')} <span className="font-semibold text-zinc-700 dark:text-slate-300">{t('report.mediaRequiredHint')}</span>
+            {t('report.mediaDesc')}
           </p>
 
           <input
@@ -547,7 +630,7 @@ export default function ReportForm() {
             className="hidden"
           />
 
-          <div className={`rounded-2xl border bg-white p-4 dark:bg-[#1a1a1a] shadow-xs space-y-3 ${media.length === 0 ? 'border-red-200 dark:border-red-900/40' : 'border-zinc-200 dark:border-white/[0.1]'}`}>
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-white/[0.1] dark:bg-[#1a1a1a] shadow-xs space-y-3">
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -642,7 +725,7 @@ export default function ReportForm() {
         <div className="pt-2 space-y-2">
           <button
             type="submit"
-            disabled={sending || !selectedType || !reporterPhone.trim() || media.length === 0}
+            disabled={sending || !selectedType || !reporterPhone.trim() || !hasTrustedFix}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-800 py-4 text-base font-bold text-white shadow-md transition hover:bg-zinc-700 active:scale-[0.98] disabled:bg-slate-200 disabled:text-slate-400 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white dark:disabled:bg-slate-800 dark:disabled:text-zinc-500 cursor-pointer"
           >
             {sending ? (
@@ -658,13 +741,115 @@ export default function ReportForm() {
             )}
           </button>
 
-          {(!selectedType || !reporterPhone.trim() || media.length === 0) && (
+          {(!hasTrustedFix || !selectedType || !reporterPhone.trim()) && (
             <p className="text-center text-xs font-medium text-red-500 dark:text-red-400">
-              {media.length === 0 ? t('report.mediaValidation') : t('report.submitValidation')}
+              {!hasTrustedFix ? t('report.locationUnverified') : t('report.submitValidation')}
             </p>
           )}
         </div>
       </form>
+
+      {/* Location Correction Modal — required while only a fallback estimate exists */}
+      <Modal
+        open={showLocationModal}
+        title={t('sos.modalTitle')}
+        onClose={() => setShowLocationModal(false)}
+      >
+        <div className="space-y-4 text-left">
+          <p className="text-xs text-zinc-500 dark:text-slate-400">
+            {t('sos.modalDesc')}
+          </p>
+
+          {/* Manual Address Input */}
+          <div>
+            <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
+              {t('sos.addressLabel')}
+            </label>
+            <input
+              value={editAddressText}
+              onChange={(e) => setEditAddressText(e.target.value)}
+              placeholder={t('sos.addressPlaceholder')}
+              className="w-full rounded-xl border border-zinc-200 px-3.5 py-2.5 text-xs font-semibold text-zinc-800 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-200 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300"
+            />
+            <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+              {t('sos.modalHint')}
+            </p>
+          </div>
+
+          {/* Quick Regional Presets */}
+          <div>
+            <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
+              {t('sos.presetsLabel')}
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { name: 'Bhubaneswar (Sundarpada)', lat: 20.2371, lng: 85.8114, addr: 'Sundarpada, Bhubaneswar, Odisha - 751002' },
+                { name: 'Bhubaneswar (Old Town)', lat: 20.2365, lng: 85.8336, addr: 'Lingaraj, Old Town, Bhubaneswar - 751002' },
+                { name: 'Bhubaneswar (Patia)', lat: 20.3534, lng: 85.8225, addr: 'Patia / KIIT, Bhubaneswar - 751024' },
+                { name: 'Cuttack', lat: 20.4625, lng: 85.8828, addr: 'Badambadi, Cuttack, Odisha - 753001' },
+                { name: 'Puri', lat: 19.8135, lng: 85.8312, addr: 'Puri Beach Road, Odisha - 752001' },
+                { name: 'Kolkata (Salt Lake)', lat: 22.5726, lng: 88.3639, addr: 'Sector V, Salt Lake, Kolkata - 700091' },
+                { name: 'Howrah', lat: 22.5958, lng: 88.2636, addr: 'Howrah Station Area, West Bengal - 711101' },
+                { name: 'Sundarbans Coastal', lat: 21.9497, lng: 88.8997, addr: 'Sundarbans Coastal Delta, West Bengal - 743370' },
+              ].map((preset) => (
+                <button
+                  key={preset.name}
+                  type="button"
+                  onClick={() => {
+                    setEditPoint({ lat: preset.lat, lng: preset.lng })
+                    setEditAddressText(preset.addr)
+                  }}
+                  className="rounded-lg border border-zinc-200/80 bg-[#f4f4f5] px-2.5 py-1 text-[11px] font-medium text-zinc-600 hover:border-slate-400 hover:bg-white dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 dark:hover:bg-slate-700 cursor-pointer transition"
+                >
+                  {preset.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Interactive Map Picker */}
+          <div>
+            <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
+              {t('sos.mapLabel')}
+            </label>
+            <div className="overflow-hidden rounded-xl border border-zinc-200/80 dark:border-white/[0.1]">
+              <LandmarkPicker
+                value={
+                  editPoint ||
+                  (coords
+                    ? { lat: coords.latitude, lng: coords.longitude }
+                    : { lat: 20.2706, lng: 85.8334 })
+                }
+                onChange={(p, addr) => {
+                  setEditPoint(p)
+                  if (addr && !editAddressText.trim()) {
+                    setEditAddressText(addr)
+                  }
+                }}
+                height="220px"
+              />
+            </div>
+          </div>
+
+          {/* Modal Action Buttons */}
+          <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-2 dark:border-white/[0.08]">
+            <button
+              type="button"
+              onClick={() => setShowLocationModal(false)}
+              className="rounded-xl border border-zinc-200/80 px-4 py-2 text-xs font-semibold text-zinc-500 hover:bg-zinc-100 dark:border-white/[0.1] dark:text-slate-300 dark:hover:bg-[#252525] cursor-pointer"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={applyManualLocation}
+              className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-red-700 cursor-pointer"
+            >
+              {t('sos.saveLocation')}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

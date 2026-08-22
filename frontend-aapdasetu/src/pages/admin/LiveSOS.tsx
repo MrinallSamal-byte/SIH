@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import {
   Siren,
   Volume2,
+  VolumeX,
+  Play,
   Phone,
   Navigation,
   ArrowRight,
@@ -13,62 +15,160 @@ import PriorityBadge from '../../components/common/PriorityBadge'
 import Badge from '../../components/common/Badge'
 import Button from '../../components/common/Button'
 import Loader from '../../components/common/Loader'
-import LeafletMap, { type MapMarker } from '../../components/map/LeafletMap'
+import LeafletMap, { type MapMarker, type MapPopupAction } from '../../components/map/LeafletMap'
 import { useRealtime } from '../../hooks/useRealtime'
+import { emitRealtimeUpdate } from '../../lib/realtimeEventBus'
 import { timeAgo, getNavigationUrl } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
 import type { GeoPoint, Report } from '../../types'
 
-// Singleton Audio Context for alarm siren
-let globalAudioCtx: AudioContext | null = null
+const SIREN_ENABLED_KEY = 'aapdasetu_siren_enabled'
+const BASE_TAB_TITLE = typeof document !== 'undefined' ? document.title : 'AapdaSetu'
 
-function getAudioContext(): AudioContext | null {
-  if (typeof window === 'undefined') return null
-  if (!globalAudioCtx) {
-    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-    if (AudioCtx) globalAudioCtx = new AudioCtx()
+class SirenEngine {
+  private ctx: AudioContext | null = null
+  private timer: number | null = null
+  private active = false
+
+  prime(): void {
+    this.ensureContext()
   }
-  if (globalAudioCtx && globalAudioCtx.state === 'suspended') {
-    globalAudioCtx.resume().catch(() => {})
+
+  get isRunning(): boolean {
+    return this.active
   }
-  return globalAudioCtx
+
+  start(): void {
+    if (this.active) return
+    const ctx = this.ensureContext()
+    if (!ctx) return
+    this.active = true
+    this.playTwoToneCycle()
+    this.timer = window.setInterval(() => this.playTwoToneCycle(), 1200)
+  }
+
+  stop(): void {
+    this.active = false
+    if (this.timer !== null) {
+      window.clearInterval(this.timer)
+      this.timer = null
+    }
+  }
+
+  burst(): void {
+    const ctx = this.ensureContext()
+    if (!ctx || ctx.state !== 'running') return
+    this.playTwoToneCycle()
+  }
+
+  private ensureContext(): AudioContext | null {
+    if (typeof window === 'undefined') return null
+    if (!this.ctx) {
+      const Ctor =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      if (Ctor) this.ctx = new Ctor()
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {})
+    }
+    return this.ctx
+  }
+
+  private playTwoToneCycle(): void {
+    const ctx = this.ctx
+    if (!ctx || ctx.state !== 'running') return
+    this.playTone(ctx, 880, 0)
+    this.playTone(ctx, 440, 0.6)
+  }
+
+  private playTone(ctx: AudioContext, freq: number, offset: number): void {
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'square'
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + offset)
+    const startAt = ctx.currentTime + offset
+    gain.gain.setValueAtTime(0.0001, startAt)
+    gain.gain.exponentialRampToValueAtTime(0.25, startAt + 0.04)
+    gain.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.58)
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start(startAt)
+    osc.stop(startAt + 0.6)
+  }
 }
 
-function playCriticalAlarm() {
-  const ctx = getAudioContext()
-  if (!ctx || ctx.state !== 'running') return
+const sirenEngine = new SirenEngine()
 
-  const osc = ctx.createOscillator()
-  const gain = ctx.createGain()
-  osc.type = 'sawtooth'
-  osc.connect(gain)
-  gain.connect(ctx.destination)
+function readStoredSirenEnabled(): boolean {
+  try {
+    return localStorage.getItem(SIREN_ENABLED_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
 
-  osc.frequency.setValueAtTime(880, ctx.currentTime)
-  osc.frequency.setValueAtTime(1200, ctx.currentTime + 0.15)
-  osc.frequency.setValueAtTime(880, ctx.currentTime + 0.3)
+function storeSirenEnabled(enabled: boolean): void {
+  try {
+    localStorage.setItem(SIREN_ENABLED_KEY, enabled ? 'true' : 'false')
+  } catch {
+    // Storage unavailable — siren still works for this session
+  }
+}
 
-  gain.gain.setValueAtTime(0.3, ctx.currentTime)
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6)
+function requestNotificationPermissionOnce(): void {
+  if (typeof window === 'undefined' || !('Notification' in window)) return
+  try {
+    if (Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {})
+    }
+  } catch {
+    // Notification API unavailable or blocked
+  }
+}
 
-  osc.start(ctx.currentTime)
-  osc.stop(ctx.currentTime + 0.6)
+function notifyNewRedIncidents(items: Report[]): void {
+  if (typeof window === 'undefined' || !('Notification' in window)) return
+  if (Notification.permission !== 'granted') return
+  for (const r of items) {
+    try {
+      const where =
+        r.landmark ||
+        (typeof r.latitude === 'number' && typeof r.longitude === 'number'
+          ? `${r.latitude.toFixed(3)}, ${r.longitude.toFixed(3)}`
+          : 'Location unavailable')
+      new Notification('RED SOS — AapdaSetu', {
+        body: `${r.type.replace('_', ' ').toUpperCase()} • ${where} • ${r.trackingId}`,
+        tag: r.id,
+      })
+    } catch {
+      // Notification constructor can throw on some platforms
+    }
+  }
 }
 
 export default function LiveSOS() {
   const { t } = useLanguage()
   const fetchReports = useCallback(() => listReports({ status: 'pending' }), [])
   const reports = useRealtime<Report[]>(fetchReports, 3000)
-  const [audioEnabled, setAudioEnabled] = useState(false)
+
+  const [sirenArmed, setSirenArmed] = useState<boolean>(readStoredSirenEnabled)
+  const [muted, setMuted] = useState(false)
+  const [loopActive, setLoopActive] = useState(false)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const knownRedIdsRef = useRef<Set<string>>(new Set())
   const isFirstLoadRef = useRef(true)
 
-  const enableAudio = () => {
-    const ctx = getAudioContext()
-    if (ctx) {
-      ctx.resume().then(() => setAudioEnabled(true)).catch(() => {})
-    }
-  }
+  useEffect(() => {
+    setLoopActive(sirenEngine.isRunning)
+  }, [])
+
+  const acknowledge = useCallback(async (reportId: string) => {
+    sirenEngine.stop()
+    setLoopActive(false)
+    await updateReport(reportId, { status: 'in_progress' })
+    emitRealtimeUpdate('report_updated', reportId)
+  }, [])
 
   useEffect(() => {
     if (!reports) return
@@ -82,16 +182,63 @@ export default function LiveSOS() {
       return
     }
 
-    const hasNewRedAlert = currentRedReports.some((r) => !knownRedIdsRef.current.has(r.id))
-    if (hasNewRedAlert && audioEnabled) {
-      playCriticalAlarm()
-    }
+    const netNewReds = reports.filter(
+      (r) => r.priorityLabel === 'RED' && !knownRedIdsRef.current.has(r.id),
+    )
 
     knownRedIdsRef.current = currentRedIds
-  }, [reports, audioEnabled])
 
-  const acknowledge = async (reportId: string) => {
-    await updateReport(reportId, { status: 'in_progress' })
+    if (netNewReds.length > 0 && sirenArmed) {
+      setMuted(false)
+      sirenEngine.start()
+      setLoopActive(true)
+      notifyNewRedIncidents(netNewReds)
+    }
+  }, [reports, sirenArmed])
+
+  const unackedRedCount = reports?.filter((r) => r.priorityLabel === 'RED').length ?? 0
+
+  useEffect(() => {
+    if (unackedRedCount <= 0) {
+      document.title = BASE_TAB_TITLE
+      return
+    }
+    document.title = '🔴 RED SOS — AapdaSetu'
+    let flip = false
+    const id = window.setInterval(() => {
+      flip = !flip
+      document.title = flip ? BASE_TAB_TITLE : '🔴 RED SOS — AapdaSetu'
+    }, 1500)
+    return () => {
+      window.clearInterval(id)
+      document.title = BASE_TAB_TITLE
+    }
+  }, [unackedRedCount])
+
+  const armSiren = () => {
+    setSirenArmed(true)
+    storeSirenEnabled(true)
+    setMuted(false)
+    sirenEngine.prime()
+    requestNotificationPermissionOnce()
+  }
+
+  const disarmSiren = () => {
+    setSirenArmed(false)
+    storeSirenEnabled(false)
+    sirenEngine.stop()
+    setLoopActive(false)
+  }
+
+  const muteSiren = () => {
+    setMuted(true)
+    sirenEngine.stop()
+    setLoopActive(false)
+  }
+
+  const testSiren = () => {
+    sirenEngine.prime()
+    sirenEngine.burst()
   }
 
   // Live Map markers for pending SOS signals
@@ -99,15 +246,31 @@ export default function LiveSOS() {
     if (!reports) return []
     return reports
       .filter((r) => r.latitude && r.longitude)
-      .map((r) => ({
-        id: r.id,
-        position: { lat: r.latitude!, lng: r.longitude! },
-        title: `${t('ls.sos')} ${r.type.toUpperCase()} (${r.trackingId})`,
-        subtitle: `${r.description ?? ''} - Reported ${timeAgo(r.createdAt)}`,
-        color: r.priorityLabel === 'RED' ? '#dc2626' : '#f59e0b',
-        isSos: true,
-      }))
-  }, [reports, t])
+      .map((r) => {
+        const actions: MapPopupAction[] = [
+          {
+            label: t('ls.popupAcknowledge', 'Acknowledge'),
+            onClick: () => acknowledge(r.id),
+          },
+        ]
+        if (r.latitude && r.longitude) {
+          actions.push({
+            label: t('ls.popupNavigate', 'Navigate'),
+            onClick: () =>
+              window.open(getNavigationUrl(r.latitude!, r.longitude!), '_blank', 'noopener,noreferrer'),
+          })
+        }
+        return {
+          id: r.id,
+          position: { lat: r.latitude!, lng: r.longitude! },
+          title: `${t('ls.sos')} ${r.type.toUpperCase()} (${r.trackingId})`,
+          subtitle: `${r.description ?? ''} - Reported ${timeAgo(r.createdAt)}`,
+          color: r.priorityLabel === 'RED' ? '#dc2626' : '#f59e0b',
+          isSos: true,
+          popupActions: actions,
+        }
+      })
+  }, [reports, t, acknowledge])
 
   const mapCenter: GeoPoint = useMemo(() => {
     if (markers.length > 0) return markers[0].position
@@ -132,17 +295,43 @@ export default function LiveSOS() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          {!audioEnabled ? (
-            <Button variant="outline" size="sm" onClick={enableAudio} className="font-bold flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-2">
+          {!sirenArmed ? (
+            <Button variant="outline" size="sm" onClick={armSiren} className="font-bold flex items-center gap-1.5">
               <Volume2 className="h-4 w-4 text-slate-700 dark:text-slate-300" />
               <span>{t('ls.enableAudioSiren')}</span>
             </Button>
           ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 shadow-xs">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>{t('ls.sirenActive')}</span>
-            </span>
+            <>
+              <button
+                type="button"
+                onClick={disarmSiren}
+                title={t('ls.disableSirenHint', 'Click to disable siren')}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 shadow-xs cursor-pointer"
+              >
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>{t('ls.sirenActive')}</span>
+              </button>
+
+              <Button variant="outline" size="sm" onClick={testSiren} title={t('ls.testSirenHint', 'Play one siren cycle')} className="font-bold flex items-center gap-1.5">
+                <Play className="h-3.5 w-3.5 text-slate-700 dark:text-slate-300" />
+                <span>{t('ls.testSiren', 'Test')}</span>
+              </Button>
+
+              {muted && !loopActive && (
+                <span className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  <VolumeX className="h-3.5 w-3.5" />
+                  <span>{t('ls.mutedUntilNextRed', 'Muted until next RED')}</span>
+                </span>
+              )}
+
+              {loopActive && (
+                <Button variant="danger" size="sm" onClick={muteSiren} className="font-bold flex items-center gap-1.5 animate-pulse">
+                  <VolumeX className="h-3.5 w-3.5" />
+                  <span>{t('ls.muteSiren', 'Silence')}</span>
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -159,6 +348,7 @@ export default function LiveSOS() {
             markers={markers}
             height="100%"
             autoFit={markers.length > 0}
+            selectedId={selectedId}
           />
         </div>
       </div>
@@ -168,7 +358,11 @@ export default function LiveSOS() {
         {reports.map((r) => (
           <div
             key={r.id}
-            className={`rounded-2xl border bg-white p-5 shadow-xs transition dark:bg-slate-900 ${
+            onMouseEnter={() => setSelectedId(r.id)}
+            onClick={() => setSelectedId(r.id)}
+            className={`rounded-2xl border bg-white p-5 shadow-xs transition cursor-pointer dark:bg-slate-900 ${
+              selectedId === r.id ? 'ring-2 ring-red-500/60' : ''
+            } ${
               r.priorityLabel === 'RED'
                 ? 'border-l-4 border-l-red-600 border-slate-200 dark:border-slate-800'
                 : 'border-l-4 border-l-amber-500 border-slate-200 dark:border-slate-800'
@@ -183,7 +377,7 @@ export default function LiveSOS() {
             </div>
 
             <p className="mt-2 text-sm text-slate-800 dark:text-slate-200 font-medium leading-relaxed">{r.description}</p>
-            
+
             <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
               {r.landmark && (
                 <div className="flex items-center gap-1">

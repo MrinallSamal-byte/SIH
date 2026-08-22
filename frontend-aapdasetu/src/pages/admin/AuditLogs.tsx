@@ -3,11 +3,15 @@ import {
   Search,
   Shield,
   Lock,
-  User
+  User,
+  Download,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react'
 import { listAuditLogs } from '../../api/endpoints'
 import Badge from '../../components/common/Badge'
 import Loader from '../../components/common/Loader'
+import { downloadCsv } from '../../lib/csv'
 import { formatDateTime } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
 import type { AuditLog } from '../../types'
@@ -17,6 +21,7 @@ export default function AuditLogs() {
   const [logs, setLogs] = useState<AuditLog[] | null>(null)
   const [search, setSearch] = useState('')
   const [actionFilter, setActionFilter] = useState<string>('all')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   useEffect(() => {
     listAuditLogs().then(setLogs)
@@ -24,7 +29,7 @@ export default function AuditLogs() {
 
   const filtered = useMemo(() => {
     if (!logs) return []
-    return logs.filter((l) => {
+    const rows = logs.filter((l) => {
       if (actionFilter !== 'all' && l.action.toLowerCase() !== actionFilter.toLowerCase()) return false
       if (search.trim()) {
         const q = search.toLowerCase().trim()
@@ -36,7 +41,23 @@ export default function AuditLogs() {
       }
       return true
     })
-  }, [logs, actionFilter, search])
+    return [...rows].sort((a, b) => {
+      const diff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      return sortDir === 'asc' ? diff : -diff
+    })
+  }, [logs, actionFilter, search, sortDir])
+
+  const exportCsv = () => {
+    if (filtered.length === 0) return
+    const stamp = new Date().toISOString().slice(0, 10)
+    downloadCsv(`aapdasetu-audit-logs-${stamp}.csv`, filtered.map((l) => ({
+      timestamp: formatDateTime(l.createdAt),
+      actor: l.adminEmail,
+      action: l.action,
+      target: l.entityType ? `${l.entityType}${l.entityId ? ` (${l.entityId})` : ''}` : '',
+      detail: l.details ? JSON.stringify(l.details) : '',
+    })))
+  }
 
   if (!logs) return <Loader />
 
@@ -60,9 +81,19 @@ export default function AuditLogs() {
           </p>
         </div>
 
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300 mono">
-          {totalCount} {t('au.loggedEvents')}
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={exportCsv}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span>{t('au.exportCsv', 'Export CSV')}</span>
+          </button>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300 mono">
+            {totalCount} {t('au.loggedEvents')}
+          </span>
+        </div>
       </div>
 
       {/* KPI Cards Row */}
@@ -150,7 +181,22 @@ export default function AuditLogs() {
                 <th className="px-5 py-3.5">{t('au.adminUser')}</th>
                 <th className="px-5 py-3.5">{t('au.actionExecuted')}</th>
                 <th className="px-5 py-3.5">{t('au.targetEntity')}</th>
-                <th className="px-5 py-3.5">{t('au.eventTimestamp')}</th>
+                <th className="px-5 py-3.5">
+                  <button
+                    type="button"
+                    onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
+                    title={t('au.sortByTime', 'Toggle time sort')}
+                    aria-label={t('au.sortByTime', 'Toggle time sort')}
+                    className="inline-flex items-center gap-1 uppercase tracking-wider transition hover:text-slate-700 cursor-pointer dark:hover:text-slate-200"
+                  >
+                    <span>{t('au.eventTimestamp')}</span>
+                    {sortDir === 'asc' ? (
+                      <ChevronUp className="h-3 w-3" />
+                    ) : (
+                      <ChevronDown className="h-3 w-3" />
+                    )}
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">

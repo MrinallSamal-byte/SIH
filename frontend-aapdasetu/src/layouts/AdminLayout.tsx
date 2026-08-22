@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, Navigate, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -16,11 +16,17 @@ import {
   LogOut,
   ArrowLeft,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Keyboard,
+  Sun,
+  Moon,
+  X
 } from 'lucide-react'
 import AapdaSetuLogo from '../components/common/AapdaSetuLogo'
+import { apiHealth } from '../api/client'
 import { useAuth, useIsAdminAuthed } from '../hooks/useAuth'
 import { useLanguage } from '../lib/i18n'
+import { useTheme } from '../lib/theme'
 
 interface AdminView {
   to: string
@@ -45,12 +51,117 @@ const adminViews: AdminView[] = [
   { to: '/admin/settings', labelKey: 'adminNav.settings', icon: Settings },
 ]
 
+function relativeSyncTime(ts: number | null): string {
+  if (!ts || ts <= 0) return '—'
+  const seconds = Math.max(0, Math.floor((Date.now() - ts) / 1000))
+  if (seconds < 60) return `${seconds}s ago`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
+}
+
+const SHORTCUT_ROUTES: Record<string, string> = {
+  r: '/admin/reports',
+  s: '/admin',
+  v: '/admin/volunteers',
+  a: '/admin/analytics',
+  l: '/admin/live-sos',
+}
+
 export default function AdminLayout() {
   const { t } = useLanguage()
   const isAuthed = useIsAdminAuthed()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [collapsed, setCollapsed] = useState(false)
+  const { theme, toggleTheme } = useTheme()
+  const [showShortcuts, setShowShortcuts] = useState(false)
+  const [, setStatusTick] = useState(0)
+  const [online, setOnline] = useState<boolean>(() => (typeof navigator !== 'undefined' ? navigator.onLine : true))
+
+  useEffect(() => {
+    const id = window.setInterval(() => setStatusTick((n) => n + 1), 10_000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    const goOnline = () => setOnline(true)
+    const goOffline = () => setOnline(false)
+    window.addEventListener('online', goOnline)
+    window.addEventListener('offline', goOffline)
+    return () => {
+      window.removeEventListener('online', goOnline)
+      window.removeEventListener('offline', goOffline)
+    }
+  }, [])
+
+  useEffect(() => {
+    let pendingG = false
+    let gTimer: number | undefined
+
+    const cancelPendingG = () => {
+      pendingG = false
+      if (gTimer !== undefined) window.clearTimeout(gTimer)
+      gTimer = undefined
+    }
+
+    const isTypingTarget = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) return false
+      const tag = target.tagName
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable
+    }
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+
+      if (e.key === 'Escape') {
+        setShowShortcuts(false)
+        cancelPendingG()
+        return
+      }
+      if (isTypingTarget(e.target)) return
+
+      if (pendingG) {
+        const dest = SHORTCUT_ROUTES[e.key.toLowerCase()]
+        cancelPendingG()
+        if (dest) {
+          e.preventDefault()
+          navigate(dest)
+        }
+        return
+      }
+
+      if (e.key === '/') {
+        e.preventDefault()
+        setShowShortcuts(false)
+        const input = document.querySelector<HTMLInputElement>('input[data-shortcut="search"]')
+        if (input) {
+          input.focus()
+          input.select()
+        }
+        return
+      }
+
+      if (e.key === '?') {
+        e.preventDefault()
+        setShowShortcuts((open) => !open)
+        return
+      }
+
+      if (e.key.toLowerCase() === 'g') {
+        pendingG = true
+        gTimer = window.setTimeout(cancelPendingG, 1500)
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      cancelPendingG()
+    }
+  }, [navigate])
 
   if (!isAuthed) {
     return <Navigate to="/admin/login" replace />
@@ -60,6 +171,20 @@ export default function AdminLayout() {
     logout()
     navigate('/admin/login')
   }
+
+  const lastWasMock = Boolean(apiHealth?.lastWasMock)
+  const lastSuccessAt = apiHealth?.lastSuccessAt ?? null
+  const recentSuccess = lastSuccessAt !== null && Date.now() - lastSuccessAt < 60_000
+  const mode = lastWasMock ? 'DEMO' : recentSuccess ? 'LIVE' : 'UNKNOWN'
+
+  const pillClasses =
+    mode === 'DEMO'
+      ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+      : mode === 'LIVE'
+        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+        : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+  const pillDotClasses =
+    mode === 'LIVE' ? 'bg-emerald-500 animate-pulse' : mode === 'DEMO' ? 'bg-amber-500' : 'bg-slate-400'
 
   return (
     // h-screen + overflow-hidden keeps the sidebar fixed; only the main column scrolls
@@ -157,11 +282,112 @@ export default function AdminLayout() {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        <main className="flex-1 p-6 md:p-8">
+      <div className="flex flex-1 flex-col min-w-0">
+        {/* Ops Status Bar */}
+        <div className="flex items-center gap-3 border-b border-slate-200 bg-white px-6 py-1.5 text-[11px] dark:border-slate-800 dark:bg-slate-900">
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-bold tracking-wide mono ${pillClasses}`}
+            title={
+              mode === 'DEMO'
+                ? t('adminOps.demoHint', 'Backend unreachable — showing demo data')
+                : mode === 'LIVE'
+                  ? t('adminOps.liveHint', 'Receiving live backend data')
+                  : t('adminOps.unknownHint', 'No backend sync yet in this session')
+            }
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${pillDotClasses}`} />
+            <span>{mode}</span>
+          </span>
+
+          <span className="flex items-center gap-1.5 font-semibold text-slate-500 dark:text-slate-400">
+            <span className={`h-2 w-2 rounded-full ${online ? 'bg-emerald-500' : 'bg-red-500'}`} />
+            <span>{online ? t('adminOps.online', 'Online') : t('adminOps.offline', 'Offline')}</span>
+          </span>
+
+          <span className="text-slate-400 dark:text-slate-500 mono">
+            {t('adminOps.lastSync', 'Sync')} {relativeSyncTime(lastSuccessAt)}
+          </span>
+
+          <div className="ml-auto flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setShowShortcuts(true)}
+              title={t('adminOps.shortcutsTitle', 'Keyboard shortcuts (?)')}
+              aria-label={t('adminOps.shortcutsTitle', 'Keyboard shortcuts (?)')}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2 py-1 font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800 cursor-pointer dark:border-white/[0.08] dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            >
+              <Keyboard className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">?</span>
+            </button>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={t('layout.toggleTheme', 'Toggle theme')}
+              title={t('layout.toggleTheme', 'Toggle theme')}
+              className="rounded-lg border border-slate-200 p-1.5 text-slate-500 transition hover:bg-slate-50 hover:text-slate-800 cursor-pointer dark:border-white/[0.08] dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            >
+              {theme === 'dark' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+        </div>
+
+        <main className="flex-1 overflow-y-auto p-6 md:p-8">
           <Outlet />
         </main>
       </div>
+
+      {/* Keyboard Shortcuts Cheat Sheet */}
+      {showShortcuts && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowShortcuts(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-800 dark:bg-slate-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mono dark:text-slate-400">
+                {t('adminOps.shortcutsHeading', 'Keyboard Shortcuts')}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowShortcuts(false)}
+                aria-label={t('adminOps.closeShortcuts', 'Close shortcuts')}
+                className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 cursor-pointer dark:hover:bg-slate-800 dark:hover:text-slate-200"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <ul className="mt-3 space-y-2 text-xs text-slate-700 dark:text-slate-300">
+              {[
+                { keys: ['?'], label: t('adminOps.scHelp', 'Toggle this cheat sheet') },
+                { keys: ['/'], label: t('adminOps.scSearch', 'Focus search') },
+                { keys: ['Esc'], label: t('adminOps.scEscape', 'Close dialogs') },
+                { keys: ['g', 'r'], label: t('adminNav.reports') },
+                { keys: ['g', 's'], label: t('adminNav.dashboard') },
+                { keys: ['g', 'v'], label: t('adminNav.volunteers') },
+                { keys: ['g', 'a'], label: t('adminNav.analytics') },
+                { keys: ['g', 'l'], label: t('adminNav.liveSos') },
+              ].map(({ keys, label }) => (
+                <li key={keys.join('+')} className="flex items-center justify-between gap-4">
+                  <span>{label}</span>
+                  <span className="flex items-center gap-1">
+                    {keys.map((k) => (
+                      <kbd
+                        key={k}
+                        className="rounded-md border border-slate-300 bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-700 dark:border-white/[0.15] dark:bg-slate-800 dark:text-slate-200"
+                      >
+                        {k}
+                      </kbd>
+                    ))}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

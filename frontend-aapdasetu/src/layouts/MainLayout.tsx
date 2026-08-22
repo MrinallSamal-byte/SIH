@@ -15,7 +15,9 @@ import {
   ChevronDown,
   Compass,
   Users,
-  Bell
+  Bell,
+  ShieldCheck,
+  Radio
 } from 'lucide-react'
 import AapdaSetuLogo from '../components/common/AapdaSetuLogo'
 import ErrorBoundary from '../components/common/ErrorBoundary'
@@ -23,6 +25,7 @@ import ChatWidget from '../components/ChatWidget'
 import { LANGUAGES, useLanguage, type Language } from '../lib/i18n'
 import { useTheme } from '../lib/theme'
 import { listAlerts } from '../api/endpoints'
+import { initGlobalOutboxSync } from '../lib/outbox'
 import type { Alert } from '../types'
 
 interface NavLinkItem {
@@ -41,8 +44,10 @@ const topNavItems: NavLinkItem[] = [
 const featureNavItems: NavLinkItem[] = [
   { to: '/sos', labelKey: 'nav.sos', isSos: true },
   { to: '/report', labelKey: 'nav.report' },
-  { to: '/report-damage', labelKey: 'nav.damage' },
   { to: '/track', labelKey: 'nav.track' },
+  { to: '/alerts', labelKey: 'nav.alerts' },
+  { to: '/checkin', labelKey: 'nav.checkin' },
+  { to: '/report-damage', labelKey: 'nav.damage' },
   { to: '/shelters', labelKey: 'nav.shelters' },
   { to: '/safe-routes', labelKey: 'nav.routes' },
   { to: '/missing-persons', labelKey: 'nav.missing' },
@@ -51,8 +56,10 @@ const featureNavItems: NavLinkItem[] = [
 const featureIconMap: Record<string, typeof Siren> = {
   '/sos': Siren,
   '/report': FileText,
-  '/report-damage': FileWarning,
   '/track': Search,
+  '/alerts': Radio,
+  '/checkin': ShieldCheck,
+  '/report-damage': FileWarning,
   '/shelters': Building,
   '/safe-routes': Compass,
   '/missing-persons': Users,
@@ -101,6 +108,17 @@ export default function MainLayout() {
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifRead, setNotifRead] = useState(true)
   const notifRef = useRef<HTMLDivElement>(null)
+  const [tickerDismissed, setTickerDismissed] = useState(false)
+
+  // Global offline outbox sync — flushes queued reports/SOS when connectivity
+  // returns. Module is idempotent (StrictMode double-invoke safe); cleanup on
+  // unmount stops its timers/listeners.
+  useEffect(() => {
+    const cleanup = initGlobalOutboxSync()
+    return () => {
+      if (typeof cleanup === 'function') cleanup()
+    }
+  }, [])
 
   useEffect(() => {
     setMobileMenuOpen(false)
@@ -147,6 +165,8 @@ export default function MainLayout() {
       window.removeEventListener('offline', handleOffline)
     }
   }, [])
+
+  const criticalBulletin = bulletins.find((a) => a.severity === 'critical')
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f4f4f5] text-zinc-800 dark:bg-[#111111] dark:text-slate-200">
@@ -412,6 +432,38 @@ export default function MainLayout() {
           </nav>
         )}
       </header>
+
+      {/* Critical Alert Ticker — only while an unresolved critical bulletin exists */}
+      {criticalBulletin && !tickerDismissed && (
+        <div className="bg-red-600 px-4 py-2 text-white shadow-sm" role="alert">
+          <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2 text-xs">
+              <span className="relative flex h-2.5 w-2.5 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-white" />
+              </span>
+              <span className="shrink-0 font-black uppercase tracking-wider">{t('ticker.criticalAlert')}</span>
+              <span className="truncate font-semibold opacity-90">{criticalBulletin.title}</span>
+            </div>
+            <div className="flex shrink-0 items-center gap-3">
+              <Link
+                to="/alerts"
+                className="text-xs font-extrabold underline underline-offset-2 hover:text-red-100"
+              >
+                {t('ticker.viewAlerts')}
+              </Link>
+              <button
+                type="button"
+                onClick={() => setTickerDismissed(true)}
+                aria-label={t('ticker.dismiss')}
+                className="rounded-md p-1 transition hover:bg-red-500/70"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Container */}
       <main className="mx-auto flex-1 w-full max-w-7xl px-4 py-6 pb-24 md:pb-8">

@@ -10,6 +10,17 @@ import { subscribeRealtimeUpdates } from '../lib/realtimeEventBus'
  * Pass `snapshotKey` to seed the UI instantly from the last successful fetch
  * (localStorage) so repeat visits never wait on the network for first paint.
  */
+interface NetworkConnection {
+  saveData?: boolean
+  effectiveType?: string
+  addEventListener?: (type: string, listener: () => void) => void
+  removeEventListener?: (type: string, listener: () => void) => void
+}
+
+function getConnection(): NetworkConnection | undefined {
+  return (navigator as Navigator & { connection?: NetworkConnection }).connection
+}
+
 export function useRealtime<T>(
   fetcher: () => Promise<T>,
   intervalMs = 5000,
@@ -35,13 +46,35 @@ export function useRealtime<T>(
       }
     }
 
+    // Adaptive interval: respect Data Saver and slow (2G) cellular links by polling 4x less often.
+    const getAdaptiveInterval = () => {
+      const connection = getConnection()
+      if (!connection) return intervalMs
+      const saveData = connection.saveData === true
+      const effectiveType = String(connection.effectiveType || '')
+      if (saveData || effectiveType.includes('2g')) {
+        return Math.min(intervalMs * 4, 30000)
+      }
+      return intervalMs
+    }
+
     // 1. Initial fetch
     execute()
 
     // 2. Periodic polling interval
-    const id = setInterval(execute, intervalMs)
+    let id = setInterval(execute, getAdaptiveInterval())
 
-    // 3. Tab visibility awareness
+    // 3. Recompute cadence when network conditions change mid-session
+    const connection = getConnection()
+    const handleConnectionChange = () => {
+      clearInterval(id)
+      id = setInterval(execute, getAdaptiveInterval())
+    }
+    if (typeof connection?.addEventListener === 'function') {
+      connection.addEventListener('change', handleConnectionChange)
+    }
+
+    // 4. Tab visibility awareness
     const handleVisibility = () => {
       if (!document.hidden) {
         execute()
@@ -49,7 +82,7 @@ export function useRealtime<T>(
     }
     document.addEventListener('visibilitychange', handleVisibility)
 
-    // 4. Instant Real-time Event Bus Subscription (0ms latency!)
+    // 5. Instant Real-time Event Bus Subscription (0ms latency!)
     const unsubscribeBus = subscribeRealtimeUpdates(() => {
       execute()
     })
@@ -58,6 +91,9 @@ export function useRealtime<T>(
       cancelled = true
       clearInterval(id)
       document.removeEventListener('visibilitychange', handleVisibility)
+      if (typeof connection?.removeEventListener === 'function') {
+        connection.removeEventListener('change', handleConnectionChange)
+      }
       unsubscribeBus()
     }
   }, [intervalMs, snapshotKey])

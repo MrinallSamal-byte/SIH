@@ -11,6 +11,25 @@ export class ApiError extends Error {
   }
 }
 
+/** Thrown when a write reaches the network while the device is offline —
+ * callers (e.g. the outbox) use it to decide whether to queue locally. */
+export class OfflineError extends Error {
+  constructor(message = 'You are offline — the request was not sent') {
+    super(message)
+    this.name = 'OfflineError'
+  }
+}
+
+/**
+ * Honesty ledger for the mock-fallback system. Another agent renders a status
+ * badge from this — do not rename or move.
+ */
+export const apiHealth = {
+  lastAttemptAt: null as number | null,
+  lastSuccessAt: null as number | null,
+  lastWasMock: false,
+}
+
 /** Reads the stored admin session ({ token, email, name }) from localStorage. */
 export function getAdminToken(): string | undefined {
   try {
@@ -84,6 +103,12 @@ function markApiDown() {
  * `{ success: false, error }` on failure — this unwraps both.
  */
 async function apiCall<T>(method: string, path: string, body?: unknown): Promise<T> {
+  // Mutations (POST/PUT/PATCH/DELETE) must never be silently faked with mock
+  // data — fail fast offline and tag failures so withMockFallback rethrows.
+  const mutating = method.toUpperCase() !== 'GET'
+  if (mutating && typeof navigator !== 'undefined' && navigator.onLine === false) {
+    throw new OfflineError()
+  }
   if (apiIsUnreachable()) throw new ApiError(503, 'API unreachable')
 
   const headers: Record<string, string> = {}
@@ -114,14 +139,22 @@ async function apiCall<T>(method: string, path: string, body?: unknown): Promise
         // Network-level failure (refused/DNS/timeout): probe again only after
         // the cool-off window instead of retrying on every poll tick.
         markApiDown()
-        throw err
+        throw tagMutating(err)
       }
-      if (err.status >= 400 && err.status < 500) throw err
-      if (attempt === MAX_ATTEMPTS - 1) throw err
+      if (err.status >= 400 && err.status < 500) throw tagMutating(err)
+      if (attempt === MAX_ATTEMPTS - 1) throw tagMutating(err)
       await new Promise((r) => setTimeout(r, 250))
     }
   }
-  throw lastErr as Error
+  throw tagMutating(lastErr)
+
+  /** Marks errors from non-GET requests so the mock fallback can never swallow them. */
+  function tagMutating(err: unknown): unknown {
+    if (mutating && err instanceof Error) {
+      ;(err as Error & { mutating?: boolean }).mutating = true
+    }
+    return err
+  }
 }
 
 /**
@@ -138,35 +171,51 @@ async function aiCall<T>(method: string, path: string, body?: unknown): Promise<
   return (await res.json()) as T
 }
 
+export interface MockFallbackOptions {
+  /** True for write calls (POST/PUT/PATCH/DELETE): failures always propagate —
+   * mock data must never fake a successful submission. */
+  mutating?: boolean
+}
+
+function isMutatingFailure(err: unknown): boolean {
+  return (
+    err instanceof OfflineError ||
+    Boolean((err as { mutating?: boolean } | null | undefined)?.mutating)
+  )
+}
+
 /**
- * Runs the real backend call; on any failure (or when VITE_USE_MOCK_ONLY=true)
- * it silently returns mock data and notifies the "demo data" pill.
+ * Runs the real backend call; on failure of a read-only call (or when
+ * VITE_USE_MOCK_ONLY=true) it returns mock data and notifies the "demo data"
+ * pill. Write calls never fall back to mocks — they throw so callers can queue
+ * honestly via the outbox (src/lib/outbox.ts).
  */
 export async function withMockFallback<T>(
   realCall: () => Promise<T>,
   mock: MockData<T>,
+  options: MockFallbackOptions = {},
 ): Promise<T> {
-  if (config.useMockOnly) {
+  if (config.useMockOnly && !options.mutating) {
     notifyFallback()
+    apiHealth.lastWasMock = true
     return mock()
   }
   try {
-    return await realCall()
+    const data = await realCall()
+    apiHealth.lastAttemptAt = Date.now()
+    apiHealth.lastSuccessAt = Date.now()
+    apiHealth.lastWasMock = false
+    return data
   } catch (err) {
-    if (err instanceof ApiError && err.status >= 400 && err.status < 500) throw err
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      notifyFallback()
-      return mock()
+    apiHealth.lastAttemptAt = Date.now()
+    if (options.mutating || isMutatingFailure(err)) {
+      if (!navigator.onLine) throw new OfflineError()
+      console.error('[aapdasetu] write failed — refusing to fake success with mock data', err)
+      throw err
     }
-    if (err instanceof TypeError) {
-      notifyFallback()
-      return mock()
-    }
-    if (err instanceof ApiError && err.status >= 500) {
-      notifyFallback()
-      return mock()
-    }
+    // Read-only degradation: serve demo data and flag it via apiHealth.
     notifyFallback()
+    apiHealth.lastWasMock = true
     return mock()
   }
 }

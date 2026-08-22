@@ -1197,6 +1197,17 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'vt.title': 'Assigned Disaster Response Tasks',
     'vt.toViewTasks': 'to access your assigned rescue tasks.',
     'vt.updateFailed': 'Failed to update task',
+    'alerts.affectsYourArea': 'Affects your area',
+    'common.share': 'Share',
+    'home.activeAlerts': 'active alerts',
+    'home.sheltersOpen': 'shelters open',
+    'report.locationUnverified': 'Location not confirmed — the position shown is a regional estimate. Please confirm your location to enable submission.',
+    'ticker.criticalAlert': 'CRITICAL ALERT',
+    'ticker.dismiss': 'Dismiss critical alert banner',
+    'ticker.viewAlerts': 'View alerts',
+    'tracker.teamAssigned': 'Response team assigned',
+    'service.alertsTag': 'Live Alerts',
+    'service.checkinTag': 'Family Safety',
   },
   hi: {
     'about.feature1Desc': 'एक टैप में अपनी GPS स्थिति के साथ आपदा कमांडरों को तुरंत सतर्क करें।',
@@ -2377,6 +2388,17 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'vt.title': 'सौंपे गए आपदा प्रतिक्रिया कार्य',
     'vt.toViewTasks': 'अपने सौंपे गए बचाव कार्यों तक पहुंचने के लिए।',
     'vt.updateFailed': 'कार्य अपडेट करने में विफल',
+    'alerts.affectsYourArea': 'आपके क्षेत्र को प्रभावित करता है',
+    'common.share': 'साझा करें',
+    'home.activeAlerts': 'सक्रिय चेतावनियां',
+    'home.sheltersOpen': 'आश्रय खुले हैं',
+    'report.locationUnverified': 'स्थान पुष्टि नहीं हुई — दिखाया गया स्थान एक क्षेत्रीय अनुमान है। जमा करने में सक्षम होने के लिए कृपया अपना स्थान पुष्टि करें।',
+    'ticker.criticalAlert': 'गंभीर चेतावनी',
+    'ticker.dismiss': 'गंभीर चेतावनी बैनर हटाएं',
+    'ticker.viewAlerts': 'चेतावनियां देखें',
+    'tracker.teamAssigned': 'रेस्पॉन्स टीम नियुक्त की गई है',
+    'service.alertsTag': 'लाइव चेतावनियां',
+    'service.checkinTag': 'परिवार की सुरक्षा',
   },
   bn: {
     'about.feature1Desc': 'একটি ট্যাপে আপনার GPS অবস্থান সহ দুর্যোগ কমান্ডারদের সতর্ক করুন।',
@@ -3557,6 +3579,17 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'vt.title': 'বরাদ্দকৃত দুর্যোগ মোকাবেলা কার্য',
     'vt.toViewTasks': 'আপনার বরাদ্দকৃত উদ্ধার কাজ দেখতে।',
     'vt.updateFailed': 'কাজ আপডেট করতে ব্যর্থ',
+    'alerts.affectsYourArea': 'আপনার এলাকা প্রভাবিত হচ্ছে',
+    'common.share': 'শেয়ার করুন',
+    'home.activeAlerts': 'সক্রিয় সতর্কতা',
+    'home.sheltersOpen': 'আশ্রয়কেন্দ্র খোলা আছে',
+    'report.locationUnverified': 'অবস্থান নিশ্চিত করা হয়নি — দেখানো অবস্থানটি একটি আঞ্চলিক অনুমান। জমা দেওয়ার জন্য অনুগ্রহ করে আপনার অবস্থান নিশ্চিত করুন।',
+    'ticker.criticalAlert': 'জরুরি সতর্কতা',
+    'ticker.dismiss': 'জরুরি সতর্কতা ব্যানার বন্ধ করুন',
+    'ticker.viewAlerts': 'সতর্কতা দেখুন',
+    'tracker.teamAssigned': 'উদ্ধারকারী দল নিয়োগ করা হয়েছে',
+    'service.alertsTag': 'লাইভ সতর্কতা',
+    'service.checkinTag': 'পরিবারের নিরাপত্তা',
   },
   or: {
     'about.feature1Desc': 'ଏକ ଟ୍ୟାପରେ ଆପଣଙ୍କ GPS ସ୍ଥାନ ସହ ବିପଦ କମାଣ୍ଡରମାନଙ୍କୁ ସତର୍କ କରନ୍ତୁ।',
@@ -4737,6 +4770,17 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'vt.title': 'ନ୍ୟସ୍ତ ବିପର୍ଯ୍ୟୟ ମୁକାବିଲା କାର୍ଯ୍ୟ',
     'vt.toViewTasks': 'ଆପଣଙ୍କର ନ୍ୟସ୍ତ ଉଦ୍ଧାର କାର୍ଯ୍ୟ ଦେଖିବା ପାଇଁ।',
     'vt.updateFailed': 'କାର୍ଯ୍ୟ ଅପଡେଟ୍ କରିବାରେ ବିଫଳ',
+    'alerts.affectsYourArea': 'ଆପଣଙ୍କ ଅଞ୍ଚଳକୁ ପ୍ରଭାବିତ କରୁଛି',
+    'common.share': 'ସହଭାଗ କରନ୍ତୁ',
+    'home.activeAlerts': 'ସକ୍ରିୟ ସତର୍କତା',
+    'home.sheltersOpen': 'ଆଶ୍ରୟ ଖୋଲା ଅଛି',
+    'report.locationUnverified': 'ସ୍ଥାନ ନିଶ୍ଚିତ ହୋଇନାହିଁ — ଦେଖାଯାଉଥିବା ସ୍ଥାନ ଏକ ଆଞ୍ଚଳିକ ଅନୁମାନ। ଦାଖଲ କରିବା ପାଇଁ ଦୟାକରି ନିଜ ସ୍ଥାନ ନିଶ୍ଚିତ କରନ୍ତୁ।',
+    'ticker.criticalAlert': 'ଗୁରୁତର ସତର୍କତା',
+    'ticker.dismiss': 'ଗୁରୁତର ସତର୍କତା ବ୍ୟାନର୍ ବନ୍ଦ କରନ୍ତୁ',
+    'ticker.viewAlerts': 'ସତର୍କତା ଦେଖନ୍ତୁ',
+    'tracker.teamAssigned': 'ପ୍ରତିକ୍ରିୟା ଟିମ୍ ନିୟୋଜିତ ହୋଇଛି',
+    'service.alertsTag': 'ଲାଇଭ୍ ସତର୍କତା',
+    'service.checkinTag': 'ପରିବାର ସୁରକ୍ଷା',
   },
 }
 
@@ -4751,7 +4795,21 @@ const LanguageContext = createContext<LanguageContextValue | null>(null)
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLang] = useState<Language>(() => {
     const stored = localStorage.getItem('aapdasetu_lang')
-    return stored === 'hi' || stored === 'or' || stored === 'bn' || stored === 'en' ? (stored as Language) : 'en'
+    if (stored === 'hi' || stored === 'or' || stored === 'bn' || stored === 'en') {
+      return stored as Language
+    }
+    // First visit — auto-detect from browser locale preferences, else English.
+    const candidates =
+      typeof navigator !== 'undefined' && Array.isArray(navigator.languages) && navigator.languages.length > 0
+        ? navigator.languages
+        : [navigator.language]
+    for (const candidate of candidates) {
+      const code = (candidate || '').toLowerCase()
+      if (code.startsWith('hi')) return 'hi'
+      if (code.startsWith('bn')) return 'bn'
+      if (code.startsWith('or')) return 'or'
+    }
+    return 'en'
   })
 
   useEffect(() => {

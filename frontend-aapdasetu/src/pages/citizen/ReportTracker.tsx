@@ -14,9 +14,8 @@ import { getReport } from '../../api/endpoints'
 import { Field } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import PriorityBadge from '../../components/common/PriorityBadge'
-import LeafletMap, { type MapMarker, type MapPolyline } from '../../components/map/LeafletMap'
-import { formatDateTime, getNavigationUrl, haversineKm } from '../../lib/helpers'
-import { fetchOsrmRoute } from '../../lib/routing'
+import LeafletMap, { type MapMarker } from '../../components/map/LeafletMap'
+import { formatDateTime, getNavigationUrl } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
 import type { Report } from '../../types'
 import type { GeoPoint } from '../../types'
@@ -131,41 +130,10 @@ export default function ReportTracker() {
   const hasCoords = report?.latitude != null && report?.longitude != null
   const incidentPoint: GeoPoint = hasCoords ? { lat: report!.latitude!, lng: report!.longitude! } : { lat: 22.5726, lng: 88.3639 }
 
-  const responderPoint: GeoPoint | null = (hasCoords && report?.status === 'in_progress')
-    ? { lat: report!.latitude! + 0.007, lng: report!.longitude! + 0.006 }
-    : null
-
-  const [routePoints, setRoutePoints] = useState<GeoPoint[]>([])
-  const [routeKm, setRouteKm] = useState<number | null>(null)
-  const [routeEta, setRouteEta] = useState<number | null>(null)
-
-  useEffect(() => {
-    if (!hasCoords || !responderPoint) {
-      setRoutePoints([])
-      setRouteKm(null)
-      setRouteEta(null)
-      return
-    }
-    let cancelled = false
-    fetchOsrmRoute(responderPoint, incidentPoint, [], 'driving').then((r) => {
-      if (cancelled) return
-      if (r) {
-        setRoutePoints(r.points)
-        setRouteKm(r.distanceKm)
-        setRouteEta(Math.max(2, Math.round(r.durationMin)))
-      } else {
-        setRoutePoints([responderPoint, incidentPoint])
-        // OSRM failed — fall back to the true great-circle distance instead of a fabricated constant
-        const fallbackKm = haversineKm(responderPoint, incidentPoint)
-        setRouteKm(fallbackKm)
-        setRouteEta(Math.max(2, Math.round((fallbackKm / 25) * 60)))
-      }
-    })
-    return () => { cancelled = true }
-  }, [hasCoords, responderPoint?.lat, responderPoint?.lng, incidentPoint.lat, incidentPoint.lng])
-
-  const distanceKm = routeKm
-  const estimatedEtaMins = routeEta
+  // NOTE: No responder position or ETA is fabricated here — real responder
+  // telemetry arrives only from backend assignment data. While a response is
+  // underway we show neutral "team assigned" status instead of invented pins.
+  const teamAssigned = report?.status === 'in_progress'
 
   const mapMarkers: MapMarker[] = []
   if (hasCoords) {
@@ -176,27 +144,6 @@ export default function ReportTracker() {
       subtitle: report?.landmark ?? t('tracker.victimLocation'),
       color: '#dc2626',
       isSos: true,
-    })
-  }
-
-  if (responderPoint) {
-    mapMarkers.push({
-      id: 'responder',
-      position: responderPoint,
-      title: `${t('tracker.rescueUnit')}: ${report?.assignedVolunteerName ?? t('tracker.fieldResponder')}`,
-      subtitle: `${t('tracker.enRouteEta')}${estimatedEtaMins ?? '?'} ${t('common.mins')}`,
-      color: '#2563eb',
-    })
-  }
-
-  const mapPolylines: MapPolyline[] = []
-  if (hasCoords && responderPoint) {
-    mapPolylines.push({
-      id: 'route',
-      points: routePoints.length >= 2 ? routePoints : [responderPoint, incidentPoint],
-      color: '#2563eb',
-      dashed: false,
-      label: `${t('tracker.routeLabel')} (~${distanceKm?.toFixed(1) ?? '0.9'} ${t('common.km')})`,
     })
   }
 
@@ -354,14 +301,15 @@ export default function ReportTracker() {
             </div>
           </div>
 
-          {/* Interactive Live Responder & Incident Map */}
+          {/* Interactive Incident Map */}
           {hasCoords && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
                 <span>{t('track.liveTelemetry')}</span>
-                {responderPoint && distanceKm && (
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                    {t('track.eta')}: ~{estimatedEtaMins} {t('common.mins')} (~{distanceKm.toFixed(1)} {t('common.km')})
+                {teamAssigned && (
+                  <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    {t('tracker.teamAssigned')}
                   </span>
                 )}
               </div>
@@ -370,9 +318,8 @@ export default function ReportTracker() {
                   center={incidentPoint}
                   zoom={14}
                   markers={mapMarkers}
-                  polylines={mapPolylines}
                   height="260px"
-                  autoFit={Boolean(responderPoint)}
+                  autoFit={false}
                 />
               </div>
             </div>

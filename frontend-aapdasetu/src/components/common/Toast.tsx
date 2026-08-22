@@ -1,47 +1,104 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
+import { X } from 'lucide-react'
+
+type ToastType = 'success' | 'error' | 'info' | 'warning'
+
+export interface ToastAction {
+  label: string
+  onClick: () => void
+}
 
 interface Toast {
   id: number
   message: string
-  type: 'success' | 'error' | 'info'
+  type: ToastType
+  action?: ToastAction
 }
 
 interface ToastContextValue {
-  toast: (message: string, type?: 'success' | 'error' | 'info') => void
+  toast: (message: string, type?: ToastType, options?: { action?: ToastAction }) => void
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null)
 
 let nextId = 0
 
+// Success/info fade away; errors & warnings persist until manually dismissed
+const AUTO_DISMISS_MS = 6000
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
+  const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>())
 
-  const toast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
-    const id = ++nextId
-    setToasts((prev) => [...prev, { id, message, type }])
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000)
+  const dismiss = useCallback((id: number) => {
+    const timer = timers.current.get(id)
+    if (timer) {
+      clearTimeout(timer)
+      timers.current.delete(id)
+    }
+    setToasts((prev) => prev.filter((t) => t.id !== id))
   }, [])
+
+  const toast = useCallback(
+    (message: string, type: ToastType = 'success', options?: { action?: ToastAction }) => {
+      const id = ++nextId
+      setToasts((prev) => [...prev, { id, message, type, action: options?.action }])
+      if (type !== 'error' && type !== 'warning') {
+        const timer = setTimeout(() => {
+          timers.current.delete(id)
+          setToasts((prev) => prev.filter((t) => t.id !== id))
+        }, AUTO_DISMISS_MS)
+        timers.current.set(id, timer)
+      }
+    },
+    [],
+  )
 
   const value = useMemo(() => ({ toast }), [toast])
 
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="pointer-events-none fixed bottom-4 right-4 z-[60] space-y-2">
+      <div
+        role="status"
+        aria-live="assertive"
+        className="pointer-events-none fixed top-16 left-1/2 z-[100] flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 flex-col gap-2 sm:max-w-md"
+      >
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`pointer-events-auto rounded-lg px-4 py-2 text-sm shadow-lg ${
+            className={`animate-page-enter pointer-events-auto flex items-center rounded-lg py-1.5 pl-4 pr-1 text-sm shadow-lg ${
               t.type === 'success'
                 ? 'bg-emerald-600 text-white'
                 : t.type === 'info'
-                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-semibold'
+                ? 'bg-slate-900 font-semibold text-white dark:bg-slate-100 dark:text-slate-900'
+                : t.type === 'warning'
+                ? 'bg-amber-500 font-semibold text-slate-950'
                 : 'bg-red-600 text-white'
             }`}
           >
-            {t.message}
+            <span className="min-w-0 flex-1 py-1.5">{t.message}</span>
+            {t.action && (
+              <button
+                type="button"
+                onClick={() => {
+                  dismiss(t.id)
+                  t.action!.onClick()
+                }}
+                className="shrink-0 cursor-pointer whitespace-nowrap rounded-md px-1.5 py-1 text-xs font-bold uppercase tracking-wider underline underline-offset-2 transition hover:opacity-70"
+              >
+                {t.action.label}
+              </button>
+            )}
+            <button
+              type="button"
+              aria-label="Dismiss notification"
+              onClick={() => dismiss(t.id)}
+              className="-mr-1 ml-1 flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg transition hover:bg-black/10"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         ))}
       </div>

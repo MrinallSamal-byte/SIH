@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   FileText,
   Search,
   ChevronLeft,
   ChevronRight,
-  RotateCcw
+  RotateCcw,
+  Download,
+  X
 } from 'lucide-react'
 import { listAgencies, listReports, listVolunteers, updateReport, resetMockDatabase } from '../../api/endpoints'
+import { emitRealtimeUpdate } from '../../lib/realtimeEventBus'
+import { downloadCsv } from '../../lib/csv'
 import { Field, Input, Select } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import Modal from '../../components/common/Modal'
@@ -26,6 +30,11 @@ interface DispatchDraft {
   notes: string
 }
 
+function truncateForCsv(value: string | undefined, max: number): string {
+  if (!value) return ''
+  return value.length > max ? `${value.slice(0, max - 1)}…` : value
+}
+
 export default function Reports() {
   const { t } = useLanguage()
   const { toast } = useToast()
@@ -39,6 +48,9 @@ export default function Reports() {
   const [saving, setSaving] = useState(false)
   const [page, setPage] = useState(1)
   const pageSize = 20
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkRunning, setBulkRunning] = useState(false)
+  const selectAllRef = useRef<HTMLInputElement | null>(null)
 
   const [draft, setDraft] = useState<DispatchDraft>({
     volunteerId: '',
@@ -128,6 +140,80 @@ export default function Reports() {
     return reports.slice(start, start + pageSize)
   }, [reports, safePage, pageSize])
 
+  const toggleRowSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const allPageSelected =
+    paginatedReports.length > 0 && paginatedReports.every((r) => selectedIds.has(r.id))
+
+  const toggleAllOnPage = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (allPageSelected) {
+        paginatedReports.forEach((r) => next.delete(r.id))
+      } else {
+        paginatedReports.forEach((r) => next.add(r.id))
+      }
+      return next
+    })
+  }
+
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate =
+        selectedIds.size > 0 && !allPageSelected && paginatedReports.some((r) => selectedIds.has(r.id))
+    }
+  }, [selectedIds, allPageSelected, paginatedReports])
+
+  const runBulkStatusUpdate = async (status: Report['status']) => {
+    const ids = Array.from(selectedIds)
+    if (ids.length === 0 || bulkRunning) return
+    setBulkRunning(true)
+    try {
+      const results = await Promise.allSettled(ids.map((id) => updateReport(id, { status })))
+      const succeeded = results.filter((res) => res.status === 'fulfilled').length
+      const failed = results.length - succeeded
+      if (failed > 0) {
+        toast(
+          `${succeeded} ${t('rp.bulkUpdated', 'incident(s) updated')} · ${failed} ${t('rp.bulkFailed', 'failed')}`,
+          succeeded > 0 ? 'info' : 'error',
+        )
+      } else {
+        toast(`${succeeded} ${t('rp.bulkUpdated', 'incident(s) updated')}`, 'success')
+      }
+      setSelectedIds(new Set())
+      emitRealtimeUpdate('report_updated')
+    } finally {
+      setBulkRunning(false)
+    }
+  }
+
+  const exportFilteredCsv = () => {
+    if (!reports || reports.length === 0) return
+    const stamp = new Date().toISOString().slice(0, 10)
+    downloadCsv(`aapdasetu-reports-${stamp}.csv`, reports.map((r) => ({
+      id: r.id,
+      createdAt: formatDateTime(r.createdAt),
+      type: r.type,
+      priority: r.priorityLabel,
+      status: r.status,
+      phone: r.reporterPhone ?? '',
+      landmark:
+        r.landmark ??
+        (typeof r.latitude === 'number' && typeof r.longitude === 'number'
+          ? `${r.latitude.toFixed(5)}, ${r.longitude.toFixed(5)}`
+          : ''),
+      description: truncateForCsv(r.description, 120),
+    })))
+    toast(t('rp.csvExported', 'CSV exported'), 'success')
+  }
+
   if (!reports) return <Loader />
 
   return (
@@ -149,6 +235,14 @@ export default function Reports() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={exportFilteredCsv}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span>{t('rp.exportCsv', 'Export CSV')}</span>
+          </button>
           <button
             type="button"
             onClick={async () => {
@@ -205,6 +299,7 @@ export default function Reports() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t('rp.searchPlaceholder')}
+              data-shortcut="search"
               className="w-full rounded-xl border border-slate-300 bg-white pl-8 pr-3 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-white/[0.1] dark:bg-slate-950 dark:text-slate-100"
             />
           </div>
@@ -216,6 +311,17 @@ export default function Reports() {
         <table className="w-full text-left text-sm">
           <thead className="border-b bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400 mono font-bold">
             <tr>
+              <th className="w-10 px-4 py-3">
+                <input
+                  ref={selectAllRef}
+                  type="checkbox"
+                  checked={allPageSelected}
+                  onChange={toggleAllOnPage}
+                  aria-label={t('rp.selectAllPage', 'Select all on page')}
+                  title={t('rp.selectAllPage', 'Select all on page')}
+                  className="h-4 w-4 cursor-pointer accent-slate-900 dark:accent-slate-100"
+                />
+              </th>
               <th className="px-4 py-3">{t('rp.thTrackingId')}</th>
               <th className="px-4 py-3">{t('rp.thType')}</th>
               <th className="px-4 py-3">{t('rp.thPriorityScore')}</th>
@@ -230,6 +336,16 @@ export default function Reports() {
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {paginatedReports.map((r) => (
               <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
+                <td className="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(r.id)}
+                    onChange={() => toggleRowSelected(r.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={`${t('rp.selectRow', 'Select')} ${r.trackingId}`}
+                    className="h-4 w-4 cursor-pointer accent-slate-900 dark:accent-slate-100"
+                  />
+                </td>
                 <td className="px-4 py-3 font-mono text-xs font-bold text-slate-900 dark:text-slate-100">
                   <div className="flex items-center gap-1.5">
                     {r.source === 'sos' && <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse" />}
@@ -325,6 +441,44 @@ export default function Reports() {
           </div>
         )}
       </div>
+
+      {/* Bulk Actions Floating Bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-16 left-1/2 z-50 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/95 px-4 py-2.5 shadow-xl backdrop-blur dark:border-white/[0.1] dark:bg-slate-900/95">
+          <span className="text-xs font-bold text-slate-700 mono dark:text-slate-200">
+            {selectedIds.size} {t('rp.selected', 'selected')}
+          </span>
+          <span className="h-5 w-px bg-slate-200 dark:bg-slate-700" />
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={bulkRunning}
+            onClick={() => runBulkStatusUpdate('in_progress')}
+            className="font-bold whitespace-nowrap"
+          >
+            {t('rp.markInProgress', 'Mark In Progress')}
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={bulkRunning}
+            onClick={() => runBulkStatusUpdate('resolved')}
+            className="font-bold whitespace-nowrap"
+          >
+            {bulkRunning ? t('rp.working', 'Working…') : t('rp.markResolved', 'Mark Resolved')}
+          </Button>
+          <button
+            type="button"
+            onClick={() => setSelectedIds(new Set())}
+            disabled={bulkRunning}
+            aria-label={t('rp.clearSelection', 'Clear selection')}
+            title={t('rp.clearSelection', 'Clear selection')}
+            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40 cursor-pointer dark:hover:bg-slate-800 dark:hover:text-slate-200"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Dispatch Modal */}
       {selected && (

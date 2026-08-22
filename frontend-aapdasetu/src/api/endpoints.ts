@@ -162,10 +162,15 @@ function reportBody(input: ReportInput): Record<string, unknown> {
     if (input.missing.age !== undefined) body.missingPersonAge = input.missing.age
     if (input.missing.desc) body.missingPersonDesc = input.missing.desc
   }
-  const media = input.media?.[0]
-  if (media) {
-    body.mediaData = media.dataUrl
-    body.mediaType = media.kind
+  // Send ALL attachments: legacy single fields keep the current backend
+  // contract for entry 0, extras ride along as additionalMedia entries.
+  const media = input.media ?? []
+  if (media.length > 0) {
+    body.mediaData = media[0].dataUrl
+    body.mediaType = media[0].kind
+    if (media.length > 1) {
+      body.additionalMedia = media.slice(1).map((m) => ({ dataUrl: m.dataUrl, kind: m.kind }))
+    }
   }
   return body
 }
@@ -178,6 +183,7 @@ export function createReport(input: ReportInput): Promise<Report> {
   return withMockFallback(
     () => apiCall<RawReport & { triage?: unknown }>('POST', path, reportBody(input)).then((d) => toReport(d)),
     () => mocks.createReport(input),
+    { mutating: true },
   )
 }
 
@@ -244,6 +250,7 @@ export function updateReport(
       if (!updated) throw new Error('Report not found')
       return updated
     },
+    { mutating: true },
   )
 }
 
@@ -299,6 +306,7 @@ export function createSafetyCheckin(
         longitude: input.longitude ?? null,
       }),
     () => mocks.createSafetyCheckin(input),
+    { mutating: true },
   )
 }
 
@@ -317,6 +325,7 @@ export function createShelter(input: Omit<Shelter, 'id'>): Promise<Shelter> {
   return withMockFallback(
     () => apiCall<Shelter>('POST', '/api/v1/admin/shelters', input),
     () => mocks.createShelter(input),
+    { mutating: true },
   )
 }
 
@@ -329,6 +338,7 @@ export function updateShelter(id: string, patch: Partial<Shelter>): Promise<Shel
       if (!updated) throw new Error('Shelter not found')
       return updated
     },
+    { mutating: true },
   )
 }
 
@@ -337,6 +347,7 @@ export function deleteShelter(id: string): Promise<boolean> {
   return withMockFallback(
     () => apiCall<{ success: boolean }>('DELETE', `/api/v1/admin/shelters/${encodeURIComponent(id)}`).then(() => true),
     () => mocks.deleteShelter(id),
+    { mutating: true },
   )
 }
 
@@ -367,6 +378,7 @@ export function createAlert(input: Omit<Alert, 'id' | 'createdAt'>): Promise<Ale
         targetArea: input.region,
       }),
     () => mocks.createAlert(input),
+    { mutating: true },
   )
 }
 
@@ -406,6 +418,7 @@ export function updateVolunteer(id: string, patch: Partial<Volunteer>): Promise<
       if (!updated) throw new Error('Volunteer not found')
       return updated
     },
+    { mutating: true },
   )
 }
 
@@ -444,6 +457,7 @@ export function createMissingPerson(input: Omit<MissingPerson, 'id' | 'status'>)
         photoUrl: input.photoUrl ?? null,
       }),
     () => mocks.createMissingPerson(input),
+    { mutating: true },
   )
 }
 
@@ -456,6 +470,7 @@ export function updateMissingPerson(id: string, patch: Partial<MissingPerson>): 
       if (!updated) throw new Error('Missing person record not found')
       return updated
     },
+    { mutating: true },
   )
 }
 
@@ -527,6 +542,7 @@ export function broadcastAlert(input: BroadcastPayload): Promise<{ delivered: nu
         recipientNumbers: input.recipientNumbers,
       }),
     () => mocks.broadcast(input),
+    { mutating: true },
   )
 }
 
@@ -605,6 +621,7 @@ export function createDamageAssessment(input: {
         compensationInr: input.estimatedLossInr || 47550,
         district: input.district || 'North 24 Parganas',
       }),
+    { mutating: true },
   )
 }
 
@@ -617,5 +634,6 @@ export function updateDamageAssessmentStatus(
     () =>
       apiCall<DamageAssessmentReport>('PATCH', `/api/v1/admin/damage-assessments/${id}/status`, { status }),
     () => mocks.updateDamageAssessmentStatus(id, status),
+    { mutating: true },
   )
 }

@@ -13,7 +13,9 @@ import {
   Edit3,
 } from 'lucide-react'
 import { createReport } from '../../api/endpoints'
+import { ApiError } from '../../api/client'
 import { aiTriage } from '../../api/ai'
+import { enqueueOutbox, initGlobalOutboxSync } from '../../lib/outbox'
 import { Field, Input } from '../../components/common/Input'
 import Modal from '../../components/common/Modal'
 import LandmarkPicker from '../../components/map/LandmarkPicker'
@@ -57,6 +59,7 @@ export default function SOS() {
   const [result, setResult] = useState<Report | null>(null)
   const [copied, setCopied] = useState(false)
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
+  const [queuedNotice, setQueuedNotice] = useState(false)
   const [showLocationModal, setShowLocationModal] = useState(false)
   const [editAddressText, setEditAddressText] = useState('')
   const [editPoint, setEditPoint] = useState<GeoPoint | null>(null)
@@ -69,51 +72,22 @@ export default function SOS() {
     }
   }, [phone, phoneError])
 
-  // Track online/offline status + flush pending offline SOS queue
+  // Track online/offline status for the banner + arm the global outbox sync.
+  // Flushing is owned by initGlobalOutboxSync (app-wide, idempotent) — it also
+  // replays any SOS/report queued from previous sessions on mount/reconnect.
   useEffect(() => {
-    const flushPendingSos = async () => {
-      try {
-        const raw = localStorage.getItem('aapdasetu_pending_sos')
-        if (!raw) return
-        // Support both the legacy single-object format and the array format
-        const parsed = JSON.parse(raw) as ReportInput | ReportInput[]
-        const queue = Array.isArray(parsed) ? parsed : [parsed]
-        if (queue.length === 0) return
-        const remaining: ReportInput[] = []
-        for (const item of queue) {
-          try {
-            await createReport(item)
-            toast(t('sos.syncedToast'), 'success')
-          } catch {
-            remaining.push(item)
-          }
-        }
-        if (remaining.length > 0) {
-          localStorage.setItem('aapdasetu_pending_sos', JSON.stringify(remaining))
-        } else {
-          localStorage.removeItem('aapdasetu_pending_sos')
-        }
-      } catch {
-        // Storage access error
-      }
-    }
-    const handleOnline = () => {
-      setIsOffline(false)
-      void flushPendingSos()
-    }
+    const cleanupOutbox = initGlobalOutboxSync()
+    const handleOnline = () => setIsOffline(false)
     const handleOffline = () => setIsOffline(true)
-
-    // Flush on mount too — a queued SOS from a previous session must sync
-    // even if the network never transitions offline→online while we're mounted.
-    if (navigator.onLine) void flushPendingSos()
 
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
     return () => {
+      cleanupOutbox()
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
     }
-  }, [toast, t])
+  }, [])
 
   const validatePhone = (raw: string): boolean => {
     const clean = raw.replace(/\D/g, '')
@@ -154,6 +128,7 @@ export default function SOS() {
 
     setPhoneError(null)
     setTriggering(true)
+    let pendingInput: ReportInput | null = null
 
     try {
       const foundType = emergencyTypes.find((e) => e.type === selectedType)
@@ -195,18 +170,13 @@ export default function SOS() {
         location: { lat, lng },
         landmark: fullLandmark,
       }
+      pendingInput = input
 
       if (!navigator.onLine) {
-        // Queue as an array so multiple offline SOS reports are never lost
-        try {
-          const raw = localStorage.getItem('aapdasetu_pending_sos')
-          const parsed = raw ? (JSON.parse(raw) as ReportInput | ReportInput[]) : []
-          const queue = Array.isArray(parsed) ? parsed : [parsed]
-          queue.push(input)
-          localStorage.setItem('aapdasetu_pending_sos', JSON.stringify(queue))
-        } catch {
-          localStorage.setItem('aapdasetu_pending_sos', JSON.stringify([input]))
-        }
+        // Park in the global outbox — it auto-dispatches on reconnect.
+        enqueueOutbox('sos', input)
+        navigator.vibrate?.([200, 100, 200])
+        setQueuedNotice(true)
         toast(t('sos.offlineQueuedToast'), 'info')
         setTriggering(false)
         return
@@ -227,6 +197,7 @@ export default function SOS() {
             : report
 
       setResult(finalReport)
+      navigator.vibrate?.([200, 100, 200])
 
       // Save to localStorage for quick tracking
       try {
@@ -241,7 +212,18 @@ export default function SOS() {
 
       toast(t('sos.sent'))
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('common.submissionFailed'), 'error')
+      // Validation rejections (4xx) surface honestly; network/backend failures
+      // never lose the SOS — park it in the global outbox for auto-retry.
+      if (err instanceof ApiError && err.status >= 400 && err.status < 500) {
+        toast(err.message || t('common.submissionFailed'), 'error')
+      } else if (pendingInput) {
+        enqueueOutbox('sos', pendingInput)
+        navigator.vibrate?.([200, 100, 200])
+        setQueuedNotice(true)
+        toast(t('sos.offlineQueuedToast'), 'info')
+      } else {
+        toast(err instanceof Error ? err.message : t('common.submissionFailed'), 'error')
+      }
     } finally {
       setTriggering(false)
     }
@@ -368,6 +350,13 @@ export default function SOS() {
             <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-400 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300 shadow-xs max-w-3xl w-full">
               <AlertTriangle className="h-4 w-4 shrink-0" />
               <span>{t('sos.offlineNotice')}</span>
+            </div>
+          )}
+
+          {queuedNotice && (
+            <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-400 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300 shadow-xs max-w-3xl w-full">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>{t('sos.queuedOnDevice', 'Saved on device — will send automatically when you reconnect.')}</span>
             </div>
           )}
 

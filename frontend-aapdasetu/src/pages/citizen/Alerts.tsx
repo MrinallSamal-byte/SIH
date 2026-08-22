@@ -1,30 +1,74 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   ShieldAlert,
   AlertTriangle,
   Info,
   Clock,
   MapPin,
-  Radio
+  Radio,
+  MessageCircle,
+  MessageSquare,
+  Crosshair
 } from 'lucide-react'
 import { listAlerts } from '../../api/endpoints'
 import Badge from '../../components/common/Badge'
-import Loader from '../../components/common/Loader'
 import { useRealtime } from '../../hooks/useRealtime'
+import { useGeoLocation } from '../../hooks/useLocation'
 import { useLanguage } from '../../lib/i18n'
-import { timeAgo } from '../../lib/helpers'
+import { reverseGeocode, timeAgo } from '../../lib/helpers'
 import type { Alert } from '../../types'
+
+const severityRank: Record<string, number> = { critical: 0, warning: 1, info: 2 }
 
 export default function Alerts() {
   const { t } = useLanguage()
   const fetchAlerts = useCallback(() => listAlerts(), [])
   const alerts = useRealtime<Alert[]>(fetchAlerts, 8000)
   const [filter, setFilter] = useState<string>('all')
+  const { coords, source: locationSource } = useGeoLocation()
+  const [userArea, setUserArea] = useState<string | null>(null)
+  const userLat = coords?.latitude
+  const userLng = coords?.longitude
 
-  const filtered = (alerts ?? []).filter((a) => {
-    if (filter === 'all') return true
-    return a.severity === filter
-  })
+  // Resolve the user's area once a real fix exists (any provenance except the
+  // hardcoded default estimate) so region matching can highlight relevant alerts.
+  useEffect(() => {
+    if (userLat == null || userLng == null || locationSource === 'default') return
+    let cancelled = false
+    reverseGeocode({ lat: userLat, lng: userLng })
+      .then((addr) => {
+        if (!cancelled && addr) setUserArea(addr.toLowerCase())
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [userLat, userLng, locationSource])
+
+  const matchesUserArea = (region?: string): boolean => {
+    if (!userArea || !region) return false
+    // Loose token match: any comma-separated part of the alert region that
+    // appears in the reverse-geocoded address counts as affecting the area.
+    return region
+      .toLowerCase()
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .some((part) => userArea.includes(part))
+  }
+
+  const filtered = (alerts ?? [])
+    .filter((a) => filter === 'all' || a.severity === filter)
+    .sort((a, b) => {
+      // Severity groups first, then area-matched alerts to the top of each
+      // group, newest within the same match tier.
+      const sevDiff = (severityRank[a.severity] ?? 3) - (severityRank[b.severity] ?? 3)
+      if (sevDiff !== 0) return sevDiff
+      const areaDiff =
+        (matchesUserArea(a.region) ? 0 : 1) - (matchesUserArea(b.region) ? 0 : 1)
+      if (areaDiff !== 0) return areaDiff
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -57,7 +101,14 @@ export default function Alerts() {
         </div>
       </div>
 
-      {alerts === null && <Loader />}
+      {/* Skeleton cards while first load is in flight */}
+      {alerts === null && (
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="skeleton-shimmer h-36 rounded-2xl" />
+          ))}
+        </div>
+      )}
 
       <div className="space-y-3">
         {filtered.map((a) => {
@@ -70,13 +121,18 @@ export default function Alerts() {
 
           const Icon = a.severity === 'critical' ? ShieldAlert : a.severity === 'warning' ? AlertTriangle : Info
 
+          const affectsArea = matchesUserArea(a.region)
+          const shareText = `${a.title}${a.region ? ` — ${a.region}` : ''}`
+          const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`
+          const smsUrl = `sms:?&body=${encodeURIComponent(shareText)}`
+
           return (
             <div
               key={a.id}
               className={`rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-xs transition dark:border-white/[0.08] dark:bg-[#1a1a1a] ${borderClass}`}
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Icon className="h-4.5 w-4.5 text-slate-500" />
                   <Badge value={a.severity} label={a.severity === 'critical' ? t('alerts.sevCritical') : a.severity === 'warning' ? t('alerts.sevWarning') : t('alerts.sevInfo')} />
                   <h3 className="text-sm font-bold text-zinc-800 dark:text-slate-300">{a.title}</h3>
@@ -89,12 +145,44 @@ export default function Alerts() {
 
               <p className="mt-2.5 text-xs leading-relaxed text-zinc-500 dark:text-slate-300">{a.message}</p>
 
-              {a.region && (
-                <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 pt-2.5 dark:border-white/[0.08]">
-                  <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                  <span className="font-semibold text-zinc-600 dark:text-slate-300">{t('alerts.affectedArea')} {a.region}</span>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-2.5 dark:border-white/[0.08]">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  {a.region && (
+                    <span className="flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                      <span className="font-semibold text-zinc-600 dark:text-slate-300">{t('alerts.affectedArea')} {a.region}</span>
+                    </span>
+                  )}
+                  {affectsArea && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+                      <Crosshair className="h-3 w-3" />
+                      {t('alerts.affectsYourArea')}
+                    </span>
+                  )}
                 </div>
-              )}
+
+                {/* Per-alert share actions — 44px+ tap targets */}
+                <div className="ml-auto flex items-center gap-2">
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${t('common.share')} WhatsApp`}
+                    title={`${t('common.share')} WhatsApp`}
+                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200/80 bg-[#f4f4f5] text-emerald-600 transition hover:bg-emerald-50 hover:text-emerald-700 active:scale-95 dark:border-white/[0.08] dark:bg-[#222222] dark:text-emerald-400 dark:hover:bg-emerald-950/60"
+                  >
+                    <MessageCircle className="h-4.5 w-4.5" />
+                  </a>
+                  <a
+                    href={smsUrl}
+                    aria-label={`${t('common.share')} SMS`}
+                    title={`${t('common.share')} SMS`}
+                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200/80 bg-[#f4f4f5] text-blue-600 transition hover:bg-blue-50 hover:text-blue-700 active:scale-95 dark:border-white/[0.08] dark:bg-[#222222] dark:text-blue-400 dark:hover:bg-blue-950/60"
+                  >
+                    <MessageSquare className="h-4.5 w-4.5" />
+                  </a>
+                </div>
+              </div>
             </div>
           )
         })}

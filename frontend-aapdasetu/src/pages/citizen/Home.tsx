@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Siren,
@@ -12,10 +12,13 @@ import {
   Bot,
   Search,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Radio
 } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
 import { openChatWidget } from '../../components/ChatWidget'
+import { listAlerts, listShelters } from '../../api/endpoints'
+import type { Alert } from '../../types'
 
 interface ServiceCard {
   to: string
@@ -29,8 +32,24 @@ interface ServiceCard {
 
 const emergencyServices: ServiceCard[] = [
   {
-    to: '/shelters',
+    to: '/checkin',
     num: '01',
+    tagKey: 'service.checkinTag',
+    titleKey: 'nav.checkin',
+    descKey: 'checkin.subtitle',
+    icon: ShieldCheck,
+  },
+  {
+    to: '/alerts',
+    num: '02',
+    tagKey: 'service.alertsTag',
+    titleKey: 'nav.alerts',
+    descKey: 'alerts.pageDesc',
+    icon: Radio,
+  },
+  {
+    to: '/shelters',
+    num: '03',
     tagKey: 'service.sheltersTag',
     titleKey: 'nav.shelters',
     descKey: 'service.sheltersDesc',
@@ -38,7 +57,7 @@ const emergencyServices: ServiceCard[] = [
   },
   {
     to: '/safe-routes',
-    num: '02',
+    num: '04',
     tagKey: 'service.navTag',
     titleKey: 'nav.routes',
     descKey: 'service.routesDesc',
@@ -46,7 +65,7 @@ const emergencyServices: ServiceCard[] = [
   },
   {
     to: '/missing-persons',
-    num: '03',
+    num: '05',
     tagKey: 'service.registryTag',
     titleKey: 'nav.missing',
     descKey: 'service.missingDesc',
@@ -54,7 +73,7 @@ const emergencyServices: ServiceCard[] = [
   },
   {
     to: '/report-damage',
-    num: '04',
+    num: '06',
     tagKey: 'service.claimsTag',
     titleKey: 'nav.damage',
     descKey: 'service.damageDesc',
@@ -62,7 +81,7 @@ const emergencyServices: ServiceCard[] = [
   },
   {
     to: '/pfa-chat',
-    num: '05',
+    num: '07',
     tagKey: 'service.aiTag',
     titleKey: 'nav.pfa',
     descKey: 'service.pfaDesc',
@@ -74,6 +93,21 @@ const emergencyServices: ServiceCard[] = [
 export default function Home() {
   const { t } = useLanguage()
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [activeAlertCount, setActiveAlertCount] = useState<number | null>(null)
+  const [openShelterCount, setOpenShelterCount] = useState<number | null>(null)
+
+  // Snapshot live status for the crisis-first strip. Degrades silently to
+  // nothing when either feed is unavailable.
+  useEffect(() => {
+    let active = true
+    listAlerts()
+      .then((data: Alert[]) => { if (active) setActiveAlertCount(data.length) })
+      .catch(() => {})
+    listShelters('open')
+      .then((data) => { if (active) setOpenShelterCount(Array.isArray(data) ? data.length : null) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [])
 
   const scrollCards = (dir: 'left' | 'right') => {
     if (!scrollRef.current) return
@@ -92,20 +126,40 @@ export default function Home() {
           {t('hero.subtitle')}
         </p>
 
-        {/* Hero CTAs */}
+        {/* Live Status Strip — hidden entirely when no data could be fetched */}
+        {(activeAlertCount !== null || openShelterCount !== null) && (
+          <div className="mb-6 flex flex-wrap items-center justify-center gap-2 text-xs">
+            {activeAlertCount !== null && (
+              <Link
+                to="/alerts"
+                className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 font-bold text-red-700 transition hover:bg-red-100 active:scale-[0.98] dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-900/60 cursor-pointer"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-red-600 animate-pulse" />
+                <span>{activeAlertCount}</span>
+                <span>{t('home.activeAlerts')}</span>
+              </Link>
+            )}
+            <span aria-hidden="true" className="hidden text-slate-300 sm:inline dark:text-zinc-600">·</span>
+            {openShelterCount !== null && (
+              <Link
+                to="/shelters"
+                className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 font-bold text-emerald-700 transition hover:bg-emerald-100 active:scale-[0.98] dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/60 cursor-pointer"
+              >
+                <Building className="h-3.5 w-3.5" />
+                <span>{openShelterCount}</span>
+                <span>{t('home.sheltersOpen')}</span>
+              </Link>
+            )}
+          </div>
+        )}
+
+        {/* Hero CTAs — SOS is the primary, largest action */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-6">
           <Link
-            to="/report"
-            className="w-full sm:w-auto group inline-flex items-center justify-center gap-2.5 rounded-xl bg-zinc-800 px-6 py-3 text-sm sm:text-base font-semibold text-white transition-all hover:bg-zinc-700 active:scale-[0.98] dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white shadow-sm cursor-pointer"
-          >
-            <span>{t('hero.submitReport')}</span>
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </Link>
-          <Link
             to="/sos"
-            className="w-full sm:w-auto group inline-flex items-center justify-center gap-2.5 rounded-xl bg-red-600 px-6 py-3 text-sm sm:text-base font-bold text-white transition-all hover:bg-red-700 active:scale-[0.98] shadow-sm cursor-pointer"
+            className="w-full sm:w-auto group inline-flex items-center justify-center gap-2.5 rounded-xl bg-red-600 px-8 py-4 text-base sm:text-lg font-extrabold uppercase tracking-tight text-white transition-all hover:bg-red-700 active:scale-[0.98] shadow-md shadow-red-600/20 ring-2 ring-red-600/30 cursor-pointer"
           >
-            <Siren className="h-5 w-5" />
+            <Siren className="h-6 w-6 animate-pulse" />
             <span>{t('hero.tapSos')}</span>
           </Link>
           <Link
@@ -114,6 +168,13 @@ export default function Home() {
           >
             <Search className="h-4.5 w-4.5" />
             <span>{t('nav.track')}</span>
+          </Link>
+          <Link
+            to="/report"
+            className="w-full sm:w-auto group inline-flex items-center justify-center gap-2.5 rounded-xl bg-zinc-800 px-6 py-3 text-sm sm:text-base font-semibold text-white transition-all hover:bg-zinc-700 active:scale-[0.98] dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white shadow-sm cursor-pointer"
+          >
+            <span>{t('hero.submitReport')}</span>
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>
       </section>
