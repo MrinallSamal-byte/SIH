@@ -83,13 +83,15 @@ class ChannelManager(
         private const val KEY_LENGTH = 256
         
         // Hub IDs
+        const val HUB_EMERGENCY = "hub_emergency"
         const val HUB_CAMPUS = "hub_campus"
         const val HUB_ACADEMICS = "hub_academics"
         const val HUB_HOSTEL = "hub_hostel"
         const val HUB_CLUBS = "hub_clubs"
         const val HUB_DIRECT_MESSAGES = "hub_dms"
-        
+
         // Category IDs
+        const val CAT_EMERGENCY_RESPONSE = "cat_emergency_response"
         const val CAT_CAMPUS_BROADCAST = "cat_campus_broadcast"
         const val CAT_STUDY_GROUPS = "cat_study_groups"
         const val CAT_SECURE_SQUADS = "cat_secure_squads"
@@ -97,9 +99,8 @@ class ChannelManager(
         const val CAT_CLUBS_SPORTS = "cat_clubs_sports"
         const val CAT_DMS = "cat_dms"
 
-        // Admin Channel & Credentials
+        // Admin Channel
         const val ADMIN_CHANNEL = "#admin"
-        const val ADMIN_DEFAULT_PASSWORD = "Mrinall@1123"
     }
     
     // Channel encryption and security
@@ -130,6 +131,13 @@ class ChannelManager(
     
     private fun initializeDiscordHierarchy() {
         val initialHubs = listOf(
+            DiscordHub(
+                id = HUB_EMERGENCY,
+                name = "Emergency Response Hub",
+                icon = "🚨",
+                description = "SOS Beacons, Official Alerts & Crisis Coordination",
+                isEmergency = true
+            ),
             DiscordHub(
                 id = HUB_CAMPUS,
                 name = "Campus Main Hub",
@@ -168,6 +176,13 @@ class ChannelManager(
         )
         
         val initialCategories = listOf(
+            // Emergency Response
+            DiscordCategory(
+                id = CAT_EMERGENCY_RESPONSE,
+                hubId = HUB_EMERGENCY,
+                title = "🚨 EMERGENCY RESPONSE",
+                type = ChannelCategoryType.EMERGENCY
+            ),
             // Campus Main
             DiscordCategory(
                 id = CAT_CAMPUS_BROADCAST,
@@ -212,6 +227,72 @@ class ChannelManager(
         )
         
         val initialChannels = listOf(
+            // Emergency Response Hub
+            DiscordChannel(
+                id = "#sos",
+                name = "sos",
+                topic = "🆘 Broadcast SOS distress beacons to nearby peers",
+                categoryId = CAT_EMERGENCY_RESPONSE,
+                hubId = HUB_EMERGENCY,
+                isEmergency = true
+            ),
+            DiscordChannel(
+                id = "#alerts",
+                name = "alerts",
+                topic = "🚨 Official emergency alerts, warnings & advisories",
+                categoryId = CAT_EMERGENCY_RESPONSE,
+                hubId = HUB_EMERGENCY,
+                isEmergency = true
+            ),
+            DiscordChannel(
+                id = "#rescue",
+                name = "rescue",
+                topic = "🛟 Rescue coordination & volunteer team dispatch",
+                categoryId = CAT_EMERGENCY_RESPONSE,
+                hubId = HUB_EMERGENCY,
+                isEmergency = true
+            ),
+            DiscordChannel(
+                id = "#medical",
+                name = "medical",
+                topic = "⚕️ Medical emergencies, first aid requests & guidance",
+                categoryId = CAT_EMERGENCY_RESPONSE,
+                hubId = HUB_EMERGENCY,
+                isEmergency = true
+            ),
+            DiscordChannel(
+                id = "#shelter",
+                name = "shelter",
+                topic = "🏠 Safe shelter locations, capacity & directions",
+                categoryId = CAT_EMERGENCY_RESPONSE,
+                hubId = HUB_EMERGENCY,
+                isEmergency = true
+            ),
+            DiscordChannel(
+                id = "#supplies",
+                name = "supplies",
+                topic = "📦 Food, water, medicine & essential supply requests",
+                categoryId = CAT_EMERGENCY_RESPONSE,
+                hubId = HUB_EMERGENCY,
+                isEmergency = true
+            ),
+            DiscordChannel(
+                id = "#missing-persons",
+                name = "missing-persons",
+                topic = "🔎 Report & search for missing persons",
+                categoryId = CAT_EMERGENCY_RESPONSE,
+                hubId = HUB_EMERGENCY,
+                isEmergency = true
+            ),
+            DiscordChannel(
+                id = "#infrastructure",
+                name = "infrastructure",
+                topic = "🏗️ Damaged roads, power, water & connectivity reports",
+                categoryId = CAT_EMERGENCY_RESPONSE,
+                hubId = HUB_EMERGENCY,
+                isEmergency = true
+            ),
+
             // Campus Main Hub
             DiscordChannel(
                 id = "#admin",
@@ -395,7 +476,13 @@ class ChannelManager(
         currentChannels.removeAll { it.id == channelId }
         currentChannels.add(newChannel)
         _channels.value = currentChannels
-        
+
+        if (!channelId.equals(ADMIN_CHANNEL, ignoreCase = true) &&
+            !dataManager.channelCreators.containsKey(channelId)
+        ) {
+            dataManager.addChannelCreator(channelId, myPeerID)
+        }
+
         if (isEncrypted && password != null) {
             setChannelPassword(channelId, password)
         }
@@ -425,9 +512,6 @@ class ChannelManager(
                     return false
                 }
             }
-            if (isAdminChannel) {
-                com.bitchat.android.features.admin.AdminManager.verifyAndEnable(ADMIN_DEFAULT_PASSWORD)
-            }
             switchToChannel(channelTag)
             return true
         }
@@ -444,7 +528,7 @@ class ChannelManager(
                     state.setShowPasswordPrompt(true)
                     return false
                 }
-            } else if (dataManager.isChannelCreator(channelTag, myPeerID)) {
+            } else if (dataManager.isChannelCreator(channelTag, myPeerID) && channelPasswords.containsKey(channelTag)) {
                 // Creator bypass
             } else if (password != null) {
                 if (!verifyAndSetChannelPassword(channelTag, password)) {
@@ -525,12 +609,10 @@ class ChannelManager(
         if (password.isBlank()) return false
         val normalized = if (channel.startsWith("#")) channel else "#$channel"
         if (normalized.equals(ADMIN_CHANNEL, ignoreCase = true)) {
-            if (password != ADMIN_DEFAULT_PASSWORD) {
+            if (!com.bitchat.android.features.admin.AdminManager.verifyAndEnable(password)) {
                 Log.w(TAG, "Invalid password attempt for admin channel")
                 return false
             }
-            com.bitchat.android.features.admin.AdminManager.setupAdmin(ADMIN_DEFAULT_PASSWORD)
-            com.bitchat.android.features.admin.AdminManager.verifyAndEnable(ADMIN_DEFAULT_PASSWORD)
         }
         setChannelPassword(channel, password)
         return true

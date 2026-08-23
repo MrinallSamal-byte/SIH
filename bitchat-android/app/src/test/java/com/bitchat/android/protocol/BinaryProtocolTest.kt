@@ -1,6 +1,7 @@
 package com.bitchat.android.protocol
 
 import com.bitchat.android.model.BitchatFilePacket
+import com.bitchat.android.model.BitchatMessage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertFalse
@@ -11,6 +12,7 @@ import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.util.Date
 import java.util.Random
 import java.util.zip.Deflater
 
@@ -206,8 +208,8 @@ class BinaryProtocolTest {
      *
      * Creates one packet per MessageType (ANNOUNCE, MESSAGE, LEAVE,
      * NOISE_HANDSHAKE, NOISE_ENCRYPTED, FRAGMENT, REQUEST_SYNC,
-     * FILE_TRANSFER), encodes and decodes each, then verifies the type
-     * field is preserved exactly.
+     * FILE_TRANSFER, VOICE_FRAME, SOS), encodes and decodes each, then
+     * verifies the type field is preserved exactly.
      *
      * MessageType is stored as a single UByte. If any type value gets
      * mangled by signed/unsigned byte conversion (e.g., 0x80+ values
@@ -234,6 +236,71 @@ class BinaryProtocolTest {
             assertEquals("fromValue must resolve for ${msgType.name}",
                 msgType, MessageType.fromValue(decoded.type))
         }
+    }
+
+    /**
+     * SOS packets reuse the MESSAGE payload encoding through a signed round-trip
+     *
+     * Encodes a type 0x30 packet whose payload is a real BitchatMessage
+     * binary payload plus an Ed25519-sized signature, decodes it, and
+     * verifies the type byte, payload bytes, and signature bytes all
+     * survive. The payload must parse back into the identical message,
+     * proving SOS shares the MESSAGE encoding path with no new codec.
+     */
+    @Test
+    fun `sos packet reuses message payload encoding through signed round-trip`() {
+        assertEquals(0x30u.toUByte(), MessageType.SOS.value)
+        val message = BitchatMessage(
+            sender = "alice",
+            content = "SOS broadcast",
+            timestamp = Date(fixedTimestamp.toLong())
+        )
+        val payload = message.toBinaryPayload()
+        assertNotNull(payload)
+        val signature = ByteArray(64) { (it + 0x30).toByte() }
+        val original = makePacket(
+            type = MessageType.SOS.value,
+            payload = payload!!,
+            signature = signature
+        )
+
+        val decoded = roundTrip(original)
+
+        assertEquals(MessageType.SOS.value, decoded.type)
+        assertEquals(MessageType.SOS, MessageType.fromValue(decoded.type))
+        assertTrue("payload must survive", original.payload.contentEquals(decoded.payload))
+        assertNotNull("signature must survive", decoded.signature)
+        assertTrue("signature bytes must match",
+            signature.contentEquals(decoded.signature!!))
+        val parsed = BitchatMessage.fromBinaryPayload(decoded.payload)
+        assertNotNull(parsed)
+        assertEquals(message.id, parsed!!.id)
+        assertEquals(message.sender, parsed.sender)
+        assertEquals(message.content, parsed.content)
+        assertEquals(message.timestamp.time, parsed.timestamp.time)
+    }
+
+    /**
+     * SOS signing data is TTL-independent
+     *
+     * Signatures cover the canonical data with TTL excluded so relay hops can
+     * decrement TTL without invalidating the sender's signature. Verifies this
+     * holds for SOS by asserting identical signing data for the same packet at
+     * different TTLs — the exact property SecurityManager's verification relies on.
+     */
+    @Test
+    fun `sos signing data is unaffected by ttl changes during relay`() {
+        val original = makePacket(
+            type = MessageType.SOS.value,
+            payload = "sos".toByteArray(),
+            ttl = 7u
+        )
+        val afterRelayDecrement = original.copy(ttl = 1u)
+
+        assertArrayEquals(
+            original.toBinaryDataForSigning(),
+            afterRelayDecrement.toBinaryDataForSigning()
+        )
     }
 
     /**
@@ -1465,6 +1532,94 @@ class BinaryProtocolTest {
         val result = BinaryProtocol.decode(padded)
 
         assertNull("v2 compressed with payloadLength < 4 must return null", result)
+    }
+
+    /**
+     * Type byte stays at index 1 for every serialized SOS form
+     *
+     * BluetoothPacketBroadcaster.isPrioritySend() classifies a queued BLE
+     * frame as priority SOS solely by reading data[1]. This test pins that
+     * contract across all serialization variants: v1 and v2 headers, with
+     * and without source route, compressed and uncompressed payloads, and
+     * both padded and unpadded frames. Padding must only append a tail;
+     * routes and compression must never shift the fixed header. If any
+     * encoder variant moved or prefixed the header, SOS frames would lose
+     * their priority lane (or worse, another type would gain it).
+     */
+    @Test
+    fun `type byte stays at index one for every serialized sos form`() {
+        val compressible = "SOSRELAYNOW".repeat(30) // 330 bytes, low entropy, above threshold
+        val route = listOf(
+            hexToBytes("aabbccdd00112233"),
+            hexToBytes("1122334455667700")
+        )
+        val signature = ByteArray(64) { 0x3A.toByte() }
+        val variants = listOf(
+            makePacket(
+                type = MessageType.SOS.value,
+                payload = "sos".toByteArray()
+            ),
+            makePacket(
+                version = 2u,
+                type = MessageType.SOS.value,
+                payload = "sos".toByteArray(),
+                recipientID = hexToBytes(recipientHex),
+                signature = signature,
+                route = route
+            ),
+            makePacket(
+                type = MessageType.SOS.value,
+                payload = compressible.toByteArray(),
+                signature = signature
+            ),
+            makePacket(
+                version = 2u,
+                type = MessageType.SOS.value,
+                payload = compressible.toByteArray(),
+                recipientID = hexToBytes(recipientHex),
+                signature = signature,
+                route = route
+            )
+        )
+
+        variants.forEachIndexed { index, packet ->
+            val expectedVersion = packet.version.toByte()
+            for (padding in listOf(true, false)) {
+                val encoded = BinaryProtocol.encode(packet, padding = padding)
+                assertNotNull("variant $index must encode (padding=$padding)", encoded)
+                assertEquals("variant $index version at byte 0", expectedVersion, encoded!![0])
+                assertEquals(
+                    "variant $index type byte must sit at index 1 for isPrioritySend",
+                    0x30.toByte(), encoded[1]
+                )
+                assertNotNull("variant $index must decode back", BinaryProtocol.decode(encoded))
+            }
+        }
+    }
+
+    /**
+     * Compressed SOS payload round-trips through the MESSAGE encoding path
+     *
+     * A ≥100-byte low-entropy SOS payload triggers the same compression path
+     * as MESSAGE: IS_COMPRESSED flag set, original size prepended, deflate
+     * body stored. Decode must restore the exact plaintext payload while
+     * preserving the SOS type so downstream signature checks and dedup still
+     * see the canonical packet.
+     */
+    @Test
+    fun `compressed sos payload round-trips through message encoding path`() {
+        val payload = "EMERGENCY BROADCAST PAYLOAD ".repeat(20) // 560 bytes
+        val original = makePacket(
+            type = MessageType.SOS.value,
+            payload = payload.toByteArray(),
+            signature = ByteArray(64) { 0x11 }
+        )
+
+        val decoded = roundTrip(original)
+
+        assertEquals(MessageType.SOS, MessageType.fromValue(decoded.type))
+        assertTrue("compressed payload must be restored exactly",
+            original.payload.contentEquals(decoded.payload))
     }
 
     private fun hexToBytes(hex: String): ByteArray {

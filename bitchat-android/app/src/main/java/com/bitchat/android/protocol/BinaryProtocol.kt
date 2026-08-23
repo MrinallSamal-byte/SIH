@@ -8,6 +8,7 @@ import android.util.Log
 
 /**
  * Message types - exact same as iOS version with Noise Protocol support
+ * (SOS 0x30 is an additive Android extension; unknown types are dropped by peers)
  */
 enum class MessageType(val value: UByte) {
     ANNOUNCE(0x01u),
@@ -18,7 +19,8 @@ enum class MessageType(val value: UByte) {
     FRAGMENT(0x20u), // Fragmentation for large packets
     REQUEST_SYNC(0x21u), // GCS-based sync request
     FILE_TRANSFER(0x22u), // New: File transfer packet (BLE voice notes, etc.)
-    VOICE_FRAME(0x29u); // Ephemeral live push-to-talk frame; never added to gossip sync
+    VOICE_FRAME(0x29u), // Ephemeral live push-to-talk frame; never added to gossip sync
+    SOS(0x30u); // Emergency broadcast; payload identical to MESSAGE, always relayed
 
     companion object {
         fun fromValue(value: UByte): MessageType? {
@@ -50,6 +52,12 @@ object SpecialRecipients {
  * - RecipientID: 8 bytes (if hasRecipient flag set)
  * - Payload: Variable length (includes original size if compressed)
  * - Signature: 64 bytes (if hasSignature flag set)
+ *
+ * Message types (type byte): 0x01 ANNOUNCE, 0x02 MESSAGE, 0x03 LEAVE,
+ * 0x10 NOISE_HANDSHAKE, 0x11 NOISE_ENCRYPTED, 0x20 FRAGMENT, 0x21 REQUEST_SYNC,
+ * 0x22 FILE_TRANSFER, 0x29 VOICE_FRAME, 0x30 SOS. SOS packets carry a payload
+ * encoded exactly like MESSAGE (BitchatMessage binary format) and are signed
+ * like every other packet; receivers that do not know 0x30 drop it fail-closed.
  */
 @Parcelize
 data class BitchatPacket(

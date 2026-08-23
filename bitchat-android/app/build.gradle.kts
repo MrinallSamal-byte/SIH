@@ -204,4 +204,23 @@ tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
         "robolectric.dependency.repo.url",
         "https://repo.maven.apache.org/maven2"
     )
+
+    // Windows machines whose user profile path contains spaces (or non-ASCII
+    // characters) break Robolectric's native runtime loader: it converts the
+    // android-all jar's file URL to a path without percent-decoding, so any
+    // space becomes a literal "%20" and JarFile/sqlite native calls fail with
+    // NoSuchFileException / SQLITE_CANTOPEN. Redirect user.home and
+    // java.io.tmpdir for test JVMs to space-free, repo-local directories.
+    // Machines with clean paths (e.g. CI Linux runners) are left untouched.
+    // Optional: to reuse an existing ~/.m2 cache instead of re-downloading,
+    // create a directory junction at <buildDir>/win-safe-test-home/.m2/repository.
+    val realUserHome = System.getProperty("user.home") ?: ""
+    if (realUserHome.any { it == ' ' || it.code > 127 }) {
+        val safeHome = layout.buildDirectory.dir("win-safe-test-home").get().asFile
+        val safeTmp = layout.buildDirectory.dir("win-safe-test-tmp").get().asFile
+        safeHome.mkdirs()
+        safeTmp.mkdirs()
+        systemProperty("user.home", safeHome.absolutePath)
+        systemProperty("java.io.tmpdir", safeTmp.absolutePath)
+    }
 }

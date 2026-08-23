@@ -7,7 +7,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -19,7 +18,10 @@ import com.bitchat.android.R
  * Loading screen shown during app initialization after permissions are granted
  */
 @Composable
-fun InitializingScreen(modifier: Modifier) {
+fun InitializingScreen(
+    modifier: Modifier,
+    currentStep: Int = OnboardingProgressSteps.STEP_INITIALIZING
+) {
     val colorScheme = MaterialTheme.colorScheme
     
     // Animated rotation for the loading indicator
@@ -55,6 +57,14 @@ fun InitializingScreen(modifier: Modifier) {
         modifier = modifier.padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
+        OnboardingProgress(
+            currentStep = currentStep,
+            totalSteps = OnboardingProgressSteps.TOTAL_STEPS,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 8.dp)
+        )
+
         Column(
             verticalArrangement = Arrangement.spacedBy(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -170,13 +180,14 @@ fun InitializationErrorScreen(
             // Error indicator
             Card(
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFFFEBEE)
+                    containerColor = colorScheme.errorContainer
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 Text(
                     text = stringResource(R.string.warning_emoji),
                     style = MaterialTheme.typography.headlineLarge,
+                    color = colorScheme.onErrorContainer,
                     modifier = Modifier.padding(16.dp)
                 )
             }

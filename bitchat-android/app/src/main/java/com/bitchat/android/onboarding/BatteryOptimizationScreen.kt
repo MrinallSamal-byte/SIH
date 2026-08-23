@@ -95,6 +95,12 @@ private fun BatteryOptimizationEnabledContent(
                 .padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            OnboardingProgress(
+                currentStep = OnboardingProgressSteps.STEP_BATTERY_OPTIMIZATION,
+                totalSteps = OnboardingProgressSteps.TOTAL_STEPS,
+                modifier = Modifier.fillMaxWidth()
+            )
+
             // Header Section - matching AboutSheet style
             Column(
                 modifier = Modifier

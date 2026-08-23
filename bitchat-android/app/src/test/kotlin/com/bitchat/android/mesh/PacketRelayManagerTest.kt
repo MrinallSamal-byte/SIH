@@ -7,11 +7,14 @@ import com.bitchat.android.protocol.MessageType
 import com.bitchat.android.util.toHexString
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
@@ -101,6 +104,106 @@ class PacketRelayManagerTest {
 
         verify(delegate, never()).sendToPeer(any(), any())
         verify(delegate).broadcastPacket(any())
+    }
+
+    @Test
+    fun `sos packet relays unconditionally in dense network conditions`() = runTest {
+        val denseManager = PacketRelayManager(myPeerID) { 0.99 }
+        denseManager.delegate = delegate
+        whenever(delegate.getNetworkSize()).thenReturn(200)
+        val packet = createPacket(null).copy(type = MessageType.SOS.value, ttl = 2u)
+
+        denseManager.handlePacketRelay(RoutedPacket(packet, otherPeerID))
+
+        verify(delegate, never()).sendToPeer(any(), any())
+        verify(delegate).broadcastPacket(any())
+    }
+
+    @Test
+    fun `message packet is deterministically dropped in the same dense network conditions`() = runTest {
+        val denseManager = PacketRelayManager(myPeerID) { 0.99 }
+        denseManager.delegate = delegate
+        whenever(delegate.getNetworkSize()).thenReturn(200)
+        val packet = createPacket(null).copy(ttl = 2u)
+
+        denseManager.handlePacketRelay(RoutedPacket(packet, otherPeerID))
+
+        verify(delegate, never()).broadcastPacket(any())
+    }
+
+    @Test
+    fun `sos relayed ttl keeps normal decrement without voice frame cap or jitter`() = runTest {
+        whenever(delegate.getNetworkSize()).thenReturn(200)
+        val packet = createPacket(null).copy(type = MessageType.SOS.value, ttl = 8u)
+
+        packetRelayManager.handlePacketRelay(RoutedPacket(packet, otherPeerID))
+
+        val captor = argumentCaptor<RoutedPacket>()
+        verify(delegate).broadcastPacket(captor.capture())
+        assertEquals(7u.toUByte(), captor.firstValue.packet.ttl)
+    }
+
+    @Test
+    fun `sos with exhausted ttl zero is never relayed`() = runTest {
+        whenever(delegate.getNetworkSize()).thenReturn(2)
+        val packet = createPacket(null).copy(type = MessageType.SOS.value, ttl = 0u)
+
+        packetRelayManager.handlePacketRelay(RoutedPacket(packet, otherPeerID))
+
+        verify(delegate, never()).broadcastPacket(any())
+        verify(delegate, never()).sendToPeer(any(), any())
+    }
+
+    @Test
+    fun `sos arriving with ttl one decrements first and relays exactly once`() = runTest {
+        // Small network so relaying is deterministic without consulting the
+        // probabilistic roll; the unconditional SOS branch itself must NOT
+        // decide here because the post-decrement hop budget is zero.
+        whenever(delegate.getNetworkSize()).thenReturn(3)
+        val packet = createPacket(null).copy(type = MessageType.SOS.value, ttl = 1u)
+
+        packetRelayManager.handlePacketRelay(RoutedPacket(packet, otherPeerID))
+
+        val captor = argumentCaptor<RoutedPacket>()
+        verify(delegate, times(1)).broadcastPacket(captor.capture())
+        assertEquals("post-decrement semantics: the relayed frame must have ttl 0",
+            0u.toUByte(), captor.firstValue.packet.ttl)
+        verify(delegate, never()).sendToPeer(any(), any())
+    }
+
+    @Test
+    fun `v2 source-routed sos honors the route and keeps normal decrement`() = runTest {
+        whenever(delegate.getNetworkSize()).thenReturn(200)
+        whenever(delegate.sendToPeer(any(), any())).thenReturn(true)
+        val packet = createPacket(
+            route = listOf(
+                hexStringToPeerBytes(myPeerID),
+                hexStringToPeerBytes(nextHopPeerID)
+            ),
+            recipient = finalRecipientID
+        ).copy(
+            version = 2u.toUByte(),
+            type = MessageType.SOS.value,
+            ttl = 6u
+        )
+
+        packetRelayManager.handlePacketRelay(RoutedPacket(packet, otherPeerID))
+
+        val captor = argumentCaptor<RoutedPacket>()
+        verify(delegate, times(1)).sendToPeer(org.mockito.kotlin.eq(nextHopPeerID), captor.capture())
+        assertEquals(5u.toUByte(), captor.firstValue.packet.ttl)
+        verify(delegate, never()).broadcastPacket(any())
+    }
+
+    @Test
+    fun `sos specifically addressed to me is never relayed`() = runTest {
+        whenever(delegate.getNetworkSize()).thenReturn(2)
+        val packet = createPacket(null, myPeerID).copy(type = MessageType.SOS.value, ttl = 7u)
+
+        packetRelayManager.handlePacketRelay(RoutedPacket(packet, otherPeerID))
+
+        verify(delegate, never()).broadcastPacket(any())
+        verify(delegate, never()).sendToPeer(any(), any())
     }
 
     private fun hexStringToPeerBytes(hex: String): ByteArray {

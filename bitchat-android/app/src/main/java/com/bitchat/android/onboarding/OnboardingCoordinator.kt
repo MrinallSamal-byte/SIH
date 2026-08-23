@@ -8,8 +8,6 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
 
 /**
  * Coordinates the complete onboarding flow including permission explanation,
@@ -20,7 +18,8 @@ class OnboardingCoordinator(
     private val permissionManager: PermissionManager,
     private val onOnboardingComplete: () -> Unit,
     private val onBackgroundLocationRequired: () -> Unit,
-    private val onOnboardingFailed: (String) -> Unit
+    private val onOnboardingFailed: (String) -> Unit,
+    private val onPartialPermissionWarning: (String) -> Unit = {}
 ) {
 
     companion object {
@@ -201,9 +200,7 @@ class OnboardingCoordinator(
         }
         
         Log.w(TAG, "Partial permissions granted: $message")
-        
-        // For now, we'll proceed anyway and let the user experience the limitations
-        // In a production app, you might want to show a dialog explaining the limitations
+        onPartialPermissionWarning(message)
         completeOnboarding()
     }
 
@@ -238,15 +235,11 @@ class OnboardingCoordinator(
         
         // Mark onboarding as complete
         permissionManager.markOnboardingComplete()
-        
+
         // Log final permission status
         permissionManager.logPermissionStatus()
-        
-        // Notify completion with a small delay to ensure everything is ready
-        activity.lifecycleScope.launch {
-            kotlinx.coroutines.delay(100) // Small delay for UI state to settle
-            onOnboardingComplete()
-        }
+
+        onOnboardingComplete()
     }
 
     /**

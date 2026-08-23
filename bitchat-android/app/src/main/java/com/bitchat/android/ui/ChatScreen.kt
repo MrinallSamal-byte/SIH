@@ -21,6 +21,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -115,6 +116,10 @@ fun ChatScreen(viewModel: ChatViewModel) {
     var initialViewerIndex by remember { mutableStateOf(0) }
     var forceScrollToBottom by remember { mutableStateOf(false) }
     var isScrolledUp by remember { mutableStateOf(false) }
+    // Saveable so the erase confirmation survives rotation (and process restore): silently
+    // dropping a pending destructive confirmation on a config change is worse than re-asking.
+    var showEraseEverythingDialog by rememberSaveable { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // Wire admin bridge for AboutSheet → admin panel
     DisposableEffect(viewModel) {
@@ -565,8 +570,9 @@ fun ChatScreen(viewModel: ChatViewModel) {
                 viewModel.onTextInputChanged(newText.text, selectedPrivatePeer)
             },
             onSend = {
-                if (messageText.text.trim().isNotEmpty()) {
-                    viewModel.sendMessage(messageText.text.trim()) { accepted ->
+                val outgoingText = messageText.text.trim()
+                if (outgoingText.isNotEmpty()) {
+                    viewModel.sendMessage(outgoingText) { accepted ->
                         if (accepted) {
                             messageText = TextFieldValue("")
                             viewModel.setConversationDraft(selectedPrivatePeer, "")
@@ -574,6 +580,29 @@ fun ChatScreen(viewModel: ChatViewModel) {
                             // so the popups have to be dismissed here.
                             viewModel.clearSuggestions()
                             forceScrollToBottom = !forceScrollToBottom
+                            if (!outgoingText.startsWith("/")) {
+                                // Audience depends on the timeline: geohash channels are
+                                // reached over Nostr, so their reach is the geohash
+                                // participants, not the BLE-connected mesh peers. Matches the
+                                // count the header shows for the same channel.
+                                val reached = if (
+                                    selectedLocationChannel is ChannelID.Location
+                                ) {
+                                    geohashPeople.size
+                                } else {
+                                    connectedPeers.size
+                                }
+                                drawerCoroutineScope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = if (reached == 0) {
+                                            "No peers nearby — nobody will receive this"
+                                        } else {
+                                            "Sent · $reached peer(s) reached"
+                                        },
+                                        duration = SnackbarDuration.Short
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -631,7 +660,7 @@ fun ChatScreen(viewModel: ChatViewModel) {
                 }
             },
             onShowAppInfo = { viewModel.showAppInfo() },
-            onPanicClear = { viewModel.panicClearAllData() },
+            onPanicClear = { showEraseEverythingDialog = true },
             onLocationChannelsClick = { showLocationChannelsSheet = true },
             onLocationNotesClick = {
                 nearbyNotesController.reveal()
@@ -676,6 +705,16 @@ fun ChatScreen(viewModel: ChatViewModel) {
                 }
             }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .zIndex(2f)
+                .padding(bottom = composerHeight + 8.dp)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .windowInsetsPadding(WindowInsets.ime)
+        )
     }
     }
 
@@ -685,6 +724,35 @@ fun ChatScreen(viewModel: ChatViewModel) {
             imagePaths = viewerImagePaths,
             initialIndex = initialViewerIndex,
             onClose = { showFullScreenImageViewer = false }
+        )
+    }
+
+    if (showEraseEverythingDialog) {
+        AlertDialog(
+            onDismissRequest = { showEraseEverythingDialog = false },
+            title = { Text("Erase everything?") },
+            text = {
+                Text(
+                    "This permanently destroys all messages, encryption keys, and your identity " +
+                        "on this device. This cannot be undone."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showEraseEverythingDialog = false
+                        viewModel.panicClearAllData()
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = colorScheme.error)
+                ) {
+                    Text("Erase")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEraseEverythingDialog = false }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 
@@ -1012,7 +1080,7 @@ private fun ChatFloatingHeader(
                 }
             },
             onSidebarClick = onSidebarToggle,
-            onTripleClick = onPanicClear,
+            onRequestEraseEverything = onPanicClear,
             onShowAppInfo = onShowAppInfo,
             onLocationChannelsClick = onLocationChannelsClick,
             onLocationNotesClick = {

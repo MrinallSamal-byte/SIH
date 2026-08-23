@@ -665,7 +665,7 @@ fun ChatHeaderContent(
     viewModel: ChatViewModel,
     onBackClick: () -> Unit,
     onSidebarClick: () -> Unit,
-    onTripleClick: () -> Unit,
+    onRequestEraseEverything: () -> Unit,
     onShowAppInfo: () -> Unit,
     onLocationChannelsClick: () -> Unit,
     onLocationNotesClick: () -> Unit
@@ -689,7 +689,7 @@ fun ChatHeaderContent(
                 nickname = nickname,
                 onNicknameChange = viewModel::setNickname,
                 onTitleClick = onShowAppInfo,
-                onTripleTitleClick = onTripleClick,
+                onRequestEraseEverything = onRequestEraseEverything,
                 onSidebarClick = onSidebarClick,
                 onLocationChannelsClick = onLocationChannelsClick,
                 onLocationNotesClick = onLocationNotesClick,
@@ -744,7 +744,7 @@ private fun MainHeader(
     nickname: String,
     onNicknameChange: (String) -> Unit,
     onTitleClick: () -> Unit,
-    onTripleTitleClick: () -> Unit,
+    onRequestEraseEverything: () -> Unit,
     onSidebarClick: () -> Unit,
     onLocationChannelsClick: () -> Unit,
     onLocationNotesClick: () -> Unit,
@@ -773,7 +773,7 @@ private fun MainHeader(
             // Keep the brand and trailing actions fixed. Only the nickname yields under pressure.
             BitChatBrandButton(
                 onClick = onTitleClick,
-                onTripleClick = onTripleTitleClick,
+                onRequestEraseEverything = onRequestEraseEverything,
                 contentDescription = stringResource(R.string.cd_open_about),
                 modifier = Modifier.size(HeaderTapTarget),
             )

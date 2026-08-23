@@ -64,6 +64,49 @@ class PacketProcessorAnnounceSideEffectTest {
         assertEquals(PEER_ID, withTimeout(1_000) { delegate.lastSeen.await() })
     }
 
+    @Test
+    fun `broadcast sos dispatches through message handler and relays`() = runBlocking {
+        val delegate = RecordingDelegate(acceptAnnounce = true)
+        val processor = processor(delegate)
+
+        processor.processPacket(sos(recipientID = SpecialRecipients.BROADCAST))
+
+        val dispatched = withTimeout(1_000) { delegate.messageHandled.await() }
+        assertEquals(MessageType.SOS.value, dispatched.packet.type)
+        assertEquals(PEER_ID, withTimeout(1_000) { delegate.lastSeen.await() })
+        val relayed = withTimeout(1_000) { delegate.relayed.await() }
+        assertEquals(MessageType.SOS.value, relayed.packet.type)
+    }
+
+    @Test
+    fun `sos addressed to me dispatches through message handler without relaying`() = runBlocking {
+        val delegate = RecordingDelegate(acceptAnnounce = true)
+        val processor = processor(delegate)
+
+        processor.processPacket(sos(recipientID = MY_PEER_ID.hexToBytes()))
+
+        val dispatched = withTimeout(1_000) { delegate.messageHandled.await() }
+        assertEquals(MessageType.SOS.value, dispatched.packet.type)
+        assertEquals(PEER_ID, withTimeout(1_000) { delegate.lastSeen.await() })
+        assertNull(withTimeoutOrNull(250) { delegate.relayed.await() })
+    }
+
+    @Test
+    fun `unknown type addressed to me fails closed`() = runBlocking {
+        val delegate = RecordingDelegate(acceptAnnounce = false)
+        val processor = processor(delegate)
+
+        // Prime the per-peer actor so the probe below is ordered after a settled packet
+        processor.processPacket(announce())
+        withTimeout(1_000) { delegate.handled.await() }
+
+        processor.processPacket(unknownType(recipientID = MY_PEER_ID.hexToBytes()))
+
+        assertNull(withTimeoutOrNull(250) { delegate.messageHandled.await() })
+        assertNull(withTimeoutOrNull(250) { delegate.lastSeen.await() })
+        assertEquals(0, delegate.relayCount)
+    }
+
     private fun processor(delegate: RecordingDelegate): PacketProcessor =
         PacketProcessor(MY_PEER_ID).also {
             it.delegate = delegate
@@ -96,6 +139,32 @@ class PacketProcessorAnnounceSideEffectTest {
         return RoutedPacket(packet, PEER_ID, "direct-link")
     }
 
+    private fun sos(recipientID: ByteArray): RoutedPacket {
+        val packet = BitchatPacket(
+            version = 1u,
+            type = MessageType.SOS.value,
+            senderID = PEER_ID.hexToBytes(),
+            recipientID = recipientID,
+            timestamp = System.currentTimeMillis().toULong(),
+            payload = byteArrayOf(0x01),
+            ttl = 7u
+        )
+        return RoutedPacket(packet, PEER_ID, "direct-link")
+    }
+
+    private fun unknownType(recipientID: ByteArray): RoutedPacket {
+        val packet = BitchatPacket(
+            version = 1u,
+            type = 0x7Fu,
+            senderID = PEER_ID.hexToBytes(),
+            recipientID = recipientID,
+            timestamp = System.currentTimeMillis().toULong(),
+            payload = byteArrayOf(0x01),
+            ttl = 7u
+        )
+        return RoutedPacket(packet, PEER_ID, "direct-link")
+    }
+
     private class RecordingDelegate(
         private val acceptAnnounce: Boolean,
         private val acceptHandshake: Boolean = false
@@ -103,6 +172,8 @@ class PacketProcessorAnnounceSideEffectTest {
         val handled = CompletableDeferred<Unit>()
         val handshakeHandled = CompletableDeferred<Unit>()
         val lastSeen = CompletableDeferred<String>()
+        val messageHandled = CompletableDeferred<RoutedPacket>()
+        val relayed = CompletableDeferred<RoutedPacket>()
         @Volatile var relayCount = 0
 
         override fun validatePacketSecurity(packet: BitchatPacket, peerID: String) = true
@@ -121,7 +192,9 @@ class PacketProcessorAnnounceSideEffectTest {
             handled.complete(Unit)
             return acceptAnnounce
         }
-        override fun handleMessage(routed: RoutedPacket) = Unit
+        override fun handleMessage(routed: RoutedPacket) {
+            messageHandled.complete(routed)
+        }
         override fun handleLeave(routed: RoutedPacket) = Unit
         override fun handleFragment(packet: BitchatPacket): BitchatPacket? = null
         override fun handleRequestSync(routed: RoutedPacket) = Unit
@@ -129,6 +202,7 @@ class PacketProcessorAnnounceSideEffectTest {
         override fun sendCachedMessages(peerID: String) = Unit
         override fun relayPacket(routed: RoutedPacket) {
             relayCount += 1
+            relayed.complete(routed)
         }
         override fun sendToPeer(peerID: String, routed: RoutedPacket) = false
     }

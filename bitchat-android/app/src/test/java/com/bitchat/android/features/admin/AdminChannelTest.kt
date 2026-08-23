@@ -18,7 +18,7 @@ import javax.crypto.spec.SecretKeySpec
  */
 class AdminChannelTest {
 
-    private val adminPassword = "Mrinall@1123"
+    private val adminPassword = "SyntheticAdminPass#123"
     private val adminChannel = "#admin"
 
     private fun deriveKey(password: String, channel: String): SecretKeySpec {
@@ -63,23 +63,24 @@ class AdminChannelTest {
     @Test
     fun testAdminConstants() {
         assertEquals("#admin", ChannelManager.ADMIN_CHANNEL)
-        assertEquals("Mrinall@1123", ChannelManager.ADMIN_DEFAULT_PASSWORD)
-        assertEquals("Mrinall@1123", AdminManager.MASTER_ADMIN_PASS)
     }
 
     @Test
-    fun testAdminPassphraseVerification_Success() {
+    fun testAdminLockedBeforePassphraseSetup() {
         assertFalse(AdminManager.isAdminEnabled.value)
-        val success = AdminManager.verifyAndEnable("Mrinall@1123")
-        assertTrue("Admin verification must succeed with Mrinall@1123", success)
-        assertTrue("AdminManager must be enabled after successful verification", AdminManager.isAdminEnabled.value)
+        assertFalse(AdminManager.isAdminSetUp())
+        assertFalse(
+            "Admin verification must fail while no passphrase has been set up",
+            AdminManager.verifyAndEnable("SyntheticAdminPass#123")
+        )
+        assertFalse("AdminManager must remain disabled before passphrase setup", AdminManager.isAdminEnabled.value)
     }
 
     @Test
     fun testAdminPassphraseVerification_Failure() {
         assertFalse(AdminManager.isAdminEnabled.value)
         val failure = AdminManager.verifyAndEnable("WrongPassword123")
-        assertFalse("Admin verification must fail with wrong password", failure)
+        assertFalse("Admin verification must fail without a matching stored passphrase", failure)
         assertFalse("AdminManager must remain disabled", AdminManager.isAdminEnabled.value)
     }
 

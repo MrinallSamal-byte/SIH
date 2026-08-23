@@ -47,8 +47,6 @@ object AdminManager {
         refreshReports()
     }
 
-    const val MASTER_ADMIN_PASS = "Mrinall@1123"
-
     // ─── Admin Auth ──────────────────────────────────────────────
 
     /**
@@ -74,16 +72,9 @@ object AdminManager {
 
     /**
      * Verify admin passphrase and enable admin mode.
+     * Fails closed when no passphrase has been set up.
      */
     fun verifyAndEnable(passphrase: String): Boolean {
-        if (passphrase == MASTER_ADMIN_PASS) {
-            val db = database
-            db?.setConfig(PASSPHRASE_HASH_KEY, hashPassphrase(MASTER_ADMIN_PASS))
-            db?.setConfig(ADMIN_ENABLED_KEY, "true")
-            _isAdminEnabled.value = true
-            Log.i(TAG, "Admin mode verified and enabled with master passphrase")
-            return true
-        }
         val db = database ?: return false
         val storedHash = db.getConfig(PASSPHRASE_HASH_KEY) ?: return false
         val inputHash = hashPassphrase(passphrase)

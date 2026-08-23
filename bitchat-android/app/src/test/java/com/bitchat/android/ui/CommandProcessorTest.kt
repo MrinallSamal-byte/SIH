@@ -188,4 +188,92 @@ class CommandProcessorTest() {
     assertFalse(chatState.getShowMentionSuggestionsValue())
     assertTrue(chatState.getMentionSuggestionsValue().isEmpty())
   }
+
+  @Test
+  fun `help command works outside channels and tolerates extra arguments`() {
+    val handledBare = commandProcessor.processCommand(
+      command = "/help",
+      meshService = meshService,
+      myPeerID = "peer-id",
+      onSendMessage = { _, _, _ -> },
+      viewModel = null
+    )
+    assertTrue(handledBare)
+    assertTrue(chatState.getMessagesValue().last().content.startsWith("available commands:"))
+
+    val handledWithArgs = commandProcessor.processCommand(
+      command = "/help nonsense args",
+      meshService = meshService,
+      myPeerID = "peer-id",
+      onSendMessage = { _, _, _ -> },
+      viewModel = null
+    )
+    assertTrue(handledWithArgs)
+    assertEquals(2, chatState.getMessagesValue().count { it.content.startsWith("available commands:") })
+  }
+
+  @Test
+  fun `help suggestions contain no duplicate entries`() {
+    chatState.setCurrentChannel("#some-channel")
+    commandProcessor.updateCommandSuggestions("/")
+    val commands = chatState.getCommandSuggestionsValue().map { it.command }
+    assertEquals(commands.size, commands.toSet().size)
+    assertTrue(commands.contains("/help"))
+  }
+
+  @Test
+  fun `pass command lets channel creator rotate an encrypted channel password`() {
+    val created = channelManager.createChannel(
+      name = "pass-rotate-squad",
+      topic = "rotation test",
+      categoryId = ChannelManager.CAT_SECURE_SQUADS,
+      hubId = ChannelManager.HUB_ACADEMICS,
+      isEncrypted = true,
+      password = "first-secret",
+      myPeerID = "creator-peer"
+    )
+    assertTrue(created)
+
+    val handled = commandProcessor.processCommand(
+      command = "/pass second-secret",
+      meshService = meshService,
+      myPeerID = "creator-peer",
+      onSendMessage = { _, _, _ -> },
+      viewModel = null
+    )
+
+    assertTrue(handled)
+    assertEquals("second-secret", channelManager.getChannelPassword("#pass-rotate-squad"))
+  }
+
+  @Test
+  fun `pass command refuses rotation by non creator`() {
+    assertTrue(channelManager.joinChannel("#open-squad", null, "creator-peer"))
+    chatState.setCurrentChannel("#open-squad")
+
+    val handled = commandProcessor.processCommand(
+      command = "/pass sneak",
+      meshService = meshService,
+      myPeerID = "other-peer",
+      onSendMessage = { _, _, _ -> },
+      viewModel = null
+    )
+
+    assertTrue(handled)
+    assertEquals(null, channelManager.getChannelPassword("#open-squad"))
+  }
+
+  @Test
+  fun `admin channel stays locked before passphrase setup`() {
+    com.bitchat.android.features.admin.AdminManager.initialize(context)
+    assertFalse(
+      com.bitchat.android.features.admin.AdminManager.isAdminEnabled.value
+    )
+    assertFalse(channelManager.joinChannel("#admin", null, "peer-a"))
+    assertTrue(chatState.getShowPasswordPromptValue())
+    assertFalse(channelManager.joinChannel("#admin", "wrong-guess", "peer-a"))
+    assertFalse(
+      com.bitchat.android.features.admin.AdminManager.isAdminEnabled.value
+    )
+  }
 }

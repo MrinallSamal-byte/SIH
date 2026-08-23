@@ -9,7 +9,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -35,6 +34,14 @@ fun BluetoothCheckScreen(
         modifier = modifier.padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
+        OnboardingProgress(
+            currentStep = OnboardingProgressSteps.STEP_BLUETOOTH_CHECK,
+            totalSteps = OnboardingProgressSteps.TOTAL_STEPS,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 8.dp)
+        )
+
         when (status) {
             BluetoothStatus.DISABLED -> {
                 BluetoothDisabledContent(
@@ -77,7 +84,7 @@ private fun BluetoothDisabledContent(
             imageVector = Icons.Outlined.Bluetooth,
             contentDescription = stringResource(R.string.cd_bluetooth),
             modifier = Modifier.size(64.dp),
-            tint = Color(0xFF00C851) // App's main green color
+            tint = colorScheme.primary
         )
 
         Text(
@@ -132,7 +139,7 @@ private fun BluetoothDisabledContent(
                     onClick = onEnableBluetooth,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF00C851) // App's main green color
+                        containerColor = colorScheme.primary
                     )
                 ) {
                         Text(
@@ -173,13 +180,14 @@ private fun BluetoothNotSupportedContent(
         // Error icon
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFFFEBEE)
+                containerColor = colorScheme.errorContainer
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Text(
                 text = stringResource(R.string.warning_emoji),
                 style = MaterialTheme.typography.headlineLarge,
+                color = colorScheme.onErrorContainer,
                 modifier = Modifier.padding(16.dp)
             )
         }
@@ -256,6 +264,7 @@ private fun BluetoothCheckingContent(
 
 @Composable
 private fun BluetoothLoadingIndicator() {
+    val colorScheme = MaterialTheme.colorScheme
     // Animated rotation for the loading indicator
     val infiniteTransition = rememberInfiniteTransition(label = "bluetooth_loading")
     val rotationAngle by infiniteTransition.animateFloat(
@@ -276,7 +285,7 @@ private fun BluetoothLoadingIndicator() {
             modifier = Modifier
                 .fillMaxSize()
                 .rotate(rotationAngle),
-            color = Color(0xFF2196F3), // Bluetooth blue
+            color = colorScheme.secondary,
             strokeWidth = 3.dp
         )
     }
