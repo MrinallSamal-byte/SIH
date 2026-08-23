@@ -14,7 +14,7 @@ export class ApiError extends Error {
 /** Thrown when a write reaches the network while the device is offline —
  * callers (e.g. the outbox) use it to decide whether to queue locally. */
 export class OfflineError extends Error {
-  constructor(message = 'You are offline — the request was not sent') {
+  constructor(message = 'You appear to be offline. Please check your internet connection and try again.') {
     super(message)
     this.name = 'OfflineError'
   }
@@ -102,14 +102,32 @@ function markApiDown() {
  * The backend wraps every response in `{ success, data }` and returns
  * `{ success: false, error }` on failure — this unwraps both.
  */
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
+
+/** Maps raw fetch failures (TypeError 'Failed to fetch', AbortController
+ * timeouts) onto an ApiError with a human sentence, so any caller that surfaces
+ * `err.message` shows something actionable instead of browser jargon.
+ * Status 0 = "never reached the server" — callers can safely treat it as
+ * queueable/offline (it is outside the 4xx validation band). */
+function toFriendlyNetworkError(err: unknown): unknown {
+  if (err instanceof OfflineError || err instanceof ApiError) return err
+  const aborted = err instanceof Error && err.name === 'AbortError'
+  const message = aborted
+    ? 'The server took too long to respond. Please check your connection and try again.'
+    : 'Could not reach the AapdaSetu server. Please check your internet connection and try again.'
+  if (err instanceof Error) console.warn(`[aapdasetu] network failure (${err.name}: ${err.message})`)
+  return new ApiError(0, message)
+}
+
 async function apiCall<T>(method: string, path: string, body?: unknown): Promise<T> {
-  // Mutations (POST/PUT/PATCH/DELETE) must never be silently faked with mock
-  // data — fail fast offline and tag failures so withMockFallback rethrows.
-  const mutating = method.toUpperCase() !== 'GET'
+  // Only true write verbs are mutations — HEAD/OPTIONS (and GET, even with
+  // query strings) must stay cacheable/mockable and never fail-fast offline.
+  const mutating = MUTATING_METHODS.has(method.toUpperCase())
   if (mutating && typeof navigator !== 'undefined' && navigator.onLine === false) {
     throw new OfflineError()
   }
-  if (apiIsUnreachable()) throw new ApiError(503, 'API unreachable')
+  if (apiIsUnreachable())
+    throw new ApiError(503, 'Cannot reach the AapdaSetu server right now. Please try again shortly.')
 
   const headers: Record<string, string> = {}
   if (body !== undefined) headers['Content-Type'] = 'application/json'
@@ -139,7 +157,7 @@ async function apiCall<T>(method: string, path: string, body?: unknown): Promise
         // Network-level failure (refused/DNS/timeout): probe again only after
         // the cool-off window instead of retrying on every poll tick.
         markApiDown()
-        throw tagMutating(err)
+        throw tagMutating(toFriendlyNetworkError(err))
       }
       if (err.status >= 400 && err.status < 500) throw tagMutating(err)
       if (attempt === MAX_ATTEMPTS - 1) throw tagMutating(err)
@@ -175,6 +193,9 @@ export interface MockFallbackOptions {
   /** True for write calls (POST/PUT/PATCH/DELETE): failures always propagate —
    * mock data must never fake a successful submission. */
   mutating?: boolean
+  /** Auth endpoints: a fabricated demo session is acceptable ONLY in explicit
+   * useMockOnly demo builds; real deployments always surface the failure. */
+  allowDemoMock?: boolean
 }
 
 function isMutatingFailure(err: unknown): boolean {
@@ -195,7 +216,7 @@ export async function withMockFallback<T>(
   mock: MockData<T>,
   options: MockFallbackOptions = {},
 ): Promise<T> {
-  if (config.useMockOnly && !options.mutating) {
+  if (config.useMockOnly && (!options.mutating || options.allowDemoMock)) {
     notifyFallback()
     apiHealth.lastWasMock = true
     return mock()
@@ -211,6 +232,10 @@ export async function withMockFallback<T>(
     if (options.mutating || isMutatingFailure(err)) {
       if (!navigator.onLine) throw new OfflineError()
       console.error('[aapdasetu] write failed — refusing to fake success with mock data', err)
+      throw err
+    }
+    if (options.allowDemoMock) {
+      console.error('[aapdasetu] login failed — refusing to fabricate a session outside demo mode', err)
       throw err
     }
     // Read-only degradation: serve demo data and flag it via apiHealth.

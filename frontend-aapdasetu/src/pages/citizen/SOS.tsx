@@ -15,7 +15,7 @@ import {
 import { createReport } from '../../api/endpoints'
 import { ApiError } from '../../api/client'
 import { aiTriage } from '../../api/ai'
-import { enqueueOutbox, initGlobalOutboxSync } from '../../lib/outbox'
+import { enqueueOutbox, getOutbox, initGlobalOutboxSync, subscribeOutbox } from '../../lib/outbox'
 import { Field, Input } from '../../components/common/Input'
 import Modal from '../../components/common/Modal'
 import LandmarkPicker from '../../components/map/LandmarkPicker'
@@ -59,11 +59,24 @@ export default function SOS() {
   const [result, setResult] = useState<Report | null>(null)
   const [copied, setCopied] = useState(false)
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
-  const [queuedNotice, setQueuedNotice] = useState(false)
+  // Live count of SOS submissions parked in the global outbox — the queued
+  // banner reflects the REAL queue (updates on enqueue, replay and drop).
+  const [queuedSosCount, setQueuedSosCount] = useState(
+    () => getOutbox().filter((item) => item.kind === 'sos').length,
+  )
   const [showLocationModal, setShowLocationModal] = useState(false)
   const [editAddressText, setEditAddressText] = useState('')
   const [editPoint, setEditPoint] = useState<GeoPoint | null>(null)
   const phoneInputRef = useRef<HTMLInputElement>(null)
+  // Belt-and-braces against double-click double-submits: state `triggering`
+  // only applies after re-render; the ref blocks synchronously.
+  const busyRef = useRef(false)
+
+  useEffect(() => {
+    const syncQueuedCount = () => setQueuedSosCount(getOutbox().filter((item) => item.kind === 'sos').length)
+    syncQueuedCount()
+    return subscribeOutbox(syncQueuedCount)
+  }, [])
 
   // Clear phone error when user types
   useEffect(() => {
@@ -127,6 +140,8 @@ export default function SOS() {
     }
 
     setPhoneError(null)
+    if (busyRef.current) return // double-click guard (synchronous, pre-render)
+    busyRef.current = true
     setTriggering(true)
     let pendingInput: ReportInput | null = null
 
@@ -163,7 +178,7 @@ export default function SOS() {
 
       const input: ReportInput = {
         type: selectedType,
-        description: `1-Tap SOS distress trigger: ${typeLabel}`,
+        description: `${t('sos.autoDescription')}: ${typeLabel}`,
         isOneTapSos: true,
         reporterName: name.trim() || undefined,
         reporterPhone: phone.trim(),
@@ -174,9 +189,9 @@ export default function SOS() {
 
       if (!navigator.onLine) {
         // Park in the global outbox — it auto-dispatches on reconnect.
+        // Banner count updates via the subscribeOutbox listener.
         enqueueOutbox('sos', input)
         navigator.vibrate?.([200, 100, 200])
-        setQueuedNotice(true)
         toast(t('sos.offlineQueuedToast'), 'info')
         setTriggering(false)
         return
@@ -219,12 +234,12 @@ export default function SOS() {
       } else if (pendingInput) {
         enqueueOutbox('sos', pendingInput)
         navigator.vibrate?.([200, 100, 200])
-        setQueuedNotice(true)
         toast(t('sos.offlineQueuedToast'), 'info')
       } else {
         toast(err instanceof Error ? err.message : t('common.submissionFailed'), 'error')
       }
     } finally {
+      busyRef.current = false
       setTriggering(false)
     }
   }
@@ -353,10 +368,13 @@ export default function SOS() {
             </div>
           )}
 
-          {queuedNotice && (
+          {queuedSosCount > 0 && (
             <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-400 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300 shadow-xs max-w-3xl w-full">
               <CheckCircle2 className="h-4 w-4 shrink-0" />
-              <span>{t('sos.queuedOnDevice', 'Saved on device — will send automatically when you reconnect.')}</span>
+              <span>
+                {t('sos.queuedOnDevice', 'Saved on device — will send automatically when you reconnect.')}
+                {queuedSosCount > 1 && ` (${queuedSosCount})`}
+              </span>
             </div>
           )}
 

@@ -37,9 +37,40 @@ function resolveTimeAgoLocale(): string {
   }
 }
 
+/** RelativeTimeFormat is missing on some old browsers and throws RangeError on unknown locales — degrade to English, never crash. */
+function createTimeAgoFormatter(): Intl.RelativeTimeFormat | null {
+  if (typeof Intl === 'undefined' || typeof Intl.RelativeTimeFormat !== 'function') return null
+  try {
+    return new Intl.RelativeTimeFormat(resolveTimeAgoLocale(), { numeric: 'auto' })
+  } catch {
+    try {
+      return new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
+    } catch {
+      return null
+    }
+  }
+}
+
+/** Plain-English fallback for environments without a usable Intl.RelativeTimeFormat. */
+function formatEnglishFallback(seconds: number): string {
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 1) return seconds <= 1 ? 'just now' : `${seconds}s ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 1) return minutes === 1 ? 'a minute ago' : `${minutes} min ago`
+  const days = Math.floor(hours / 24)
+  if (days < 1) return hours === 1 ? 'an hour ago' : `${hours} hr ago`
+  if (days < 7) return days === 1 ? 'yesterday' : `${days} days ago`
+  const weeks = Math.floor(days / 7)
+  return weeks === 1 ? 'last week' : `${weeks} weeks ago`
+}
+
 export function timeAgo(iso: string): string {
-  const seconds = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000))
-  const rtf = new Intl.RelativeTimeFormat(resolveTimeAgoLocale(), { numeric: 'auto' })
+  // Guard missing/invalid timestamps ('' | nullish at runtime | malformed string → NaN).
+  const time = iso ? new Date(iso).getTime() : NaN
+  if (!Number.isFinite(time)) return '—'
+  const seconds = Math.max(0, Math.floor((Date.now() - time) / 1000))
+  const rtf = createTimeAgoFormatter()
+  if (!rtf) return formatEnglishFallback(seconds)
   if (seconds < 60) return rtf.format(-seconds, 'second')
   const minutes = Math.floor(seconds / 60)
   if (minutes < 60) return rtf.format(-minutes, 'minute')
@@ -552,7 +583,39 @@ export function getNavigationUrl(lat: number, lng: number): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
 }
 
-/** Offline Emergency SMS string generator (National SOS 112). */
+/** Supported SMS help-line languages. */
+type SmsLang = 'en' | 'hi' | 'bn' | 'or'
+
+/**
+ * Resolve the current UI language from <html lang> (kept in sync by the i18n
+ * provider) with a localStorage fallback — mirrors ErrorBoundary.readStoredLanguage
+ * locally so this module stays dependency-free.
+ */
+function resolveSmsLanguage(): SmsLang {
+  try {
+    if (typeof document !== 'undefined') {
+      const l = document.documentElement.lang
+      if (l === 'hi' || l === 'bn' || l === 'or') return l
+    }
+    if (typeof localStorage !== 'undefined') {
+      const stored = localStorage.getItem('aapdasetu_lang')
+      if (stored === 'hi' || stored === 'bn' || stored === 'or') return stored
+    }
+  } catch {
+    // DOM/storage unavailable — fall back to English
+  }
+  return 'en'
+}
+
+/** First line of the offline SOS SMS, in the citizen's own language. */
+const SMS_HELP_LINE: Record<SmsLang, string> = {
+  en: 'I need URGENT HELP.',
+  hi: 'मुझे तुरंत मदद चाहिए।',
+  bn: 'আমার দ্রুত সাহায্য দরকার।',
+  or: 'ମୋର ତୁରନ୍ତ ସାହାଯ୍ୟ ଦରକାର।',
+}
+
+/** Offline Emergency SMS string generator (National SOS 112). Bilingual: a native-language plea followed by an operator-readable English payload. */
 export function generateEmergencySms(options: {
   lat?: number
   lng?: number
@@ -562,7 +625,7 @@ export function generateEmergencySms(options: {
   address?: string
   landmark?: string
 }): string {
-  const parts = ['EMERGENCY SOS']
+  const parts = [SMS_HELP_LINE[resolveSmsLanguage()], 'SOS']
   if (options.type) parts.push(`TYPE:${options.type.toUpperCase()}`)
   if (options.name) parts.push(`NAME:${options.name}`)
   if (options.phone) parts.push(`PHONE:${options.phone}`)

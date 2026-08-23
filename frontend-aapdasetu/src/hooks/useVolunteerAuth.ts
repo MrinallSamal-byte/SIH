@@ -5,6 +5,26 @@ import type { VolunteerUser } from '../types'
 export const VOLUNTEER_AUTH_KEY = 'aapdasetu_volunteer_auth'
 export const VOLUNTEER_ID_KEY = 'aapdasetu_volunteer_session'
 
+// Fallback shown only when a thrown value is not an Error (raw backend messages
+// always pass through untouched). Read outside React — mirrors ErrorBoundary's
+// localStorage language pattern (src/lib/i18n.tsx keeps 'aapdasetu_lang' in sync).
+const LOGIN_FAILED_STRINGS = {
+  en: 'Volunteer login failed',
+  hi: 'स्वयंसेवक लॉगिन विफल',
+  bn: 'স্বেচ্ছাসেবী লগইন ব্যর্থ',
+  or: 'ସ୍ୱେଚ୍ଛାସେବୀ ଲଗଇନ୍ ବିଫଳ',
+} as const
+
+function readStoredLanguage(): keyof typeof LOGIN_FAILED_STRINGS {
+  try {
+    const stored = localStorage.getItem('aapdasetu_lang')
+    if (stored === 'hi' || stored === 'bn' || stored === 'or') return stored
+  } catch {
+    // Storage unavailable — fall back to English
+  }
+  return 'en'
+}
+
 export function useVolunteerAuth() {
   const [user, setUser] = useState<VolunteerUser | null>(() => {
     try {
@@ -27,7 +47,7 @@ export function useVolunteerAuth() {
       setUser(data)
       return data
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Volunteer login failed')
+      setError(err instanceof Error ? err.message : LOGIN_FAILED_STRINGS[readStoredLanguage()])
       throw err
     } finally {
       setLoading(false)

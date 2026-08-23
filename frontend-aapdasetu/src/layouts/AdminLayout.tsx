@@ -51,15 +51,17 @@ const adminViews: AdminView[] = [
   { to: '/admin/settings', labelKey: 'adminNav.settings', icon: Settings },
 ]
 
-function relativeSyncTime(ts: number | null): string {
+type TranslateFn = (key: string, fallback?: string) => string
+
+function relativeSyncTime(ts: number | null, t: TranslateFn): string {
   if (!ts || ts <= 0) return '—'
   const seconds = Math.max(0, Math.floor((Date.now() - ts) / 1000))
-  if (seconds < 60) return `${seconds}s ago`
+  if (seconds < 60) return t('adminOps.agoSeconds', '{n}s ago').replace('{n}', String(seconds))
   const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
+  if (minutes < 60) return t('adminOps.agoMinutes', '{n}m ago').replace('{n}', String(minutes))
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  return `${Math.floor(hours / 24)}d ago`
+  if (hours < 24) return t('adminOps.agoHours', '{n}h ago').replace('{n}', String(hours))
+  return t('adminOps.agoDays', '{n}d ago').replace('{n}', String(Math.floor(hours / 24)))
 }
 
 const SHORTCUT_ROUTES: Record<string, string> = {
@@ -305,7 +307,7 @@ export default function AdminLayout() {
           </span>
 
           <span className="text-slate-400 dark:text-slate-500 mono">
-            {t('adminOps.lastSync', 'Sync')} {relativeSyncTime(lastSuccessAt)}
+            {t('adminOps.lastSync', 'Sync')} {relativeSyncTime(lastSuccessAt, t)}
           </span>
 
           <div className="ml-auto flex items-center gap-1.5">

@@ -23,7 +23,36 @@ import { useLanguage } from '../../lib/i18n'
 import type { GeoPoint, Report } from '../../types'
 
 const SIREN_ENABLED_KEY = 'aapdasetu_siren_enabled'
-const BASE_TAB_TITLE = typeof document !== 'undefined' ? document.title : 'AapdaSetu'
+const FLASH_TAB_TITLE = '🔴 RED SOS — AapdaSetu'
+const MODULE_LOAD_TITLE = typeof document !== 'undefined' ? document.title : 'AapdaSetu'
+
+// Browser Notification() fires from module scope (outside React), so the stored
+// language is read directly from localStorage — mirrors ErrorBoundary's pattern.
+const NOTIFY_STRINGS = {
+  en: { notifTitle: 'RED SOS — AapdaSetu', locationUnavailable: 'Location unavailable' },
+  hi: { notifTitle: 'लाल संकट SOS — AapdaSetu', locationUnavailable: 'स्थान अनुपलब्ध' },
+  bn: { notifTitle: 'লাল সংকট SOS — AapdaSetu', locationUnavailable: 'অবস্থান অনুপলব্ধ' },
+  or: { notifTitle: 'ଲାଲ୍ ସଙ୍କଟ SOS — AapdaSetu', locationUnavailable: 'ଅବସ୍ଥିତି ଅନୁପଲବ୍ଧ' },
+} as const
+
+type NotifyLang = keyof typeof NOTIFY_STRINGS
+
+function readStoredLanguage(): NotifyLang {
+  try {
+    const stored = localStorage.getItem('aapdasetu_lang')
+    if (stored === 'hi' || stored === 'bn' || stored === 'or') return stored
+  } catch {
+    // Storage unavailable — fall back to English
+  }
+  return 'en'
+}
+
+/** Original tab title, evaluated once at bundle load and guarded so a remount
+ * can never capture our own flashed title back as the "original". */
+function getBaseTabTitle(): string {
+  if (MODULE_LOAD_TITLE && !MODULE_LOAD_TITLE.includes('RED SOS')) return MODULE_LOAD_TITLE
+  return 'AapdaSetu'
+}
 
 class SirenEngine {
   private ctx: AudioContext | null = null
@@ -43,8 +72,19 @@ class SirenEngine {
     const ctx = this.ensureContext()
     if (!ctx) return
     this.active = true
-    this.playTwoToneCycle()
-    this.timer = window.setInterval(() => this.playTwoToneCycle(), 1200)
+    if (ctx.state === 'running') {
+      this.beginLoop()
+      return
+    }
+    // Autoplay policy: the context only leaves 'suspended' after a real user
+    // gesture — begin the loop when resume settles; until then the engine is
+    // honestly not audible (isRunning true, but no timer/no sound).
+    void ctx
+      .resume()
+      .then(() => {
+        if (this.active && this.ctx?.state === 'running') this.beginLoop()
+      })
+      .catch(() => {})
   }
 
   stop(): void {
@@ -59,6 +99,12 @@ class SirenEngine {
     const ctx = this.ensureContext()
     if (!ctx || ctx.state !== 'running') return
     this.playTwoToneCycle()
+  }
+
+  private beginLoop(): void {
+    if (!this.active || this.timer !== null) return
+    this.playTwoToneCycle()
+    this.timer = window.setInterval(() => this.playTwoToneCycle(), 1200)
   }
 
   private ensureContext(): AudioContext | null {
@@ -130,14 +176,15 @@ function requestNotificationPermissionOnce(): void {
 function notifyNewRedIncidents(items: Report[]): void {
   if (typeof window === 'undefined' || !('Notification' in window)) return
   if (Notification.permission !== 'granted') return
+  const s = NOTIFY_STRINGS[readStoredLanguage()]
   for (const r of items) {
     try {
       const where =
         r.landmark ||
         (typeof r.latitude === 'number' && typeof r.longitude === 'number'
           ? `${r.latitude.toFixed(3)}, ${r.longitude.toFixed(3)}`
-          : 'Location unavailable')
-      new Notification('RED SOS — AapdaSetu', {
+          : s.locationUnavailable)
+      new Notification(s.notifTitle, {
         body: `${r.type.replace('_', ' ').toUpperCase()} • ${where} • ${r.trackingId}`,
         tag: r.id,
       })
@@ -152,23 +199,46 @@ export default function LiveSOS() {
   const fetchReports = useCallback(() => listReports({ status: 'pending' }), [])
   const reports = useRealtime<Report[]>(fetchReports, 3000)
 
+  const statusLabel = useCallback(
+    (status: string) =>
+      status === 'pending'
+        ? t('rp.filterPending', 'Pending Triage')
+        : status === 'in_progress'
+          ? t('rp.filterInProgress', 'In Progress')
+          : t('rp.filterResolved', 'Resolved'),
+    [t],
+  )
+
   const [sirenArmed, setSirenArmed] = useState<boolean>(readStoredSirenEnabled)
+  const [hasGesture, setHasGesture] = useState(false)
   const [muted, setMuted] = useState(false)
   const [loopActive, setLoopActive] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const knownRedIdsRef = useRef<Set<string>>(new Set())
   const isFirstLoadRef = useRef(true)
 
+  // Autoplay policies require a real user gesture before audio can play.
+  // Every operator click routes through here so the AudioContext resume
+  // happens inside a gesture-trusted call stack.
+  const markInteraction = useCallback(() => {
+    setHasGesture(true)
+    sirenEngine.prime()
+  }, [])
+
   useEffect(() => {
     setLoopActive(sirenEngine.isRunning)
   }, [])
 
-  const acknowledge = useCallback(async (reportId: string) => {
-    sirenEngine.stop()
-    setLoopActive(false)
-    await updateReport(reportId, { status: 'in_progress' })
-    emitRealtimeUpdate('report_updated', reportId)
-  }, [])
+  const acknowledge = useCallback(
+    async (reportId: string) => {
+      markInteraction()
+      sirenEngine.stop()
+      setLoopActive(false)
+      await updateReport(reportId, { status: 'in_progress' })
+      emitRealtimeUpdate('report_updated', reportId)
+    },
+    [markInteraction],
+  )
 
   useEffect(() => {
     if (!reports) return
@@ -190,40 +260,46 @@ export default function LiveSOS() {
 
     if (netNewReds.length > 0 && sirenArmed) {
       setMuted(false)
-      sirenEngine.start()
-      setLoopActive(true)
       notifyNewRedIncidents(netNewReds)
+      // No sound before a user gesture: with a stored "enabled" pref the siren
+      // stays armed-but-silent until the operator interacts with the page.
+      if (hasGesture) {
+        sirenEngine.start()
+        setLoopActive(true)
+      }
     }
-  }, [reports, sirenArmed])
+  }, [reports, sirenArmed, hasGesture])
 
   const unackedRedCount = reports?.filter((r) => r.priorityLabel === 'RED').length ?? 0
 
   useEffect(() => {
+    const base = getBaseTabTitle()
     if (unackedRedCount <= 0) {
-      document.title = BASE_TAB_TITLE
+      document.title = base
       return
     }
-    document.title = '🔴 RED SOS — AapdaSetu'
+    document.title = FLASH_TAB_TITLE
     let flip = false
     const id = window.setInterval(() => {
       flip = !flip
-      document.title = flip ? BASE_TAB_TITLE : '🔴 RED SOS — AapdaSetu'
+      document.title = flip ? base : FLASH_TAB_TITLE
     }, 1500)
     return () => {
       window.clearInterval(id)
-      document.title = BASE_TAB_TITLE
+      document.title = base
     }
   }, [unackedRedCount])
 
   const armSiren = () => {
+    markInteraction()
     setSirenArmed(true)
     storeSirenEnabled(true)
     setMuted(false)
-    sirenEngine.prime()
     requestNotificationPermissionOnce()
   }
 
   const disarmSiren = () => {
+    markInteraction()
     setSirenArmed(false)
     storeSirenEnabled(false)
     sirenEngine.stop()
@@ -231,13 +307,14 @@ export default function LiveSOS() {
   }
 
   const muteSiren = () => {
+    markInteraction()
     setMuted(true)
     sirenEngine.stop()
     setLoopActive(false)
   }
 
   const testSiren = () => {
-    sirenEngine.prime()
+    markInteraction()
     sirenEngine.burst()
   }
 
@@ -264,7 +341,7 @@ export default function LiveSOS() {
           id: r.id,
           position: { lat: r.latitude!, lng: r.longitude! },
           title: `${t('ls.sos')} ${r.type.toUpperCase()} (${r.trackingId})`,
-          subtitle: `${r.description ?? ''} - Reported ${timeAgo(r.createdAt)}`,
+          subtitle: `${r.description ?? ''} - ${t('ls.reportedAgo', 'Reported {t}').replace('{t}', timeAgo(r.createdAt))}`,
           color: r.priorityLabel === 'RED' ? '#dc2626' : '#f59e0b',
           isSos: true,
           popupActions: actions,
@@ -303,15 +380,30 @@ export default function LiveSOS() {
             </Button>
           ) : (
             <>
-              <button
-                type="button"
-                onClick={disarmSiren}
-                title={t('ls.disableSirenHint', 'Click to disable siren')}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 shadow-xs cursor-pointer"
-              >
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>{t('ls.sirenActive')}</span>
-              </button>
+              {hasGesture ? (
+                <button
+                  type="button"
+                  onClick={disarmSiren}
+                  title={t('ls.disableSirenHint', 'Click to disable siren')}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 shadow-xs cursor-pointer"
+                >
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>{t('ls.sirenActive')}</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={markInteraction}
+                  title={t(
+                    'ls.armedMutedHint',
+                    'Armed — audio stays muted until you interact with the page',
+                  )}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300 shadow-xs cursor-pointer"
+                >
+                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                  <span>{t('ls.armedMutedUntilInteraction', 'Armed — muted until interaction')}</span>
+                </button>
+              )}
 
               <Button variant="outline" size="sm" onClick={testSiren} title={t('ls.testSirenHint', 'Play one siren cycle')} className="font-bold flex items-center gap-1.5">
                 <Play className="h-3.5 w-3.5 text-slate-700 dark:text-slate-300" />
@@ -372,7 +464,7 @@ export default function LiveSOS() {
               <PriorityBadge label={r.priorityLabel} />
               <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100">{r.trackingId}</span>
               <span className="text-xs font-bold capitalize text-slate-800 dark:text-slate-200">{r.type} {t('ls.emergency')}</span>
-              <Badge value={r.status} />
+              <Badge value={r.status} label={statusLabel(r.status)} />
               <span className="ml-auto text-xs text-slate-400 mono">{timeAgo(r.createdAt)}</span>
             </div>
 

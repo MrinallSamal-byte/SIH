@@ -151,11 +151,13 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
   const manualResetTimerRef = useRef<number | null>(null)
 
   const setManualLocation = useCallback((point: GeoPoint, customAddress?: string) => {
+    // Sticky override: a manually pinned location stays authoritative until
+    // the user explicitly re-locates (refresh / locateHighAccuracy).
     isManualRef.current = true
-    if (manualResetTimerRef.current) window.clearTimeout(manualResetTimerRef.current)
-    manualResetTimerRef.current = window.setTimeout(() => {
-      isManualRef.current = false
-    }, 30000)
+    if (manualResetTimerRef.current) {
+      window.clearTimeout(manualResetTimerRef.current)
+      manualResetTimerRef.current = null
+    }
     const manualCoords: GeoLocationCoordinatesLike = {
       latitude: point.lat,
       longitude: point.lng,
@@ -317,7 +319,7 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
           try { navigator.geolocation.clearWatch(watchIdRef.current) } catch { /* already cleared */ }
           watchIdRef.current = null
         }
-      } else if (watchIdRef.current === null && source === 'gps') {
+      } else if (watchIdRef.current === null && source === 'gps' && !isManualRef.current) {
         const c = detect()
         void c
       }
@@ -325,6 +327,20 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
     document.addEventListener('visibilitychange', onVis)
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [detect, source])
+
+  const releaseManualOverride = useCallback(() => {
+    isManualRef.current = false
+    if (manualResetTimerRef.current) {
+      window.clearTimeout(manualResetTimerRef.current)
+      manualResetTimerRef.current = null
+    }
+  }, [])
+
+  // User-initiated rescan: intentionally lifts the sticky manual override.
+  const refresh = useCallback(() => {
+    releaseManualOverride()
+    detect()
+  }, [detect, releaseManualOverride])
 
   const value = useMemo<LocationValue>(
     () => ({
@@ -334,12 +350,12 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
       accuracy,
       source,
       isFallback: source !== 'gps',
-      refresh: detect,
+      refresh,
       locateHighAccuracy,
       setManualLocation,
       setAddress,
     }),
-    [coords, address, status, accuracy, source, detect, locateHighAccuracy, setManualLocation, setAddress],
+    [coords, address, status, accuracy, source, refresh, locateHighAccuracy, setManualLocation, setAddress],
   )
 
   return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>

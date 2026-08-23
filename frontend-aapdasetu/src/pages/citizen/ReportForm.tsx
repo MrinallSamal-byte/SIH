@@ -123,21 +123,13 @@ export default function ReportForm() {
     }
   }
 
-  // Auto-open the location-correction modal while only a fallback estimate is
-  // available — submission stays blocked until a real location is confirmed.
-  useEffect(() => {
-    if (!hasTrustedFix) {
-      setEditPoint(coords ? { lat: coords.latitude, lng: coords.longitude } : null)
-      setEditAddressText(detectedAddress || '')
-      setShowLocationModal(true)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasTrustedFix])
-
   const applyManualLocation = () => {
-    if (editPoint) {
-      const point = editPoint
-      const addrText = editAddressText.trim()
+    const addrText = editAddressText.trim()
+    // Saving must always yield a trusted fix (manual source) or submission
+    // stays locked — typed-address-only confirms fall back to the current
+    // context fix as the pinned point instead of skipping setManualLocation.
+    const point = editPoint ?? (coords ? { lat: coords.latitude, lng: coords.longitude } : null)
+    if (point) {
       setCustomPoint(point)
       if (addrText) {
         setGpsAddress(addrText)
@@ -147,8 +139,8 @@ export default function ReportForm() {
         setManualLocation(point)
         reverseGeocode(point).then((addr) => { if (addr) setGpsAddress(addr) })
       }
-    } else if (editAddressText.trim()) {
-      setAddress(editAddressText.trim())
+    } else if (addrText) {
+      setAddress(addrText)
       setCustomPoint(null)
     }
     setShowLocationModal(false)
@@ -749,7 +741,8 @@ export default function ReportForm() {
         </div>
       </form>
 
-      {/* Location Correction Modal — required while only a fallback estimate exists */}
+      {/* Location Correction Modal — opened on demand from the warning strip
+          or a blocked submit, never auto-opened on mount */}
       <Modal
         open={showLocationModal}
         title={t('sos.modalTitle')}

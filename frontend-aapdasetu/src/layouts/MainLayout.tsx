@@ -108,7 +108,7 @@ export default function MainLayout() {
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifRead, setNotifRead] = useState(true)
   const notifRef = useRef<HTMLDivElement>(null)
-  const [tickerDismissed, setTickerDismissed] = useState(false)
+  const [tickerDismissedId, setTickerDismissedId] = useState<string | null>(null)
 
   // Global offline outbox sync — flushes queued reports/SOS when connectivity
   // returns. Module is idempotent (StrictMode double-invoke safe); cleanup on
@@ -145,13 +145,25 @@ export default function MainLayout() {
 
   useEffect(() => {
     let active = true
-    listAlerts().then((data) => {
-      if (active) {
-        setBulletins(data)
-        if (data.length > 0) setNotifRead(false)
-      }
-    }).catch(() => {})
-    return () => { active = false }
+    let cancelled = false
+    const loadBulletins = () => {
+      listAlerts().then((data) => {
+        if (active && !cancelled) {
+          // Defensive: a malformed feed payload must never poison render state
+          const list = Array.isArray(data) ? data : []
+          setBulletins(list)
+          if (list.length > 0) setNotifRead(false)
+        }
+      }).catch(() => {})
+    }
+    loadBulletins()
+    // Keep the ticker + notification bell fresh without hammering the API.
+    const id = window.setInterval(loadBulletins, 45_000)
+    return () => {
+      cancelled = true
+      active = false
+      window.clearInterval(id)
+    }
   }, [])
 
   // Track online/offline status
@@ -433,8 +445,9 @@ export default function MainLayout() {
         )}
       </header>
 
-      {/* Critical Alert Ticker — only while an unresolved critical bulletin exists */}
-      {criticalBulletin && !tickerDismissed && (
+      {/* Critical Alert Ticker — only while an unresolved critical bulletin exists.
+          Dismissal is keyed to the alert id so a NEW critical bulletin re-shows it. */}
+      {criticalBulletin && criticalBulletin.id !== tickerDismissedId && (
         <div className="bg-red-600 px-4 py-2 text-white shadow-sm" role="alert">
           <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2 text-xs">
@@ -454,7 +467,7 @@ export default function MainLayout() {
               </Link>
               <button
                 type="button"
-                onClick={() => setTickerDismissed(true)}
+                onClick={() => setTickerDismissedId(criticalBulletin.id)}
                 aria-label={t('ticker.dismiss')}
                 className="rounded-md p-1 transition hover:bg-red-500/70"
               >

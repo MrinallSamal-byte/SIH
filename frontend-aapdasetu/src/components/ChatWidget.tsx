@@ -24,7 +24,7 @@ export function openChatWidget() {
 
 export default function ChatWidget() {
   const { toast } = useToast()
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const { coords } = useGeoLocation()
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<PfaChatMessage[]>([])
@@ -74,7 +74,9 @@ export default function ChatWidget() {
     try {
       const res = await aiPfaChat(
         text,
-        updatedMessages.map((m) => ({ role: m.role, content: m.content }))
+        updatedMessages.map((m) => ({ role: m.role, content: m.content })),
+        'Friend',
+        lang
       )
       setMessages((prev) => [
         ...prev,
@@ -337,15 +339,15 @@ export default function ChatWidget() {
           {/* Quick Prompts */}
           <div className="flex gap-1.5 overflow-x-auto border-t border-slate-100 bg-slate-50 px-3 py-1.5 dark:border-slate-800 dark:bg-slate-950">
             {[
-              { label: t('chat.qWater'), text: 'Flood water is entering the building fast' },
-              { label: t('chat.qWound'), text: 'Someone has deep bleeding wound' },
-              { label: t('chat.qDebris'), text: 'Help, someone is trapped under collapsed wall' },
-              { label: t('chat.qEvac'), text: 'Where is the nearest safe shelter route?' },
+              { label: t('chat.qWater'), text: t('chat.qWaterMsg') },
+              { label: t('chat.qWound'), text: t('chat.qWoundMsg') },
+              { label: t('chat.qDebris'), text: t('chat.qDebrisMsg') },
+              { label: t('chat.qEvac'), text: t('chat.qShelterMsg') },
             ].map((qp, idx) => (
               <button
                 key={idx}
                 type="button"
-                onClick={() => send(qp.label)}
+                onClick={() => send(qp.text)}
                 disabled={busy}
                 className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[10px] font-semibold text-slate-700 shadow-xs hover:bg-slate-100 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300 cursor-pointer"
               >

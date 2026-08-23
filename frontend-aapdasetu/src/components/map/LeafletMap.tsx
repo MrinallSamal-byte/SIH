@@ -1,5 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
-import { MapContainer, Marker, Polygon, Polyline, Popup, TileLayer, useMap, ScaleControl } from 'react-leaflet'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  CircleMarker,
+  MapContainer,
+  Marker,
+  Polygon,
+  Polyline,
+  Popup,
+  TileLayer,
+  ZoomControl,
+  useMap,
+  ScaleControl,
+} from 'react-leaflet'
 import L from 'leaflet'
 import { Layers, Globe, Mountain, Map as MapIcon, Moon } from 'lucide-react'
 import type { GeoPoint } from '../../types'
@@ -41,19 +52,23 @@ export const INDIA_BOUNDS: [[number, number], [number, number]] = [
 ]
 export const INDIA_CENTER: GeoPoint = { lat: 22.0, lng: 79.0 }
 
-export type MapLayerMode = 'satellite' | 'terrain' | 'streets' | 'dark'
+/** Above this many markers, switch from DOM divIcons to canvas CircleMarkers */
+export const CANVAS_MARKER_THRESHOLD = 80
 
-const MAP_LAYERS: Record<
-  MapLayerMode,
-  {
-    name: string
-    url: string
-    attribution: string
-    subdomains: string | string[]
-    overlayUrl?: string
-    overlayAttribution?: string
-  }
-> = {
+export type MapLayerMode = 'satellite' | 'streets' | 'osm' | 'terrain' | 'dark'
+
+interface LayerDef {
+  name: string
+  url: string
+  attribution: string
+  subdomains: string | string[]
+  /** only true for providers whose URLs contain the {r} placeholder */
+  retina?: boolean
+  overlayUrl?: string
+  overlayAttribution?: string
+}
+
+const MAP_LAYERS: Record<MapLayerMode, LayerDef> = {
   satellite: {
     name: 'Satellite',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -62,16 +77,25 @@ const MAP_LAYERS: Record<
     overlayUrl: 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
     overlayAttribution: 'Labels &copy; Esri',
   },
+  // Fast global CDN, clean look — default basemap
   streets: {
-    name: 'Streets (OSM)',
+    name: 'Streets (Voyager)',
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd',
+    retina: true,
+  },
+  osm: {
+    name: 'Classic OSM',
     url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     subdomains: 'abc',
   },
+  // OpenTopoMap throttles hard under load — Esri World Topo is fast and global
   terrain: {
-    name: 'Terrain',
-    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-    attribution: 'Map data &copy; OpenStreetMap contributors, SRTM | &copy; OpenTopoMap (CC-BY-SA)',
+    name: 'Terrain (Esri Topo)',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri',
     subdomains: 'abc',
   },
   dark: {
@@ -79,18 +103,35 @@ const MAP_LAYERS: Record<
     url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
     subdomains: 'abcd',
+    retina: true,
   },
 }
 
-function markerIcon(color: string, isSos = false, isShelter = false, selected = false) {
+// Stable icon instances: react-leaflet diffs the icon prop by reference, so a
+// fresh L.divIcon per render destroys/re-adds every DOM marker. Cache instead.
+const ICON_CACHE = new Map<string, L.DivIcon>()
+
+function iconCacheKey(color: string, isSos: boolean, isShelter: boolean, selected: boolean) {
+  return `${color}|${isSos ? 1 : 0}|${isShelter ? 1 : 0}|${selected ? 1 : 0}`
+}
+
+function markerIcon(color: string, isSos = false, isShelter = false, selected = false): L.DivIcon {
+  const key = iconCacheKey(color, isSos, isShelter, selected)
+  const cached = ICON_CACHE.get(key)
+  if (cached) return cached
+
+  let icon: L.DivIcon
+
   if (isSos) {
     const size = selected ? 44 : 32
     const core = selected ? 24 : 18
-    return L.divIcon({
+    // Infinite ping animation ONLY on the selected marker — one compositing
+    // layer beats hundreds of animated layers during zoom.
+    icon = L.divIcon({
       className: '',
       html: `
         <div style="position:relative;display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;">
-          <div style="position:absolute;width:${size}px;height:${size}px;border-radius:50%;background:#ef4444;opacity:${selected ? '0.75' : '0.6'};animation:ping 1s cubic-bezier(0,0,0.2,1) infinite;"></div>
+          <div style="position:absolute;width:${size}px;height:${size}px;border-radius:50%;background:#ef4444;opacity:${selected ? '0.75' : '0.6'};${selected ? 'animation:apd-ping 1s cubic-bezier(0,0,0.2,1) infinite;' : ''}"></div>
           ${
             selected
               ? `<div style="position:absolute;width:${core + 12}px;height:${core + 12}px;border-radius:50%;border:3px solid rgba(220,38,38,0.55);"></div>`
@@ -104,12 +145,10 @@ function markerIcon(color: string, isSos = false, isShelter = false, selected = 
       iconSize: [size, size],
       iconAnchor: [size / 2, size / 2],
     })
-  }
-
-  if (isShelter) {
+  } else if (isShelter) {
     const size = selected ? 34 : 28
     const box = selected ? 30 : 24
-    return L.divIcon({
+    icon = L.divIcon({
       className: '',
       html: `
         <div style="position:relative;display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;">
@@ -121,20 +160,72 @@ function markerIcon(color: string, isSos = false, isShelter = false, selected = 
       iconSize: [size, size],
       iconAnchor: [size / 2, size / 2],
     })
+  } else {
+    const size = selected ? 30 : 22
+    const dotSize = selected ? 22 : 16
+    icon = L.divIcon({
+      className: '',
+      html: `
+        <div style="position:relative;display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;">
+          <div style="width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:${selected ? `0 0 0 3px rgba(59,130,246,0.45), ` : ''}0 2px 6px rgba(0,0,0,0.5);"></div>
+        </div>
+      `,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+    })
   }
 
-  const size = selected ? 30 : 22
-  const dotSize = selected ? 22 : 16
-  return L.divIcon({
-    className: '',
-    html: `
-      <div style="position:relative;display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;">
-        <div style="width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:${selected ? `0 0 0 3px rgba(59,130,246,0.45), ` : ''}0 2px 6px rgba(0,0,0,0.5);"></div>
-      </div>
-    `,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-  })
+  ICON_CACHE.set(key, icon)
+  return icon
+}
+
+const EMPTY_ACTIONS: MapPopupAction[] = []
+
+function MarkerPopupContent({
+  title,
+  subtitle,
+  actions,
+}: {
+  title: string
+  subtitle?: string
+  actions: MapPopupAction[]
+}) {
+  return (
+    <div className="min-w-[180px] p-1">
+      <div className="text-sm font-bold text-slate-900">{title}</div>
+      {subtitle && <div className="mt-0.5 text-xs text-slate-600 leading-tight">{subtitle}</div>}
+      {actions.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {actions.map((action) => (
+            <button
+              key={action.label}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                action.onClick()
+              }}
+              className="rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-bold text-white transition hover:bg-slate-700 cursor-pointer"
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Removes the bulky "Leaflet" prefix so the control stays compact */
+function CompactAttribution() {
+  const map = useMap()
+  useEffect(() => {
+    try {
+      map.attributionControl?.setPrefix('')
+    } catch {
+      // attribution control unavailable
+    }
+  }, [map])
+  return null
 }
 
 function MapController({
@@ -157,6 +248,7 @@ function MapController({
   const map = useMap()
   const hasFittedRef = useRef(false)
   const lastCenterRef = useRef(`${center?.lat?.toFixed(4) ?? '0'},${center?.lng?.toFixed(4) ?? '0'}`)
+  const lastFitSigRef = useRef<string | null>(null)
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -185,28 +277,39 @@ function MapController({
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [map])
 
-  // 1. Fit bounds on mount or when points change
+  // 1. Fit bounds on mount or when the underlying geometry actually changes.
+  // Polling parents recreate the markers array every tick — refitting on every
+  // poll yanks the viewport, so compare a cheap signature before fitting.
   useEffect(() => {
     const safeMarkers = markers ?? []
     const safePolygons = polygons ?? []
     const safePolylines = polylines ?? []
 
+    const points: GeoPoint[] = [
+      ...safeMarkers.map((m) => m?.position).filter((p): p is GeoPoint => Boolean(p && typeof p.lat === 'number' && typeof p.lng === 'number')),
+      ...safePolygons.flatMap((p) => p?.points ?? []).filter((p): p is GeoPoint => Boolean(p && typeof p.lat === 'number' && typeof p.lng === 'number')),
+      ...safePolylines.flatMap((p) => p?.points ?? []).filter((p): p is GeoPoint => Boolean(p && typeof p.lat === 'number' && typeof p.lng === 'number')),
+    ]
+
     if (
       (!hasFittedRef.current || autoFit) &&
       (safeMarkers.length > 0 || safePolygons.length > 0 || safePolylines.length > 0)
     ) {
-      const points: GeoPoint[] = [
-        ...safeMarkers.map((m) => m?.position).filter((p): p is GeoPoint => Boolean(p && typeof p.lat === 'number' && typeof p.lng === 'number')),
-        ...safePolygons.flatMap((p) => p?.points ?? []).filter((p): p is GeoPoint => Boolean(p && typeof p.lat === 'number' && typeof p.lng === 'number')),
-        ...safePolylines.flatMap((p) => p?.points ?? []).filter((p): p is GeoPoint => Boolean(p && typeof p.lat === 'number' && typeof p.lng === 'number')),
-      ]
-      if (points.length > 1) {
+      const lats = points.map((pt) => pt.lat)
+      const lngs = points.map((pt) => pt.lng)
+      const sig =
+        points.length <= 1
+          ? ''
+          : `${points.length}:${Math.min(...lats).toFixed(3)},${Math.max(...lats).toFixed(3)},${Math.min(...lngs).toFixed(3)},${Math.max(...lngs).toFixed(3)}`
+      const shouldFit = !hasFittedRef.current || (autoFit && sig !== lastFitSigRef.current)
+      if (shouldFit && points.length > 1) {
         try {
           map.fitBounds(
             points.map((pt) => [pt.lat, pt.lng] as [number, number]),
             { padding: [40, 40], maxZoom: 15 },
           )
           hasFittedRef.current = true
+          lastFitSigRef.current = sig
         } catch {
           // fitBounds may fail if bounds are zero-area or map is unmounted
         }
@@ -250,7 +353,7 @@ export default function LeafletMap({
   polylines = [],
   height = '420px',
   autoFit = false,
-  defaultLayer = 'satellite',
+  defaultLayer = 'streets',
   popupActions,
   selectedId = null,
 }: {
@@ -289,6 +392,87 @@ export default function LeafletMap({
 
   const currentLayer = MAP_LAYERS[layerMode]
 
+  // Rebuild the marker element tree only when inputs genuinely change — parent
+  // polling recreates arrays but the contents stay equal, so memoize on refs.
+  const visibleMarkers = useMemo(
+    () =>
+      (markers ?? []).filter(
+        (m) =>
+          m &&
+          m.position &&
+          typeof m.position.lat === 'number' &&
+          typeof m.position.lng === 'number',
+      ),
+    [markers],
+  )
+
+  const useCanvas = visibleMarkers.length > CANVAS_MARKER_THRESHOLD
+
+  // On canvas, draw order == paint order, so put the selected circle last.
+  const orderedCanvasMarkers = useMemo(() => {
+    if (!useCanvas || selectedId == null) return visibleMarkers
+    return [...visibleMarkers].sort(
+      (a, b) => (a.id === selectedId ? 1 : 0) - (b.id === selectedId ? 1 : 0),
+    )
+  }, [useCanvas, visibleMarkers, selectedId])
+
+  const domMarkers = useMemo(
+    () =>
+      useCanvas
+        ? []
+        : visibleMarkers.map((m) => {
+            const isSelected = selectedId != null && m.id === selectedId
+            return (
+              <Marker
+                key={m.id}
+                position={[m.position.lat, m.position.lng]}
+                icon={markerIcon(m.color ?? '#3b82f6', m.isSos, m.isShelter, isSelected)}
+                zIndexOffset={isSelected ? 1000 : 0}
+              >
+                <Popup>
+                  <MarkerPopupContent
+                    title={m.title}
+                    subtitle={m.subtitle}
+                    actions={m.popupActions ?? popupActions ?? EMPTY_ACTIONS}
+                  />
+                </Popup>
+              </Marker>
+            )
+          }),
+    [useCanvas, visibleMarkers, selectedId, popupActions],
+  )
+
+  const canvasMarkers = useMemo(
+    () =>
+      useCanvas
+        ? orderedCanvasMarkers.map((m) => {
+            const isSelected = selectedId != null && m.id === selectedId
+            return (
+              <CircleMarker
+                key={m.id}
+                center={[m.position.lat, m.position.lng]}
+                radius={isSelected ? 9 : 7}
+                pathOptions={{
+                  fillColor: m.color ?? '#3b82f6',
+                  fillOpacity: 0.95,
+                  color: '#ffffff',
+                  weight: 2,
+                }}
+              >
+                <Popup>
+                  <MarkerPopupContent
+                    title={m.title}
+                    subtitle={m.subtitle}
+                    actions={m.popupActions ?? popupActions ?? EMPTY_ACTIONS}
+                  />
+                </Popup>
+              </CircleMarker>
+            )
+          })
+        : [],
+    [useCanvas, orderedCanvasMarkers, selectedId, popupActions],
+  )
+
   return (
     <div className="relative w-full overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs" style={{ height }}>
       {/* Floating Realistic Layer Selector Switcher */}
@@ -320,19 +504,6 @@ export default function LeafletMap({
 
             <button
               type="button"
-              onClick={() => selectLayer('terrain')}
-              className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
-                layerMode === 'terrain'
-                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                  : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-              }`}
-            >
-              <Mountain className="h-3.5 w-3.5" />
-              <span>Topographic Terrain</span>
-            </button>
-
-            <button
-              type="button"
               onClick={() => selectLayer('streets')}
               className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
                 layerMode === 'streets'
@@ -341,7 +512,33 @@ export default function LeafletMap({
               }`}
             >
               <MapIcon className="h-3.5 w-3.5" />
-              <span>Street Map</span>
+              <span>Streets (Voyager)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => selectLayer('osm')}
+              className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
+                layerMode === 'osm'
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                  : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+              }`}
+            >
+              <MapIcon className="h-3.5 w-3.5" />
+              <span>Classic OSM</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => selectLayer('terrain')}
+              className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
+                layerMode === 'terrain'
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                  : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+              }`}
+            >
+              <Mountain className="h-3.5 w-3.5" />
+              <span>Terrain (Esri Topo)</span>
             </button>
 
             <button
@@ -368,27 +565,38 @@ export default function LeafletMap({
         maxBounds={INDIA_BOUNDS}
         maxBoundsViscosity={1.0}
         worldCopyJump={false}
-        attributionControl={false}
+        preferCanvas
+        zoomControl={false}
         style={{ height: '100%', width: '100%', zIndex: 1 }}
       >
         <ScaleControl position="bottomleft" imperial={false} />
+        <ZoomControl position="bottomright" />
+        <CompactAttribution />
+
         {/* Base Layer */}
         <TileLayer
           key={layerMode}
-          attribution=""
+          attribution={currentLayer.attribution}
           url={currentLayer.url}
           subdomains={currentLayer.subdomains || 'abc'}
           maxZoom={19}
+          keepBuffer={4}
+          updateWhenIdle={false}
+          updateWhenZooming={false}
+          detectRetina={currentLayer.retina === true}
         />
 
         {/* Optional Satellite Labels/Boundaries Overlay */}
         {currentLayer.overlayUrl && (
           <TileLayer
             key={`${layerMode}-overlay`}
-            attribution=""
+            attribution={currentLayer.overlayAttribution ?? ''}
             url={currentLayer.overlayUrl}
             subdomains="abc"
             maxZoom={19}
+            keepBuffer={4}
+            updateWhenIdle={false}
+            updateWhenZooming={false}
           />
         )}
 
@@ -449,50 +657,8 @@ export default function LeafletMap({
           ))}
 
         {/* Interactive Markers */}
-        {(markers ?? [])
-          .filter(
-            (m) =>
-              m &&
-              m.position &&
-              typeof m.position.lat === 'number' &&
-              typeof m.position.lng === 'number',
-          )
-          .map((m) => {
-            const isSelected = selectedId != null && m.id === selectedId
-            const actions = m.popupActions ?? popupActions ?? []
-            return (
-              <Marker
-                key={m.id}
-                position={[m.position.lat, m.position.lng]}
-                icon={markerIcon(m.color ?? '#3b82f6', m.isSos, m.isShelter, isSelected)}
-                zIndexOffset={isSelected ? 1000 : 0}
-              >
-                <Popup>
-                  <div className="min-w-[180px] p-1">
-                    <div className="text-sm font-bold text-slate-900">{m.title}</div>
-                    {m.subtitle && <div className="mt-0.5 text-xs text-slate-600 leading-tight">{m.subtitle}</div>}
-                    {actions.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {actions.map((action) => (
-                          <button
-                            key={action.label}
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              action.onClick()
-                            }}
-                            className="rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-bold text-white transition hover:bg-slate-700 cursor-pointer"
-                          >
-                            {action.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </Popup>
-              </Marker>
-            )
-          })}
+        {canvasMarkers}
+        {domMarkers}
       </MapContainer>
     </div>
   )

@@ -21,6 +21,16 @@ export default function AssignedTasks() {
 
   const activeVolunteerId = localStorage.getItem('aapdasetu_volunteer_session')
 
+  const statusLabel = useCallback(
+    (status: string) =>
+      status === 'pending'
+        ? t('rp.filterPending', 'Pending Triage')
+        : status === 'in_progress'
+          ? t('rp.filterInProgress', 'In Progress')
+          : t('rp.filterResolved', 'Resolved'),
+    [t],
+  )
+
   const loadTasks = useCallback(async () => {
     try {
       const reports = await listReports({ status: 'in_progress' })
@@ -43,7 +53,7 @@ export default function AssignedTasks() {
     setUpdatingId(reportId)
     try {
       await updateReport(reportId, { status: nextStatus, resolutionNotes: notes })
-      toast(`${t('vt.taskUpdated')}: ${nextStatus.toUpperCase()}`, 'success')
+      toast(`${t('vt.taskUpdated')}: ${statusLabel(nextStatus)}`, 'success')
       setResolveTarget(null)
       setResolutionNotes('')
       loadTasks()
@@ -85,7 +95,7 @@ export default function AssignedTasks() {
                 <PriorityBadge label={task.priorityLabel} />
                 <span className="font-mono text-xs font-bold text-slate-400 dark:text-slate-500">{task.trackingId}</span>
                 <span className="text-sm font-bold capitalize">{task.type} {t('vt.emergency')}</span>
-                <Badge value={task.status} />
+                <Badge value={task.status} label={statusLabel(task.status)} />
                 <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">{timeAgo(task.createdAt)}</span>
               </div>
 

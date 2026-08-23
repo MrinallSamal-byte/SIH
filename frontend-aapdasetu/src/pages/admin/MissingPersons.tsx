@@ -244,7 +244,7 @@ export default function MissingPersons() {
       {previewPhoto && (
         <Modal open title={t('mp_admin.modalPhotoTitle')} onClose={() => setPreviewPhoto(null)}>
           <div className="flex flex-col items-center">
-            <img src={previewPhoto} alt="Preview" className="max-h-96 w-auto rounded-xl object-contain shadow-md" />
+            <img src={previewPhoto} alt={t('missing.previewAlt', 'Preview')} className="max-h-96 w-auto rounded-xl object-contain shadow-md" />
             <Button variant="secondary" className="mt-4" onClick={() => setPreviewPhoto(null)}>
               {t('mp_admin.btnClosePreview')}
             </Button>

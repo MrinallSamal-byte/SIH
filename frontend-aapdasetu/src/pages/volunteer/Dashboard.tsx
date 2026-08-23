@@ -41,6 +41,16 @@ export default function Dashboard() {
     load()
   }, [load])
 
+  const statusLabel = useCallback(
+    (status: string) =>
+      status === 'on_duty'
+        ? t('vd.onDuty', 'On Duty')
+        : status === 'offline'
+          ? t('vl.statusOffline', 'Off Duty / Offline')
+          : t('vd.available', 'Available'),
+    [t],
+  )
+
   const selectVolunteerProfile = (id: string) => {
     const matched = allVolunteers.find((v) => v.id === id)
     if (matched) {
@@ -60,7 +70,7 @@ export default function Dashboard() {
     try {
       const updated = await updateVolunteer(volunteer.id, { status: next })
       setVolunteer(updated)
-      toast(`${t('vd.dutyStatusNow')}: ${updated.status.toUpperCase()}`, 'success')
+      toast(`${t('vd.dutyStatusNow')}: ${statusLabel(updated.status)}`, 'success')
     } catch (err) {
       toast(err instanceof Error ? err.message : t('vd.statusUpdateFailed'), 'error')
     }
@@ -96,7 +106,7 @@ export default function Dashboard() {
             >
               {allVolunteers.map((v) => (
                 <option key={v.id} value={v.id}>
-                  {v.name} ({v.status})
+                  {v.name} ({statusLabel(v.status)})
                 </option>
               ))}
             </select>

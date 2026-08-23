@@ -38,6 +38,17 @@ function truncateForCsv(value: string | undefined, max: number): string {
 export default function Reports() {
   const { t } = useLanguage()
   const { toast } = useToast()
+
+  const statusLabel = useCallback(
+    (status: string) =>
+      status === 'pending'
+        ? t('rp.filterPending', 'Pending Triage')
+        : status === 'in_progress'
+          ? t('rp.filterInProgress', 'In Progress')
+          : t('rp.filterResolved', 'Resolved'),
+    [t],
+  )
+
   const [statusFilter, setStatusFilter] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
@@ -363,7 +374,7 @@ export default function Reports() {
                     </span>
                   </div>
                 </td>
-                <td className="px-4 py-3"><Badge value={r.status} /></td>
+                <td className="px-4 py-3"><Badge value={r.status} label={statusLabel(r.status)} /></td>
                 <td className="px-4 py-3 text-xs max-w-[200px] truncate text-slate-700 dark:text-slate-300">
                   {r.landmark ?? (r.latitude ? `${r.latitude.toFixed(4)}, ${r.longitude?.toFixed(4)}` : t('rp.gpsRecord'))}
                 </td>

@@ -61,23 +61,37 @@ export function useRealtime<T>(
     // 1. Initial fetch
     execute()
 
-    // 2. Periodic polling interval
-    let id = setInterval(execute, getAdaptiveInterval())
+    // 2. Periodic polling interval — always (re)started via startPolling so the
+    //    adaptive cadence is recomputed from live connection state, never reused stale.
+    let id: ReturnType<typeof setInterval> | undefined
+
+    const startPolling = () => {
+      if (id !== undefined) clearInterval(id)
+      id = setInterval(execute, getAdaptiveInterval())
+    }
+
+    startPolling()
 
     // 3. Recompute cadence when network conditions change mid-session
     const connection = getConnection()
     const handleConnectionChange = () => {
-      clearInterval(id)
-      id = setInterval(execute, getAdaptiveInterval())
+      startPolling()
     }
     if (typeof connection?.addEventListener === 'function') {
       connection.addEventListener('change', handleConnectionChange)
     }
 
-    // 4. Tab visibility awareness
+    // 4. Tab visibility awareness — fully stop polling while hidden, and on resume
+    //    fetch immediately + restart with a freshly computed adaptive interval.
     const handleVisibility = () => {
-      if (!document.hidden) {
+      if (document.hidden) {
+        if (id !== undefined) {
+          clearInterval(id)
+          id = undefined
+        }
+      } else {
         execute()
+        startPolling()
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
@@ -89,7 +103,7 @@ export function useRealtime<T>(
 
     return () => {
       cancelled = true
-      clearInterval(id)
+      if (id !== undefined) clearInterval(id)
       document.removeEventListener('visibilitychange', handleVisibility)
       if (typeof connection?.removeEventListener === 'function') {
         connection.removeEventListener('change', handleConnectionChange)

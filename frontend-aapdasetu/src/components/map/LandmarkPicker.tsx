@@ -12,19 +12,19 @@ const INDIA_BOUNDS: [[number, number], [number, number]] = [
 ]
 const DEFAULT_CENTER: GeoPoint = { lat: 22.5726, lng: 88.3639 }
 
-function pickIcon() {
-  return L.divIcon({
-    className: '',
-    html: `
-      <div style="position:relative;display:flex;align-items:center;justify-content:center;width:32px;height:32px;">
-        <div style="position:absolute;width:32px;height:32px;border-radius:50%;background:#3b82f6;opacity:0.35;animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></div>
-        <div style="width:20px;height:20px;border-radius:50%;background:#2563eb;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.6)"></div>
-      </div>
-    `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-  })
-}
+// Stable instance — react-leaflet diffs the icon prop by reference, so a fresh
+// L.divIcon per render would re-add the draggable marker on every render.
+const PIN_ICON = L.divIcon({
+  className: '',
+  html: `
+    <div style="position:relative;display:flex;align-items:center;justify-content:center;width:32px;height:32px;">
+      <div style="position:absolute;width:32px;height:32px;border-radius:50%;background:#3b82f6;opacity:0.35;"></div>
+      <div style="width:20px;height:20px;border-radius:50%;background:#2563eb;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.6)"></div>
+    </div>
+  `,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+})
 
 function MapInteractions({ onPick }: { onPick: (p: GeoPoint) => void }) {
   useMapEvents({
@@ -232,16 +232,20 @@ export default function LandmarkPicker({
         >
           <ScaleControl position="bottomleft" imperial={false} />
           <TileLayer
-            attribution=""
+            attribution="&copy; <a href=&quot;https://www.openstreetmap.org/copyright&quot;>OpenStreetMap</a> contributors &copy; <a href=&quot;https://carto.com/attributions&quot;>CARTO</a>"
             url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
             subdomains="abcd"
+            detectRetina
+            keepBuffer={4}
+            updateWhenIdle={false}
+            updateWhenZooming={false}
           />
           <MapInteractions onPick={handleMapPick} />
           {view && <Recenter target={view.target} zoom={view.zoom} />}
           {value && typeof value.lat === 'number' && typeof value.lng === 'number' && (
             <Marker
               position={[value.lat, value.lng]}
-              icon={pickIcon()}
+              icon={PIN_ICON}
               draggable
               eventHandlers={{
                 dragend: async (e) => {

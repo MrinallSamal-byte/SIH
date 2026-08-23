@@ -43,3 +43,6 @@ __pycache__/
 # Coverage
 coverage/
 *.lcov
+
+vite-dev.log
+SOS-project with bolt/

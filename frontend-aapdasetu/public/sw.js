@@ -12,13 +12,22 @@ const STATIC_ASSETS = [
 // Basemap tile hosts cached cache-first so maps render offline (FIFO capped).
 const TILE_HOST_PATTERN = /^([abc]\.)?tile\.openstreetmap\.org$|^tile\.opentopomap\.org$|^([abcd]\.)?basemaps\.cartocdn\.com$/
 const TILE_CACHE_LIMIT = 300
+const API_CACHE_LIMIT = 100
 
-function trimTileCache(cache) {
+function trimCacheFifo(cache, limit) {
   return cache.keys().then((keys) => {
-    if (keys.length <= TILE_CACHE_LIMIT) return undefined
-    const excess = keys.slice(0, keys.length - TILE_CACHE_LIMIT)
+    if (keys.length <= limit) return undefined
+    const excess = keys.slice(0, keys.length - limit)
     return Promise.all(excess.map((key) => cache.delete(key)))
   })
+}
+
+function trimTileCache(cache) {
+  return trimCacheFifo(cache, TILE_CACHE_LIMIT)
+}
+
+function trimApiCache(cache) {
+  return trimCacheFifo(cache, API_CACHE_LIMIT)
 }
 
 self.addEventListener('install', (event) => {
@@ -52,7 +61,15 @@ self.addEventListener('sync', (event) => {
   if (event.tag !== 'aapdasetu-outbox') return
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      clientList.forEach((client) => client.postMessage({ type: 'OUTBOX_FLUSH' }))
+      clientList.forEach((client) => {
+        // A client can close between matchAll() and postMessage — never let
+        // that reject the waitUntil promise.
+        try {
+          client.postMessage({ type: 'OUTBOX_FLUSH' })
+        } catch (_) {
+          // client gone — page-side initGlobalOutboxSync covers next launch
+        }
+      })
       return new Promise((resolve) => setTimeout(resolve, 3000))
     })
   )
@@ -72,9 +89,13 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
+          // Cache ONLY complete same-origin 200s — never error/opaque bodies.
           if (response && response.status === 200) {
             const copy = response.clone()
-            caches.open(API_CACHE_NAME).then((cache) => cache.put(event.request, copy))
+            caches
+              .open(API_CACHE_NAME)
+              .then((cache) => cache.put(event.request, copy))
+              .then(() => caches.open(API_CACHE_NAME).then(trimApiCache))
           }
           return response
         })

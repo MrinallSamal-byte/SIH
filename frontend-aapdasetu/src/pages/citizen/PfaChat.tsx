@@ -17,19 +17,19 @@ import { useGeoLocation } from '../../hooks/useLocation'
 import type { PfaChatMessage } from '../../types'
 
 const promptShortcuts = [
-  { labelKey: 'pfa.topicFlood', query: 'Water is entering our house rapidly. What are our immediate flood survival actions?' },
-  { labelKey: 'pfa.topicBleeding', query: 'How to administer emergency first-aid for severe arterial bleeding?' },
-  { labelKey: 'pfa.topicPanic', query: 'I am having intense panic and fear during this disaster. Guide me to calm down.' },
-  { labelKey: 'pfa.topicTrapped', query: 'We are trapped under collapsed concrete debris. What should we do to survive and signal rescuers?' },
-  { labelKey: 'pfa.topicCardiac', query: 'Someone is having severe chest pain and breathing distress. What should I do immediately?' },
-  { labelKey: 'pfa.topicElectrical', query: 'Fallen power lines in standing water. What electrical safety rules should we follow?' },
-  { labelKey: 'pfa.topicSnakebite', query: 'Someone was bitten by a snake in flood water. What is the immediate first-aid protocol?' },
-  { labelKey: 'pfa.topicFire', query: 'Dense smoke and fire blocking exit. How should we evacuate safely?' },
+  { labelKey: 'pfa.topicFlood', queryKey: 'chat.qFlood' },
+  { labelKey: 'pfa.topicBleeding', queryKey: 'chat.qBleeding' },
+  { labelKey: 'pfa.topicPanic', queryKey: 'chat.qPanic' },
+  { labelKey: 'pfa.topicTrapped', queryKey: 'chat.qTrapped' },
+  { labelKey: 'pfa.topicCardiac', queryKey: 'chat.qCardiac' },
+  { labelKey: 'pfa.topicElectrical', queryKey: 'chat.qElectric' },
+  { labelKey: 'pfa.topicSnakebite', queryKey: 'chat.qSnakebite' },
+  { labelKey: 'pfa.topicFire', queryKey: 'chat.qFire' },
 ]
 
 export default function PfaChatPage() {
   const { toast } = useToast()
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const { coords } = useGeoLocation()
   const [messages, setMessages] = useState<PfaChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -88,7 +88,9 @@ export default function PfaChatPage() {
     try {
       const res = await aiPfaChat(
         text,
-        updatedMessages.map((m) => ({ role: m.role, content: m.content }))
+        updatedMessages.map((m) => ({ role: m.role, content: m.content })),
+        'Friend',
+        lang
       )
       setMessages((prev) => [
         ...prev,
@@ -345,7 +347,7 @@ export default function PfaChatPage() {
             <button
               key={ps.labelKey}
               type="button"
-              onClick={() => send(ps.query)}
+              onClick={() => send(t(ps.queryKey))}
               className="shrink-0 rounded-xl border border-zinc-200/80 bg-[#f4f4f5] px-3 py-1.5 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-100 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300"
             >
               {t(ps.labelKey)}

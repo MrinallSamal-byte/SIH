@@ -1208,6 +1208,73 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'tracker.teamAssigned': 'Response team assigned',
     'service.alertsTag': 'Live Alerts',
     'service.checkinTag': 'Family Safety',
+    'chat.qFlood': 'Water is entering our house rapidly. What are our immediate flood survival actions?',
+    'chat.qBleeding': 'How to administer emergency first-aid for severe arterial bleeding?',
+    'chat.qPanic': 'I am having intense panic and fear during this disaster. Guide me to calm down.',
+    'chat.qTrapped': 'We are trapped under collapsed concrete debris. What should we do to survive and signal rescuers?',
+    'chat.qCardiac': 'Someone is having severe chest pain and breathing distress. What should I do immediately?',
+    'chat.qElectric': 'Fallen power lines in standing water. What electrical safety rules should we follow?',
+    'chat.qSnakebite': 'Someone was bitten by a snake in flood water. What is the immediate first-aid protocol?',
+    'chat.qFire': 'Dense smoke and fire blocking exit. How should we evacuate safely?',
+    'chat.qWaterMsg': 'Flood water is entering the building fast',
+    'chat.qWoundMsg': 'Someone has deep bleeding wound',
+    'chat.qDebrisMsg': 'Help, someone is trapped under collapsed wall',
+    'chat.qShelterMsg': 'Where is the nearest safe shelter route?',
+    'sh.nearest': 'Nearest',
+    'sh.sortNearest': 'Nearest first',
+    'sh.sortCapacity': 'Most capacity',
+    'sh.locateOnMap': 'Show on map',
+    'sh.statOpen': 'open',
+    'sh.statFull': 'full',
+    'sh.statClosed': 'closed',
+    'sh.clearSearch': 'Clear search',
+    'sh.noResultsTitle': 'No shelters matched your filters',
+    'sh.noResultsDesc': 'Try different keywords or clear the search and facility filters.',
+    'sh.resetFilters': 'Reset search & filters',
+    'sh.offlineSnapshot': 'You are offline — showing last synced shelter data.',
+    'sos.queuedOnDevice': 'Saved on device — will send automatically when you reconnect.',
+    'sos.autoDescription': '1-Tap SOS distress trigger',
+    'damage.photoAlt': 'Damage photo',
+    'adminOps.demoHint': 'Backend unreachable — showing demo data',
+    'adminOps.liveHint': 'Receiving live backend data',
+    'adminOps.unknownHint': 'No backend sync yet in this session',
+    'adminOps.online': 'Online',
+    'adminOps.offline': 'Offline',
+    'adminOps.lastSync': 'Sync',
+    'adminOps.shortcutsTitle': 'Keyboard shortcuts (?)',
+    'adminOps.shortcutsHeading': 'Keyboard Shortcuts',
+    'adminOps.closeShortcuts': 'Close shortcuts',
+    'adminOps.scHelp': 'Toggle this cheat sheet',
+    'adminOps.scSearch': 'Focus search',
+    'adminOps.scEscape': 'Close dialogs',
+    'adminOps.agoSeconds': '{n}s ago',
+    'adminOps.agoMinutes': '{n}m ago',
+    'adminOps.agoHours': '{n}h ago',
+    'adminOps.agoDays': '{n}d ago',
+    'ls.armedMutedUntilInteraction': 'Armed — muted until interaction',
+    'ls.armedMutedHint': 'Armed — audio stays muted until you interact with the page',
+    'ls.disableSirenHint': 'Click to disable siren',
+    'ls.testSiren': 'Test',
+    'ls.testSirenHint': 'Play one siren cycle',
+    'ls.muteSiren': 'Silence',
+    'ls.mutedUntilNextRed': 'Muted until next RED',
+    'ls.popupAcknowledge': 'Acknowledge',
+    'ls.popupNavigate': 'Navigate',
+    'ls.reportedAgo': 'Reported {t}',
+    'rp.exportCsv': 'Export CSV',
+    'rp.selectAllPage': 'Select all on page',
+    'rp.selectRow': 'Select',
+    'rp.selected': 'selected',
+    'rp.markInProgress': 'Mark In Progress',
+    'rp.markResolved': 'Mark Resolved',
+    'rp.working': 'Working…',
+    'rp.clearSelection': 'Clear selection',
+    'rp.csvExported': 'CSV exported',
+    'rp.bulkUpdated': 'incident(s) updated',
+    'rp.bulkFailed': 'failed',
+    'au.exportCsv': 'Export CSV',
+    'au.sortByTime': 'Toggle time sort',
+    'dm.photoAlt': 'Damage photo',
   },
   hi: {
     'about.feature1Desc': 'एक टैप में अपनी GPS स्थिति के साथ आपदा कमांडरों को तुरंत सतर्क करें।',
@@ -2399,6 +2466,73 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'tracker.teamAssigned': 'रेस्पॉन्स टीम नियुक्त की गई है',
     'service.alertsTag': 'लाइव चेतावनियां',
     'service.checkinTag': 'परिवार की सुरक्षा',
+    'chat.qFlood': 'पानी तेज़ी से हमारे घर में भर रहा है। बाढ़ में जान बचाने के लिए हमें अभी क्या करना चाहिए?',
+    'chat.qBleeding': 'गंभीर धमनी रक्तस्राव के लिए आपातकालीन प्राथमिक चिकित्सा कैसे दें?',
+    'chat.qPanic': 'इस आपदा के दौरान मुझे तेज़ घबराहट और डर हो रहा है। मुझे शांत होने का तरीका बताएं।',
+    'chat.qTrapped': 'हम गिरी हुई कंक्रीट के मलबे के नीचे फंसे हैं। बचने और बचावकर्ताओं को संकेत देने के लिए हमें क्या करना चाहिए?',
+    'chat.qCardiac': 'किसी को तेज़ छाती दर्द और सांस लेने में तकलीफ़ हो रही है। मुझे तुरंत क्या करना चाहिए?',
+    'chat.qElectric': 'जमे हुए पानी में गिरी हुई बिजली की लाइनें। हमें कौन-से बिजली सुरक्षा नियम मानने चाहिए?',
+    'chat.qSnakebite': 'बाढ़ के पानी में किसी को सांप ने काट लिया है। तुरंत की जाने वाली प्राथमिक चिकित्सा क्या है?',
+    'chat.qFire': 'घना धुआँ और आग रास्ता रोक रही है। हम सुरक्षित निकासी कैसे करें?',
+    'chat.qWaterMsg': 'बाढ़ का पानी तेज़ी से इमारत में भर रहा है',
+    'chat.qWoundMsg': 'किसी को गहरा खून बहता घाव है',
+    'chat.qDebrisMsg': 'मदद, कोई गिरी हुई दीवार के नीचे फंसा है',
+    'chat.qShelterMsg': 'निकटतम सुरक्षित आश्रय का रास्ता क्या है?',
+    'sh.nearest': 'सबसे नज़दीक',
+    'sh.sortNearest': 'निकटतम पहले',
+    'sh.sortCapacity': 'अधिकतम क्षमता',
+    'sh.locateOnMap': 'नक्शे पर देखें',
+    'sh.statOpen': 'खुले',
+    'sh.statFull': 'भरे हुए',
+    'sh.statClosed': 'बंद',
+    'sh.clearSearch': 'खोज साफ़ करें',
+    'sh.noResultsTitle': 'कोई आश्रय फ़िल्टर से मेल नहीं खाया',
+    'sh.noResultsDesc': 'अलग शब्द आज़माएं या खोज और सुविधा फ़िल्टर हटाएं।',
+    'sh.resetFilters': 'खोज और फ़िल्टर रीसेट करें',
+    'sh.offlineSnapshot': 'आप ऑफ़लाइन हैं — अंतिम सिंक किया गया आश्रय डेटा दिख रहा है।',
+    'sos.queuedOnDevice': 'डिवाइस में सुरक्षित है — नेटवर्क लौटते ही स्वयं भेज दिया जाएगा।',
+    'sos.autoDescription': '1-टैप SOS संकट सूचना',
+    'damage.photoAlt': 'क्षति की फ़ोटो',
+    'adminOps.demoHint': 'बैकएंड अनुपलब्ध — डेमो डेटा दिखाया जा रहा है',
+    'adminOps.liveHint': 'लाइव बैकएंड डेटा प्राप्त हो रहा है',
+    'adminOps.unknownHint': 'इस सत्र में अभी कोई बैकएंड सिंक नहीं हुआ',
+    'adminOps.online': 'ऑनलाइन',
+    'adminOps.offline': 'ऑफ़लाइन',
+    'adminOps.lastSync': 'सिंक',
+    'adminOps.shortcutsTitle': 'कीबोर्ड शॉर्टकट (?)',
+    'adminOps.shortcutsHeading': 'कीबोर्ड शॉर्टकट',
+    'adminOps.closeShortcuts': 'शॉर्टकट बंद करें',
+    'adminOps.scHelp': 'यह शॉर्टकट सूची खोलें/बंद करें',
+    'adminOps.scSearch': 'खोज पर फ़ोकस करें',
+    'adminOps.scEscape': 'डायलॉग बंद करें',
+    'adminOps.agoSeconds': '{n}s पहले',
+    'adminOps.agoMinutes': '{n}m पहले',
+    'adminOps.agoHours': '{n}h पहले',
+    'adminOps.agoDays': '{n}d पहले',
+    'ls.armedMutedUntilInteraction': 'चालू — इंटरैक्शन तक मौन',
+    'ls.armedMutedHint': 'चालू — पेज पर इंटरैक्ट करने तक ऑडियो मौन रहेगा',
+    'ls.disableSirenHint': 'सायरन बंद करने के लिए क्लिक करें',
+    'ls.testSiren': 'टेस्ट',
+    'ls.testSirenHint': 'सायरन का एक चक्र बजाएं',
+    'ls.muteSiren': 'मौन करें',
+    'ls.mutedUntilNextRed': 'अगले RED तक मौन',
+    'ls.popupAcknowledge': 'स्वीकार करें',
+    'ls.popupNavigate': 'नेविगेट करें',
+    'ls.reportedAgo': 'रिपोर्ट: {t}',
+    'rp.exportCsv': 'CSV निर्यात करें',
+    'rp.selectAllPage': 'पेज के सभी चुनें',
+    'rp.selectRow': 'चुनें',
+    'rp.selected': 'चयनित',
+    'rp.markInProgress': 'प्रगति में चिह्नित करें',
+    'rp.markResolved': 'समाधान चिह्नित करें',
+    'rp.working': 'कार्यरत…',
+    'rp.clearSelection': 'चयन हटाएं',
+    'rp.csvExported': 'CSV निर्यात हो गया',
+    'rp.bulkUpdated': 'घटना(एँ) अपडेट हुईं',
+    'rp.bulkFailed': 'विफल',
+    'au.exportCsv': 'CSV निर्यात करें',
+    'au.sortByTime': 'समय क्रम बदलें',
+    'dm.photoAlt': 'क्षति फोटो',
   },
   bn: {
     'about.feature1Desc': 'একটি ট্যাপে আপনার GPS অবস্থান সহ দুর্যোগ কমান্ডারদের সতর্ক করুন।',
@@ -3590,6 +3724,73 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'tracker.teamAssigned': 'উদ্ধারকারী দল নিয়োগ করা হয়েছে',
     'service.alertsTag': 'লাইভ সতর্কতা',
     'service.checkinTag': 'পরিবারের নিরাপত্তা',
+    'chat.qFlood': 'জল দ্রুত আমাদের বাড়িতে ঢুকছে। বন্যায় প্রাণ বাঁচাতে আমাদের এখনই কী করা উচিত?',
+    'chat.qBleeding': 'গুরুতর ধমনী রক্তক্ষরণের জন্য জরুরি প্রাথমিক চিকিৎসা কীভাবে দেব?',
+    'chat.qPanic': 'এই দুর্যোগের সময় আমার প্রবল আতঙ্ক ও ভয় লাগছে। শান্ত হতে আমাকে গাইড করুন।',
+    'chat.qTrapped': 'আমরা ভেঙে পড়া কংক্রিটের ধ্বংসাবশেষের নিচে আটকে আছি। বাঁচতে ও উদ্ধারকারীদের সংকেত দিতে আমাদের কী করা উচিত?',
+    'chat.qCardiac': 'কারও তীব্র বুকে ব্যথা ও শ্বাসকষ্ট হচ্ছে। আমার এখনই কী করা উচিত?',
+    'chat.qElectric': 'জমে থাকা পানিতে পড়ে থাকা বিদ্যুতের তার। আমাদের কোন বৈদ্যুতিক নিরাপত্তা নিয়ম মানা উচিত?',
+    'chat.qSnakebite': 'বন্যার জলে কাউকে সাপ কামড়েছে। এখনই করণীয় প্রাথমিক চিকিৎসার নিয়ম কী?',
+    'chat.qFire': 'ঘন ধোঁয়া ও আগুন রাস্তা বন্ধ করে দিয়েছে। আমরা কীভাবে নিরাপদে সরে যাব?',
+    'chat.qWaterMsg': 'বন্যার জল দ্রুত ভবনে ঢুকছে',
+    'chat.qWoundMsg': 'কারও গভীর রক্তক্ষরণের ক্ষত হয়েছে',
+    'chat.qDebrisMsg': 'সাহায্য, কেউ ভেঙে পড়া দেয়ালের নিচে আটকে আছে',
+    'chat.qShelterMsg': 'নিকটতম নিরাপদ আশ্রয়ের পথ কোথায়?',
+    'sh.nearest': 'সবচেয়ে নিকটতম',
+    'sh.sortNearest': 'নিকটতম প্রথমে',
+    'sh.sortCapacity': 'সর্বাধিক ক্ষমতা',
+    'sh.locateOnMap': 'ম্যাপে দেখুন',
+    'sh.statOpen': 'খোলা',
+    'sh.statFull': 'পূর্ণ',
+    'sh.statClosed': 'বন্ধ',
+    'sh.clearSearch': 'খোঁজা মুছুন',
+    'sh.noResultsTitle': 'কোনো আশ্রয় ফিল্টারের সাথে মেলেনি',
+    'sh.noResultsDesc': 'ভিন্ন শব্দ চেষ্টা করুন বা খোঁজা ও সুবিধার ফিল্টার সরিয়ে দিন।',
+    'sh.resetFilters': 'খোঁজা ও ফিল্টার রিসেট করুন',
+    'sh.offlineSnapshot': 'আপনি অফলাইনে আছেন — সর্বশেষ সিঙ্ক করা আশ্রয়ের তথ্য দেখানো হচ্ছে।',
+    'sos.queuedOnDevice': 'ডিভাইসে সংরক্ষিত আছে — ইন্টারনেট ফিরলে স্বয়ংক্রিয়ভাবে পাঠানো হবে।',
+    'sos.autoDescription': '১-ট্যাপ SOS বিপদ সংবাদ',
+    'damage.photoAlt': 'ক্ষতির ছবি',
+    'adminOps.demoHint': 'ব্যাকএন্ড অ্যাক্সেসযোগ্য নয় — ডেমো ডেটা দেখানো হচ্ছে',
+    'adminOps.liveHint': 'লাইভ ব্যাকএন্ড ডেটা গৃহীত হচ্ছে',
+    'adminOps.unknownHint': 'এই সেশনে এখনও কোনো ব্যাকএন্ড সিঙ্ক হয়নি',
+    'adminOps.online': 'অনলাইন',
+    'adminOps.offline': 'অফলাইন',
+    'adminOps.lastSync': 'সিঙ্ক',
+    'adminOps.shortcutsTitle': 'কীবোর্ড শর্টকাট (?)',
+    'adminOps.shortcutsHeading': 'কীবোর্ড শর্টকাট',
+    'adminOps.closeShortcuts': 'শর্টকাট বন্ধ করুন',
+    'adminOps.scHelp': 'এই শর্টকাট তালিকা খুলুন/বন্ধ করুন',
+    'adminOps.scSearch': 'সার্চে ফোকাস করুন',
+    'adminOps.scEscape': 'ডায়ালগ বন্ধ করুন',
+    'adminOps.agoSeconds': '{n}s আগে',
+    'adminOps.agoMinutes': '{n}m আগে',
+    'adminOps.agoHours': '{n}h আগে',
+    'adminOps.agoDays': '{n}d আগে',
+    'ls.armedMutedUntilInteraction': 'সক্রিয় — ইন্টারঅ্যাকশন পর্যন্ত নীরব',
+    'ls.armedMutedHint': 'সক্রিয় — পেজে ইন্টারঅ্যাক্ট করা পর্যন্ত অডিও নীরব থাকবে',
+    'ls.disableSirenHint': 'সাইরেন বন্ধ করতে ক্লিক করুন',
+    'ls.testSiren': 'টেস্ট',
+    'ls.testSirenHint': 'সাইরেনের একটি চক্র বাজান',
+    'ls.muteSiren': 'নীরব করুন',
+    'ls.mutedUntilNextRed': 'পরবর্তী RED পর্যন্ত নীরব',
+    'ls.popupAcknowledge': 'স্বীকার করুন',
+    'ls.popupNavigate': 'নেভিগেট করুন',
+    'ls.reportedAgo': 'রিপোর্ট: {t}',
+    'rp.exportCsv': 'CSV এক্সপোর্ট করুন',
+    'rp.selectAllPage': 'পেজের সব নির্বাচন করুন',
+    'rp.selectRow': 'নির্বাচন করুন',
+    'rp.selected': 'নির্বাচিত',
+    'rp.markInProgress': 'চলমান হিসেবে চিহ্নিত করুন',
+    'rp.markResolved': 'সমাধান হিসেবে চিহ্নিত করুন',
+    'rp.working': 'কাজ চলছে…',
+    'rp.clearSelection': 'নির্বাচন মুছুন',
+    'rp.csvExported': 'CSV এক্সপোর্ট হয়েছে',
+    'rp.bulkUpdated': 'ঘটনা আপডেট হয়েছে',
+    'rp.bulkFailed': 'ব্যর্থ',
+    'au.exportCsv': 'CSV এক্সপোর্ট করুন',
+    'au.sortByTime': 'সময় ক্রম পরিবর্তন করুন',
+    'dm.photoAlt': 'ক্ষতির ছবি',
   },
   or: {
     'about.feature1Desc': 'ଏକ ଟ୍ୟାପରେ ଆପଣଙ୍କ GPS ସ୍ଥାନ ସହ ବିପଦ କମାଣ୍ଡରମାନଙ୍କୁ ସତର୍କ କରନ୍ତୁ।',
@@ -4781,6 +4982,73 @@ const dictionaries: Record<Language, Record<string, string>> = {
     'tracker.teamAssigned': 'ପ୍ରତିକ୍ରିୟା ଟିମ୍ ନିୟୋଜିତ ହୋଇଛି',
     'service.alertsTag': 'ଲାଇଭ୍ ସତର୍କତା',
     'service.checkinTag': 'ପରିବାର ସୁରକ୍ଷା',
+    'chat.qFlood': 'ପାଣି ଶୀଘ୍ର ଶୀଘ୍ର ଆମ ଘରକୁ ଭରିପାରୁଛି। ବନ୍ୟାରେ ଜୀବନ ବଞ୍ଚାଇବା ପାଇଁ ଆମେ ଏବେ କଣ କରିବା ଉଚିତ?',
+    'chat.qBleeding': 'ଗୁରୁତର ଧମନୀ ରକ୍ତସ୍ରାବ ପାଇଁ ଜରୁରୀକାଳୀନ ପ୍ରାଥମିକ ଚିକିତ୍ସା କିପରି ଦେବା?',
+    'chat.qPanic': 'ଏହି ବିପର୍ଯ୍ୟୟ ସମযରେ ମୋର ପ୍ରବଳ ଆତଙ୍କ ଓ ଭୟ ଲାଗୁଛି। ଶାନ୍ତ ହେବା ପାଇଁ ମୋତେ ଗାଇଡ୍ କରନ୍ତୁ।',
+    'chat.qTrapped': 'ଆମେ ଭାଙ୍ଗିପଡ଼ିଥିବା କଂକ୍ରିଟ୍ ମଳବା ତଳେ ଫସି ପଡ଼ିଛୁ। ବଞ୍ଚିବା ଓ ଉଦ୍ଧାରକର୍ମୀଙ୍କୁ ସଂକେତ ଦେବା ପାଇଁ ଆମେ କଣ କରିବା ଉଚିତ?',
+    'chat.qCardiac': 'କାହାକୁ ପ୍ରବଳ ଛାତି ଯନ୍ତ୍ରଣା ଏବଂ ଶ୍ୱାସ କଷ୍ଟ ହେଉଛି। ମୁଁ ଏବେ ତୁରନ୍ତ କଣ କରିବା ଉଚିତ?',
+    'chat.qElectric': 'ଜମା ପାଣିରେ ପଡ଼ିଥିବା ବିଦ୍ୟୁତ୍ ତାର। ଆମେ କେଉଁ ବିଦ୍ୟୁତ୍ ସୁରକ୍ଷା ନିୟମ ମାନିବା ଉଚିତ?',
+    'chat.qSnakebite': 'ବନ୍ୟା ପାଣିରେ କାହାକୁ ସାପ କାମୁଡ଼ିଛି। ଏବେ ତୁରନ୍ତ କରିବାକୁ ହେଉଥିବା ପ୍ରାଥମିକ ଚିକିତ୍ସା କଣ?',
+    'chat.qFire': 'ଘନ ଧୂଆଁ ଓ ନିଆଁ ରାସ୍ତା ଅଟକାଉଛି। ଆମେ କିପରି ସୁରକ୍ଷିତ ଭାବେ ବାହାରିପାରିବା?',
+    'chat.qWaterMsg': 'ବନ୍ୟା ପାଣି ଶୀଘ୍ର ଶୀଘ୍ର ଗୃହକୁ ଭରିପାରୁଛି',
+    'chat.qWoundMsg': 'କାହାର ଗଭୀର ରକ୍ତସ୍ରାବ କ୍ଷତ ହୋଇଛି',
+    'chat.qDebrisMsg': 'ସହାୟତା, କେହି ଭାଙ୍ଗିପଡ଼ିଥିବା ଦେଉଳି ତଳେ ଫସି ପଡ଼ିଛି',
+    'chat.qShelterMsg': 'ନିକଟତମ ସୁରକ୍ଷିତ ଆଶ୍ରୟ ରାସ୍ତା କେଉଁଠି?',
+    'sh.nearest': 'ନିକଟତମ',
+    'sh.sortNearest': 'ନିକଟତମ ପ୍ରଥମେ',
+    'sh.sortCapacity': 'ସର୍ବାଧିକ କ୍ଷମତା',
+    'sh.locateOnMap': 'ମାନଚିତ୍ରରେ ଦେଖନ୍ତୁ',
+    'sh.statOpen': 'ଖୋଲା',
+    'sh.statFull': 'ପୂର୍ଣ୍ଣ',
+    'sh.statClosed': 'ବନ୍ଦ',
+    'sh.clearSearch': 'ଖୋଜା ସଫା କରନ୍ତୁ',
+    'sh.noResultsTitle': 'କୌଣସି ଆଶ୍ରୟ ଫିଲ୍ଟର ସହିଁ ମେଳ ଖାଇଲା ନାହିଁ',
+    'sh.noResultsDesc': 'ଭିନ୍ନ ଶବ୍ଦ ଚେଷ୍ଟା କରନ୍ତୁ କିମ୍ବା ଖୋଜା ଓ ସୁବିଧା ଫିଲ୍ଟର ହଟାନ୍ତୁ।',
+    'sh.resetFilters': 'ଖୋଜା ଓ ଫିଲ୍ଟର ରିସେଟ୍ କରନ୍ତୁ',
+    'sh.offlineSnapshot': 'ଆପଣ ଅଫଲାଇନ୍ ଅଛନ୍ତି — ସର୍ବଶେଷ ସିଙ୍କ ହୋଇଥିବା ଆଶ୍ରୟ ତଥ୍ୟ ଦେଖାଯାଉଛି।',
+    'sos.queuedOnDevice': 'ଡିଭାଇସରେ ସଂରକ୍ଷିତ — ନେଟୱାର୍କ ଫେରିବା ମାତ୍ରେ ସ୍ୱୟଂଚାଳିତ ଭାବରେ ପଠାଯିବ।',
+    'sos.autoDescription': '୧-ଟ୍ୟାପ SOS ବିପଦ ସୂଚନା',
+    'damage.photoAlt': 'କ୍ଷତିର ଫଟୋ',
+    'adminOps.demoHint': 'ବ୍ୟାକେଣ୍ଡ ଅନୁପଲବ୍ଧ — ଡେମୋ ଡାଟା ଦେଖାଯାଉଛି',
+    'adminOps.liveHint': 'ଲାଇଭ୍ ବ୍ୟାକେଣ୍ଡ ଡାଟା ଗୃହୀତ ହେଉଛି',
+    'adminOps.unknownHint': 'ଏହି ସେସନ୍‌ରେ ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ବ୍ୟାକେଣ୍ଡ ସିଙ୍କ ହୋଇନାହିଁ',
+    'adminOps.online': 'ଅନଲାଇନ୍',
+    'adminOps.offline': 'ଅଫଲାଇନ୍',
+    'adminOps.lastSync': 'ସିଙ୍କ',
+    'adminOps.shortcutsTitle': 'କିବୋର୍ଡ ଶର୍ଟକଟ୍ (?)',
+    'adminOps.shortcutsHeading': 'କିବୋର୍ଡ ଶର୍ଟକଟ୍',
+    'adminOps.closeShortcuts': 'ଶର୍ଟକଟ୍ ବନ୍ଦ କରନ୍ତୁ',
+    'adminOps.scHelp': 'ଏହି ଶର୍ଟକଟ୍ ତାଲିକା ଖୋଲନ୍ତୁ/ବନ୍ଦ କରନ୍ତୁ',
+    'adminOps.scSearch': 'ଖୋଜିବା ଉପରେ ଫୋକସ୍ କରନ୍ତୁ',
+    'adminOps.scEscape': 'ଡାଏଲଗ୍ ବନ୍ଦ କରନ୍ତୁ',
+    'adminOps.agoSeconds': '{n}s ପୂର୍ବେ',
+    'adminOps.agoMinutes': '{n}m ପୂର୍ବେ',
+    'adminOps.agoHours': '{n}h ପୂର୍ବେ',
+    'adminOps.agoDays': '{n}d ପୂର୍ବେ',
+    'ls.armedMutedUntilInteraction': 'ସକ୍ରିୟ — ଯୋଗାଯୋଗ ପର୍ଯ୍ୟନ୍ତ ନୀରବ',
+    'ls.armedMutedHint': 'ସକ୍ରିୟ — ପୃଷ୍ଠା ସହ ଯୋଗାଯୋଗ କରିବା ପର୍ଯ୍ୟନ୍ତ ଅଡିଓ ନୀରବ ରହିବ',
+    'ls.disableSirenHint': 'ସାଇରନ୍ ବନ୍ଦ କରିବା ପାଇଁ କ୍ଲିକ୍ କରନ୍ତୁ',
+    'ls.testSiren': 'ଟେଷ୍ଟ',
+    'ls.testSirenHint': 'ସାଇରନ୍‌ର ଗୋଟିଏ ଚକ୍ର ବଜାନ୍ତୁ',
+    'ls.muteSiren': 'ନୀରବ କରନ୍ତୁ',
+    'ls.mutedUntilNextRed': 'ପରବର୍ତ୍ତୀ RED ପର୍ଯ୍ୟନ୍ତ ନୀରବ',
+    'ls.popupAcknowledge': 'ସ୍ୱୀକାର କରନ୍ତୁ',
+    'ls.popupNavigate': 'ନେଭିଗେଟ୍ କରନ୍ତୁ',
+    'ls.reportedAgo': 'ରିପୋର୍ଟ: {t}',
+    'rp.exportCsv': 'CSV ଏକ୍ସପୋର୍ଟ କରନ୍ତୁ',
+    'rp.selectAllPage': 'ପୃଷ୍ଠାର ସବୁ ଚୟନ କରନ୍ତୁ',
+    'rp.selectRow': 'ଚୟନ କରନ୍ତୁ',
+    'rp.selected': 'ଚୟନିତ',
+    'rp.markInProgress': 'ପ୍ରଗତିରେ ଚିହ୍ନିତ କରନ୍ତୁ',
+    'rp.markResolved': 'ସମାଧାନ ଚିହ୍ନିତ କରନ୍ତୁ',
+    'rp.working': 'କାର୍ଯ୍ୟରତ…',
+    'rp.clearSelection': 'ଚୟନ ମୁକ୍ତ କରନ୍ତୁ',
+    'rp.csvExported': 'CSV ଏକ୍ସପୋର୍ଟ ହୋଇଗଲା',
+    'rp.bulkUpdated': 'ଘଟଣା ଅପଡେଟ୍ ହୋଇଛି',
+    'rp.bulkFailed': 'ବିଫଳ',
+    'au.exportCsv': 'CSV ଏକ୍ସପୋର୍ଟ କରନ୍ତୁ',
+    'au.sortByTime': 'ସମୟ କ୍ରମ ବଦଳାନ୍ତୁ',
+    'dm.photoAlt': 'କ୍ଷତି ଫୋଟୋ',
   },
 }
 
@@ -4794,26 +5062,60 @@ const LanguageContext = createContext<LanguageContextValue | null>(null)
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLang] = useState<Language>(() => {
-    const stored = localStorage.getItem('aapdasetu_lang')
-    if (stored === 'hi' || stored === 'or' || stored === 'bn' || stored === 'en') {
-      return stored as Language
+    // localStorage can throw (private mode / blocked storage) — never crash the provider.
+    let stored: string | null = null
+    try {
+      stored = localStorage.getItem('aapdasetu_lang')
+    } catch {
+      stored = null
+    }
+    // Normalize every historical value: canonical codes ('en'|'hi'|'bn'|'or'), legacy
+    // aliases ('hindi'|'bengali'|'odia'|…), and casing/whitespace variants must all
+    // resolve to the right language instead of silently resetting the device to English.
+    switch ((stored || '').trim().toLowerCase()) {
+      case 'en':
+      case 'english':
+        return 'en'
+      case 'hi':
+      case 'hindi':
+        return 'hi'
+      case 'bn':
+      case 'ben':
+      case 'bengali':
+        return 'bn'
+      case 'or':
+      case 'oriya':
+      case 'odia':
+        return 'or'
     }
     // First visit — auto-detect from browser locale preferences, else English.
-    const candidates =
-      typeof navigator !== 'undefined' && Array.isArray(navigator.languages) && navigator.languages.length > 0
-        ? navigator.languages
-        : [navigator.language]
+    let candidates: readonly (string | undefined)[] = []
+    if (typeof navigator !== 'undefined') {
+      try {
+        candidates =
+          Array.isArray(navigator.languages) && navigator.languages.length > 0
+            ? navigator.languages
+            : [navigator.language]
+      } catch {
+        candidates = []
+      }
+    }
     for (const candidate of candidates) {
-      const code = (candidate || '').toLowerCase()
+      const code = String(candidate ?? '').trim().toLowerCase()
       if (code.startsWith('hi')) return 'hi'
       if (code.startsWith('bn')) return 'bn'
       if (code.startsWith('or')) return 'or'
+      if (code.startsWith('en')) return 'en'
     }
     return 'en'
   })
 
   useEffect(() => {
-    localStorage.setItem('aapdasetu_lang', lang)
+    try {
+      localStorage.setItem('aapdasetu_lang', lang)
+    } catch {
+      // Persistence unavailable — in-memory language still applies for this session.
+    }
     document.documentElement.lang = lang
   }, [lang])
 

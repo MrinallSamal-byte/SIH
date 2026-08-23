@@ -4,6 +4,7 @@ import {
   createReport,
   createSafetyCheckin,
 } from '../api/endpoints'
+import { ApiError, OfflineError } from '../api/client'
 
 /**
  * Global offline submission outbox. Every citizen write (SOS, reports, etc.)
@@ -34,7 +35,10 @@ export interface FlushResult {
 
 const OUTBOX_KEY = 'aapdasetu_outbox_v1'
 const LEGACY_SOS_KEY = 'aapdasetu_pending_sos'
+const OUTBOX_LOCK_KEY = 'aapdasetu_outbox_lock'
+const OUTBOX_LOCK_TTL_MS = 30_000
 const MAX_ATTEMPTS = 5
+const MAX_FLUSH_PASSES = 10
 
 function readOutbox(): OutboxItem[] {
   try {
@@ -60,6 +64,32 @@ function writeOutbox(items: OutboxItem[]): void {
   } catch {
     // Storage blocked/full (private mode) — queue is best-effort only
   }
+  notifyOutboxListeners()
+}
+
+// ---- change notifications -----------------------------------------------------
+// Lets UI (e.g. the SOS queued-banner count) reflect the real queue without
+// polling. Listener errors must never break queue operations.
+type OutboxListener = () => void
+const outboxListeners = new Set<OutboxListener>()
+
+/** Subscribe to outbox mutations (enqueue/remove/attempt-bump). Returns an
+ * unsubscribe function. Safe to call multiple times. */
+export function subscribeOutbox(fn: OutboxListener): () => void {
+  outboxListeners.add(fn)
+  return () => {
+    outboxListeners.delete(fn)
+  }
+}
+
+function notifyOutboxListeners(): void {
+  outboxListeners.forEach((l) => {
+    try {
+      l()
+    } catch {
+      // ignore listener errors
+    }
+  })
 }
 
 function newId(): string {
@@ -106,29 +136,113 @@ function replayItem(item: OutboxItem): Promise<unknown> {
   }
 }
 
+// ---- cross-tab flush lock -------------------------------------------------------
+// The in-module single-flight promise only guards concurrent calls within one
+// tab; two tabs flushing simultaneously could double-send (both read the same
+// item before either removes it). This localStorage lock with a timestamp TTL
+// hands flushing to exactly one tab: verify-after-write picks the winner, and
+// a crashed tab's lock self-expires after OUTBOX_LOCK_TTL_MS.
+function parseLock(raw: string): { token?: unknown; ts?: unknown } | null {
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    return parsed && typeof parsed === 'object' ? (parsed as { token?: unknown; ts?: unknown }) : null
+  } catch {
+    return null
+  }
+}
+
+function acquireOutboxLock(): string | null {
+  try {
+    const raw = localStorage.getItem(OUTBOX_LOCK_KEY)
+    if (raw) {
+      const held = parseLock(raw)
+      // A fresh lock owned by another tab blocks us; stale or corrupt locks don't.
+      const fresh =
+        held !== null &&
+        typeof held.ts === 'number' &&
+        Date.now() - held.ts < OUTBOX_LOCK_TTL_MS &&
+        typeof held.token === 'string'
+      if (fresh) return null
+    }
+    const token = newId()
+    localStorage.setItem(OUTBOX_LOCK_KEY, JSON.stringify({ token, ts: Date.now() }))
+    // Read-back race check: if another tab wrote its own token after ours, it wins.
+    const confirmRaw = localStorage.getItem(OUTBOX_LOCK_KEY)
+    const confirmed = confirmRaw ? parseLock(confirmRaw) : null
+    return confirmed?.token === token ? token : null
+  } catch {
+    return null // storage unavailable — queue itself is unusable anyway
+  }
+}
+
+function releaseOutboxLock(token: string): void {
+  try {
+    const raw = localStorage.getItem(OUTBOX_LOCK_KEY)
+    if (!raw) return
+    const held = parseLock(raw)
+    if (held?.token === token) localStorage.removeItem(OUTBOX_LOCK_KEY)
+  } catch {
+    // ignore — TTL covers it
+  }
+}
+
+function isOffline(): boolean {
+  return typeof navigator !== 'undefined' && navigator.onLine === false
+}
+
 // Single-flight lock so mount/online/SW nudges never double-submit an SOS.
 let flushing: Promise<FlushResult> | null = null
 
 async function runFlush(): Promise<FlushResult> {
   try {
     // Never burn retry attempts while provably offline.
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-      return { synced: 0, failed: 0 }
-    }
+    if (isOffline()) return { synced: 0, failed: 0 }
+    const lockToken = acquireOutboxLock()
+    if (!lockToken) return { synced: 0, failed: 0 } // another tab owns the flush
+
     let synced = 0
     let failed = 0
-    for (const item of readOutbox()) {
-      if (item.attempts >= MAX_ATTEMPTS) continue // poison-pill guard: left queued, no longer retried
-      try {
-        await replayItem(item)
-        removeFromOutbox(item.id)
-        synced++
-      } catch {
-        failed++
-        writeOutbox(
-          readOutbox().map((i) => (i.id === item.id ? { ...i, attempts: i.attempts + 1 } : i)),
-        )
+    try {
+      // Re-snapshot each pass so items enqueued mid-flush are not stranded
+      // until the next online event. Extra passes only continue after real
+      // progress, so a downed backend can't hammer/burn attempts in a loop.
+      for (let pass = 0; pass < MAX_FLUSH_PASSES; pass++) {
+        const syncedBeforePass = synced
+        for (const original of readOutbox()) {
+          if (original.attempts >= MAX_ATTEMPTS) continue // poison-pill guard: left queued, no longer retried
+          // Persist the attempt bump BEFORE sending: a crash mid-send may
+          // cause one at-least-once resend, but can never retry forever.
+          writeOutbox(readOutbox().map((i) => (i.id === original.id ? { ...original, attempts: original.attempts + 1 } : i)))
+          try {
+            await replayItem(original)
+            removeFromOutbox(original.id)
+            synced++
+          } catch (err) {
+            if (err instanceof OfflineError || isOffline()) {
+              // Device dropped mid-flush: refund the attempt and stop — items
+              // stay queued at full budget for the next reconnect.
+              writeOutbox(readOutbox().map((i) => (i.id === original.id ? original : i)))
+              return { synced, failed }
+            }
+            failed++
+            if (
+              err instanceof ApiError &&
+              err.status >= 400 &&
+              err.status < 500 &&
+              err.status !== 408 &&
+              err.status !== 429
+            ) {
+              // Permanent rejection (validation/auth): retrying can never
+              // succeed — drop so it cannot clog the queue forever.
+              removeFromOutbox(original.id)
+              console.warn('[aapdasetu] outbox item permanently rejected, dropping:', original.kind, err.message)
+            }
+          }
+        }
+        if (synced === syncedBeforePass) break
       }
+    } finally {
+      releaseOutboxLock(lockToken)
     }
     return { synced, failed }
   } catch {
@@ -146,7 +260,23 @@ export function flushOutbox(): Promise<FlushResult> {
   return flushing
 }
 
-/** One-time migration of the old SOS-page-only queue into the global outbox. */
+/** One-time migration of the old SOS-page-only queue into the global outbox.
+ * Handles BOTH legacy shapes (single object or array) without throwing, and
+ * normalises old flat {latitude,longitude} payloads onto ReportInput's
+ * location{lat,lng} so coordinates survive the round-trip through
+ * createReport's reportBody mapping. */
+function normalizeLegacySosPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  const normalized = { ...payload }
+  if (
+    normalized.location === undefined &&
+    typeof normalized.latitude === 'number' &&
+    typeof normalized.longitude === 'number'
+  ) {
+    normalized.location = { lat: normalized.latitude, lng: normalized.longitude }
+  }
+  return normalized
+}
+
 function migrateLegacySosQueue(): void {
   try {
     const raw = localStorage.getItem(LEGACY_SOS_KEY)
@@ -155,7 +285,9 @@ function migrateLegacySosQueue(): void {
     const parsed = JSON.parse(raw) as unknown
     const queue = Array.isArray(parsed) ? parsed : [parsed]
     for (const payload of queue) {
-      if (payload && typeof payload === 'object') enqueueOutbox('sos', payload)
+      if (payload && typeof payload === 'object') {
+        enqueueOutbox('sos', normalizeLegacySosPayload(payload as Record<string, unknown>))
+      }
     }
   } catch {
     try {

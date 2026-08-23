@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ShieldAlert,
   AlertTriangle,
@@ -27,13 +27,20 @@ export default function Alerts() {
   const [filter, setFilter] = useState<string>('all')
   const { coords, source: locationSource } = useGeoLocation()
   const [userArea, setUserArea] = useState<string | null>(null)
+  const lastAreaFixRef = useRef<string>('')
   const userLat = coords?.latitude
   const userLng = coords?.longitude
 
   // Resolve the user's area once a real fix exists (any provenance except the
   // hardcoded default estimate) so region matching can highlight relevant alerts.
+  // The fix is quantized to a ~100m grid and de-duplicated — the GPS watch in
+  // the location context ticks continuously and would otherwise re-run this
+  // reverse geocode on every coordinate update.
   useEffect(() => {
     if (userLat == null || userLng == null || locationSource === 'default') return
+    const fixKey = `${userLat.toFixed(3)},${userLng.toFixed(3)}`
+    if (fixKey === lastAreaFixRef.current) return
+    lastAreaFixRef.current = fixKey
     let cancelled = false
     reverseGeocode({ lat: userLat, lng: userLng })
       .then((addr) => {

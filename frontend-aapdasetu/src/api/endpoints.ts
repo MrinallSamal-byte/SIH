@@ -495,6 +495,7 @@ export function adminLogin(email: string, password: string): Promise<{ token: st
         password,
       }).then((d) => ({ token: d.token, email: d.admin.email, name: d.admin.name })),
     () => ({ token: 'mock-token', email, name: 'Admin' }),
+    { allowDemoMock: true },
   )
 }
 
@@ -526,6 +527,7 @@ export function volunteerLogin(email: string, password: string): Promise<Volunte
         skills: found?.skills || ['search_rescue', 'medical'],
       }
     },
+    { allowDemoMock: true },
   )
 }
 

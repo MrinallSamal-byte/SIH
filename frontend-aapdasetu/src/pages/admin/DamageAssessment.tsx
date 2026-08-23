@@ -667,7 +667,7 @@ export default function DamageAssessment() {
                 <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-white/[0.1] max-h-56 bg-slate-950">
                   <img
                     src={selectedReport.photoUrl}
-                    alt="Damage"
+                    alt={t('dm.photoAlt', 'Damage photo')}
                     className="w-full h-full object-cover"
                   />
                 </div>

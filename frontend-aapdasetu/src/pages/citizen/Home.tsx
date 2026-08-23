@@ -101,7 +101,7 @@ export default function Home() {
   useEffect(() => {
     let active = true
     listAlerts()
-      .then((data: Alert[]) => { if (active) setActiveAlertCount(data.length) })
+      .then((data: Alert[]) => { if (active) setActiveAlertCount(Array.isArray(data) ? data.length : null) })
       .catch(() => {})
     listShelters('open')
       .then((data) => { if (active) setOpenShelterCount(Array.isArray(data) ? data.length : null) })

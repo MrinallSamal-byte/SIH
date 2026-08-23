@@ -259,7 +259,7 @@ export default function ReportDamage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
               {photos.map((p, idx) => (
                 <div key={idx} className="relative overflow-hidden rounded-xl border border-zinc-200/80 dark:border-white/[0.1] bg-slate-950">
-                  <img src={p} alt={`Damage ${idx + 1}`} className="h-32 w-full object-cover" />
+                  <img src={p} alt={`${t('damage.photoAlt')} ${idx + 1}`} className="h-32 w-full object-cover" />
                   <button type="button" onClick={() => removePhoto(idx)} className="absolute top-1.5 right-1.5 rounded-full bg-black/70 px-2 py-1 text-[10px] font-bold text-white hover:bg-red-600">
                     {t('common.remove')}
                   </button>
