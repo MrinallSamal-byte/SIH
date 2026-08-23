@@ -52,7 +52,7 @@ export function errorHandler(
     const statusMaybe = (err as Error & { status?: number }).status;
     if (statusMaybe && statusMaybe >= 400 && statusMaybe < 500) {
       status = statusMaybe;
-      message = err.message;
+      message = 'Request failed';
       code = 'HTTP_ERROR';
     }
   }
