@@ -17,7 +17,8 @@ import {
   Users,
   Bell,
   ShieldCheck,
-  Radio
+  Radio,
+  Smartphone
 } from 'lucide-react'
 import AapdaSetuLogo from '../components/common/AapdaSetuLogo'
 import ErrorBoundary from '../components/common/ErrorBoundary'
@@ -51,6 +52,7 @@ const featureNavItems: NavLinkItem[] = [
   { to: '/shelters', labelKey: 'nav.shelters' },
   { to: '/safe-routes', labelKey: 'nav.routes' },
   { to: '/missing-persons', labelKey: 'nav.missing' },
+  { to: '/app', labelKey: 'appdl.navLabel' },
 ]
 
 const featureIconMap: Record<string, typeof Siren> = {
@@ -63,6 +65,7 @@ const featureIconMap: Record<string, typeof Siren> = {
   '/shelters': Building,
   '/safe-routes': Compass,
   '/missing-persons': Users,
+  '/app': Smartphone,
 }
 
 // Bottom navigation items for mobile thumb reach

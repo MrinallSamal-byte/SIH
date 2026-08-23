@@ -13,7 +13,8 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  Radio
+  Radio,
+  Smartphone
 } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
 import { openChatWidget } from '../../components/ChatWidget'
@@ -87,6 +88,14 @@ const emergencyServices: ServiceCard[] = [
     descKey: 'service.pfaDesc',
     icon: Bot,
     action: 'chat',
+  },
+  {
+    to: '/app',
+    num: '08',
+    tagKey: 'appdl.cardTag',
+    titleKey: 'appdl.navLabel',
+    descKey: 'appdl.cardDesc',
+    icon: Smartphone,
   },
 ]
 
