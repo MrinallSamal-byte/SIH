@@ -9,13 +9,17 @@ export default function VolunteerLogin() {
   const { t } = useLanguage()
   const { login, loading, error } = useVolunteerAuth()
   const navigate = useNavigate()
-  const [email, setEmail] = useState('volunteer@aapdasetu.in')
-  const [password, setPassword] = useState('Volunteer@123')
+  const [phone, setPhone] = useState('')
+  const [accessCode, setAccessCode] = useState('')
+  // ponytail: backend auth is phone + shared access code; require 10-15 digits
+  const phoneDigits = phone.replace(/\D/g, '')
+  const canSubmit = phoneDigits.length >= 10 && phoneDigits.length <= 15 && accessCode.trim().length > 0
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    if (!canSubmit) return
     try {
-      await login(email, password)
+      await login(phoneDigits, accessCode)
       navigate('/volunteer')
     } catch {
       // error surfaced via useVolunteerAuth
@@ -27,7 +31,7 @@ export default function VolunteerLogin() {
       <div className="w-full max-w-sm">
         <form
           onSubmit={onSubmit}
-          className="rounded-2xl border border-slate-200 bg-white p-8 shadow-xs dark:border-slate-800 dark:bg-slate-900"
+          className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900"
         >
           <div className="flex items-center gap-2.5 mb-4">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 font-bold text-white text-sm">
@@ -47,27 +51,28 @@ export default function VolunteerLogin() {
             {t('volLogin.title')}
           </h1>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            {t('volLogin.subtitle')}
+            Sign in with your registered phone number and shared access code.
           </p>
 
           <div className="mt-6 space-y-4">
-            <Field label={t('volLogin.emailLabel')}>
+            <Field label="Phone Number">
               <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={t('volLogin.emailPlaceholder')}
-                autoComplete="username"
+                type="tel"
+                inputMode="numeric"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="e.g. 9876543210"
+                autoComplete="tel"
                 required
               />
             </Field>
 
-            <Field label={t('volLogin.passwordLabel')}>
+            <Field label="Access Code">
               <Input
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={t('volLogin.passwordPlaceholder')}
+                value={accessCode}
+                onChange={(e) => setAccessCode(e.target.value)}
+                placeholder="••••••••"
                 autoComplete="current-password"
                 required
               />
@@ -82,7 +87,7 @@ export default function VolunteerLogin() {
             <Button
               type="submit"
               className="w-full font-bold"
-              disabled={loading || !email.trim() || !password.trim()}
+              disabled={loading || !canSubmit}
             >
               {loading ? t('volLogin.authenticating') : t('volLogin.signIn')}
             </Button>

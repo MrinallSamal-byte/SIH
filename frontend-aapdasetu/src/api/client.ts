@@ -1,6 +1,7 @@
 import { config } from '../config'
 
 export const ADMIN_SESSION_KEY = 'aapdasetu_admin_session'
+export const VOLUNTEER_AUTH_KEY = 'aapdasetu_volunteer_auth'
 
 export class ApiError extends Error {
   constructor(
@@ -37,6 +38,17 @@ export function getAdminToken(): string | undefined {
     if (!raw) return undefined
     const session = JSON.parse(raw) as { token?: string }
     return session.token || undefined
+  } catch {
+    return undefined
+  }
+}
+
+function getVolunteerToken(): string | undefined {
+  try {
+    const raw = localStorage.getItem(VOLUNTEER_AUTH_KEY)
+    if (!raw) return undefined
+    const auth = JSON.parse(raw) as { token?: string }
+    return auth.token || undefined
   } catch {
     return undefined
   }
@@ -131,18 +143,26 @@ async function apiCall<T>(method: string, path: string, body?: unknown): Promise
 
   const headers: Record<string, string> = {}
   if (body !== undefined) headers['Content-Type'] = 'application/json'
-  const token = getAdminToken()
-  if (token && path.startsWith('/api/v1/admin')) headers.Authorization = `Bearer ${token}`
+  const adminToken = getAdminToken()
+  if (adminToken && path.startsWith('/api/v1/admin')) headers.Authorization = `Bearer ${adminToken}`
+  const volunteerToken = getVolunteerToken()
+  if (!headers.Authorization && volunteerToken && path.startsWith('/api/v1/volunteer'))
+    headers.Authorization = `Bearer ${volunteerToken}`
 
   const base = config.apiUrl.replace(/\/$/, '')
+  const bodyJson = body !== undefined ? JSON.stringify(body) : undefined
   let lastErr: unknown
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
-      const res = await fetchWithTimeout(`${base}${path}`, {
-        method,
-        headers,
-        body: body !== undefined ? JSON.stringify(body) : undefined,
-      })
+      const res = await fetchWithTimeout(
+        `${base}${path}`,
+        {
+          method,
+          headers,
+          body: bodyJson,
+        },
+        bodyJson && bodyJson.length > 1_000_000 ? 30_000 : undefined,
+      )
       const payload = (await res.json().catch(() => null)) as
         | { success: boolean; data?: T; error?: { message?: string } }
         | null
@@ -160,7 +180,8 @@ async function apiCall<T>(method: string, path: string, body?: unknown): Promise
         throw tagMutating(toFriendlyNetworkError(err))
       }
       if (err.status >= 400 && err.status < 500) throw tagMutating(err)
-      if (attempt === MAX_ATTEMPTS - 1) throw tagMutating(err)
+      // ponytail: retry only idempotent reads — a replayed POST could double-submit
+      if (attempt === MAX_ATTEMPTS - 1 || method.toUpperCase() !== 'GET') throw tagMutating(err)
       await new Promise((r) => setTimeout(r, 250))
     }
   }
@@ -246,7 +267,9 @@ export async function withMockFallback<T>(
 }
 
 // ---- snapshot cache (stale-while-revalidate) -----------------------------------
-const SNAPSHOT_PREFIX = 'aapdasetu:snapshot:'
+// ponytail: v2 prefix — legacy 'aapdasetu:snapshot:*' entries are ignored (never
+// read, overwritten on next write) and can be purged via clearSnapshots().
+const SNAPSHOT_PREFIX = 'aapdasetu:snapshot:v2:'
 
 /** Last persisted payload for an endpoint, or null. Lets list pages paint
  * instantly from the previous visit while a fresh fetch runs in background. */
@@ -266,6 +289,20 @@ export function writeSnapshot<T>(key: string, data: T): void {
     localStorage.setItem(SNAPSHOT_PREFIX + key, JSON.stringify(data))
   } catch {
     // Storage full/blocked — snapshots are best-effort only
+  }
+}
+
+/** Remove every cached snapshot written under the current prefix. */
+export function clearSnapshots(): void {
+  try {
+    const keys: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i)
+      if (k && k.startsWith(SNAPSHOT_PREFIX)) keys.push(k)
+    }
+    keys.forEach((k) => localStorage.removeItem(k))
+  } catch {
+    // Storage blocked — best-effort only
   }
 }
 

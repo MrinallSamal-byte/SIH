@@ -1,7 +1,6 @@
 /** Central error handler + 404 handler. */
 import type { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
-import { Prisma } from '@prisma/client';
 import { isHttpError } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
 
@@ -34,16 +33,17 @@ export function errorHandler(
     status = 400;
     message = 'Validation failed';
     code = 'VALIDATION_ERROR';
-    details = err.errors;
-  } else if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    details = err.errors.map((issue) => ({ path: issue.path.join('.'), message: issue.message }));
+  } else if (typeof (err as { code?: unknown }).code === 'string' && String((err as { code?: unknown }).code).startsWith('P')) {
     status = 400;
     code = 'DB_ERROR';
     message = 'Database request failed';
-    if (err.code === 'P2002') {
+    const prismaCode = String((err as { code?: unknown }).code);
+    if (prismaCode === 'P2002') {
       status = 409;
       code = 'DUPLICATE';
       message = 'A record with this value already exists';
-    } else if (err.code === 'P2025') {
+    } else if (prismaCode === 'P2025') {
       status = 404;
       code = 'NOT_FOUND';
       message = 'Record not found';

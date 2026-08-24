@@ -9,12 +9,14 @@
  * RED SOS events carry `highPriority: true` so the command center can raise sound alarms.
  */
 import { WebSocketServer, WebSocket } from 'ws';
-import type { Server } from 'http';
+import type { IncomingMessage, Server } from 'http';
 import { env } from '../config/env.js';
 import { logger } from '../lib/logger.js';
+import { verifyAdminToken } from '../lib/jwt.js';
 
 export type RealtimeEventType =
   | 'system:connected'
+  | 'error'
   | 'sos:new'
   | 'report:new'
   | 'report:update'
@@ -37,6 +39,7 @@ type Channel = 'admin' | 'public';
 
 interface ClientMeta {
   channels: Set<Channel>;
+  authHeader?: string;
 }
 
 export class RealtimeHub {
@@ -44,17 +47,31 @@ export class RealtimeHub {
   private clients = new Map<WebSocket, ClientMeta>();
 
   attach(server: Server, path = env.realtimePath): void {
-    this.wss = new WebSocketServer({ server, path });
+    this.wss = new WebSocketServer({ server, path, maxPayload: 256 * 1024 });
 
-    this.wss.on('connection', (socket) => {
-      const meta: ClientMeta = { channels: new Set(['public']) };
+    this.wss.on('connection', (socket: WebSocket, req: IncomingMessage) => {
+      const meta: ClientMeta = { channels: new Set(['public']), authHeader: req.headers.authorization };
       this.clients.set(socket, meta);
 
       socket.on('message', (raw) => {
         try {
           const msg = JSON.parse(raw.toString());
           if (msg && msg.action === 'subscribe' && Array.isArray(msg.channels)) {
-            meta.channels = new Set(msg.channels.filter((c: string) => c === 'admin' || c === 'public'));
+            const requested: string[] = msg.channels.filter(
+              (c: unknown): c is string => typeof c === 'string',
+            );
+            if (
+              requested.some((c) => c.startsWith('admin')) &&
+              !this.hasAdminAuth(msg.authorization ?? meta.authHeader)
+            ) {
+              this.send(socket, {
+                type: 'error',
+                payload: { message: 'Admin channel requires admin authorization' },
+                timestamp: new Date().toISOString(),
+              });
+              return;
+            }
+            meta.channels = new Set(requested.filter((c): c is Channel => c === 'admin' || c === 'public'));
             this.send(socket, {
               type: 'system:connected' as RealtimeEventType,
               payload: { channels: [...meta.channels] },
@@ -116,6 +133,27 @@ export class RealtimeHub {
       { type: 'alert:new', payload: alert, timestamp: new Date().toISOString() },
       'admin',
     );
+  }
+
+  private hasAdminAuth(header: unknown): boolean {
+    if (typeof header !== 'string' || !header.startsWith('Bearer ')) return false;
+    try {
+      const decoded = verifyAdminToken(header.slice('Bearer '.length).trim());
+      return decoded.role === 'admin';
+    } catch {
+      return false;
+    }
+  }
+
+  closeAll(): void {
+    for (const socket of this.clients.keys()) {
+      try {
+        socket.terminate();
+      } catch {
+        /* already gone */
+      }
+    }
+    this.clients.clear();
   }
 
   private send(socket: WebSocket, event: RealtimeEvent): void {

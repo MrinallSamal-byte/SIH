@@ -40,13 +40,15 @@ import java.util.UUID
 class NostrDirectMessageHandlerTest {
     private val gson = Gson()
     private lateinit var scope: CoroutineScope
+    private lateinit var mainDispatcher: UnconfinedTestDispatcher
     private lateinit var conversationRepository: ConversationRepository
     private lateinit var conversationDatabaseName: String
 
     @Before
     fun setUp() {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
-        scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        mainDispatcher = UnconfinedTestDispatcher()
+        Dispatchers.setMain(mainDispatcher)
+        scope = CoroutineScope(SupervisorJob() + mainDispatcher)
         AppStateStore.clear()
         conversationDatabaseName = "nostr-dm-${UUID.randomUUID()}.db"
         conversationRepository = ConversationRepository(
@@ -144,6 +146,8 @@ class NostrDirectMessageHandlerTest {
         kotlinx.coroutines.runBlocking {
             withTimeout(5_000) {
                 while (state.getPrivateChatsValue().values.flatten().none { it.id == messageId }) {
+                    mainDispatcher.scheduler.advanceUntilIdle()
+                    if (state.getPrivateChatsValue().values.flatten().any { it.id == messageId }) break
                     delay(10)
                 }
             }

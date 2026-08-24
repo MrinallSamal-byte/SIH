@@ -7,8 +7,9 @@ import {
   MapPin,
   Shield,
   Flame,
-  HeartPulse,
-  Truck
+  HardHat,
+  Cross,
+  HeartHandshake
 } from 'lucide-react'
 import { listAgencies } from '../../api/endpoints'
 import Badge from '../../components/common/Badge'
@@ -17,12 +18,11 @@ import { useLanguage } from '../../lib/i18n'
 import type { Agency } from '../../types'
 
 const TYPE_ICONS: Record<string, typeof Building2> = {
-  ndrf: Shield,
-  fire: Flame,
+  fire_department: Flame,
   police: Shield,
-  medical: HeartPulse,
-  ngo: Building2,
-  logistics: Truck,
+  ndrf: HardHat,
+  hospital: Cross,
+  ngo: HeartHandshake
 }
 
 export default function Agencies() {
@@ -77,7 +77,7 @@ export default function Agencies() {
       </div>
 
       {/* Search & Filter Toolbar */}
-      <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+      <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
@@ -131,7 +131,7 @@ export default function Agencies() {
           return (
             <div
               key={a.id}
-              className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
+              className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
             >
               <div>
                 <div className="flex items-start justify-between gap-3">

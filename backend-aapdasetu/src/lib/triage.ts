@@ -111,9 +111,6 @@ export function computeTriage(input: TriageInput): TriageResult {
     } else if (age <= CHILD_MAX_AGE) {
       score += 20;
       factors.push({ rule: 'AGE_CHILD', points: 20 });
-    } else if (age >= 65) {
-      score += 20;
-      factors.push({ rule: 'AGE_ELDERLY', points: 20 });
     } else if (age >= ELDER_MIN_AGE) {
       score += 20;
       factors.push({ rule: 'AGE_ELDERLY', points: 20 });

@@ -1,3 +1,5 @@
+# Prototype code in this directory runs on the Python standard library only;
+# the real service dependencies live in backend-aapdasetu/fastapi-service/requirements.txt.
 fastapi>=0.100.0
 uvicorn>=0.22.0
 pydantic>=2.0.0

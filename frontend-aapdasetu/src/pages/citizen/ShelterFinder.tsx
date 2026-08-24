@@ -257,7 +257,7 @@ export default function ShelterFinder() {
           type="button"
           onClick={refresh}
           disabled={status === 'locating'}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200 shadow-xs cursor-pointer"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200 shadow-sm cursor-pointer"
         >
           <MapPin className="h-3.5 w-3.5 text-zinc-800 dark:text-slate-300" />
           <span>
@@ -271,7 +271,7 @@ export default function ShelterFinder() {
       </div>
 
       {/* Search Bar, Sort Toggle & Facility Filter Chips */}
-      <div className="mt-4 space-y-3 rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+      <div className="mt-4 space-y-3 rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]">
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
@@ -295,7 +295,7 @@ export default function ShelterFinder() {
 
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <div
-            className="inline-flex rounded-xl border border-zinc-200 bg-[#f4f4f5] p-0.5 shadow-xs dark:border-white/[0.1] dark:bg-[#222222]"
+            className="inline-flex rounded-xl border border-zinc-200 bg-[#f4f4f5] p-0.5 shadow-sm dark:border-white/[0.1] dark:bg-[#222222]"
             role="group"
           >
             <button
@@ -365,7 +365,7 @@ export default function ShelterFinder() {
       )}
 
       {/* Map-first layout: stacks above the list naturally on mobile */}
-      <div className="mt-4 h-[320px] sm:h-[420px] lg:h-[520px] rounded-2xl overflow-hidden shadow-xs border border-zinc-200/80 dark:border-white/[0.08]">
+      <div className="mt-4 h-[320px] sm:h-[420px] lg:h-[520px] rounded-2xl overflow-hidden shadow-sm border border-zinc-200/80 dark:border-white/[0.08]">
         <LeafletMap
           center={center}
           zoom={14}
@@ -405,7 +405,8 @@ export default function ShelterFinder() {
           const distance = userPos && point ? haversineKm(userPos, point) : null
           const cap = s.capacity ?? 100
           const occ = s.occupancy ?? 0
-          const pct = Math.round((occ / cap) * 100)
+          // Clamp guards NaN/overflow labels when cap is 0 or occupancy exceeds it.
+          const pct = Math.max(0, Math.min(100, Math.round((occ / (cap || 100)) * 100)))
           const facilitiesList = Array.isArray(s.facilities) ? s.facilities : []
           const isOpen = s.status !== 'full' && s.status !== 'closed'
           const isSelected = selectedId === s.id
@@ -442,7 +443,7 @@ export default function ShelterFinder() {
                   aria-hidden="true"
                 />
               )}
-              <Card className="flex flex-col rounded-2xl border border-zinc-200/80 bg-white p-5 sm:p-6 shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+              <Card className="flex flex-col rounded-2xl border border-zinc-200/80 bg-white p-5 sm:p-6 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 min-w-0">
@@ -549,7 +550,7 @@ export default function ShelterFinder() {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white cursor-pointer"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white cursor-pointer"
                     >
                       <Navigation className="h-3 w-3" />
                       <span>{t('common.directions')}</span>
@@ -577,7 +578,7 @@ export default function ShelterFinder() {
                 <button
                   type="button"
                   onClick={resetFilters}
-                  className="mt-1 inline-flex items-center gap-1.5 rounded-xl bg-zinc-800 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white cursor-pointer"
+                  className="mt-1 inline-flex items-center gap-1.5 rounded-xl bg-zinc-800 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white cursor-pointer"
                 >
                   <X className="h-3.5 w-3.5" />
                   {t('sh.resetFilters')}

@@ -1,6 +1,8 @@
 import type { GeoPoint } from '../types'
 
-const OSRM_BASE = 'https://router.project-osrm.org'
+// ponytail: FOSSGIS public instance (routing.openstreetmap.de) serves a genuine foot profile;
+// router.project-osrm.org is car-only and lied about walking times. Be gentle — it's community-run courtesy capacity.
+const OSRM_FOOT_URL = 'https://routing.openstreetmap.de/routed-foot/route/v1/foot'
 
 export interface OsrmRoute {
   points: GeoPoint[]
@@ -12,13 +14,14 @@ export async function fetchOsrmRoute(
   from: GeoPoint,
   to: GeoPoint,
   waypoints: GeoPoint[] = [],
-  profile: 'foot' | 'driving' = 'foot',
 ): Promise<OsrmRoute | null> {
   try {
     const coords = [from, ...waypoints, to]
       .map((p) => `${p.lng},${p.lat}`)
       .join(';')
-    const url = `${OSRM_BASE}/route/v1/${profile}/${coords}?overview=full&geometries=geojson`
+    // overview=full kept (callers draw the polyline; overview=false strips geometry entirely);
+    // steps=false skips turn instructions to stay light on the shared instance.
+    const url = `${OSRM_FOOT_URL}/${coords}?overview=full&geometries=geojson&steps=false`
     const controller = new AbortController()
     const t = setTimeout(() => controller.abort(), 8000)
     const res = await fetch(url, { signal: controller.signal })

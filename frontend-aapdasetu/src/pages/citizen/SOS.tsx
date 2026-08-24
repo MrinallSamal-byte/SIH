@@ -174,7 +174,8 @@ export default function SOS() {
         return
       }
 
-      const fullLandmark = [address, landmark.trim()].filter(Boolean).join(' | ') || undefined
+      const fullLandmark =
+        [address, landmark.trim()].filter(Boolean).join(' | ').slice(0, 500) || undefined
 
       const input: ReportInput = {
         type: selectedType,
@@ -197,29 +198,29 @@ export default function SOS() {
         return
       }
 
-      let triage: { score: number; label: Report['priorityLabel'] } | null = null
-      try {
-        triage = await aiTriage(input)
-      } catch {
-        triage = null
-      }
+      // ponytail: dispatch first, triage second — an AI outage must never delay the SOS.
       const report = await createReport({ ...input, description: input.description })
-      const finalReport =
-        report.priorityLabel
-          ? report
-          : triage
-            ? { ...report, priorityScore: triage.score, priorityLabel: triage.label }
-            : report
-
-      setResult(finalReport)
+      setResult(report)
       navigator.vibrate?.([200, 100, 200])
+
+      void aiTriage(input)
+        .then((triage) => {
+          if (report.priorityLabel) return
+          // Fire-and-forget priority hint: updates the local result view only.
+          setResult((prev) =>
+            prev && prev.trackingId === report.trackingId
+              ? { ...prev, priorityScore: triage.score, priorityLabel: triage.label }
+              : prev,
+          )
+        })
+        .catch(() => {})
 
       // Save to localStorage for quick tracking
       try {
-        localStorage.setItem('aapdasetu_last_sos', JSON.stringify(finalReport))
+        localStorage.setItem('aapdasetu_last_sos', JSON.stringify(report))
         const existingTracked = JSON.parse(localStorage.getItem('aapdasetu_tracked_reports') || '[]') as string[]
-        if (!existingTracked.includes(finalReport.trackingId)) {
-          localStorage.setItem('aapdasetu_tracked_reports', JSON.stringify([finalReport.trackingId, ...existingTracked]))
+        if (!existingTracked.includes(report.trackingId)) {
+          localStorage.setItem('aapdasetu_tracked_reports', JSON.stringify([report.trackingId, ...existingTracked]))
         }
       } catch {
         // Storage unavailable
@@ -270,7 +271,7 @@ export default function SOS() {
         <div className="flex flex-col items-center text-center">
           {/* Header */}
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200/80 bg-red-50 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300 shadow-xs mono">
+            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200/80 bg-red-50 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300 shadow-sm mono">
               <span className="h-2 w-2 rounded-full bg-red-600 animate-ping" />
               {t('sos.channelBadge')}
             </div>
@@ -284,7 +285,7 @@ export default function SOS() {
           </div>
 
           {/* Location Card */}
-          <div className="mt-6 w-full max-w-3xl rounded-2xl border border-zinc-200/80 bg-white p-4 text-left shadow-xs transition-all dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+          <div className="mt-6 w-full max-w-3xl rounded-2xl border border-zinc-200/80 bg-white p-4 text-left shadow-sm transition-all dark:border-white/[0.08] dark:bg-[#1a1a1a]">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3 min-w-0 flex-1">
                 <div
@@ -362,14 +363,14 @@ export default function SOS() {
           </div>
 
           {isOffline && (
-            <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-400 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300 shadow-xs max-w-3xl w-full">
+            <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-400 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300 shadow-sm max-w-3xl w-full">
               <AlertTriangle className="h-4 w-4 shrink-0" />
               <span>{t('sos.offlineNotice')}</span>
             </div>
           )}
 
           {queuedSosCount > 0 && (
-            <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-400 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300 shadow-xs max-w-3xl w-full">
+            <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-400 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300 shadow-sm max-w-3xl w-full">
               <CheckCircle2 className="h-4 w-4 shrink-0" />
               <span>
                 {t('sos.queuedOnDevice', 'Saved on device — will send automatically when you reconnect.')}
@@ -383,7 +384,7 @@ export default function SOS() {
               {/* Contact form — wider on desktop */}
               <div className="mt-6 w-full max-w-3xl space-y-5">
                 {/* Rescue Details Card */}
-                <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 text-left shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+                <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 text-left shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]">
                   <div className="mb-3 flex items-center justify-between flex-wrap gap-2">
                     <span className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-slate-200 mono">
                       {t('sos.contactTitle')}
@@ -492,13 +493,13 @@ export default function SOS() {
               </div>
 
               {/* Offline Fallback */}
-              <div className="mt-3 w-full max-w-3xl space-y-2 rounded-2xl border border-zinc-200/80 bg-white p-4 text-left shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+              <div className="mt-3 w-full max-w-3xl space-y-2 rounded-2xl border border-zinc-200/80 bg-white p-4 text-left shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]">
                 <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">
                   {t('sos.offlineOptionsTitle')}
                 </span>
                 <a
                   href={emergencySmsLink}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-[#f4f4f5] py-2.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-200 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200 shadow-xs cursor-pointer"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-[#f4f4f5] py-2.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-200 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200 shadow-sm cursor-pointer"
                 >
                   <MessageSquare className="h-4 w-4" />
                   <span>{t('sos.smsLink')}</span>
@@ -507,7 +508,7 @@ export default function SOS() {
             </>
           ) : (
             /* Result screen */
-            <div className="mt-6 w-full max-w-3xl space-y-5 rounded-2xl border border-red-200 bg-white p-6 text-left shadow-xs dark:border-red-900/50 dark:bg-[#1a1a1a]">
+            <div className="mt-6 w-full max-w-3xl space-y-5 rounded-2xl border border-red-200 bg-white p-6 text-left shadow-sm dark:border-red-900/50 dark:bg-[#1a1a1a]">
               <div className="flex items-center gap-3 rounded-xl bg-red-50 p-4 text-red-800 dark:bg-red-950/50 dark:text-red-300">
                 <CheckCircle2 className="h-6 w-6 shrink-0 text-red-600 dark:text-red-400" />
                 <div>
@@ -702,7 +703,7 @@ export default function SOS() {
                 setShowLocationModal(false)
                 toast(t('sos.savedToast'), 'success')
               }}
-              className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-red-700 cursor-pointer"
+              className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-red-700 cursor-pointer"
             >
               {t('sos.saveLocation')}
             </button>

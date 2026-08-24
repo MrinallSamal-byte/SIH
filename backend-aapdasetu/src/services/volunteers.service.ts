@@ -1,6 +1,6 @@
 /** Volunteer roster & skill dispatch service. */
 import { prisma } from '../lib/prisma.js';
-import { NotFoundError } from '../lib/errors.js';
+import { NotFoundError, ConflictError } from '../lib/errors.js';
 import { writeAuditLog } from './audit.service.js';
 import { realtimeHub } from '../realtime/hub.js';
 
@@ -50,6 +50,12 @@ export async function updateVolunteerStatus(input: {
 }) {
   const existing = await prisma.volunteer.findUnique({ where: { id: input.id } });
   if (!existing) throw new NotFoundError('Volunteer not found');
+
+  // ponytail: block status flips while the volunteer still owns unresolved reports
+  const activeAssignments = await prisma.report.count({
+    where: { assignedVolunteerId: input.id, status: { not: 'resolved' } },
+  });
+  if (activeAssignments > 0) throw new ConflictError('Volunteer has active assignments; resolve or unassign first');
 
   const volunteer = await prisma.volunteer.update({
     where: { id: input.id },

@@ -48,6 +48,8 @@ export default function Analytics() {
   const redCount = data.byPriority['RED'] || 0
   const resolvedCount = data.byStatus['resolved'] || 0
   const resolvedPct = totalIncidents > 0 ? Math.round((resolvedCount / totalIncidents) * 100) : 0
+  // Optional field mapped by getAnalytics when the backend reports it.
+  const avgResponseMinutes = (data as AnalyticsData & { avgResponseMinutes?: number | null }).avgResponseMinutes
 
   return (
     <div className="space-y-6">
@@ -72,7 +74,7 @@ export default function Analytics() {
 
       {/* KPI Cards Row */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">{t('an.incidentLoad')}</div>
           <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-slate-100">
             {totalIncidents.toLocaleString()}
@@ -80,7 +82,7 @@ export default function Analytics() {
           <div className="text-[11px] text-slate-400">{t('an.aggregatedSubmissions')}</div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 mono flex items-center gap-1">
             <AlertTriangle className="h-3.5 w-3.5" />
             <span>{t('an.redPriorityRatio')}</span>
@@ -91,7 +93,7 @@ export default function Analytics() {
           <div className="text-[11px] text-slate-400">{redCount} {t('an.criticalDistressCalls')}</div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mono flex items-center gap-1">
             <CheckCircle2 className="h-3.5 w-3.5" />
             <span>{t('an.resolutionRate')}</span>
@@ -102,16 +104,18 @@ export default function Analytics() {
           <div className="text-[11px] text-slate-400">{resolvedCount} {t('an.casesClosed')}</div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 mono flex items-center gap-1">
-            <Clock className="h-3.5 w-3.5" />
-            <span>{t('an.meanResponseDelta')}</span>
+        {typeof avgResponseMinutes === 'number' && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 mono flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" />
+              <span>{t('an.meanResponseDelta')}</span>
+            </div>
+            <div className="mt-1 text-2xl font-bold font-mono text-blue-600 dark:text-blue-400">
+              {Math.round(avgResponseMinutes)} min
+            </div>
+            <div className="text-[11px] text-slate-400">{t('an.avgResponseCaption', 'avg response')}</div>
           </div>
-          <div className="mt-1 text-2xl font-bold font-mono text-blue-600 dark:text-blue-400">
-            14.2m
-          </div>
-          <div className="text-[11px] text-slate-400">{t('an.fasterThanSla')}</div>
-        </div>
+        )}
       </div>
 
       {/* Main Charts Grid */}

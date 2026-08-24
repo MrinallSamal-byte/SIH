@@ -93,7 +93,7 @@ export default function Settings() {
 
       <div className="grid gap-5 md:grid-cols-2">
         {/* SMS Gateway Card */}
-        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
             <Smartphone className="h-4 w-4 text-blue-600" />
             <span>{t('st.smsGateway')}</span>
@@ -129,10 +129,12 @@ export default function Settings() {
         </div>
 
         {/* WhatsApp Gateway Card */}
-        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+        {/* ponytail: these fields are local notes only — real gateway creds and
+            webhook URLs are configured via backend environment variables. */}
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
             <MessageSquare className="h-4 w-4 text-emerald-600" />
-            <span>{t('st.whatsappGateway')}</span>
+            <span>{t('st.localNotes', 'Local notes (not synced to server)')}</span>
           </div>
 
           <Field label={t('st.cloudApiToken')}>
@@ -155,12 +157,12 @@ export default function Settings() {
           </Field>
 
           <div className="rounded-xl bg-slate-50 p-3 text-[11px] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-            {t('st.webhookCallbackUrl')} <code className="text-slate-800 dark:text-slate-200">https://api.aapdasetu.org/webhook/whatsapp</code>
+            {t('st.webhookCallbackUrl')} {t('st.webhookEnvConfigured', 'Configured via backend environment variables')}
           </div>
         </div>
 
         {/* AI Engine Hooks */}
-        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
             <Cpu className="h-4 w-4 text-purple-600" />
             <span>{t('st.aiEndpoints')}</span>
@@ -186,7 +188,7 @@ export default function Settings() {
         </div>
 
         {/* Incident Command SOP Parameters */}
-        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
             <Sliders className="h-4 w-4 text-amber-600" />
             <span>{t('st.thresholds')}</span>
@@ -209,7 +211,7 @@ export default function Settings() {
       </div>
 
       {/* Database Diagnostic & Environment Banner */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <RotateCcw className="h-4 w-4 text-slate-500" />

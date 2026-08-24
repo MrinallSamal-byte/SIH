@@ -9,7 +9,7 @@ import {
   Activity,
   HeartPulse
 } from 'lucide-react'
-import { aiPfaChat, cleanAiOutput } from '../../api/ai'
+import { aiPfaChat, cleanAiOutput, isAiProviderConfigured } from '../../api/ai'
 import { createReport } from '../../api/endpoints'
 import { useToast } from '../../components/common/Toast'
 import { useLanguage } from '../../lib/i18n'
@@ -39,6 +39,8 @@ export default function PfaChatPage() {
   const [callbackPhones, setCallbackPhones] = useState<Record<number, string>>({})
   const [submittingCallback, setSubmittingCallback] = useState<number | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  // ponytail: badge reflects real provider availability, not a hardcoded claim
+  const aiConfigured = isAiProviderConfigured()
 
   useEffect(() => {
     setMessages((prev) => {
@@ -47,9 +49,7 @@ export default function PfaChatPage() {
           {
             id: 'pfa-init',
             role: 'bot',
-            content:
-              t('chat.greeting') ||
-              t('pfa.greeting'),
+            content: t('pfa.greeting'),
           },
         ]
       }
@@ -87,7 +87,7 @@ export default function PfaChatPage() {
 
     try {
       const res = await aiPfaChat(
-        text,
+        updatedMessages[updatedMessages.length - 1]?.content ?? '',
         updatedMessages.map((m) => ({ role: m.role, content: m.content })),
         'Friend',
         lang
@@ -171,18 +171,24 @@ export default function PfaChatPage() {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col h-[calc(100vh-7.5rem)] lg:max-w-5xl">
       {/* Top Banner */}
-      <div className="flex items-center justify-between rounded-t-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+      <div className="flex items-center justify-between rounded-t-2xl border border-zinc-200/80 bg-white p-4 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800 font-bold text-white shadow-xs dark:bg-slate-100 dark:text-slate-950">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800 font-bold text-white shadow-sm dark:bg-slate-100 dark:text-slate-950">
             <Bot className="h-5 w-5" />
           </div>
           <div>
             <h1 className="text-base font-bold text-zinc-800 dark:text-slate-300 flex items-center gap-2">
               <span>AapdaMitra AI</span>
-              <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 flex items-center gap-1 mono">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                {t('pfa.badgeActive')}
-              </span>
+              {aiConfigured ? (
+                <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 flex items-center gap-1 mono">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  {t('pfa.badgeActive')}
+                </span>
+              ) : (
+                <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400 mono">
+                  OFFLINE GUIDANCE
+                </span>
+              )}
             </h1>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
               {t('pfa.tagline')}
@@ -226,7 +232,7 @@ export default function PfaChatPage() {
         {messages.map((m, i) => (
           <div key={m.id || i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div
-              className={`max-w-[88%] lg:max-w-[70%] rounded-2xl px-4 py-3 text-sm shadow-xs ${
+              className={`max-w-[88%] lg:max-w-[70%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
                 m.role === 'user'
                   ? 'bg-zinc-800 text-white rounded-br-none dark:bg-slate-100 dark:text-slate-950 font-medium'
                   : m.dangerLevel === 'CRITICAL' || m.isCritical
@@ -247,7 +253,7 @@ export default function PfaChatPage() {
 
               {/* Danger Level Action Box: Critical or Moderate */}
               {(m.dangerLevel === 'CRITICAL' || m.isCritical || m.dangerLevel === 'MODERATE') && (
-                <div className={`mt-3 space-y-3 rounded-xl border p-4 shadow-xs ${
+                <div className={`mt-3 space-y-3 rounded-xl border p-4 shadow-sm ${
                   m.dangerLevel === 'CRITICAL' || m.isCritical
                     ? 'border-red-300 bg-white dark:border-red-800 dark:bg-[#1a1a1a]'
                     : 'border-amber-300 bg-white dark:border-amber-800 dark:bg-[#1a1a1a]'
@@ -269,7 +275,7 @@ export default function PfaChatPage() {
                     <div className="flex items-center gap-1.5">
                       <a
                         href={`tel:${m.dangerLevel === 'CRITICAL' || m.isCritical ? '112' : '108'}`}
-                        className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold text-white shadow-xs transition ${
+                        className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold text-white shadow-sm transition ${
                           m.dangerLevel === 'CRITICAL' || m.isCritical
                             ? 'bg-red-600 hover:bg-red-700'
                             : 'bg-amber-600 hover:bg-amber-700'
@@ -301,7 +307,7 @@ export default function PfaChatPage() {
                           type="button"
                           onClick={() => handleEmergencyCallback(i, m.content)}
                           disabled={submittingCallback === i}
-                          className="shrink-0 rounded-xl bg-red-600 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-xs transition hover:bg-red-700 disabled:opacity-50"
+                          className="shrink-0 rounded-xl bg-red-600 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-sm transition hover:bg-red-700 disabled:opacity-50"
                         >
                           {submittingCallback === i ? t('pfa.dispatching') : t('pfa.reachMe')}
                         </button>
@@ -357,7 +363,7 @@ export default function PfaChatPage() {
       </div>
 
       {/* Bottom Input */}
-      <div className="flex gap-2 rounded-b-2xl border border-zinc-200/80 bg-white p-3.5 shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+      <div className="flex gap-2 rounded-b-2xl border border-zinc-200/80 bg-white p-3.5 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -369,7 +375,7 @@ export default function PfaChatPage() {
           type="button"
           onClick={() => send()}
           disabled={busy || !input.trim()}
-          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-zinc-800 px-6 py-2.5 text-sm font-bold text-white shadow-xs transition hover:bg-zinc-700 disabled:opacity-50 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-zinc-800 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-zinc-700 disabled:opacity-50 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
         >
           <Send className="h-4 w-4" />
           <span>{t('common.send')}</span>

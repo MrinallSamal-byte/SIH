@@ -10,6 +10,7 @@ export function aiTriage(input: ReportInput): Promise<TriageResult> {
   return withMockFallback(
     () => aiCall<TriageResult>('POST', '/ai/triage', input),
     () => mocks.aiTriage(input),
+    { mutating: true },
   )
 }
 
@@ -79,6 +80,11 @@ function getChatProviders(): ChatProviderConfig[] {
   return providers
 }
 
+/** True when at least one AI chat provider key is configured. */
+export function isAiProviderConfigured(): boolean {
+  return Boolean(ZEN_API_KEY || OPENROUTER_API_KEY)
+}
+
 export type AiLang = 'en' | 'hi' | 'bn' | 'or'
 
 const AI_LANG_NAMES: Record<AiLang, string> = {
@@ -120,6 +126,9 @@ export function detectDangerLevel(text: string): DangerLevel {
     'drown', 'sinking', 'heart attack', 'chest pain', 'stroke', 'electrocute',
     'severe burn', 'fire', 'choking', 'snake', 'snakebite', 'poison', 'collapse',
     'debris', 'fracture', 'broken bone', 'crush', 'dying', 'flood rising', 'water level',
+    // ponytail: parity with backend ESCALATION_KEYWORDS (pfa.service.ts)
+    "can't breathe", 'cant breathe', 'can not breathe', 'burn', 'sink', 'flooded',
+    'electric shock', 'मदद',
     'खून', 'बेहोश', 'फंसा', 'डूब', 'हार्ट अटैक', 'सांप', 'आग', 'बिजली',
     'রক্ত', 'অজ্ঞান', 'আটকে', 'ডুব', 'সাপ', 'আগুন',
     'ରକ୍ତ', 'ଚେତାଶୂନ୍ୟ', 'ଫସିରହିଛି', 'ନିଆଁ',
@@ -292,12 +301,14 @@ export function cleanAiOutput(rawText: string): string {
   text = text.replace(/<thought[\s\S]*?<\/thought>/gi, '')
   text = text.replace(/\[think[\s\S]*?\[\/think\]/gi, '')
 
-  // 2. If model leaked reasoning markers, extract the final response segment
+  // ponytail: ^ + m so mid-sentence "…my Response:" words never truncate output
   const responseMarkers = [
-    /(?:(?:3|4|5)\.\s*)?Determine Response:\s*([\s\S]*)$/i,
-    /(?:Final\s*)?Response:\s*([\s\S]*)$/i,
-    /(?:Final\s*)?Answer:\s*([\s\S]*)$/i,
-    /Output:\s*([\s\S]*)$/i,
+    /^(?:(?:3|4|5)\.\s*)?Determine Response:\s*([\s\S]*)$/im,
+    /^Final\s*Response:\s*([\s\S]*)$/im,
+    /^Response:\s*([\s\S]*)$/im,
+    /^Final\s*Answer:\s*([\s\S]*)$/im,
+    /^Answer:\s*([\s\S]*)$/im,
+    /^Output:\s*([\s\S]*)$/im,
   ]
   for (const marker of responseMarkers) {
     const match = text.match(marker)
@@ -356,13 +367,17 @@ async function callOpenRouter(
   history: ChatHistoryItem[] = [],
   lang: AiLang = 'en'
 ): Promise<string> {
-  const chatMessages = [
+  // ponytail: callers (ChatWidget/PfaChat) pass the FULL conversation and its
+  // last item IS the current user turn — treat history as-is, never append
+  // `message` again (it is only a fallback when no history exists).
+  const chatMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
     { role: 'system', content: AAPDAMITRA_SYSTEM_PROMPT + languageDirective(lang) },
-    ...history.slice(-6).map((h) => ({
-      role: h.role === 'bot' ? ('assistant' as const) : ('user' as const),
-      content: cleanAiOutput(h.content),
-    })),
-    { role: 'user', content: message },
+    ...(history.length > 0
+      ? history.slice(-6).map((h) => ({
+          role: h.role === 'bot' ? ('assistant' as const) : ('user' as const),
+          content: cleanAiOutput(h.content),
+        }))
+      : [{ role: 'user' as const, content: message }]),
   ]
 
   if (getChatProviders().length === 0) {
@@ -439,7 +454,13 @@ export async function aiPfaChat(
   }
   try {
     const aiReply = await callOpenRouter(message, history, lang)
-    const dangerLevel = detectDangerLevel(message) || detectDangerLevel(aiReply)
+    // ponytail: detectDangerLevel never returns falsy — rank both texts instead
+    const levels = [detectDangerLevel(message), detectDangerLevel(aiReply)]
+    const dangerLevel: DangerLevel = levels.includes('CRITICAL')
+      ? 'CRITICAL'
+      : levels.includes('MODERATE')
+      ? 'MODERATE'
+      : 'LOW'
     const isCritical = dangerLevel === 'CRITICAL'
     const exerciseType = detectBreathingExercise(message) || detectBreathingExercise(aiReply)
 
@@ -532,6 +553,8 @@ export function aiDamageAssessment(
         description,
         infrastructureType as DamageInfrastructureType,
       ),
+    // ponytail: fabricated verdicts feed compensation claims — failures must surface
+    { mutating: true },
   )
 }
 
@@ -540,5 +563,6 @@ export function aiSatelliteFloodMap(payload: { district?: string; center?: { lat
   return withMockFallback(
     () => aiCall<FloodGeoJson>('POST', '/ai/satelliteflood-map', payload),
     () => mocks.aiSatelliteFloodMap(),
+    { mutating: true },
   )
 }

@@ -131,7 +131,7 @@ export interface Alert {
   title: string
   message: string
   channel?: string
-  region?: string
+  targetArea?: string
   createdAt: string
 }
 

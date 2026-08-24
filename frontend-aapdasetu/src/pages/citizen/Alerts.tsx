@@ -72,7 +72,7 @@ export default function Alerts() {
       const sevDiff = (severityRank[a.severity] ?? 3) - (severityRank[b.severity] ?? 3)
       if (sevDiff !== 0) return sevDiff
       const areaDiff =
-        (matchesUserArea(a.region) ? 0 : 1) - (matchesUserArea(b.region) ? 0 : 1)
+        (matchesUserArea(a.targetArea) ? 0 : 1) - (matchesUserArea(b.targetArea) ? 0 : 1)
       if (areaDiff !== 0) return areaDiff
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     })
@@ -91,7 +91,7 @@ export default function Alerts() {
         </div>
 
         {/* Severity Filter Tabs */}
-        <div className="flex items-center gap-1 rounded-xl border border-zinc-200/80 bg-white p-1 dark:border-white/[0.08] dark:bg-[#1a1a1a] shadow-xs">
+        <div className="flex items-center gap-1 rounded-xl border border-zinc-200/80 bg-white p-1 dark:border-white/[0.08] dark:bg-[#1a1a1a] shadow-sm">
           {(['all', 'critical', 'warning', 'info'] as const).map((sev) => (
             <button
               key={sev}
@@ -128,19 +128,19 @@ export default function Alerts() {
 
           const Icon = a.severity === 'critical' ? ShieldAlert : a.severity === 'warning' ? AlertTriangle : Info
 
-          const affectsArea = matchesUserArea(a.region)
-          const shareText = `${a.title}${a.region ? ` — ${a.region}` : ''}`
+          const affectsArea = matchesUserArea(a.targetArea)
+          const shareText = `${a.title}${a.targetArea ? ` — ${a.targetArea}` : ''}`
           const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`
           const smsUrl = `sms:?&body=${encodeURIComponent(shareText)}`
 
           return (
             <div
               key={a.id}
-              className={`rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-xs transition dark:border-white/[0.08] dark:bg-[#1a1a1a] ${borderClass}`}
+              className={`rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm transition dark:border-white/[0.08] dark:bg-[#1a1a1a] ${borderClass}`}
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Icon className="h-4.5 w-4.5 text-slate-500" />
+                  <Icon className="size-[18px] text-slate-500" />
                   <Badge value={a.severity} label={a.severity === 'critical' ? t('alerts.sevCritical') : a.severity === 'warning' ? t('alerts.sevWarning') : t('alerts.sevInfo')} />
                   <h3 className="text-sm font-bold text-zinc-800 dark:text-slate-300">{a.title}</h3>
                 </div>
@@ -154,10 +154,10 @@ export default function Alerts() {
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-2.5 dark:border-white/[0.08]">
                 <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                  {a.region && (
+                  {a.targetArea && (
                     <span className="flex items-center gap-1.5">
                       <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                      <span className="font-semibold text-zinc-600 dark:text-slate-300">{t('alerts.affectedArea')} {a.region}</span>
+                      <span className="font-semibold text-zinc-600 dark:text-slate-300">{t('alerts.affectedArea')} {a.targetArea}</span>
                     </span>
                   )}
                   {affectsArea && (
@@ -178,7 +178,7 @@ export default function Alerts() {
                     title={`${t('common.share')} WhatsApp`}
                     className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200/80 bg-[#f4f4f5] text-emerald-600 transition hover:bg-emerald-50 hover:text-emerald-700 active:scale-95 dark:border-white/[0.08] dark:bg-[#222222] dark:text-emerald-400 dark:hover:bg-emerald-950/60"
                   >
-                    <MessageCircle className="h-4.5 w-4.5" />
+                    <MessageCircle className="size-[18px]" />
                   </a>
                   <a
                     href={smsUrl}
@@ -186,7 +186,7 @@ export default function Alerts() {
                     title={`${t('common.share')} SMS`}
                     className="flex h-11 w-11 items-center justify-center rounded-xl border border-zinc-200/80 bg-[#f4f4f5] text-blue-600 transition hover:bg-blue-50 hover:text-blue-700 active:scale-95 dark:border-white/[0.08] dark:bg-[#222222] dark:text-blue-400 dark:hover:bg-blue-950/60"
                   >
-                    <MessageSquare className="h-4.5 w-4.5" />
+                    <MessageSquare className="size-[18px]" />
                   </a>
                 </div>
               </div>

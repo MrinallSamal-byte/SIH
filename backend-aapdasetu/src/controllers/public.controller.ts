@@ -4,6 +4,7 @@ import {
   createSosReport,
   createIncidentReport,
   getReportByTrackingId,
+  serializePublicTracking,
 } from '../services/reports.service.js';
 import { createCheckin } from '../services/checkins.service.js';
 import { findNearbyShelters, listShelters } from '../services/shelters.service.js';
@@ -27,7 +28,8 @@ export async function reportHandler(req: Request, res: Response): Promise<void> 
 export async function trackingHandler(req: Request, res: Response): Promise<void> {
   const { trackingId } = (req as Request & { validatedParams: { trackingId: string } }).validatedParams;
   const report = await getReportByTrackingId(trackingId);
-  res.json({ success: true, data: report });
+  // ponytail: public tracking payload only — no relations/PII leak via includeRelations
+  res.json({ success: true, data: serializePublicTracking(report) });
 }
 
 export async function checkinHandler(req: Request, res: Response): Promise<void> {

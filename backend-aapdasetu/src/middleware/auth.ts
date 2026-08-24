@@ -1,17 +1,19 @@
-/** Admin authentication middleware (Bearer JWT). */
+/** Admin & volunteer authentication middleware (Bearer JWT). */
 import type { Request, Response, NextFunction } from 'express';
-import { verifyAdminToken, AdminTokenPayload } from '../lib/jwt.js';
+import { verifyAdminToken, verifyVolunteerToken, AdminTokenPayload, VolunteerTokenPayload } from '../lib/jwt.js';
 import { UnauthorizedError } from '../lib/errors.js';
+import { prisma } from '../lib/prisma.js';
 
 declare global {
   namespace Express {
     interface Request {
       admin?: AdminTokenPayload;
+      volunteer?: VolunteerTokenPayload;
     }
   }
 }
 
-export function requireAdmin(req: Request, _res: Response, next: NextFunction): void {
+export async function requireAdmin(req: Request, _res: Response, next: NextFunction): Promise<void> {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {
     next(new UnauthorizedError('Missing authorization header'));
@@ -20,6 +22,34 @@ export function requireAdmin(req: Request, _res: Response, next: NextFunction): 
   const token = header.slice('Bearer '.length).trim();
   try {
     req.admin = verifyAdminToken(token);
+  } catch (err) {
+    next(err);
+    return;
+  }
+  try {
+    const admin = await prisma.adminUser.findUnique({
+      where: { id: req.admin.sub },
+      select: { id: true, isActive: true },
+    });
+    if (!admin || !admin.isActive) {
+      next(new UnauthorizedError('Account is disabled'));
+      return;
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
+export function requireVolunteer(req: Request, _res: Response, next: NextFunction): void {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    next(new UnauthorizedError('Missing authorization header'));
+    return;
+  }
+  const token = header.slice('Bearer '.length).trim();
+  try {
+    req.volunteer = verifyVolunteerToken(token);
     next();
   } catch (err) {
     next(err);

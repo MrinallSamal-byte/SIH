@@ -1,29 +1,44 @@
 import { useEffect, useState } from 'react'
-import { createSafetyCheckin, listVolunteers, updateVolunteer } from '../../api/endpoints'
+import { createSafetyCheckin, setVolunteerStatus, volunteerMe } from '../../api/endpoints'
 import { Field, Input } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import { useGeoLocation } from '../../hooks/useLocation'
 import { useLanguage } from '../../lib/i18n'
-import type { Volunteer } from '../../types'
+
+const CHECKIN_COOLDOWN_MS = 5 * 60 * 1000
+
+type VolunteerProfile = Awaited<ReturnType<typeof volunteerMe>> & { status?: string }
 
 export default function CheckIn() {
   const { t } = useLanguage()
   const { toast } = useToast()
-  const { coords } = useGeoLocation()
-  const [volunteer, setVolunteer] = useState<Volunteer | null>(null)
+  const { coords, status: geoStatus, isFallback } = useGeoLocation()
+  const [volunteer, setVolunteer] = useState<VolunteerProfile | null>(null)
   const [notes, setNotes] = useState('')
   const [sending, setSending] = useState(false)
+  const [lastSuccessAt, setLastSuccessAt] = useState(0)
+
+  // ponytail: duplicate-prevention cooldown — re-enable the button when it expires
+  useEffect(() => {
+    if (!lastSuccessAt) return
+    const remaining = lastSuccessAt + CHECKIN_COOLDOWN_MS - Date.now()
+    if (remaining <= 0) {
+      setLastSuccessAt(0)
+      return
+    }
+    const id = window.setTimeout(() => setLastSuccessAt(0), remaining)
+    return () => window.clearTimeout(id)
+  }, [lastSuccessAt])
 
   useEffect(() => {
-    listVolunteers()
-      .then((vols) => {
-        const savedId = localStorage.getItem('aapdasetu_volunteer_session')
-        const matched = vols.find((v) => v.id === savedId) || null
-        setVolunteer(matched)
-      })
+    volunteerMe()
+      .then(setVolunteer)
       .catch(() => setVolunteer(null))
   }, [])
+
+  // ponytail: only send real GPS coords; IP/default fallbacks are not consented location
+  const shareLocation = geoStatus === 'granted' && !isFallback
 
   const submit = async () => {
     setSending(true)
@@ -33,14 +48,19 @@ export default function CheckIn() {
         phone: volunteer?.phone,
         status: 'safe',
         notes,
-        latitude: coords?.latitude,
-        longitude: coords?.longitude,
+        latitude: shareLocation ? coords?.latitude : undefined,
+        longitude: shareLocation ? coords?.longitude : undefined,
       }
       await createSafetyCheckin(input)
-      if (volunteer && volunteer.status !== 'available') {
-        const updated = await updateVolunteer(volunteer.id, { status: 'available' })
-        setVolunteer(updated)
+      try {
+        if (volunteer?.status && volunteer.status !== 'available') {
+          await setVolunteerStatus('available')
+          setVolunteer({ ...volunteer, status: 'available' })
+        }
+      } catch {
+        // ponytail: status reset is best-effort; check-in already succeeded
       }
+      setLastSuccessAt(Date.now())
       toast(t('vc.checkedIn'), 'success')
       setNotes('')
     } catch (err) {
@@ -57,7 +77,7 @@ export default function CheckIn() {
         {t('vc.subtitle')}
       </p>
 
-      <div className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+      <div className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         {volunteer && (
           <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-950">
             <div className="font-bold text-slate-800 dark:text-slate-200">{t('vc.responderProfile')}: {volunteer.name}</div>
@@ -68,9 +88,16 @@ export default function CheckIn() {
         <Field label={t('vc.notesLabel')}>
           <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('vc.notesPlaceholder')} />
         </Field>
-        <Button onClick={submit} disabled={sending} className="w-full font-bold cursor-pointer">
+        <Button
+          onClick={submit}
+          disabled={sending || Date.now() < lastSuccessAt + CHECKIN_COOLDOWN_MS}
+          className="w-full font-bold cursor-pointer"
+        >
           {sending ? t('vc.checkingIn') : t('vc.checkInGo')}
         </Button>
+        {!shareLocation && (
+          <p className="text-xs text-slate-400 dark:text-slate-500">Location not shared</p>
+        )}
       </div>
     </div>
   )

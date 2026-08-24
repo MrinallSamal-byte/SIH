@@ -1,7 +1,8 @@
 /** Shelter finder & management service. */
+// ponytail: list endpoints keep returning bare arrays for FE compat; envelope upgrade path is {items,total,page,pageSize}
 import { prisma } from '../lib/prisma.js';
 import { haversineDistanceKm } from '../lib/haversine.js';
-import { NotFoundError } from '../lib/errors.js';
+import { NotFoundError, UnprocessableEntityError } from '../lib/errors.js';
 import { writeAuditLog } from './audit.service.js';
 import { realtimeHub } from '../realtime/hub.js';
 
@@ -14,25 +15,34 @@ export async function findNearbyShelters(params: {
   const shelters = await prisma.shelter.findMany({ include: { resources: true } });
 
   const withDistance = shelters
-    .map((s) => ({
+    .map((s: (typeof shelters)[number]) => ({
       ...s,
       distanceKm: haversineDistanceKm(params.latitude, params.longitude, s.latitude, s.longitude),
     }))
-    .filter((s) => s.distanceKm <= radius)
-    .sort((a, b) => a.distanceKm - b.distanceKm);
+    .filter((s: { distanceKm: number }) => s.distanceKm <= radius)
+    .sort((a: { distanceKm: number }, b: { distanceKm: number }) => a.distanceKm - b.distanceKm);
 
-  return withDistance.map(({ resources, ...s }) => ({
-    ...s,
-    capacityAvailable: Math.max(0, s.capacity - s.occupancy),
-    resources,
-  }));
+  return withDistance.map((row: (typeof withDistance)[number]) => {
+    const { resources, ...s } = row as (typeof row) & { resources?: unknown };
+    return {
+      ...s,
+      capacityAvailable: Math.max(0, s.capacity - s.occupancy),
+      resources,
+    };
+  });
 }
 
-export async function listShelters(params: { status?: string }) {
+export async function listShelters(params: { status?: string; page?: number; pageSize?: number }) {
+  // page/pageSize absent → return all rows (legacy behavior)
+  const take =
+    params.page !== undefined || params.pageSize !== undefined
+      ? Math.min(params.pageSize ?? 50, 200)
+      : undefined;
   return prisma.shelter.findMany({
     where: params.status ? { status: params.status as never } : {},
     orderBy: { createdAt: 'desc' },
     include: { resources: true },
+    ...(take !== undefined ? { skip: ((params.page ?? 1) - 1) * take, take } : {}),
   });
 }
 
@@ -90,6 +100,13 @@ export async function updateShelter(input: {
   const existing = await prisma.shelter.findUnique({ where: { id: input.id } });
   if (!existing) throw new NotFoundError('Shelter not found');
 
+  // Merge input over existing before validating capacity math.
+  const nextCapacity = input.capacity ?? existing.capacity;
+  const nextOccupancy = input.occupancy ?? existing.occupancy ?? 0;
+  if (nextOccupancy > nextCapacity) {
+    throw new UnprocessableEntityError('occupancy cannot exceed capacity');
+  }
+
   const data: Record<string, unknown> = {};
   if (input.name !== undefined) data.name = input.name;
   if (input.address !== undefined) data.address = input.address;
@@ -99,7 +116,12 @@ export async function updateShelter(input: {
   if (input.occupancy !== undefined) data.occupancy = input.occupancy;
   if (input.facilities !== undefined) data.facilities = input.facilities;
   if (input.contactPhone !== undefined) data.contactPhone = input.contactPhone;
-  if (input.status !== undefined) data.status = input.status;
+  if (input.status !== undefined) {
+    data.status = input.status;
+  } else if (input.occupancy !== undefined || input.capacity !== undefined) {
+    // Auto-derive status from capacity math when the caller didn't pin one.
+    data.status = nextOccupancy >= nextCapacity ? 'full' : 'open';
+  }
 
   const shelter = await prisma.shelter.update({ where: { id: input.id }, data });
 

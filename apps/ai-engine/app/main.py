@@ -1,9 +1,10 @@
 """
-AapdaSetu AI Microservice Hub — FastAPI Server (Port 8000)
-Unifies all Python AI engines under one HTTP API surface.
-
-Run with:  python -m uvicorn apps.ai-engine.app.main:app --port 8000
-Or test standalone:  python apps/ai-engine/app/main.py
+AapdaSetu AI Prototype — Standalone JSON Test Harness
+Runs the triage / damage-assessment / PFA-chatbot / flood-map helpers as a
+local CLI smoke test (python apps/ai-engine/app/main.py). There is no ASGI
+app in this directory; the served implementation lives in
+backend-aapdasetu/fastapi-service — run it with:
+    cd backend-aapdasetu && uvicorn app.main:app --app-dir fastapi-service --port 8000
 """
 import sys
 import json

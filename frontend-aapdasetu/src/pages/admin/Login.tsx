@@ -9,8 +9,8 @@ export default function AdminLogin() {
   const { t } = useLanguage()
   const { login, loading, error } = useAuth()
   const navigate = useNavigate()
-  const [email, setEmail] = useState('admin@aapdasetu.org')
-  const [password, setPassword] = useState('Admin@123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -27,7 +27,7 @@ export default function AdminLogin() {
       <div className="w-full max-w-sm">
         <form
           onSubmit={onSubmit}
-          className="rounded-2xl border border-slate-200 bg-white p-8 shadow-xs dark:border-slate-800 dark:bg-slate-900"
+          className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900"
         >
           <div className="flex items-center gap-2.5 mb-4">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-600 font-bold text-white text-xs font-mono">

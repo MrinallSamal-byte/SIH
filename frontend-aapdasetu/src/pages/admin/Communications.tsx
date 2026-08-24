@@ -101,9 +101,17 @@ export default function Communications() {
           ? recipients.split(',').map((s) => s.trim()).filter(Boolean)
           : undefined,
       })
+      // Per-channel honesty: the backend reports each channel's outcome in details[].
+      const details = result.details ?? []
+      const okCount = details.filter((d) => d.ok).length
+      const failedCount = details.filter((d) => d.ok === false).length
+      const perChannel = details
+        .map((d) => `${d.channel}: ${d.ok ? t('cm.channelOk', 'ok') : d.note || t('cm.channelFailed', 'failed')}`)
+        .join(' · ')
       toast(
-        `${t('cm.broadcastTransmitted')} ${result.delivered} ${t('cm.endpointsAcross')} ${result.channels.join(', ').toUpperCase()}.`,
-        'success'
+        `${okCount}/${details.length || result.channels.length} ${t('cm.channelsSucceeded', 'channel(s) succeeded')}` +
+          (perChannel ? ` — ${perChannel}` : ''),
+        failedCount > 0 ? 'warning' : 'success',
       )
     } catch (err) {
       toast(err instanceof Error ? err.message : t('cm.broadcastFailed'), 'error')
@@ -135,7 +143,7 @@ export default function Communications() {
       </div>
 
       {/* Quick Presets Bar */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
           <Sparkles className="h-4 w-4 text-amber-500" />
           <span>{t('cm.templatesTitle')}</span>
@@ -156,7 +164,7 @@ export default function Communications() {
 
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Broadcast Form */}
-        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 lg:col-span-7">
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-span-7">
           <Field label={t('cm.severityLabel')}>
             <div className="flex gap-2">
               {(['critical', 'warning', 'info'] as AlertSeverity[]).map((s) => (
@@ -226,7 +234,7 @@ export default function Communications() {
                     onClick={() => toggleChannel(c.id)}
                     className={`flex flex-col justify-between rounded-xl border p-3 text-left transition cursor-pointer ${
                       active
-                        ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900 shadow-xs'
+                        ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900 shadow-sm'
                         : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
                     }`}
                   >
@@ -263,7 +271,7 @@ export default function Communications() {
 
         {/* Citizen Live Preview Card */}
         <div className="space-y-4 lg:col-span-5">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono mb-3 flex items-center gap-1.5">
               <Smartphone className="h-4 w-4" />
               <span>{t('cm.mobilePreview')}</span>

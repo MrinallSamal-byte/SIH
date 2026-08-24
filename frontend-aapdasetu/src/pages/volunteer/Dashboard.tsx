@@ -1,35 +1,24 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { listReports, listVolunteers, updateVolunteer } from '../../api/endpoints'
+import { volunteerMe, listVolunteerTasks, setVolunteerStatus } from '../../api/endpoints'
 import Button from '../../components/common/Button'
 import Loader from '../../components/common/Loader'
 import { useToast } from '../../components/common/Toast'
 import { useLanguage } from '../../lib/i18n'
-import type { Report, Volunteer } from '../../types'
+import type { Report } from '../../types'
 
 export default function Dashboard() {
   const { t } = useLanguage()
   const { toast } = useToast()
-  const [allVolunteers, setAllVolunteers] = useState<Volunteer[]>([])
-  const [volunteer, setVolunteer] = useState<Volunteer | null>(null)
+  const [volunteer, setVolunteer] = useState<(Awaited<ReturnType<typeof volunteerMe>> & { status?: string }) | null>(null)
   const [activeTasks, setActiveTasks] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
     try {
-      const vols = await listVolunteers()
-      setAllVolunteers(vols)
-
-      const savedId = localStorage.getItem('aapdasetu_volunteer_session')
-      const matched = vols.find((v) => v.id === savedId) || null
-      setVolunteer(matched)
-
-      const reports = await listReports({ status: 'in_progress' })
-      if (!matched) {
-        setActiveTasks([])
-      } else {
-        setActiveTasks(reports.filter((r) => r.assignedVolunteerId === matched.id))
-      }
+      const me = await volunteerMe()
+      setVolunteer(me)
+      setActiveTasks(await listVolunteerTasks())
     } catch {
       toast(t('vd.loadFailed'), 'error')
     } finally {
@@ -43,36 +32,26 @@ export default function Dashboard() {
 
   const statusLabel = useCallback(
     (status: string) =>
-      status === 'on_duty'
-        ? t('vd.onDuty', 'On Duty')
-        : status === 'offline'
-          ? t('vl.statusOffline', 'Off Duty / Offline')
-          : t('vd.available', 'Available'),
+      status === 'available'
+        ? t('vd.available', 'Available')
+        : t('vl.statusOffline', 'Off Duty / Offline'),
     [t],
   )
 
-  const selectVolunteerProfile = (id: string) => {
-    const matched = allVolunteers.find((v) => v.id === id)
-    if (matched) {
-      setVolunteer(matched)
-      localStorage.setItem('aapdasetu_volunteer_session', matched.id)
-      toast(`${t('vd.sessionSwitchedTo')}: ${matched.name}`)
-      // Reload tasks for this volunteer
-      listReports({ status: 'in_progress' }).then((reports) => {
-        setActiveTasks(reports.filter((r) => r.assignedVolunteerId === matched.id))
-      })
-    }
-  }
-
   const toggleAvailability = async () => {
     if (!volunteer) return
-    const next = volunteer.status === 'available' ? 'on_duty' : 'available'
+    const next = volunteer.status === 'available' ? 'offline' : 'available'
     try {
-      const updated = await updateVolunteer(volunteer.id, { status: next })
-      setVolunteer(updated)
-      toast(`${t('vd.dutyStatusNow')}: ${statusLabel(updated.status)}`, 'success')
+      await setVolunteerStatus(next)
+      setVolunteer({ ...volunteer, status: next })
+      toast(`${t('vd.dutyStatusNow')}: ${statusLabel(next)}`, 'success')
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('vd.statusUpdateFailed'), 'error')
+      // ponytail: 409 means an active task blocks going offline
+      if (err instanceof Error && /409|conflict/i.test(err.message)) {
+        toast('Resolve your active task first', 'error')
+      } else {
+        toast(err instanceof Error ? err.message : t('vd.statusUpdateFailed'), 'error')
+      }
     }
   }
 
@@ -95,29 +74,12 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* Profile Switcher */}
-        {allVolunteers.length > 1 && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-400">{t('vd.activeProfile')}:</span>
-            <select
-              value={volunteer?.id || ''}
-              onChange={(e) => selectVolunteerProfile(e.target.value)}
-              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-800 outline-none dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200"
-            >
-              {allVolunteers.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name} ({statusLabel(v.status)})
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
       </div>
 
       {volunteer && (
         <div className="grid gap-4 md:grid-cols-2">
           {/* Volunteer Profile Card */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-start justify-between">
               <div>
                 <div className="text-xl font-bold text-slate-900 dark:text-slate-100">{volunteer.name}</div>
@@ -125,19 +87,19 @@ export default function Dashboard() {
               </div>
               <span
                 className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${
-                  volunteer.status === 'on_duty'
+                  volunteer.status === 'offline'
                     ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
                     : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
                 }`}
               >
-                {volunteer.status === 'on_duty' ? t('vd.onDuty') : t('vd.available')}
+                {volunteer.status === 'offline' ? t('vl.statusOffline', 'Off Duty / Offline') : t('vd.available')}
               </span>
             </div>
 
             <div className="mt-4">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{t('vd.registeredSkills')}:</span>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {volunteer.skills.map((s) => (
+                {(volunteer.skills ?? []).map((s) => (
                   <span key={s} className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-800 border border-slate-200 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 mono">
                     {s.replace('_', ' ').toUpperCase()}
                   </span>
@@ -153,13 +115,13 @@ export default function Dashboard() {
                 onClick={toggleAvailability}
                 className="font-bold"
               >
-                {volunteer.status === 'available' ? t('vd.goOnDuty') : t('vd.markAvailable')}
+                {volunteer.status === 'available' ? 'Go Offline' : t('vd.markAvailable')}
               </Button>
             </div>
           </div>
 
           {/* Active Tasks Summary Card */}
-          <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div>
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">{t('vd.activeMissions')}</h2>

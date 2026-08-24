@@ -217,6 +217,13 @@ async function runFlush(): Promise<FlushResult> {
             await replayItem(original)
             removeFromOutbox(original.id)
             synced++
+            // ponytail: heartbeat the lock TTL after each success so a long
+            // flush can never outlive OUTBOX_LOCK_TTL_MS and be double-flushed
+            try {
+              localStorage.setItem(OUTBOX_LOCK_KEY, JSON.stringify({ token: lockToken, ts: Date.now() }))
+            } catch {
+              // storage hiccup — TTL self-heals via releaseOutboxLock
+            }
           } catch (err) {
             if (err instanceof OfflineError || isOffline()) {
               // Device dropped mid-flush: refund the attempt and stop — items

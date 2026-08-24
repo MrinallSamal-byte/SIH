@@ -30,3 +30,30 @@ export function verifyAdminToken(token: string): DecodedToken {
     throw new UnauthorizedError('Invalid or expired session token');
   }
 }
+
+export interface VolunteerTokenPayload {
+  sub: string;
+  name: string;
+  role: 'volunteer';
+}
+
+export interface DecodedVolunteerToken extends VolunteerTokenPayload {
+  iat?: number;
+  exp?: number;
+}
+
+export function signVolunteerToken(payload: VolunteerTokenPayload): string {
+  return jwt.sign(payload, env.jwtSecret, {
+    expiresIn: env.jwtExpiresIn as jwt.SignOptions['expiresIn'],
+  });
+}
+
+export function verifyVolunteerToken(token: string): DecodedVolunteerToken {
+  try {
+    const decoded = jwt.verify(token, env.jwtSecret) as DecodedVolunteerToken;
+    if (!decoded.sub || decoded.role !== 'volunteer') throw new Error('missing claims');
+    return decoded;
+  } catch {
+    throw new UnauthorizedError('Invalid or expired session token');
+  }
+}

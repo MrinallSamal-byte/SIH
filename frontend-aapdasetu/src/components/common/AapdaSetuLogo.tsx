@@ -94,9 +94,11 @@ export default function AapdaSetuLogo({
           <span className="text-base font-black tracking-tight leading-none text-slate-900 dark:text-slate-100 font-display">
             AapdaSetu
           </span>
-          <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 tracking-wider mono uppercase mt-0.5">
-            {subtext || 'ICS NETWORK'}
-          </span>
+          {subtext && (
+            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 tracking-wider mono uppercase mt-0.5">
+              {subtext}
+            </span>
+          )}
         </div>
       )}
     </div>

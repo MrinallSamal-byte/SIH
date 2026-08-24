@@ -12,6 +12,10 @@ function escapeCsvCell(value: unknown): string {
   } else {
     str = String(value)
   }
+  // ponytail: neutralize spreadsheet formula injection (=, +, -, @, tab, CR)
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`
+  }
   if (/[",\n\r]/.test(str)) {
     return `"${str.replace(/"/g, '""')}"`
   }

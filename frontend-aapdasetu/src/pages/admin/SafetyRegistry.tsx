@@ -96,13 +96,13 @@ export default function SafetyRegistry() {
 
       {/* KPI Summary Cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">{t('sr.totalCheckIns')}</div>
           <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-slate-100">{totalCount}</div>
           <div className="text-[11px] text-slate-400">{t('sr.registeredCitizens')}</div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mono flex items-center gap-1">
             <UserCheck className="h-3.5 w-3.5" />
             <span>{t('sr.markedSafe')}</span>
@@ -113,7 +113,7 @@ export default function SafetyRegistry() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 mono flex items-center gap-1">
             <AlertTriangle className="h-3.5 w-3.5" />
             <span>{t('sr.needsAssistance')}</span>
@@ -122,7 +122,7 @@ export default function SafetyRegistry() {
           <div className="text-[11px] text-slate-400">{t('sr.urgentRescueQueue')}</div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">{t('sr.gpsMapped')}</div>
           <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-slate-100">
             {markers.length}
@@ -138,14 +138,14 @@ export default function SafetyRegistry() {
             <span>{t('sr.mapTitle')} ({markers.length} {t('sr.mappedPins')})</span>
             <span className="text-[11px] text-slate-400">{t('sr.mapLegend')}</span>
           </div>
-          <div className="h-64 rounded-2xl overflow-hidden shadow-xs border border-slate-200 dark:border-slate-800">
+          <div className="h-64 rounded-2xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800">
             <LeafletMap center={mapCenter} markers={markers} height="100%" autoFit />
           </div>
         </div>
       )}
 
       {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex flex-col sm:flex-row gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
@@ -174,7 +174,7 @@ export default function SafetyRegistry() {
       </div>
 
       {/* Check-ins Table */}
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <table className="w-full text-left text-xs">
           <thead className="border-b bg-slate-50 dark:bg-slate-800 text-[10px] uppercase text-slate-500 dark:text-slate-400 mono font-bold">
             <tr>

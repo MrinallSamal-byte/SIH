@@ -148,6 +148,9 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
   )
 
   const watchIdRef = useRef<number | null>(null)
+  // ponytail: latest detect() cleanup lives here so watches started outside the
+  // mount effect (refresh / visibilitychange) are still released on unmount
+  const detectCleanupRef = useRef<(() => void) | null>(null)
   const manualResetTimerRef = useRef<number | null>(null)
 
   const setManualLocation = useCallback((point: GeoPoint, customAddress?: string) => {
@@ -210,6 +213,7 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
 
     if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
       fallbackToIp(false)
+      detectCleanupRef.current = null
       return () => {}
     }
 
@@ -262,7 +266,7 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
     )
     watchIdRef.current = watchId
 
-    return () => {
+    const cleanup = () => {
       try {
         navigator.geolocation.clearWatch(watchId)
       } catch {
@@ -270,6 +274,8 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
       }
       if (watchIdRef.current === watchId) watchIdRef.current = null
     }
+    detectCleanupRef.current = cleanup
+    return cleanup
   }, [fallbackToIp, saveLocation])
 
   const locateHighAccuracy = useCallback(async (): Promise<GeoLocationCoordinatesLike | null> => {
@@ -306,9 +312,10 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
   }, [fallbackToIp, saveLocation])
 
   useEffect(() => {
-    const cleanup = detect()
+    detect()
     return () => {
-      if (typeof cleanup === 'function') cleanup()
+      detectCleanupRef.current?.()
+      detectCleanupRef.current = null
     }
   }, [detect])
 

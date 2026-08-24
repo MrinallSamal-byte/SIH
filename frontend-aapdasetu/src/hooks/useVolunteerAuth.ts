@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { VOLUNTEER_AUTH_KEY, clearSnapshots } from '../api/client'
 import { volunteerLogin } from '../api/endpoints'
 import type { VolunteerUser } from '../types'
 
-export const VOLUNTEER_AUTH_KEY = 'aapdasetu_volunteer_auth'
+export { VOLUNTEER_AUTH_KEY }
 export const VOLUNTEER_ID_KEY = 'aapdasetu_volunteer_session'
 
 // Fallback shown only when a thrown value is not an Error (raw backend messages
@@ -57,6 +58,7 @@ export function useVolunteerAuth() {
   const logout = useCallback(() => {
     localStorage.removeItem(VOLUNTEER_AUTH_KEY)
     localStorage.removeItem(VOLUNTEER_ID_KEY)
+    clearSnapshots()
     setUser(null)
   }, [])
 
@@ -68,7 +70,13 @@ export function useVolunteerAuth() {
 }
 
 export function useIsVolunteerAuthed(): boolean {
-  const [authed, setAuthed] = useState(() => !!localStorage.getItem(VOLUNTEER_AUTH_KEY))
+  const [authed, setAuthed] = useState(() => {
+    try {
+      return !!localStorage.getItem(VOLUNTEER_AUTH_KEY)
+    } catch {
+      return false
+    }
+  })
   useEffect(() => {
     const onStorage = () => setAuthed(!!localStorage.getItem(VOLUNTEER_AUTH_KEY))
     window.addEventListener('storage', onStorage)

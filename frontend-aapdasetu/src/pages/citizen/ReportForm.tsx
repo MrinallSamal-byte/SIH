@@ -15,7 +15,9 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import { createReport } from '../../api/endpoints'
+import { ApiError } from '../../api/client'
 import { aiTriage } from '../../api/ai'
+import { enqueueOutbox } from '../../lib/outbox'
 import LandmarkPicker from '../../components/map/LandmarkPicker'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
@@ -61,6 +63,8 @@ export default function ReportForm() {
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState<Report | null>(null)
   const [copied, setCopied] = useState(false)
+  // ponytail: sticky manual-pin flag — a fresh GPS fix must not clobber a pin the user placed
+  const manuallyPinnedRef = useRef(false)
 
   // Voice/Video recording state
   const [isRecordingAudio, setIsRecordingAudio] = useState(false)
@@ -79,20 +83,21 @@ export default function ReportForm() {
   }, [detectedAddress])
 
   useEffect(() => {
-    if (coords && !customPoint) {
-      const point: GeoPoint = { lat: coords.latitude, lng: coords.longitude }
-      setCustomPoint(point)
-      setGpsError(null)
-      if (!gpsAddress) {
-        reverseGeocode(point)
-          .then((addr) => {
-            if (addr) setGpsAddress(addr)
-            else setGpsAddress(`${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
-          })
-          .catch(() => {
-            setGpsAddress(`${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
-          })
-      }
+    // Overwrite customPoint on every NEW trusted fix until the user explicitly
+    // pins a location — otherwise the pin goes stale as the GPS watch drifts.
+    if (!coords || manuallyPinnedRef.current || !hasTrustedFix) return
+    const point: GeoPoint = { lat: coords.latitude, lng: coords.longitude }
+    setCustomPoint(point)
+    setGpsError(null)
+    if (!gpsAddress) {
+      reverseGeocode(point)
+        .then((addr) => {
+          if (addr) setGpsAddress(addr)
+          else setGpsAddress(`${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
+        })
+        .catch(() => {
+          setGpsAddress(`${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
+        })
     }
   }, [coords])
 
@@ -130,6 +135,7 @@ export default function ReportForm() {
     // context fix as the pinned point instead of skipping setManualLocation.
     const point = editPoint ?? (coords ? { lat: coords.latitude, lng: coords.longitude } : null)
     if (point) {
+      manuallyPinnedRef.current = true
       setCustomPoint(point)
       if (addrText) {
         setGpsAddress(addrText)
@@ -148,6 +154,7 @@ export default function ReportForm() {
   }
 
   const handleLandmarkPick = async (p: GeoPoint, address?: string) => {
+    manuallyPinnedRef.current = true
     setCustomPoint(p)
     setShowMap(false)
     if (address) {
@@ -201,13 +208,7 @@ export default function ReportForm() {
       setIsRecordingAudio(true)
       setAudioSeconds(0)
       timerRef.current = setInterval(() => {
-        setAudioSeconds((sec) => {
-          if (sec >= 30) {
-            recorder.stop()
-            return 30
-          }
-          return sec + 1
-        })
+        setAudioSeconds((sec) => sec + 1)
       }, 1000)
     } catch {
       toast(t('report.micDenied'), 'error')
@@ -236,6 +237,15 @@ export default function ReportForm() {
       mediaRecorderRef.current.stop()
     }
   }
+
+  // Auto-stop at the 30s cap — kept out of the setAudioSeconds updater because
+  // state updaters must stay side-effect free.
+  useEffect(() => {
+    if (audioSeconds >= 30 && isRecordingAudio) {
+      stopAudioRecording()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audioSeconds, isRecordingAudio])
 
   const handleFiles = async (files: FileList | null) => {
     if (!files) return
@@ -291,7 +301,7 @@ export default function ReportForm() {
       return
     }
 
-    const cleanPhone = reporterPhone.replace(/\D/g, '')
+    const cleanPhone = reporterPhone.replace(/\D/g, '').slice(0, 15)
     if (!cleanPhone || cleanPhone.length < 10) {
       toast(t('common.errPhone10'), 'error')
       return
@@ -304,23 +314,28 @@ export default function ReportForm() {
       return
     }
 
-    let finalLocation = customPoint
-    if (!finalLocation && coords) {
-      finalLocation = { lat: coords.latitude, lng: coords.longitude }
-    }
+    // Submit prefers the LIVE trusted fix — customPoint can lag behind the GPS
+    // watch. Only an explicit user pin outranks fresh coordinates.
+    const liveTrusted =
+      hasTrustedFix && coords ? { lat: coords.latitude, lng: coords.longitude } : null
+    let finalLocation =
+      manuallyPinnedRef.current ? customPoint ?? liveTrusted : liveTrusted ?? customPoint
     if (!finalLocation) {
       toast(t('report.errGpsRequired'), 'error')
       setSending(false)
       return
     }
 
+    let input: ReportInput | null = null
     setSending(true)
     try {
-      const input: ReportInput = {
+      input = {
         type: selectedType as IncidentType,
-        description: description.trim() || `${t('report.emergencyReport')} ${selectedType.toUpperCase()}`,
-        landmark: gpsAddress.trim() || undefined,
-        reporterName: reporterName.trim() || undefined,
+        description:
+          description.trim().slice(0, 5000) ||
+          `${t('report.emergencyReport')} ${selectedType.toUpperCase()}`,
+        landmark: gpsAddress.trim().slice(0, 500) || undefined,
+        reporterName: reporterName.trim().slice(0, 200) || undefined,
         reporterPhone: cleanPhone,
         location: finalLocation,
         media,
@@ -350,7 +365,22 @@ export default function ReportForm() {
 
       toast(t('report.reportedSuccess'), 'success')
     } catch (err) {
-      toast(err instanceof Error ? err.message : t('common.submissionFailed'), 'error')
+      // Validation rejections (4xx) surface honestly; network/backend failures
+      // park the report in the global outbox for auto-retry (SOS pattern).
+      if (err instanceof ApiError && err.status >= 400 && err.status < 500) {
+        toast(err.message || t('common.submissionFailed'), 'error')
+      } else if (input) {
+        enqueueOutbox('report', input)
+        toast(
+          t(
+            'report.offlineQueuedToast',
+            'Offline: report queued — will send automatically when you reconnect.',
+          ),
+          'info',
+        )
+      } else {
+        toast(err instanceof Error ? err.message : t('common.submissionFailed'), 'error')
+      }
     } finally {
       setSending(false)
     }
@@ -359,7 +389,7 @@ export default function ReportForm() {
   // Confirmation View
   if (result) {
     return (
-      <div className="mx-auto max-w-2xl rounded-2xl border border-zinc-200/80 bg-white p-4 sm:p-6 shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+      <div className="mx-auto max-w-2xl rounded-2xl border border-zinc-200/80 bg-white p-4 sm:p-6 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]">
         <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 p-4 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/60">
           <CheckCircle2 className="h-8 w-8 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <div>
@@ -383,7 +413,7 @@ export default function ReportForm() {
                   setCopied(true)
                   toast(t('common.copiedClipboard'))
                   setTimeout(() => setCopied(false), 3000)
-                })
+                }).catch(() => toast(t('common.copyFailed'), 'error'))
               }}
               className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-2 text-xs font-bold text-white transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white cursor-pointer"
             >
@@ -396,7 +426,7 @@ export default function ReportForm() {
         <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
           <a
             href={`#/track?id=${encodeURIComponent(result.trackingId)}`}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-zinc-800 py-3.5 text-sm font-bold text-white shadow-xs hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-zinc-800 py-3.5 text-sm font-bold text-white shadow-sm hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
           >
             <span>{t('report.trackStatusLink')}</span>
             <ArrowRight className="h-4 w-4" />
@@ -412,6 +442,7 @@ export default function ReportForm() {
               setMedia([])
               setCustomPoint(null)
               setGpsAddress('')
+              manuallyPinnedRef.current = false
             }}
             className="rounded-xl border border-zinc-200 bg-white px-5 py-3.5 text-sm font-bold text-zinc-600 hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200"
           >
@@ -471,7 +502,7 @@ export default function ReportForm() {
           <label className="block text-xs font-bold text-zinc-700 dark:text-slate-200 mb-1.5 mono uppercase">
             {t('report.gpsTitle')} <span className="text-red-600">*</span>
           </label>
-          <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-white/[0.1] dark:bg-[#1a1a1a] shadow-xs space-y-3">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-white/[0.1] dark:bg-[#1a1a1a] shadow-sm space-y-3">
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
                 {locatingGps ? (
@@ -511,6 +542,7 @@ export default function ReportForm() {
                 type="text"
                 value={gpsAddress}
                 onChange={(e) => setGpsAddress(e.target.value)}
+                maxLength={500}
                 placeholder={t('report.gpsPlaceholder')}
                 className="w-full rounded-xl border border-zinc-200/80 bg-[#f4f4f5] pl-10 pr-3.5 py-2.5 text-sm text-zinc-700 outline-none transition focus:border-zinc-500 focus:bg-white dark:border-white/[0.08] dark:bg-[#151515] dark:text-slate-300"
               />
@@ -566,6 +598,7 @@ export default function ReportForm() {
               type="text"
               value={reporterName}
               onChange={(e) => setReporterName(e.target.value)}
+              maxLength={200}
               placeholder={t('report.namePlaceholder')}
               className="w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-3.5 py-2.5 text-sm text-zinc-700 placeholder-slate-400 outline-none transition focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-slate-300 dark:focus:border-slate-500"
             />
@@ -585,6 +618,7 @@ export default function ReportForm() {
               type="tel"
               value={reporterPhone}
               onChange={(e) => setReporterPhone(e.target.value)}
+              maxLength={15}
               placeholder={t('report.phonePlaceholder')}
               required
               className="w-full bg-transparent px-3.5 py-2.5 text-sm font-mono text-zinc-700 outline-none placeholder-slate-400 dark:text-slate-300"
@@ -622,12 +656,12 @@ export default function ReportForm() {
             className="hidden"
           />
 
-          <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-white/[0.1] dark:bg-[#1a1a1a] shadow-xs space-y-3">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-white/[0.1] dark:bg-[#1a1a1a] shadow-sm space-y-3">
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => videoInputRef.current?.click()}
-                className="flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white py-2.5 px-3 text-xs font-bold text-zinc-600 shadow-xs transition hover:bg-zinc-50 hover:border-slate-400 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200 cursor-pointer"
+                className="flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white py-2.5 px-3 text-xs font-bold text-zinc-600 shadow-sm transition hover:bg-zinc-50 hover:border-slate-400 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200 cursor-pointer"
               >
                 <Camera className="h-4 w-4" />
                 <span>{t('report.uploadMedia')}</span>
@@ -637,7 +671,7 @@ export default function ReportForm() {
                 <button
                   type="button"
                   onClick={startAudioRecording}
-                  className="flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white py-2.5 px-3 text-xs font-bold text-zinc-600 shadow-xs transition hover:bg-zinc-50 hover:border-slate-400 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200 cursor-pointer"
+                  className="flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white py-2.5 px-3 text-xs font-bold text-zinc-600 shadow-sm transition hover:bg-zinc-50 hover:border-slate-400 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200 cursor-pointer"
                 >
                   <Mic className="h-4 w-4" />
                   <span>{t('report.recordVoice')}</span>
@@ -646,7 +680,7 @@ export default function ReportForm() {
                 <button
                   type="button"
                   onClick={stopAudioRecording}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-red-600 py-2.5 px-3 text-xs font-bold text-white shadow-xs transition animate-pulse cursor-pointer"
+                  className="flex items-center justify-center gap-2 rounded-xl bg-red-600 py-2.5 px-3 text-xs font-bold text-white shadow-sm transition animate-pulse cursor-pointer"
                 >
                   <Square className="h-4 w-4" />
                   <span>{t('report.stopRecord')} ({audioSeconds}s / 30s)</span>
@@ -672,7 +706,7 @@ export default function ReportForm() {
                     <button
                       type="button"
                       onClick={() => removeMedia(i)}
-                      className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow-xs"
+                      className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow-sm"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -697,6 +731,7 @@ export default function ReportForm() {
             rows={4}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            maxLength={5000}
             placeholder={t('report.descPlaceholder')}
             className="w-full rounded-2xl border border-zinc-200 bg-white p-3.5 text-sm text-zinc-700 placeholder-slate-400 outline-none transition focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-slate-300 dark:focus:border-slate-500"
           />
@@ -836,7 +871,7 @@ export default function ReportForm() {
             <button
               type="button"
               onClick={applyManualLocation}
-              className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-red-700 cursor-pointer"
+              className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-red-700 cursor-pointer"
             >
               {t('sos.saveLocation')}
             </button>

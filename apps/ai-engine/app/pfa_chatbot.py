@@ -8,7 +8,7 @@ import urllib.error
 if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8')
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "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")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")  # ponytail: committed key scrubbed; set via env only
 FREE_MODELS = [
     "nvidia/nemotron-3.5-lightning:free",
     "google/gemma-4-31b-it:free",
@@ -23,6 +23,9 @@ class PFAChatbotEngine:
     """
     @staticmethod
     def get_pfa_response(user_message, victim_name="Friend"):
+        # ponytail: fail loudly at call time instead of shipping a default credential
+        if not OPENROUTER_API_KEY:
+            raise RuntimeError("set OPENROUTER_API_KEY")
         # Try OpenRouter LLM first
         prompt_system = (
             "You are AapdaMitra AI (आपदामित्र), an elite, compassionate, and highly intelligent 24/7 Disaster Survival, "

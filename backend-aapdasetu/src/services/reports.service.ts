@@ -1,4 +1,5 @@
 /** Reports, SOS, tracking and dispatch services. */
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { computeTriage, IncidentType, PriorityLabel } from '../lib/triage.js';
 import { NotFoundError, ConflictError } from '../lib/errors.js';
@@ -139,16 +140,19 @@ export async function updateReportStatus(input: {
   if (input.status) data.status = input.status;
   if (input.resolutionNotes !== undefined) data.resolutionNotes = input.resolutionNotes;
   if (input.status === 'resolved') data.resolvedAt = new Date();
+  else if (input.status && existing.status === 'resolved') data.resolvedAt = null;
 
-  // If resolving report, release the assigned volunteer back to available
-  if (input.status === 'resolved' && existing.assignedVolunteerId) {
-    await prisma.volunteer.update({
-      where: { id: existing.assignedVolunteerId },
-      data: { status: 'available' },
-    }).catch(() => {});
-  }
+  const report = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    // If resolving report, release the assigned volunteer back to available
+    if (input.status === 'resolved' && existing.assignedVolunteerId) {
+      await tx.volunteer.update({
+        where: { id: existing.assignedVolunteerId },
+        data: { status: 'available' },
+      }).catch(() => {});
+    }
 
-  const report = await prisma.report.update({ where: { id: input.id }, data });
+    return tx.report.update({ where: { id: input.id }, data });
+  });
 
   await writeAuditLog({
     adminEmail: input.adminEmail,
@@ -174,27 +178,13 @@ export async function assignDispatch(input: {
   volunteerId?: string;
   agencyId?: string;
 }) {
+  // ponytail: validate-first, then one transaction — availability enforced by conditional updateMany guard
   const report = await prisma.report.findUnique({ where: { id: input.id } });
   if (!report) throw new NotFoundError('Report not found');
-
-  // If reassigning away from a previous volunteer, release the old volunteer back to available
-  if (report.assignedVolunteerId && report.assignedVolunteerId !== input.volunteerId) {
-    await prisma.volunteer.update({
-      where: { id: report.assignedVolunteerId },
-      data: { status: 'available' },
-    }).catch(() => {});
-  }
 
   if (input.volunteerId) {
     const volunteer = await prisma.volunteer.findUnique({ where: { id: input.volunteerId } });
     if (!volunteer) throw new NotFoundError('Volunteer not found');
-    if (volunteer.status !== 'available' && report.assignedVolunteerId !== input.volunteerId) {
-      throw new ConflictError('Volunteer is not available for dispatch');
-    }
-    await prisma.volunteer.update({
-      where: { id: input.volunteerId },
-      data: { status: 'on_duty' },
-    });
   }
 
   if (input.agencyId) {
@@ -202,27 +192,44 @@ export async function assignDispatch(input: {
     if (!agency) throw new NotFoundError('Agency not found');
   }
 
-  const updated = await prisma.report.update({
-    where: { id: input.id },
-    data: {
-      assignedVolunteerId: input.volunteerId,
-      assignedAgencyId: input.agencyId,
-      status: report.status === 'pending' ? 'in_progress' : report.status,
-    },
-    include: {
-      assignedVolunteer: { select: { id: true, name: true, phone: true } },
-      assignedAgency: { select: { id: true, name: true, type: true } },
-    },
-  });
+  const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    // If reassigning away from a previous volunteer, release the old volunteer back to available
+    if (report.assignedVolunteerId && report.assignedVolunteerId !== input.volunteerId) {
+      await tx.volunteer.update({
+        where: { id: report.assignedVolunteerId },
+        data: { status: 'available' },
+      }).catch(() => {});
+    }
 
-  await prisma.dispatch.create({
-    data: {
-      reportId: input.id,
-      volunteerId: input.volunteerId,
-      agencyId: input.agencyId,
-      action: 'assign',
-      assignedBy: input.adminEmail,
-    },
+    if (input.volunteerId) {
+      const r = await tx.volunteer.updateMany({ where: { id: input.volunteerId, status: 'available' }, data: { status: 'on_duty' } });
+      if (r.count === 0) throw new ConflictError('Volunteer not available');
+    }
+
+    const updated = await tx.report.update({
+      where: { id: input.id },
+      data: {
+        assignedVolunteerId: input.volunteerId,
+        assignedAgencyId: input.agencyId,
+        status: report.status === 'pending' ? 'in_progress' : report.status,
+      },
+      include: {
+        assignedVolunteer: { select: { id: true, name: true, phone: true } },
+        assignedAgency: { select: { id: true, name: true, type: true } },
+      },
+    });
+
+    await tx.dispatch.create({
+      data: {
+        reportId: input.id,
+        volunteerId: input.volunteerId,
+        agencyId: input.agencyId,
+        action: 'assign',
+        assignedBy: input.adminEmail,
+      },
+    });
+
+    return updated;
   });
 
   await writeAuditLog({
@@ -335,10 +342,10 @@ export async function listReports(params: {
     prisma.report.count({ where }),
   ]);
 
-  return { items: items.map((r) => serializeReport(r, true)), total, page, pageSize };
+  return { items: items.map((r: (typeof items)[number]) => serializeReport(r, true)), total, page, pageSize };
 }
 
-function serializeReport(report: Record<string, unknown>, includeRelations = false) {
+export function serializeReport(report: Record<string, unknown>, includeRelations = false) {
   const { mediaData, ...rest } = report as { mediaData?: string; [k: string]: unknown };
   // Never leak raw base64 media payloads over the public API unless explicitly needed.
   const out: Record<string, unknown> = { ...rest, hasMedia: Boolean(mediaData) };
@@ -347,4 +354,20 @@ function serializeReport(report: Record<string, unknown>, includeRelations = fal
     delete out.assignedAgency;
   }
   return out;
+}
+
+// ponytail: public tracking payload only — no reporter PII, volunteer phone or medicalCondition
+export function serializePublicTracking(report: Record<string, unknown>) {
+  const r = report as { mediaData?: string | null; mediaType?: string | null; [k: string]: unknown };
+  return {
+    trackingId: r.trackingId,
+    type: r.type,
+    status: r.status,
+    priorityLabel: r.priorityLabel,
+    priorityScore: r.priorityScore,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+    landmark: r.landmark,
+    hasMedia: Boolean(r.mediaData || r.mediaType),
+  };
 }

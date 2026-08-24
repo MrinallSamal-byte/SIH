@@ -20,6 +20,7 @@ import { useRealtime } from '../../hooks/useRealtime'
 import { emitRealtimeUpdate } from '../../lib/realtimeEventBus'
 import { timeAgo, getNavigationUrl } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
+import { useToast } from '../../components/common/Toast'
 import type { GeoPoint, Report } from '../../types'
 
 const SIREN_ENABLED_KEY = 'aapdasetu_siren_enabled'
@@ -196,8 +197,10 @@ function notifyNewRedIncidents(items: Report[]): void {
 
 export default function LiveSOS() {
   const { t } = useLanguage()
+  const { toast } = useToast()
   const fetchReports = useCallback(() => listReports({ status: 'pending' }), [])
-  const reports = useRealtime<Report[]>(fetchReports, 3000)
+  const reportsPage = useRealtime<{ items: Report[]; total: number }>(fetchReports, 3000)
+  const reports = reportsPage?.items ?? []
 
   const statusLabel = useCallback(
     (status: string) =>
@@ -227,17 +230,24 @@ export default function LiveSOS() {
 
   useEffect(() => {
     setLoopActive(sirenEngine.isRunning)
+    // Never leave the siren loop running after the operator leaves the page.
+    return () => sirenEngine.stop()
   }, [])
 
   const acknowledge = useCallback(
     async (reportId: string) => {
       markInteraction()
-      sirenEngine.stop()
-      setLoopActive(false)
-      await updateReport(reportId, { status: 'in_progress' })
-      emitRealtimeUpdate('report_updated', reportId)
+      try {
+        await updateReport(reportId, { status: 'in_progress' })
+        // Only silence the siren once the acknowledge actually stuck.
+        sirenEngine.stop()
+        setLoopActive(false)
+        emitRealtimeUpdate('report_updated', reportId)
+      } catch (err) {
+        toast(err instanceof Error ? err.message : t('ls.ackFailed', 'Failed to acknowledge incident'), 'error')
+      }
     },
-    [markInteraction],
+    [markInteraction, toast, t],
   )
 
   useEffect(() => {
@@ -354,7 +364,7 @@ export default function LiveSOS() {
     return { lat: 22.5726, lng: 88.3639 }
   }, [markers])
 
-  if (!reports) return <Loader />
+  if (!reportsPage) return <Loader />
 
   return (
     <div className="space-y-6">
@@ -368,7 +378,7 @@ export default function LiveSOS() {
           </div>
           <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1">
             <span className="inline-block h-2 w-2 rounded-full bg-red-500 animate-ping" />
-            <span>{t('ls.activeDistressQueue')} ({reports.length} {t('ls.pendingIncidents')})</span>
+            <span>{t('ls.activeDistressQueue')} ({(reportsPage.total ?? reports.length).toLocaleString()} {t('ls.pendingIncidents')})</span>
           </div>
         </div>
 
@@ -385,7 +395,7 @@ export default function LiveSOS() {
                   type="button"
                   onClick={disarmSiren}
                   title={t('ls.disableSirenHint', 'Click to disable siren')}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 shadow-xs cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 shadow-sm cursor-pointer"
                 >
                   <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                   <span>{t('ls.sirenActive')}</span>
@@ -398,7 +408,7 @@ export default function LiveSOS() {
                     'ls.armedMutedHint',
                     'Armed — audio stays muted until you interact with the page',
                   )}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300 shadow-xs cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300 shadow-sm cursor-pointer"
                 >
                   <span className="h-2 w-2 rounded-full bg-amber-500" />
                   <span>{t('ls.armedMutedUntilInteraction', 'Armed — muted until interaction')}</span>
@@ -434,7 +444,7 @@ export default function LiveSOS() {
           <span>{t('ls.activeDistressMap')} ({markers.length} {t('ls.geolocatedIncidents')})</span>
           <span className="text-[11px] text-slate-400">{t('ls.layerSwitcherHint')}</span>
         </div>
-        <div className="h-72 rounded-2xl overflow-hidden shadow-xs border border-slate-200 dark:border-slate-800">
+        <div className="h-72 rounded-2xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800">
           <LeafletMap
             center={mapCenter}
             markers={markers}
@@ -452,7 +462,7 @@ export default function LiveSOS() {
             key={r.id}
             onMouseEnter={() => setSelectedId(r.id)}
             onClick={() => setSelectedId(r.id)}
-            className={`rounded-2xl border bg-white p-5 shadow-xs transition cursor-pointer dark:bg-slate-900 ${
+            className={`rounded-2xl border bg-white p-5 shadow-sm transition cursor-pointer dark:bg-slate-900 ${
               selectedId === r.id ? 'ring-2 ring-red-500/60' : ''
             } ${
               r.priorityLabel === 'RED'

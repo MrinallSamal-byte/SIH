@@ -173,9 +173,9 @@ export default function Home() {
           </Link>
           <Link
             to="/track"
-            className="w-full sm:w-auto group inline-flex items-center justify-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-6 py-3 text-sm sm:text-base font-semibold text-zinc-700 transition-all hover:bg-zinc-50 active:scale-[0.98] shadow-xs dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-slate-200 dark:hover:bg-[#252525] cursor-pointer"
+            className="w-full sm:w-auto group inline-flex items-center justify-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-6 py-3 text-sm sm:text-base font-semibold text-zinc-700 transition-all hover:bg-zinc-50 active:scale-[0.98] shadow-sm dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-slate-200 dark:hover:bg-[#252525] cursor-pointer"
           >
-            <Search className="h-4.5 w-4.5" />
+            <Search className="size-[18px]" />
             <span>{t('nav.track')}</span>
           </Link>
           <Link

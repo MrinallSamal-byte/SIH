@@ -48,8 +48,16 @@ export async function listAlerts(params: { severity?: string; limit?: number }) 
   });
 }
 
+const ACTIVE_ALERT_TTL_HOURS = 24;
+
 export async function listActiveAlerts() {
-  return prisma.alert.findMany({ orderBy: { createdAt: 'desc' }, take: 50 });
+  // ponytail: fixed 24h TTL vs an expiresAt column — swap when alerts get explicit expiry
+  const cutoff = new Date(Date.now() - ACTIVE_ALERT_TTL_HOURS * 60 * 60 * 1000);
+  return prisma.alert.findMany({
+    where: { createdAt: { gte: cutoff } },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+  });
 }
 
 export async function getAlert(id: string) {

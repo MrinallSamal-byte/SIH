@@ -8,7 +8,8 @@ import {
   Download,
   X
 } from 'lucide-react'
-import { listAgencies, listReports, listVolunteers, updateReport, resetMockDatabase } from '../../api/endpoints'
+import { listAgencies, listReports, listVolunteers, updateReport, unassignReport, resetMockDatabase } from '../../api/endpoints'
+import { config } from '../../config'
 import { emitRealtimeUpdate } from '../../lib/realtimeEventBus'
 import { downloadCsv } from '../../lib/csv'
 import { Field, Input, Select } from '../../components/common/Input'
@@ -28,6 +29,11 @@ interface DispatchDraft {
   agencyId: string
   status: Report['status']
   notes: string
+}
+
+interface ReportsPage {
+  items: Report[]
+  total: number
 }
 
 function truncateForCsv(value: string | undefined, max: number): string {
@@ -70,22 +76,28 @@ export default function Reports() {
     notes: '',
   })
 
-  // Hook into real-time updates for reports
+  // Hook into real-time updates for reports (server-side pagination)
   const fetchReports = useCallback(() => {
     return listReports({
       status: statusFilter || undefined,
       priority: priorityFilter || undefined,
       type: typeFilter || undefined,
       q: query || undefined,
+      page,
+      pageSize,
     })
-  }, [statusFilter, priorityFilter, typeFilter, query])
+  }, [statusFilter, priorityFilter, typeFilter, query, page])
 
-  const reports = useRealtime<Report[]>(fetchReports, 4000)
+  const reportsPage = useRealtime<ReportsPage>(fetchReports, 4000)
+  const reports = useMemo(() => reportsPage?.items ?? [], [reportsPage])
 
+  // Refetch roster each time the dispatch modal opens so fresh availability
+  // (and the current assignee, even if filtered out) is shown.
   useEffect(() => {
+    if (!selected) return
     listVolunteers('available').then(setVolunteers)
     listAgencies().then(setAgencies)
-  }, [])
+  }, [selected])
 
   useEffect(() => {
     setPage(1)
@@ -125,6 +137,14 @@ export default function Reports() {
     if (!selected) return
     setSaving(true)
     try {
+      // Clearing a select means unassign on the server — the /assign route
+      // only ever sets, never clears.
+      if (!draft.volunteerId && selected.assignedVolunteerId) {
+        await unassignReport(selected.id, 'volunteer')
+      }
+      if (!draft.agencyId && selected.assignedAgencyId) {
+        await unassignReport(selected.id, 'agency')
+      }
       await updateReport(selected.id, {
         assignedVolunteerId: draft.volunteerId || undefined,
         assignedAgencyId: draft.agencyId || undefined,
@@ -132,6 +152,7 @@ export default function Reports() {
         resolutionNotes: draft.notes || undefined,
       })
       toast(t('rp.dispatchUpdated'), 'success')
+      emitRealtimeUpdate('report_updated', selected.id)
       setSelected(null)
     } catch (err) {
       toast(err instanceof Error ? err.message : t('rp.dispatchFailed'), 'error')
@@ -140,16 +161,41 @@ export default function Reports() {
     }
   }
 
-  // Pagination slice (clamped so realtime list shrinkage can't yield an empty page)
-  const totalCount = reports?.length ?? 0
+  // Server pagination — the backend owns the slice; total drives chip + bar.
+  const totalCount = reportsPage?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
-  const safePage = Math.min(page, totalPages)
-  if (safePage !== page) setPage(safePage)
-  const paginatedReports = useMemo(() => {
-    if (!reports) return []
-    const start = (safePage - 1) * pageSize
-    return reports.slice(start, start + pageSize)
-  }, [reports, safePage, pageSize])
+
+  const gotoPage = (next: number) => {
+    setPage(Math.min(totalPages, Math.max(1, next)))
+    emitRealtimeUpdate('report_updated')
+  }
+
+  // Inject the current assignee as a synthetic option so clearing vs keeping
+  // is visible even when the roster fetch filters them out.
+  const volunteerOptions = useMemo(() => {
+    if (!selected?.assignedVolunteerId || volunteers.some((v) => v.id === selected.assignedVolunteerId)) {
+      return rankedVolunteers
+    }
+    const current: Volunteer = {
+      id: selected.assignedVolunteerId,
+      name: `${selected.assignedVolunteerName ?? t('rp.currentAssignee', 'Current assignee')} (${t('rp.current', 'current')})`,
+      skills: [],
+      status: 'on_duty',
+    }
+    return [current, ...rankedVolunteers]
+  }, [rankedVolunteers, selected, t])
+
+  const agencyOptions = useMemo(() => {
+    if (!selected?.assignedAgencyId || agencies.some((a) => a.id === selected.assignedAgencyId)) {
+      return agencies
+    }
+    const current: Agency = {
+      id: selected.assignedAgencyId,
+      name: `${selected.assignedAgencyName ?? 'Current agency'} (${t('rp.current', 'current')})`,
+      type: 'assigned',
+    }
+    return [current, ...agencies]
+  }, [agencies, selected, t])
 
   const toggleRowSelected = (id: string) => {
     setSelectedIds((prev) => {
@@ -161,15 +207,15 @@ export default function Reports() {
   }
 
   const allPageSelected =
-    paginatedReports.length > 0 && paginatedReports.every((r) => selectedIds.has(r.id))
+    reports.length > 0 && reports.every((r) => selectedIds.has(r.id))
 
   const toggleAllOnPage = () => {
     setSelectedIds((prev) => {
       const next = new Set(prev)
       if (allPageSelected) {
-        paginatedReports.forEach((r) => next.delete(r.id))
+        reports.forEach((r) => next.delete(r.id))
       } else {
-        paginatedReports.forEach((r) => next.add(r.id))
+        reports.forEach((r) => next.add(r.id))
       }
       return next
     })
@@ -178,9 +224,9 @@ export default function Reports() {
   useEffect(() => {
     if (selectAllRef.current) {
       selectAllRef.current.indeterminate =
-        selectedIds.size > 0 && !allPageSelected && paginatedReports.some((r) => selectedIds.has(r.id))
+        selectedIds.size > 0 && !allPageSelected && reports.some((r) => selectedIds.has(r.id))
     }
-  }, [selectedIds, allPageSelected, paginatedReports])
+  }, [selectedIds, allPageSelected, reports])
 
   const runBulkStatusUpdate = async (status: Report['status']) => {
     const ids = Array.from(selectedIds)
@@ -209,23 +255,26 @@ export default function Reports() {
     if (!reports || reports.length === 0) return
     const stamp = new Date().toISOString().slice(0, 10)
     downloadCsv(`aapdasetu-reports-${stamp}.csv`, reports.map((r) => ({
-      id: r.id,
+      trackingId: r.trackingId,
       createdAt: formatDateTime(r.createdAt),
       type: r.type,
       priority: r.priorityLabel,
+      priorityScore: r.priorityScore,
       status: r.status,
+      reporter: r.reporterName ?? '',
       phone: r.reporterPhone ?? '',
       landmark:
         r.landmark ??
         (typeof r.latitude === 'number' && typeof r.longitude === 'number'
           ? `${r.latitude.toFixed(5)}, ${r.longitude.toFixed(5)}`
           : ''),
+      assignedUnits: [r.assignedVolunteerName, r.assignedAgencyName].filter(Boolean).join('; '),
       description: truncateForCsv(r.description, 120),
     })))
     toast(t('rp.csvExported', 'CSV exported'), 'success')
   }
 
-  if (!reports) return <Loader />
+  if (!reportsPage) return <Loader />
 
   return (
     <div className="space-y-5">
@@ -249,29 +298,31 @@ export default function Reports() {
           <button
             type="button"
             onClick={exportFilteredCsv}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
           >
             <Download className="h-3.5 w-3.5" />
             <span>{t('rp.exportCsv', 'Export CSV')}</span>
           </button>
-          <button
-            type="button"
-            onClick={async () => {
-              if (window.confirm(t('rp.resetConfirm'))) {
-                await resetMockDatabase()
-                toast(t('rp.dbReset'), 'success')
-              }
-            }}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            <span>{t('rp.resetRecords')}</span>
-          </button>
+          {config.useMockOnly && (
+            <button
+              type="button"
+              onClick={async () => {
+                if (window.confirm(t('rp.resetConfirm'))) {
+                  await resetMockDatabase()
+                  toast(t('rp.dbReset'), 'success')
+                }
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span>{t('rp.resetRecords')} (demo data)</span>
+            </button>
+          )}
         </div>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900 md:grid-cols-4">
+      <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:grid-cols-4">
         <Field label={t('rp.emergencyType')}>
           <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
             <option value="">{t('rp.allEmergencyTypes')}</option>
@@ -318,7 +369,7 @@ export default function Reports() {
       </div>
 
       {/* Incident Reports Table */}
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <table className="w-full text-left text-sm">
           <thead className="border-b bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400 mono font-bold">
             <tr>
@@ -345,7 +396,7 @@ export default function Reports() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-            {paginatedReports.map((r) => (
+            {reports.map((r) => (
               <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
                 <td className="px-4 py-3">
                   <input
@@ -427,7 +478,7 @@ export default function Reports() {
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                onClick={() => gotoPage(page - 1)}
                 disabled={page === 1}
                 className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300"
               >
@@ -441,7 +492,7 @@ export default function Reports() {
 
               <button
                 type="button"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                onClick={() => gotoPage(page + 1)}
                 disabled={page === totalPages}
                 className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300"
               >
@@ -514,7 +565,7 @@ export default function Reports() {
                 onChange={(e) => setDraft((d) => ({ ...d, volunteerId: e.target.value }))}
               >
                 <option value="">{t('rp.selectVolunteer')}</option>
-                {rankedVolunteers.map((v) => {
+                {volunteerOptions.map((v) => {
                   const dist = (selected.latitude && selected.longitude && v.latitude && v.longitude)
                     ? haversineKm({ lat: selected.latitude, lng: selected.longitude }, { lat: v.latitude, lng: v.longitude })
                     : null
@@ -533,7 +584,7 @@ export default function Reports() {
                 onChange={(e) => setDraft((d) => ({ ...d, agencyId: e.target.value }))}
               >
                 <option value="">{t('rp.selectAgency')}</option>
-                {agencies.map((a) => (
+                {agencyOptions.map((a) => (
                   <option key={a.id} value={a.id}>{a.name} ({a.type.toUpperCase()})</option>
                 ))}
               </Select>

@@ -37,8 +37,9 @@ Rules:
 - If the user is disoriented, guide the 5-4-3-2-1 sensory grounding technique:
   name 5 things you can see, 4 you can touch, 3 you can hear, 2 you can smell, 1 you can taste.
 - Never claim to be a doctor. Never invent false claims.
+- If the user mentions self-harm or suicide: stay supportive and non-judgmental, urge them to call Tele-MANAS 14416 (24x7) or emergency 112, and NEVER provide methods or instructions for self-harm.
 Respond ONLY with a JSON object of this exact shape:
-{"message": "...", "intent": "panic_hyperventilation|disorientation|general_distress|emergency|greeting|unsupported", "escalationRequired": false}`;
+{"message": "...", "intent": "<short lowercase_snake_case intent of your choice>", "escalationRequired": false}`;
 
 const GUIDED_PROTOCOLS: Record<string, { intent: PfaIntent; protocol: 'box_breathing' | 'grounding_521' }> = {
   panic_hyperventilation: { intent: 'panic_hyperventilation', protocol: 'box_breathing' },
@@ -68,9 +69,34 @@ const ESCALATION_KEYWORDS = [
   'मदद'
 ];
 
+const SELF_HARM_KEYWORDS = [
+  'suicide',
+  'kill myself',
+  'end my life',
+  'suicidal',
+  'आत्महत्या',
+  'जान दे',
+  'ଆତ୍ମହତ୍ୟା'
+];
+
+const CRISIS_GUIDANCE =
+  'If you are having thoughts of harming yourself, please call Tele-MANAS 14416 (24x7, free) or emergency 112 right now — you are not alone.';
+
+function keywordMatches(text: string, keyword: string): boolean {
+  // ponytail: ASCII keywords match on word boundaries so 'burnt toast'/'firefighter'/'sinking feeling' do not false-positive; \b is unreliable for Devanagari/Odia so those fall back to plain includes
+  if (/^[\x20-\x7e]+$/.test(keyword)) {
+    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`\\b${escaped}\\b`, 'i').test(text);
+  }
+  return text.includes(keyword);
+}
+
 function detectEmergency(text: string): boolean {
-  const lower = text.toLowerCase();
-  return ESCALATION_KEYWORDS.some((k) => lower.includes(k));
+  return ESCALATION_KEYWORDS.some((k) => keywordMatches(text, k));
+}
+
+function detectSelfHarm(text: string): boolean {
+  return SELF_HARM_KEYWORDS.some((k) => keywordMatches(text, k));
 }
 
 export async function getPfaReply(
@@ -80,43 +106,63 @@ export async function getPfaReply(
   const turns: ChatTurn[] = [...history.slice(-8), { role: 'user', content: userMessage }];
 
   const emergency = detectEmergency(userMessage);
+  const selfHarm = detectSelfHarm(userMessage);
   const guided = matchGuidedProtocol(userMessage);
 
   try {
     const result = await chatStructured(SYSTEM_PROMPT, turns);
     const intent = normalizeIntent(result.intent);
     const protocol = GUIDED_PROTOCOLS[intent]?.protocol ?? 'none';
+    // ponytail: LLM replies to self-harm must always carry the helpline even if the model omitted it
+    let message = result.message;
+    if (selfHarm && !message.includes('14416')) {
+      message = `${message}\n\n${CRISIS_GUIDANCE}`;
+    }
     return {
-      message: result.message,
+      message,
       intent,
-      escalationRequired: result.escalationRequired || emergency,
+      escalationRequired: result.escalationRequired || emergency || selfHarm,
       protocol,
     };
   } catch {
     // Degraded path: still provide the deterministic PRD protocols without the LLM.
     if (guided) {
-      return { ...guided, message: buildGuidedMessage(guided.protocol, userMessage), escalationRequired: emergency };
+      return {
+        ...guided,
+        message: selfHarm
+          ? `${buildGuidedMessage(guided.protocol, userMessage)}\n\n${CRISIS_GUIDANCE}`
+          : buildGuidedMessage(guided.protocol, userMessage),
+        escalationRequired: emergency || selfHarm,
+      };
     }
     return {
       message:
-        'I am here with you. Please take a slow breath in for 4 seconds, hold for 4, breathe out for 4, hold for 4. If you are in danger, press the SOS button or call 112.',
+        'I am here with you. Please take a slow breath in for 4 seconds, hold for 4, breathe out for 4, hold for 4. If you are in danger, press the SOS button or call 112. If you are thinking of harming yourself, call Tele-MANAS at 14416 — you are not alone.',
       intent: 'general_distress',
-      escalationRequired: emergency,
+      escalationRequired: emergency || selfHarm,
       protocol: 'box_breathing',
     };
   }
 }
 
+// ponytail: mapping-table ceiling — adapter open-vocab intents outside this table collapse to general_distress; revisit if the adapter taxonomy grows
+const ADAPTER_INTENT_ROUTES: Record<string, PfaIntent> = {
+  panic_hyperventilation: 'panic_hyperventilation',
+  trapped_or_stranded: 'panic_hyperventilation',
+  disorientation: 'disorientation',
+  general_distress: 'general_distress',
+  flood: 'general_distress',
+  displaced: 'general_distress',
+  disaster_related_distress: 'general_distress',
+  emergency: 'emergency',
+  emergency_safety: 'emergency',
+  greeting: 'greeting',
+  unsupported: 'unsupported',
+  out_of_scope: 'unsupported',
+};
+
 function normalizeIntent(raw: string): PfaIntent {
-  const known: PfaIntent[] = [
-    'panic_hyperventilation',
-    'disorientation',
-    'general_distress',
-    'emergency',
-    'greeting',
-    'unsupported',
-  ];
-  return known.includes(raw as PfaIntent) ? (raw as PfaIntent) : 'general_distress';
+  return ADAPTER_INTENT_ROUTES[raw.trim().toLowerCase()] ?? 'general_distress';
 }
 
 function matchGuidedProtocol(text: string): { intent: PfaIntent; protocol: 'box_breathing' | 'grounding_521' } | null {

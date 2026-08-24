@@ -6,7 +6,7 @@ if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8')
 
 def evaluate_sos_urgency(sos_payload):
-    transcript = (sos_payload.get('transcript', '') + ' ' + sos_payload.get('location', {}).get('landmark', '')).lower()
+    transcript = ((sos_payload.get('transcript') or '') + ' ' + (sos_payload.get('location') or {}).get('landmark', '')).lower()
     victim_info = sos_payload.get('victim_info', {})
     
     # 1. Base Score & Keyword Weighting

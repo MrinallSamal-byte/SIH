@@ -565,16 +565,17 @@ npm run dev      # Starts Vite dev server on http://localhost:5173
 cd backend-aapdasetu
 npm install
 npx prisma generate
-npm run dev      # Starts Express backend on http://localhost:3000
+npm run dev      # Starts Express backend on http://localhost:4000
 ```
 
-### 3. Standalone Python AI Microservice (`apps/ai-engine`)
+### 3. Python AI Prototype (`apps/ai-engine`) — unserved prototype, not an HTTP service
 ```bash
 cd apps/ai-engine
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-python app/main.py   # Starts FastAPI microservices on http://localhost:8000
+python app/main.py   # Standalone JSON test harness (no server); served FastAPI lives in backend-aapdasetu:
+                     # cd backend-aapdasetu && npm run fastapi:dev   (uvicorn on http://localhost:8000)
 ```
 
 ### 4. Offline Mesh Android App (`bitchat-android`)

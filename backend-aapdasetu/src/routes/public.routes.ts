@@ -87,7 +87,7 @@ publicRouter.post('/safe-routes/reroute', publicRateLimiter, validateBody(schema
 publicRouter.get(
   '/missing-persons',
   publicRateLimiter,
-  validateQuery(schemas.paginationQuerySchema.partial()),
+  validateQuery(schemas.missingPersonListQuerySchema),
   asyncHandler(c.listMissingPersonsHandler),
 );
 publicRouter.post(

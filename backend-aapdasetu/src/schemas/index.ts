@@ -14,6 +14,10 @@ export const incidentTypeSchema = z.enum([
 const latSchema = z.number().min(-90).max(90);
 const lngSchema = z.number().min(-180).max(180);
 
+// ponytail: ''/null query values become undefined so optional numeric fields fall through to defaults instead of 400/0
+const qnum = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((v) => (v === '' || v === null ? undefined : v), schema);
+
 const reportCommon = {
   type: incidentTypeSchema,
   latitude: latSchema,
@@ -54,13 +58,9 @@ export const createCheckinSchema = z.object({
 });
 
 export const nearbySheltersSchema = z.object({
-  latitude: z.coerce.number().min(-90).max(90),
-  longitude: z.coerce.number().min(-180).max(180),
-  radiusKm: z.coerce.number().min(1).max(500).optional(),
-});
-
-export const listSheltersQuerySchema = z.object({
-  status: z.enum(['open', 'full', 'closed']).optional(),
+  latitude: qnum(z.coerce.number().min(-90).max(90)),
+  longitude: qnum(z.coerce.number().min(-180).max(180)),
+  radiusKm: qnum(z.coerce.number().min(1).max(500)).optional(),
 });
 
 export const pfaChatSchema = z.object({
@@ -146,8 +146,8 @@ export const changePasswordSchema = z.object({
 });
 
 export const paginationQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional(),
-  pageSize: z.coerce.number().int().min(1).max(200).optional(),
+  page: qnum(z.coerce.number().int().min(1)).optional(),
+  pageSize: qnum(z.coerce.number().int().min(1).max(200)).optional(),
 });
 
 export const listReportsQuerySchema = paginationQuerySchema.extend({
@@ -155,6 +155,36 @@ export const listReportsQuerySchema = paginationQuerySchema.extend({
   type: incidentTypeSchema.optional(),
   priorityLabel: z.enum(['RED', 'YELLOW', 'GREEN']).optional(),
   search: z.string().max(200).optional(),
+});
+
+export const listSheltersQuerySchema = paginationQuerySchema.partial().extend({
+  status: z.enum(['open', 'full', 'closed']).optional(),
+});
+
+export const adminAgencyQuerySchema = paginationQuerySchema.partial().extend({
+  type: z.enum(['fire_department', 'police', 'ndrf', 'hospital', 'ngo']).optional(),
+});
+
+export const adminResourceQuerySchema = paginationQuerySchema.partial().extend({
+  shelterId: z.string().uuid().optional(),
+  category: z.enum(['food', 'water', 'medical', 'clothing', 'fuel']).optional(),
+});
+
+export const adminAlertQuerySchema = paginationQuerySchema.partial().extend({
+  severity: z.enum(['info', 'warning', 'critical']).optional(),
+});
+
+export const adminHazardQuerySchema = paginationQuerySchema.partial().extend({
+  // ponytail: enum mirrors the documented RouteHazard.type set in schema.prisma
+  type: z.enum(['flood_polygon', 'blocked_underpass', 'road_closed']).optional(),
+});
+
+export const missingMatchQuerySchema = paginationQuerySchema.partial().extend({
+  status: z.enum(['pending', 'confirmed', 'rejected']).optional(),
+});
+
+export const missingPersonListQuerySchema = paginationQuerySchema.partial().extend({
+  status: z.enum(['open', 'matched', 'resolved']).optional(),
 });
 
 export const idParamsSchema = z.object({
@@ -166,10 +196,14 @@ export const updateReportStatusSchema = z.object({
   resolutionNotes: z.string().max(5000).optional(),
 });
 
-export const assignDispatchSchema = z.object({
-  volunteerId: z.string().uuid().optional(),
-  agencyId: z.string().uuid().optional(),
-});
+export const assignDispatchSchema = z
+  .object({
+    volunteerId: z.string().uuid().optional(),
+    agencyId: z.string().uuid().optional(),
+  })
+  .refine((data) => data.volunteerId || data.agencyId, {
+    message: 'volunteerId or agencyId required',
+  });
 
 export const unassignDispatchSchema = z.object({
   target: z.enum(['volunteer', 'agency']),
@@ -255,13 +289,13 @@ export const reviewMatchSchema = z.object({
   status: z.enum(['confirmed', 'rejected']),
 });
 
-export const listVolunteersQuerySchema = z.object({
+export const listVolunteersQuerySchema = paginationQuerySchema.partial().extend({
   status: z.enum(['available', 'on_duty', 'offline']).optional(),
-  skill: z.string().optional(),
+  skill: z.enum(['medical', 'search_rescue', 'driving', 'logistics']).optional(),
 });
 
 export const analyticsQuerySchema = z.object({
-  rangeDays: z.coerce.number().int().min(1).max(90).optional(),
+  rangeDays: qnum(z.coerce.number().int().min(1).max(90)).optional(),
 });
 
 export const createHazardSchema = z.object({

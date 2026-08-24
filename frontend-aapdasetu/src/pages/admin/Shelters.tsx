@@ -3,7 +3,6 @@ import {
   Building2,
   Plus,
   Edit2,
-  Trash2,
   MapPin,
   Phone,
   Users,
@@ -11,7 +10,7 @@ import {
   X,
   RotateCcw
 } from 'lucide-react'
-import { listShelters, createShelter, updateShelter, deleteShelter, resetMockDatabase } from '../../api/endpoints'
+import { listShelters, createShelter, updateShelter, resetMockDatabase } from '../../api/endpoints'
 import Badge from '../../components/common/Badge'
 import Loader from '../../components/common/Loader'
 import LeafletMap, { type MapMarker } from '../../components/map/LeafletMap'
@@ -115,12 +114,21 @@ export default function AdminShelters() {
       return
     }
 
+    // Warn instead of silently defaulting mistyped coordinates to Kolkata.
+    const latNum = Number(latitude)
+    const lngNum = Number(longitude)
+    if (
+      !Number.isFinite(latNum) || latNum < -90 || latNum > 90 ||
+      !Number.isFinite(lngNum) || lngNum < -180 || lngNum > 180
+    ) {
+      toast(t('sh.invalidCoords', 'Latitude must be between -90 and 90, longitude between -180 and 180'), 'warning')
+      return
+    }
+
     setSaving(true)
     try {
       const capNum = Math.max(1, Number(capacity) || 100)
-      const occNum = Math.max(0, Number(occupancy) || 0)
-      const latNum = Number(latitude) || 22.5726
-      const lngNum = Number(longitude) || 88.3639
+      const occNum = Math.min(capNum, Math.max(0, Number(occupancy) || 0))
 
       if (editingShelter) {
         await updateShelter(editingShelter.id, {
@@ -142,7 +150,7 @@ export default function AdminShelters() {
           latitude: latNum,
           longitude: lngNum,
           capacity: capNum,
-          occupancy: occNum,
+          occupancy: 0,
           facilities,
           contactPhone: contactPhone.trim() || undefined,
           status,
@@ -155,18 +163,6 @@ export default function AdminShelters() {
       toast(err instanceof Error ? err.message : t('sh.saveFailed'), 'error')
     } finally {
       setSaving(false)
-    }
-  }
-
-  // Delete Shelter
-  const handleDelete = async (id: string, shelterName: string) => {
-    if (window.confirm(`${t('sh.deleteConfirm')} "${shelterName}". ${t('sh.deleteConfirmNote')}`)) {
-      try {
-        await deleteShelter(id)
-        toast(`${t('sh.deleted')} "${shelterName}"`, 'success')
-      } catch (err) {
-        toast(err instanceof Error ? err.message : t('sh.deleteFailed'), 'error')
-      }
     }
   }
 
@@ -260,7 +256,7 @@ export default function AdminShelters() {
           <button
             type="button"
             onClick={handleResetData}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200"
             title={t('sh.resetTooltip')}
           >
             <RotateCcw className="h-3.5 w-3.5" />
@@ -284,7 +280,7 @@ export default function AdminShelters() {
           <span>{t('sh.liveLocations')} ({filtered.length} {t('sh.sheltersPlotted')})</span>
           <span className="text-[11px] text-slate-400">{t('sh.mapLayerHint')}</span>
         </div>
-        <div className="h-72 rounded-2xl overflow-hidden shadow-xs border border-slate-200 dark:border-slate-800">
+        <div className="h-72 rounded-2xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800">
           <LeafletMap
             center={mapCenter}
             markers={mapMarkers}
@@ -295,7 +291,7 @@ export default function AdminShelters() {
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex flex-col sm:flex-row gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
@@ -340,7 +336,7 @@ export default function AdminShelters() {
           return (
             <div
               key={s.id}
-              className={`flex flex-col justify-between rounded-2xl border bg-white p-5 shadow-xs transition dark:bg-slate-900 ${
+              className={`flex flex-col justify-between rounded-2xl border bg-white p-5 shadow-sm transition dark:bg-slate-900 ${
                 s.status === 'closed'
                   ? 'border-slate-300 bg-slate-50/50 opacity-75 dark:border-slate-800'
                   : 'border-slate-200 dark:border-slate-800'
@@ -476,14 +472,7 @@ export default function AdminShelters() {
                       <Edit2 className="h-3 w-3" />
                       <span>{t('sh.edit')}</span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(s.id, s.name)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-bold text-red-600 hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300 cursor-pointer"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                      <span>{t('sh.delete')}</span>
-                    </button>
+                    {/* ponytail: no delete button — needs a cascade-aware DELETE route on the backend first */}
                   </div>
                 </div>
               </div>
@@ -612,18 +601,20 @@ export default function AdminShelters() {
                     className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm font-mono text-slate-900 outline-none focus:border-slate-900 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-100"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 mono uppercase">
-                    {t('sh.currentOccupancy')}
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={occupancy}
-                    onChange={(e) => setOccupancy(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm font-mono text-slate-900 outline-none focus:border-slate-900 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-100"
-                  />
-                </div>
+                {editingShelter && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 mono uppercase">
+                      {t('sh.currentOccupancy')}
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={occupancy}
+                      onChange={(e) => setOccupancy(e.target.value)}
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm font-mono text-slate-900 outline-none focus:border-slate-900 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-100"
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 mono uppercase">
                     {t('sh.contactPhone')}

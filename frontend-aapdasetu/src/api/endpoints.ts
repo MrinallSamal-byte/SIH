@@ -8,7 +8,6 @@ import type {
   BroadcastPayload,
   DamageAssessmentReport,
   DamageGrade,
-  DamageInfrastructureType,
   MissingPerson,
   OverviewKPIs,
   Report,
@@ -40,6 +39,7 @@ interface RawReport {
   status: Report['status']
   priorityScore: number
   priorityLabel: Report['priorityLabel']
+  source?: string
   latitude?: number
   longitude?: number
   landmark?: string | null
@@ -65,7 +65,27 @@ interface RawVolunteer {
   latitude?: number | null
   longitude?: number | null
   status: Volunteer['status']
-  assignments?: { id: string }[]
+  assignments?: { id: string; trackingId?: string }[]
+}
+
+interface RawAlert {
+  id: string
+  severity: Alert['severity']
+  title: string
+  message: string
+  channel?: string | null
+  targetArea?: string | null
+  createdAt: string
+}
+
+interface RawMissingMatch {
+  id: string
+  score?: number | null
+  createdAt: string
+  missingPersonName?: string | null
+  matchedPersonName?: string | null
+  missingPerson?: { name?: string | null } | null
+  matchedPerson?: { name?: string | null } | null
 }
 
 interface RawKpis {
@@ -108,6 +128,7 @@ function toReport(r: RawReport): Report {
     status: r.status,
     priorityScore: r.priorityScore,
     priorityLabel: r.priorityLabel,
+    source: r.source,
     latitude: r.latitude,
     longitude: r.longitude,
     landmark: r.landmark ?? undefined,
@@ -126,7 +147,7 @@ function toReport(r: RawReport): Report {
   }
 }
 
-function toVolunteer(r: RawVolunteer): Volunteer {
+function toVolunteer(r: RawVolunteer): Volunteer & { assignedTrackingId?: string } {
   return {
     id: r.id,
     name: r.name,
@@ -136,6 +157,18 @@ function toVolunteer(r: RawVolunteer): Volunteer {
     longitude: r.longitude ?? undefined,
     status: r.status,
     assignedReportId: r.assignments?.[0]?.id ?? undefined,
+    assignedTrackingId: r.assignments?.[0]?.trackingId,
+  }
+}
+
+function toAlert(r: RawAlert): Alert {
+  return {
+    id: r.id,
+    severity: r.severity,
+    title: r.title,
+    message: r.message,
+    channel: r.channel ?? undefined,
+    createdAt: r.createdAt,
   }
 }
 
@@ -187,19 +220,32 @@ export function createReport(input: ReportInput): Promise<Report> {
   )
 }
 
-/** GET /api/v1/admin/reports?status=&priorityLabel=&search= — list + search reports. */
-export function listReports(params: { status?: string; priority?: string; type?: string; q?: string } = {}): Promise<Report[]> {
+/** GET /api/v1/admin/reports?status=&priorityLabel=&search=&page=&pageSize= — server-paginated list. */
+export function listReports(params: {
+  status?: string
+  priority?: string
+  type?: string
+  q?: string
+  page?: number
+  pageSize?: number
+} = {}): Promise<{ items: Report[]; total: number }> {
   const qs = new URLSearchParams()
   if (params.status) qs.set('status', params.status)
   if (params.priority) qs.set('priorityLabel', params.priority)
   if (params.type) qs.set('type', params.type)
   if (params.q) qs.set('search', params.q)
+  if (params.page) qs.set('page', String(params.page))
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize))
   return withMockFallback(
     () =>
-      apiCall<{ items: RawReport[] }>(`GET`, `/api/v1/admin/reports?${qs.toString()}`).then((d) =>
-        (d.items ?? []).map(toReport),
-      ),
-    () => mocks.listReports(params),
+      apiCall<{ items: RawReport[]; total: number }>(`GET`, `/api/v1/admin/reports?${qs.toString()}`).then((d) => ({
+        items: (d.items ?? []).map(toReport),
+        total: Number(d.total) || (d.items?.length ?? 0),
+      })),
+    () => {
+      const items = mocks.listReports(params)
+      return { items, total: items.length }
+    },
   )
 }
 
@@ -249,6 +295,20 @@ export function updateReport(
       const updated = mocks.updateReport(id, patch)
       if (!updated) throw new Error('Report not found')
       return updated
+    },
+    { mutating: true },
+  )
+}
+
+/** POST /api/v1/admin/reports/:id/unassign — clear volunteer/agency assignment. */
+export function unassignReport(id: string, target: 'volunteer' | 'agency'): Promise<Report> {
+  return withMockFallback(
+    () =>
+      apiCall<RawReport>('POST', `/api/v1/admin/reports/${encodeURIComponent(id)}/unassign`, { target }).then(toReport),
+    () => {
+      const report = mocks.getReport(id)
+      if (!report) throw new Error('Report not found')
+      return report
     },
     { mutating: true },
   )
@@ -358,10 +418,10 @@ export function resetMockDatabase(): Promise<void> {
 
 // ---- alerts --------------------------------------------------------------------
 
-/** GET /api/v1/alerts — public live alerts. */
+/** GET /api/v1/alerts — public live alerts (backend exposes targetArea, not region). */
 export function listAlerts(): Promise<Alert[]> {
   return withMockFallback(
-    () => apiCall<Alert[]>('GET', '/api/v1/alerts'),
+    () => apiCall<RawAlert[]>('GET', '/api/v1/alerts').then((d) => (d ?? []).map(toAlert)),
     () => mocks.listAlerts(),
   )
 }
@@ -375,7 +435,7 @@ export function createAlert(input: Omit<Alert, 'id' | 'createdAt'>): Promise<Ale
         message: input.message,
         severity: input.severity,
         channel: input.channel,
-        targetArea: input.region,
+        targetArea: input.targetArea,
       }),
     () => mocks.createAlert(input),
     { mutating: true },
@@ -384,8 +444,8 @@ export function createAlert(input: Omit<Alert, 'id' | 'createdAt'>): Promise<Ale
 
 // ---- volunteers -----------------------------------------------------------------
 
-/** GET /api/v1/admin/volunteers?status= — volunteer roster. */
-export function listVolunteers(status?: string): Promise<Volunteer[]> {
+/** GET /api/v1/admin/volunteers?status= — volunteer roster (with current assignment trackingId). */
+export function listVolunteers(status?: string): Promise<(Volunteer & { assignedTrackingId?: string })[]> {
   return withMockFallback(
     () =>
       apiCall<RawVolunteer[]>(`GET`, `/api/v1/admin/volunteers${status ? `?status=${status}` : ''}`).then((d) =>
@@ -434,6 +494,45 @@ export function listAgencies(): Promise<Agency[]> {
 
 // ---- missing persons --------------------------------------------------------------
 
+export interface MissingMatch {
+  id: string
+  missingPersonName: string | null
+  matchedPersonName: string | null
+  score: number | null
+  createdAt: string
+}
+
+/** GET /api/v1/admin/missing/matches?status=pending — AI sighting matches awaiting review. */
+export function listMissingMatches(): Promise<MissingMatch[]> {
+  return withMockFallback(
+    () =>
+      apiCall<RawMissingMatch[]>('GET', '/api/v1/admin/missing/matches?status=pending').then((rows) =>
+        (rows ?? []).map((m) => ({
+          id: m.id,
+          missingPersonName:
+            m.missingPersonName ?? m.missingPerson?.name ?? null,
+          matchedPersonName:
+            m.matchedPersonName ?? m.matchedPerson?.name ?? null,
+          score: m.score === null || m.score === undefined ? null : Number(m.score),
+          createdAt: m.createdAt,
+        })),
+      ),
+    () => [],
+  )
+}
+
+/** POST /api/v1/admin/missing/matches/:id/review — confirm or reject a sighting match. */
+export function reviewMissingMatch(id: string, decision: 'confirmed' | 'rejected'): Promise<void> {
+  return withMockFallback(
+    () =>
+      apiCall<unknown>('POST', `/api/v1/admin/missing/matches/${encodeURIComponent(id)}/review`, { decision }).then(
+        () => undefined,
+      ),
+    async () => undefined,
+    { mutating: true },
+  )
+}
+
 /** GET /api/v1/missing-persons — public missing persons registry. */
 export function listMissingPersons(): Promise<MissingPerson[]> {
   return withMockFallback(
@@ -476,11 +575,20 @@ export function updateMissingPerson(id: string, patch: Partial<MissingPerson>): 
 
 // ---- audit logs ------------------------------------------------------------------
 
-/** GET /api/v1/admin/audit-logs?limit= — read-only compliance log. */
-export function listAuditLogs(): Promise<AuditLog[]> {
+/** GET /api/v1/admin/audit-logs — read-only compliance log. */
+export function listAuditLogs(): Promise<{ items: AuditLog[]; total: number }> {
   return withMockFallback(
-    () => apiCall<{ items: AuditLog[] }>('GET', '/api/v1/admin/audit-logs').then((d) => d.items ?? []),
-    () => mocks.listAuditLogs(),
+    // ponytail: server-side filter params pending UI — single large page fetch,
+    // filtering/sorting stay client-side for now.
+    () =>
+      apiCall<{ items: AuditLog[]; total: number }>('GET', '/api/v1/admin/audit-logs?pageSize=200').then((d) => ({
+        items: d.items ?? [],
+        total: Number(d.total) || (d.items?.length ?? 0),
+      })),
+    () => {
+      const items = mocks.listAuditLogs()
+      return { items, total: items.length }
+    },
   )
 }
 
@@ -499,20 +607,20 @@ export function adminLogin(email: string, password: string): Promise<{ token: st
   )
 }
 
-/** POST /api/v1/volunteer/auth/login — volunteer auth with fallback. */
-export function volunteerLogin(email: string, password: string): Promise<VolunteerUser> {
+/** POST /api/v1/volunteer/auth/login — volunteer auth (phone + access code) with demo fallback. */
+export function volunteerLogin(phone: string, accessCode: string): Promise<VolunteerUser> {
   return withMockFallback(
     () =>
-      apiCall<{ token: string; volunteer: { id: string; email: string; name: string; phone?: string; skills?: string[] } }>(
+      apiCall<{ token: string; volunteer: { id: string; name: string; email?: string; phone?: string; skills?: string[] } }>(
         'POST',
         '/api/v1/volunteer/auth/login',
-        { email, password },
+        { phone, accessCode },
       ).then((d) => ({
         token: d.token,
         id: d.volunteer.id,
-        email: d.volunteer.email,
+        email: d.volunteer.email ?? '',
         name: d.volunteer.name,
-        phone: d.volunteer.phone,
+        phone: d.volunteer.phone ?? phone,
         skills: d.volunteer.skills,
       })),
     () => {
@@ -521,9 +629,9 @@ export function volunteerLogin(email: string, password: string): Promise<Volunte
       return {
         token: 'mock-volunteer-token',
         id: found?.id || 'vol-001',
-        email,
+        email: '',
         name: found?.name || 'Rahul Sharma',
-        phone: found?.phone || '+91-9222222221',
+        phone: found?.phone || phone,
         skills: found?.skills || ['search_rescue', 'medical'],
       }
     },
@@ -531,18 +639,63 @@ export function volunteerLogin(email: string, password: string): Promise<Volunte
   )
 }
 
+// ---- volunteer self-service API -----------------------------------------------------
+// Authenticated via client.ts::apiCall, which attaches the volunteer bearer token
+// for /api/v1/volunteer paths.
+
+/** GET /api/v1/volunteer/me — profile for the signed-in volunteer. */
+export function volunteerMe(): Promise<Omit<VolunteerUser, 'token'> & { status?: string }> {
+  return apiCall<{ id: string; name: string; email?: string; phone?: string; skills?: string[]; status?: string }>(
+    'GET',
+    '/api/v1/volunteer/me',
+  ).then((v) => ({ id: v.id, name: v.name, email: v.email ?? '', phone: v.phone, skills: v.skills, status: v.status }))
+}
+
+/** GET /api/v1/volunteer/tasks — active assignments for the signed-in volunteer. */
+export function listVolunteerTasks(): Promise<Report[]> {
+  return apiCall<{ items: RawReport[] }>('GET', '/api/v1/volunteer/tasks').then((d) =>
+    (d.items ?? []).map(toReport),
+  )
+}
+
+/** PATCH /api/v1/volunteer/tasks/:id/report-status — mark an assigned rescue resolved. */
+export function completeVolunteerTask(reportId: string): Promise<void> {
+  return apiCall<void>(
+    'PATCH',
+    `/api/v1/volunteer/tasks/${encodeURIComponent(reportId)}/report-status`,
+    { status: 'resolved' },
+  )
+}
+
+/** PATCH /api/v1/volunteer/me/status — go available/offline (409 while tasks are active). */
+export function setVolunteerStatus(status: 'available' | 'offline'): Promise<void> {
+  return apiCall<void>('PATCH', '/api/v1/volunteer/me/status', { status })
+}
+
+export interface BroadcastChannelResult {
+  channel: string
+  ok?: boolean
+  note?: string
+}
+
 /** POST /api/v1/admin/communications/broadcast — multi-channel push (persists alert; Twilio/WhatsApp only if creds set). */
-export function broadcastAlert(input: BroadcastPayload): Promise<{ delivered: number; channels: string[] }> {
+export function broadcastAlert(
+  input: BroadcastPayload,
+): Promise<{ delivered: number; channels: string[]; details?: BroadcastChannelResult[] }> {
   return withMockFallback(
     () =>
-      apiCall<{ delivered: number; channels: string[] }>('POST', '/api/v1/admin/communications/broadcast', {
-        severity: input.severity,
-        title: input.title,
-        body: input.body,
-        region: input.region,
-        channels: input.channels,
-        recipientNumbers: input.recipientNumbers,
-      }),
+      apiCall<{ delivered: number; channels: string[]; details?: BroadcastChannelResult[] }>(
+        'POST',
+        '/api/v1/admin/communications/broadcast',
+        {
+          severity: input.severity,
+          title: input.title,
+          body: input.body,
+          region: input.region,
+          channels: input.channels,
+          recipientNumbers: input.recipientNumbers,
+        },
+      ),
     () => mocks.broadcast(input),
     { mutating: true },
   )
@@ -556,7 +709,7 @@ export function getAnalytics(): Promise<AnalyticsData> {
       Object.fromEntries(
         (rows ?? []).map((r: { [k: string]: string | number; count: number }) => [r[key], Number(r.count) || 0]),
       )
-    return {
+    const mapped: AnalyticsData & { avgResponseMinutes?: number | null } = {
       byType: byKey(d.byType, 'type'),
       byPriority: byKey(d.byPriority, 'priorityLabel'),
       byStatus: byKey(d.byStatus, 'status'),
@@ -564,78 +717,154 @@ export function getAnalytics(): Promise<AnalyticsData> {
         date: t.day,
         count: Number(t.count) || 0,
       })),
+      avgResponseMinutes:
+        d.avgResponseMinutes === null || d.avgResponseMinutes === undefined ? null : Number(d.avgResponseMinutes),
     }
+    return mapped
   }, mocks.analytics)
 }
 
-/** GET /api/v1/damage-assessments — list all damage assessment submissions. */
-export function listDamageAssessments(filters?: {
-  infrastructureType?: string
-  damageGrade?: string
-  district?: string
-  q?: string
-}): Promise<DamageAssessmentReport[]> {
-  const query = new URLSearchParams()
-  if (filters?.infrastructureType) query.set('infrastructureType', filters.infrastructureType)
-  if (filters?.damageGrade) query.set('damageGrade', filters.damageGrade)
-  if (filters?.district) query.set('district', filters.district)
-  if (filters?.q) query.set('q', filters.q)
-  const qs = query.toString() ? `?${query.toString()}` : ''
+// ---- damage assessments ---------------------------------------------------------
 
+export type DamageClassification = 'MINOR_DAMAGE' | 'MAJOR_STRUCTURAL_DAMAGE' | 'FULLY_DESTROYED'
+
+export interface DamageRow {
+  id: string
+  classification: DamageClassification
+  confidence: number | null
+  compensation: number
+  status: string
+  imageHash?: string
+  duplicate?: boolean
+  photoUrl?: string
+  createdAt: string
+}
+
+export interface DamageCreated {
+  id: string
+  classification: DamageClassification
+  confidence: number | null
+  compensation: number
+  locationVerified: boolean | null
+  status: string
+  createdAt: string
+}
+
+interface RawDamageRow {
+  id: string
+  classification: DamageClassification
+  confidence: number | null
+  compensation: number
+  status: string
+  imageHash?: string | null
+  duplicate?: boolean
+  photoUrl?: string | null
+  createdAt: string
+}
+
+function toDamageRow(r: RawDamageRow): DamageRow {
+  return {
+    id: r.id,
+    classification: r.classification,
+    confidence: r.confidence ?? null,
+    compensation: Number(r.compensation) || 0,
+    status: r.status,
+    imageHash: r.imageHash ?? undefined,
+    duplicate: Boolean(r.duplicate),
+    photoUrl: r.photoUrl ?? undefined,
+    createdAt: r.createdAt,
+  }
+}
+
+const LEGACY_CLASSIFICATION: Record<DamageGrade, DamageClassification> = {
+  DESTROYED: 'FULLY_DESTROYED',
+  MAJOR: 'MAJOR_STRUCTURAL_DAMAGE',
+  MINOR: 'MINOR_DAMAGE',
+}
+
+/** Maps a legacy mock DamageAssessmentReport onto the new admin wire shape so demo mode keeps working. */
+function legacyDamageRow(m: DamageAssessmentReport): DamageRow & { locationVerified: boolean | null } {
+  return {
+    id: m.id,
+    classification: LEGACY_CLASSIFICATION[m.damageGrade],
+    confidence: m.confidence ?? null,
+    compensation: Number(m.compensationInr) || 0,
+    status: m.status === 'pending_review' ? 'needs_review' : m.status,
+    imageHash: undefined,
+    duplicate: false,
+    photoUrl: m.photoUrl,
+    createdAt: m.createdAt,
+    locationVerified: m.verified ?? null,
+  }
+}
+
+/** GET /api/v1/admin/damage-assessments?page&pageSize=100 — claim review list. */
+export function listDamageAssessments(): Promise<DamageRow[]> {
   return withMockFallback(
-    () => apiCall<DamageAssessmentReport[]>('GET', `/api/v1/damage-assessments${qs}`),
-    () => mocks.listDamageAssessments(filters),
+    () =>
+      apiCall<{ items: RawDamageRow[] }>('GET', '/api/v1/admin/damage-assessments?page=1&pageSize=100').then((d) =>
+        (d.items ?? []).map(toDamageRow),
+      ),
+    () => mocks.listDamageAssessments().map(legacyDamageRow),
+  )
+}
+
+/** POST /api/v1/admin/damage-assessments/:id/flag — mark a suspect claim for review. */
+export function flagDamageAssessment(id: string): Promise<DamageRow> {
+  return withMockFallback(
+    () => apiCall<RawDamageRow>('POST', `/api/v1/admin/damage-assessments/${encodeURIComponent(id)}/flag`).then(toDamageRow),
+    () => {
+      const updated = mocks.updateDamageAssessmentStatus(id, 'flagged_fraud')
+      if (!updated) throw new Error('Damage assessment not found')
+      return legacyDamageRow(updated)
+    },
+    { mutating: true },
   )
 }
 
 /** POST /api/v1/damage-assessment — persist disaster property damage relief claim. */
 export function createDamageAssessment(input: {
-  propertyAddress: string
+  photoDataUrl: string
   latitude?: number
   longitude?: number
-  structuralDamage: boolean
-  floodDepthMeters?: number
-  estimatedLossInr: number
-  claimantName?: string
-  claimantPhone: string
-  infrastructureType?: DamageInfrastructureType
-  photoUrl?: string
-  damageGrade?: DamageGrade
-  damageScore?: number
-  confidence?: number
-  district?: string
-}): Promise<DamageAssessmentReport> {
+  reporterName?: string
+  reporterPhone?: string
+}): Promise<DamageCreated> {
+  const body: Record<string, unknown> = {
+    imageBase64: input.photoDataUrl,
+    mimeType: 'image/jpeg',
+  }
+  if (input.latitude !== undefined) body.reportedLatitude = input.latitude
+  if (input.longitude !== undefined) body.reportedLongitude = input.longitude
+  if (input.reporterName) body.reporterName = input.reporterName
+  if (input.reporterPhone) body.reporterPhone = input.reporterPhone
+
+  const mapCreated = (r: RawDamageRow & { locationVerified?: boolean | null }): DamageCreated => ({
+    id: r.id,
+    classification: r.classification,
+    confidence: r.confidence ?? null,
+    compensation: Number(r.compensation) || 0,
+    locationVerified: r.locationVerified ?? null,
+    status: r.status,
+    createdAt: r.createdAt,
+  })
+
   return withMockFallback(
-    () =>
-      apiCall<DamageAssessmentReport>('POST', '/api/v1/damage-assessment', input),
-    () =>
-      mocks.createDamageAssessment({
-        propertyAddress: input.propertyAddress,
+    () => apiCall<RawDamageRow & { locationVerified?: boolean | null }>('POST', '/api/v1/damage-assessment', body).then(mapCreated),
+    () => {
+      const m = mocks.createDamageAssessment({
+        claimantName: input.reporterName,
+        claimantPhone: input.reporterPhone ?? '+91-0000000000',
         latitude: input.latitude,
         longitude: input.longitude,
-        claimantName: input.claimantName,
-        claimantPhone: input.claimantPhone,
-        infrastructureType: input.infrastructureType || 'broken_home',
-        photoUrl: input.photoUrl,
-        damageGrade: input.damageGrade || 'MAJOR',
-        damageScore: input.damageScore || 75.0,
-        confidence: input.confidence || 98.36,
-        compensationInr: input.estimatedLossInr || 47550,
-        district: input.district || 'North 24 Parganas',
-      }),
-    { mutating: true },
-  )
-}
-
-/** PATCH /api/v1/admin/damage-assessments/:id/status — update claim review status. */
-export function updateDamageAssessmentStatus(
-  id: string,
-  status: DamageAssessmentReport['status'],
-): Promise<DamageAssessmentReport | undefined> {
-  return withMockFallback(
-    () =>
-      apiCall<DamageAssessmentReport>('PATCH', `/api/v1/admin/damage-assessments/${id}/status`, { status }),
-    () => mocks.updateDamageAssessmentStatus(id, status),
+        photoUrl: input.photoDataUrl,
+        damageGrade: 'MAJOR',
+        damageScore: 75.0,
+        confidence: 98.36,
+        compensationInr: 47550,
+      })
+      return mapCreated({ ...legacyDamageRow(m), createdAt: m.createdAt })
+    },
     { mutating: true },
   )
 }

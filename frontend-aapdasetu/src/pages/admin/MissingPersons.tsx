@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Search,
   Phone,
@@ -6,9 +6,13 @@ import {
   CheckCircle2,
   AlertCircle,
   Eye,
-  Image as ImageIcon
+  Image as ImageIcon,
+  XCircle,
+  GitCompareArrows
 } from 'lucide-react'
-import { listMissingPersons, updateMissingPerson } from '../../api/endpoints'
+import { listMissingPersons, listMissingMatches, reviewMissingMatch, updateMissingPerson } from '../../api/endpoints'
+import type { MissingPerson } from '../../types'
+import type { MissingMatch } from '../../api/endpoints'
 import { Select } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import Badge from '../../components/common/Badge'
@@ -16,8 +20,8 @@ import Loader from '../../components/common/Loader'
 import Modal from '../../components/common/Modal'
 import { useRealtime } from '../../hooks/useRealtime'
 import { useToast } from '../../components/common/Toast'
+import { formatDateTime } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
-import type { MissingPerson } from '../../types'
 
 export default function MissingPersons() {
   const { t } = useLanguage()
@@ -28,6 +32,31 @@ export default function MissingPersons() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null)
+
+  // AI sighting matches awaiting operator review
+  const [matches, setMatches] = useState<MissingMatch[] | null>(null)
+  const [reviewingId, setReviewingId] = useState<string | null>(null)
+
+  const refreshMatches = useCallback(() => {
+    listMissingMatches().then(setMatches).catch(() => setMatches([]))
+  }, [])
+
+  useEffect(() => {
+    refreshMatches()
+  }, [refreshMatches])
+
+  const reviewMatch = async (match: MissingMatch, decision: 'confirmed' | 'rejected') => {
+    setReviewingId(match.id)
+    try {
+      await reviewMissingMatch(match.id, decision)
+      toast(`${t('mp_admin.matchReviewed', 'Match reviewed')}: ${decision}`, 'success')
+      refreshMatches()
+    } catch (err) {
+      toast(err instanceof Error ? err.message : t('mp_admin.matchReviewFailed', 'Failed to review match'), 'error')
+    } finally {
+      setReviewingId(null)
+    }
+  }
 
   const update = async (id: string, patch: Partial<MissingPerson>) => {
     try {
@@ -84,13 +113,13 @@ export default function MissingPersons() {
 
       {/* KPI Metrics */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">{t('mp_admin.totalCases')}</div>
           <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-slate-100">{totalCount}</div>
           <div className="text-[11px] text-slate-400">{t('mp_admin.registeredBulletins')}</div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 mono flex items-center gap-1">
             <AlertCircle className="h-3.5 w-3.5" />
             <span>{t('mp_admin.activeSearches')}</span>
@@ -99,7 +128,7 @@ export default function MissingPersons() {
           <div className="text-[11px] text-slate-400">{t('mp_admin.investigationPending')}</div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mono flex items-center gap-1">
             <Eye className="h-3.5 w-3.5" />
             <span>{t('mp_admin.sightingsMatched')}</span>
@@ -108,7 +137,7 @@ export default function MissingPersons() {
           <div className="text-[11px] text-slate-400">{t('mp_admin.identityMatchIdentified')}</div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mono flex items-center gap-1">
             <CheckCircle2 className="h-3.5 w-3.5" />
             <span>{t('mp_admin.reunitedSafe')}</span>
@@ -119,7 +148,7 @@ export default function MissingPersons() {
       </div>
 
       {/* Search & Status Filter Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex flex-col sm:flex-row gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
@@ -153,7 +182,7 @@ export default function MissingPersons() {
         {filtered.map((p) => (
           <div
             key={p.id}
-            className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
+            className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
           >
             <div>
               <div className="flex items-start justify-between gap-3">
@@ -236,6 +265,74 @@ export default function MissingPersons() {
         {filtered.length === 0 && (
           <div className="col-span-full rounded-2xl border border-dashed border-slate-300 p-12 text-center text-xs text-slate-400 dark:border-slate-800">
             {t('mp_admin.noCases')}
+          </div>
+        )}
+      </div>
+
+      {/* Pending Match Review Queue */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3.5 dark:border-slate-800">
+          <GitCompareArrows className="h-4 w-4 text-amber-600" />
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mono">
+            {t('mp_admin.pendingMatches', 'Pending match reviews')} ({matches?.length ?? 0})
+          </span>
+        </div>
+
+        {matches !== null && matches.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="border-b border-slate-200 bg-slate-50 font-bold uppercase tracking-wider text-slate-500 mono text-[10px] dark:border-slate-800 dark:bg-slate-950">
+                <tr>
+                  <th className="px-5 py-3">{t('mp_admin.namePair', 'Name pair')}</th>
+                  <th className="px-5 py-3">{t('mp_admin.score', 'Score')}</th>
+                  <th className="px-5 py-3">{t('au.eventTimestamp', 'Timestamp')}</th>
+                  <th className="px-5 py-3 text-right">Review</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                {matches.map((m) => (
+                  <tr key={m.id} className="transition hover:bg-slate-50/70 dark:hover:bg-slate-800/50">
+                    <td className="px-5 py-3.5 font-semibold text-slate-900 dark:text-slate-100">
+                      {m.missingPersonName || '—'} <span className="text-slate-400">↔</span> {m.matchedPersonName || '—'}
+                    </td>
+                    <td className="px-5 py-3.5 font-mono text-slate-700 dark:text-slate-300">
+                      {m.score === null ? '—' : m.score}
+                    </td>
+                    <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400 font-mono">
+                      {formatDateTime(m.createdAt)}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => reviewMatch(m, 'confirmed')}
+                          disabled={reviewingId === m.id}
+                          className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50 cursor-pointer"
+                        >
+                          <CheckCircle2 className="h-3 w-3" />
+                          {t('mp_admin.confirmMatch', 'Confirm')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => reviewMatch(m, 'rejected')}
+                          disabled={reviewingId === m.id}
+                          className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-bold text-red-600 hover:bg-red-100 disabled:opacity-50 cursor-pointer dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
+                        >
+                          <XCircle className="h-3 w-3" />
+                          {t('mp_admin.rejectMatch', 'Reject')}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {matches !== null && matches.length === 0 && (
+          <div className="p-8 text-center text-xs text-slate-400 dark:text-slate-500">
+            {t('mp_admin.noPendingMatches', 'No pending AI matches')}
           </div>
         )}
       </div>

@@ -11,6 +11,7 @@ import {
   RefreshCw
 } from 'lucide-react'
 import { getReport } from '../../api/endpoints'
+import { ApiError } from '../../api/client'
 import { Field } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import PriorityBadge from '../../components/common/PriorityBadge'
@@ -69,8 +70,14 @@ export default function ReportTracker() {
         if (searchParams.get('id') !== res.trackingId) {
           setSearchParams({ id: res.trackingId }, { replace: true })
         }
-      } catch {
-        setError(t('track.notFound'))
+      } catch (err) {
+        // 404 = genuinely unknown ID; anything else (network/5xx/429) is a
+        // service problem — blaming the user's tracking code would be a lie.
+        setError(
+          err instanceof ApiError && err.status === 404
+            ? t('track.notFound')
+            : t('track.serviceUnavailable', 'Service unavailable — try again'),
+        )
         setReport(null)
       } finally {
         setLoading(false)
@@ -80,12 +87,9 @@ export default function ReportTracker() {
   )
 
   const queryParamId = searchParams.get('id')?.trim() || ''
-  const abortRef = useRef<AbortController | null>(null)
   useEffect(() => {
     if (queryParamId && queryParamId !== lastSearchedRef.current) {
       setTrackingId(queryParamId)
-      abortRef.current?.abort()
-      abortRef.current = new AbortController()
       lookup(queryParamId)
     }
   }, [queryParamId, lookup])
@@ -174,7 +178,7 @@ export default function ReportTracker() {
       </div>
 
       {/* Tracking ID Search Bar */}
-      <div className="mt-5 rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+      <div className="mt-5 rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]">
         <form
           onSubmit={(e) => {
             e.preventDefault()
@@ -188,7 +192,7 @@ export default function ReportTracker() {
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
                   value={trackingId}
-                  onChange={(e) => setTrackingId(e.target.value.toUpperCase())}
+                  onChange={(e) => setTrackingId(e.target.value)}
                   placeholder={t('track.inputPlaceholder')}
                   autoFocus
                   className="w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-3.5 py-2.5 text-sm font-mono outline-none focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#151515] dark:text-slate-300 dark:focus:border-slate-500"
@@ -247,15 +251,12 @@ export default function ReportTracker() {
             <ShieldAlert className="h-4 w-4" />
             <span>{error}</span>
           </div>
-          <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-            {t('track.notFound')}
-          </p>
         </div>
       )}
 
       {/* Incident Details Card */}
       {report && !loading && (
-        <div className="mt-6 space-y-6 rounded-2xl border border-zinc-200/80 bg-white p-5 sm:p-4 sm:p-6 shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+        <div className="mt-6 space-y-6 rounded-2xl border border-zinc-200/80 bg-white p-5 sm:p-4 sm:p-6 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]">
           {/* Header */}
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4 dark:border-white/[0.08]">
             <div>
@@ -410,7 +411,7 @@ export default function ReportTracker() {
                   href={getNavigationUrl(report.latitude!, report.longitude!)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-xl bg-zinc-800 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
+                  className="inline-flex items-center gap-1 rounded-xl bg-zinc-800 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
                 >
                   <Navigation className="h-3.5 w-3.5" />
                   <span>{t('common.directions')}</span>
@@ -418,14 +419,14 @@ export default function ReportTracker() {
               )}
               <a
                 href="tel:112"
-                className="inline-flex items-center gap-1 rounded-xl bg-red-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-red-700"
+                className="inline-flex items-center gap-1 rounded-xl bg-red-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-red-700"
               >
                 <Phone className="h-3.5 w-3.5" />
                 <span>{t('common.call112')}</span>
               </a>
               <a
                 href="tel:1070"
-                className="inline-flex items-center gap-1 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs font-bold text-zinc-700 shadow-xs hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200"
+                className="inline-flex items-center gap-1 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs font-bold text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200"
               >
                 <Phone className="h-3.5 w-3.5" />
                 <span>{t('common.call1070')}</span>

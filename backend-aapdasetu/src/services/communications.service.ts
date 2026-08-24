@@ -25,10 +25,11 @@ export interface BroadcastResult {
  * Without credentials it returns a graceful count (web=1, others=0).
  */
 export async function broadcastAlert(input: BroadcastInput): Promise<BroadcastResult> {
-  const channelKey = input.channels.includes('all')
-    ? 'all'
-    : input.channels.filter((c) => c !== 'web').join(',') || 'public';
-  const channel = input.channels.includes('sms') && input.channels.includes('whatsapp') ? 'all' : channelKey;
+  // ponytail: removed dead channels.includes('all') branch — broadcastSchema restricts input to sms|whatsapp|web
+  const channel =
+    input.channels.includes('sms') && input.channels.includes('whatsapp')
+      ? 'all'
+      : input.channels.filter((c) => c !== 'web').join(',') || 'public';
 
   const alert = await createAlert({
     title: input.title,
@@ -82,22 +83,50 @@ interface DeliveryOutcome {
   note?: string;
 }
 
+const PROVIDER_TIMEOUT_MS = 10000;
+const RECIPIENT_BATCH_SIZE = 10;
+const SMS_MAX_CHARS = 320;
+
+async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
+  let lastError: unknown;
+  // ponytail: one retry for network errors / 5xx only
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(url, { ...init, signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS) });
+      if (res.status < 500 || attempt === 1) return res;
+      lastError = new Error(`provider responded HTTP ${res.status}`);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError;
+}
+
 async function sendSms(input: BroadcastInput): Promise<DeliveryOutcome> {
+  if (!env.twilioFromNumber) {
+    return { ok: false, note: 'TWILIO_FROM_NUMBER missing' };
+  }
   try {
     const recipients = input.recipientNumbers?.length
       ? input.recipientNumbers
       : [env.twilioDefaultToNumber].filter(Boolean);
+    const text = `${input.title}\n\n${input.body}`.slice(0, SMS_MAX_CHARS);
     let sent = 0;
-    for (const to of recipients) {
-      const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${env.twilioAccountSid}/Messages.json`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Basic ${Buffer.from(`${env.twilioAccountSid}:${env.twilioAuthToken}`).toString('base64')}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({ To: to, From: env.twilioFromNumber!, Body: `${input.title}\n\n${input.body}` }).toString(),
-      });
-      if (res.ok) sent += 1;
+    for (let i = 0; i < recipients.length; i += RECIPIENT_BATCH_SIZE) {
+      const results = await Promise.all(
+        recipients.slice(i, i + RECIPIENT_BATCH_SIZE).map(async (to) => {
+          const res = await fetchWithRetry(`https://api.twilio.com/2010-04-01/Accounts/${env.twilioAccountSid}/Messages.json`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Basic ${Buffer.from(`${env.twilioAccountSid}:${env.twilioAuthToken}`).toString('base64')}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({ To: to, From: env.twilioFromNumber!, Body: text }).toString(),
+          });
+          return res.ok;
+        }),
+      );
+      sent += results.filter(Boolean).length;
     }
     return { ok: sent > 0, note: `sent ${sent}/${recipients.length}` };
   } catch {
@@ -106,26 +135,34 @@ async function sendSms(input: BroadcastInput): Promise<DeliveryOutcome> {
 }
 
 async function sendWhatsApp(input: BroadcastInput): Promise<DeliveryOutcome> {
+  if (!env.whatsappPhoneNumberId) {
+    return { ok: false, note: 'WHATSAPP_PHONE_NUMBER_ID missing' };
+  }
   try {
     const recipients = input.recipientNumbers?.length
       ? input.recipientNumbers
       : [env.whatsappDefaultToNumber].filter(Boolean);
     let sent = 0;
-    for (const to of recipients) {
-      const res = await fetch(`https://graph.facebook.com/v19.0/${env.whatsappPhoneNumberId}/messages`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${env.whatsappCloudApiToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          to,
-          type: 'text',
-          text: { body: `${input.title}\n\n${input.body}` },
+    for (let i = 0; i < recipients.length; i += RECIPIENT_BATCH_SIZE) {
+      const results = await Promise.all(
+        recipients.slice(i, i + RECIPIENT_BATCH_SIZE).map(async (to) => {
+          const res = await fetchWithRetry(`https://graph.facebook.com/v19.0/${env.whatsappPhoneNumberId}/messages`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${env.whatsappCloudApiToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              messaging_product: 'whatsapp',
+              to,
+              type: 'text',
+              text: { body: `${input.title}\n\n${input.body}` },
+            }),
+          });
+          return res.ok;
         }),
-      });
-      if (res.ok) sent += 1;
+      );
+      sent += results.filter(Boolean).length;
     }
     return { ok: sent > 0, note: `sent ${sent}/${recipients.length}` };
   } catch {

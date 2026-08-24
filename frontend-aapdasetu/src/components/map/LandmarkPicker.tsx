@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents, ScaleControl } from 'react-leaflet'
 import { Search, MapPin, Crosshair, Sparkles } from 'lucide-react'
@@ -61,10 +61,24 @@ export default function LandmarkPicker({
   const [statusMessage, setStatusMessage] = useState<string>('')
   const [view, setView] = useState<{ target: GeoPoint; zoom: number } | null>(null)
   const center = value ?? view?.target ?? DEFAULT_CENTER
+  const rootRef = useRef<HTMLDivElement>(null)
+  // ponytail: monotonic search id — stale geocode responses are discarded instead of overwriting newer ones
+  const searchIdRef = useRef(0)
+  // Last point this picker itself emitted; lets us detect externally-driven
+  // value changes and recenter the map for them.
+  const lastEmittedRef = useRef<string | null>(null)
+
+  const pointKey = (p: GeoPoint) => `${p.lat},${p.lng}`
+
+  const emitChange = (p: GeoPoint, address?: string) => {
+    lastEmittedRef.current = pointKey(p)
+    onChange(p, address)
+  }
 
   const runSearch = async () => {
     const q = query.trim()
     if (!q) return
+    const reqId = ++searchIdRef.current
     setSearching(true)
     setStatusMessage('')
     setNoMatchFallback(null)
@@ -73,7 +87,7 @@ export default function LandmarkPicker({
         proximity: center,
         limit: 5,
       })
-
+      if (reqId !== searchIdRef.current) return // superseded by a newer search
       if (places.length > 0) {
         setResults(places)
       } else {
@@ -81,16 +95,46 @@ export default function LandmarkPicker({
         setNoMatchFallback(q)
       }
     } catch {
+      if (reqId !== searchIdRef.current) return
       setStatusMessage(t('lp.geocodeUnavailable'))
       setResults(null)
       setNoMatchFallback(q)
     } finally {
-      setSearching(false)
+      if (reqId === searchIdRef.current) setSearching(false)
     }
   }
 
+  // Recenter when the parent changes `value` from outside (presets, GPS sync);
+  // our own picks are already centered and must not double-fire a jump.
+  const valueKey = value ? pointKey(value) : null
+  useEffect(() => {
+    if (!value || !valueKey || lastEmittedRef.current === valueKey) return
+    setView({ target: value, zoom: 16 })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valueKey])
+
+  // Dismiss the results dropdown on outside pointerdown or Escape.
+  useEffect(() => {
+    if (!results || results.length === 0) return
+    const root = rootRef.current
+    const handlePointerDown = (e: PointerEvent) => {
+      if (root && e.target instanceof Node && !root.contains(e.target)) {
+        setResults(null)
+      }
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setResults(null)
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [results])
+
   const selectResult = (r: PlaceSearchResult) => {
-    onChange({ lat: r.lat, lng: r.lng }, r.name)
+    emitChange({ lat: r.lat, lng: r.lng }, r.name)
     setQuery(r.name)
     setResults(null)
     setNoMatchFallback(null)
@@ -98,7 +142,7 @@ export default function LandmarkPicker({
   }
 
   const handleUseTypedAddress = (customAddr: string) => {
-    onChange(center, customAddr)
+    emitChange(center, customAddr)
     setNoMatchFallback(null)
     setResults(null)
     setStatusMessage(`${t('lp.mapCenterSet')} "${customAddr}"`)
@@ -111,7 +155,7 @@ export default function LandmarkPicker({
       const pos = await getHighPrecisionPosition()
       const p: GeoPoint = { lat: pos.coords.latitude, lng: pos.coords.longitude }
       const revAddr = await reverseGeocode(p)
-      onChange(p, revAddr || undefined)
+      emitChange(p, revAddr || undefined)
       if (revAddr) setQuery(revAddr)
       setView({ target: p, zoom: 17 })
       setStatusMessage(`${t('lp.gpsLocked')} (±${Math.round(pos.coords.accuracy ?? 5)}m)`)
@@ -125,15 +169,15 @@ export default function LandmarkPicker({
   const handleMapPick = async (p: GeoPoint) => {
     try {
       const addr = await reverseGeocode(p)
-      onChange(p, addr || undefined)
+      emitChange(p, addr || undefined)
       if (addr) setQuery(addr)
     } catch {
-      onChange(p)
+      emitChange(p)
     }
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={rootRef}>
       <div className="mb-2 flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -208,7 +252,7 @@ export default function LandmarkPicker({
             <button
               type="button"
               onClick={() => handleUseTypedAddress(noMatchFallback)}
-              className="inline-flex items-center gap-1 rounded-lg bg-amber-800 px-3 py-1 text-xs font-bold text-white shadow-xs hover:bg-amber-900 dark:bg-amber-200 dark:text-amber-900 dark:hover:bg-white cursor-pointer"
+              className="inline-flex items-center gap-1 rounded-lg bg-amber-800 px-3 py-1 text-xs font-bold text-white shadow-sm hover:bg-amber-900 dark:bg-amber-200 dark:text-amber-900 dark:hover:bg-white cursor-pointer"
             >
               <MapPin className="h-3.5 w-3.5" />
               <span>{t('lp.useAddress')} &ldquo;{noMatchFallback.slice(0, 32)}&hellip;&rdquo;</span>
@@ -227,7 +271,6 @@ export default function LandmarkPicker({
           maxBounds={INDIA_BOUNDS}
           maxBoundsViscosity={1.0}
           worldCopyJump={false}
-          attributionControl={false}
           style={{ height, width: '100%' }}
         >
           <ScaleControl position="bottomleft" imperial={false} />
@@ -253,10 +296,10 @@ export default function LandmarkPicker({
                   const p = { lat: ll.lat, lng: ll.lng }
                   try {
                     const addr = await reverseGeocode(p)
-                    onChange(p, addr || undefined)
+                    emitChange(p, addr || undefined)
                     if (addr) setQuery(addr)
                   } catch {
-                    onChange(p)
+                    emitChange(p)
                   }
                 },
               }}

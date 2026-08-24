@@ -47,7 +47,7 @@ export default function About() {
       </div>
 
       {/* Why we built it — short story */}
-      <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-6 shadow-sm dark:border-amber-900/30 dark:from-amber-950/20 dark:to-[#1a1a1a] sm:p-8">
+      <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a] sm:p-8">
         <h2 className="mb-3 text-xl font-bold text-zinc-800 dark:text-slate-200">
           {t('about.storyTitle')}
         </h2>

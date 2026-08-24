@@ -29,7 +29,8 @@ export default function Overview() {
   const kpis = useRealtime<OverviewKPIs>(fetchKpis, 6000)
 
   const fetchRecentPending = useCallback(() => listReports({ status: 'pending' }), [])
-  const pendingReports = useRealtime<Report[]>(fetchRecentPending, 5000)
+  const pendingReportsPage = useRealtime<{ items: Report[]; total: number }>(fetchRecentPending, 5000)
+  const pendingReports = pendingReportsPage?.items ?? []
 
   const handleAcknowledge = async (id: string) => {
     try {
@@ -113,7 +114,6 @@ export default function Overview() {
       desc: t('ov.qaTriageDesc'),
       to: '/admin/reports',
       icon: FileText,
-      badge: t('ov.badgeProximityMatch'),
       accent: 'border-blue-300 hover:border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-300',
     },
     {
@@ -121,7 +121,6 @@ export default function Overview() {
       desc: t('ov.qaDamageClaimsDesc'),
       to: '/admin/damage',
       icon: ShieldCheck,
-      badge: t('ov.badgeSdrfGrants'),
       accent: 'border-emerald-300 hover:border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300',
     },
     {
@@ -129,7 +128,6 @@ export default function Overview() {
       desc: t('ov.qaBroadcasterDesc'),
       to: '/admin/alerts',
       icon: Megaphone,
-      badge: t('ov.badgeMultiChannel'),
       accent: 'border-amber-300 hover:border-amber-500 bg-amber-50/50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-300',
     },
   ]
@@ -166,7 +164,7 @@ export default function Overview() {
             <Link
               key={c.label}
               to={c.to}
-              className={`rounded-2xl border p-4 shadow-xs transition hover:shadow-md hover:scale-[1.02] flex flex-col justify-between ${c.bg}`}
+              className={`rounded-2xl border p-4 shadow-sm transition hover:shadow-md hover:scale-[1.02] flex flex-col justify-between ${c.bg}`}
             >
               <div className="flex items-center justify-between">
                 <Icon className={`h-4 w-4 ${c.color}`} />
@@ -191,7 +189,7 @@ export default function Overview() {
       {/* Operational Dial & Response Pulse Section */}
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Crisis Dial Card */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mono">
@@ -250,7 +248,7 @@ export default function Overview() {
         </div>
 
         {/* Live Response Pulse */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
           <div>
             <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mono">
               {t('ov.readinessPulse')}
@@ -279,12 +277,7 @@ export default function Overview() {
               max={Math.max(kpis.totalReports, 1)}
               color="bg-red-600"
             />
-            <Bar
-              label={t('ov.barShelterBeds')}
-              value={Math.round(kpis.openShelters * 240)}
-              max={Math.max(kpis.openShelters * 350, 1000)}
-              color="bg-purple-600"
-            />
+            {/* ponytail: needs shelter aggregation endpoint — fabricated per-shelter bed math removed */}
           </div>
 
           <div className="flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800 text-[11px]">
@@ -297,7 +290,7 @@ export default function Overview() {
         </div>
 
         {/* Quick Dispatch Hub */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
           <div>
             <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mono">
               {t('ov.quickLaunch')}
@@ -327,9 +320,11 @@ export default function Overview() {
                       </div>
                     </div>
                   </div>
-                  <span className="shrink-0 rounded-full bg-white dark:bg-slate-900 px-2 py-0.5 text-[9px] font-bold shadow-2xs mono">
-                    {act.badge}
-                  </span>
+                  {act.badge && (
+                    <span className="shrink-0 rounded-full bg-white dark:bg-slate-900 px-2 py-0.5 text-[9px] font-bold shadow-2xs mono">
+                      {act.badge}
+                    </span>
+                  )}
                 </Link>
               )
             })}
@@ -344,12 +339,12 @@ export default function Overview() {
 
       {/* Live Pending SOS Stream Table */}
       {pendingReports && pendingReports.length > 0 && (
-        <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+        <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
             <div className="flex items-center gap-2">
-              <Siren className="h-4.5 w-4.5 text-red-600 animate-pulse" />
+              <Siren className="size-[18px] text-red-600 animate-pulse" />
               <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mono">
-                {t('ov.pendingSosStream')} ({pendingReports.length} {t('ov.unassignedIncidents')})
+                {t('ov.pendingSosStream')} ({(pendingReportsPage?.total ?? pendingReports.length).toLocaleString()} {t('ov.unassignedIncidents')})
               </h2>
             </div>
             <Link
@@ -379,7 +374,7 @@ export default function Overview() {
                   <button
                     type="button"
                     onClick={() => handleAcknowledge(r.id)}
-                    className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer"
+                    className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer"
                   >
                     <CheckCircle2 className="h-3 w-3" />
                     <span>{t('ov.acknowledge')}</span>

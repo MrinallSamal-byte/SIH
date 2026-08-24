@@ -5,6 +5,6 @@ coverage/
 .env.local
 *.log
 uploads/
-fastapi-service/__pycache__/
+**/__pycache__/
 fastapi-service/.venv/
 .pytest_cache/

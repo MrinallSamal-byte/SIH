@@ -1,1 +1,4 @@
 pydantic-settings>=2.6.0
+# ASGI server + framework (required by Dockerfile / npm run fastapi:* scripts)
+fastapi>=0.115
+uvicorn[standard]>=0.30

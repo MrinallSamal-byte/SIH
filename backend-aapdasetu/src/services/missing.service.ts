@@ -5,6 +5,7 @@
  * timestamps) and produces a ranked match score 0..1. The public API is stable
  * so ML/embedding models can be introduced later without changing callers.
  */
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { haversineDistanceKm } from '../lib/haversine.js';
 import { NotFoundError } from '../lib/errors.js';
@@ -62,6 +63,12 @@ export async function findMissingPersonMatches(params: {
     .filter((r) => r.score >= (params.threshold ?? 0.2))
     .sort((a, b) => b.score - a.score);
 
+  // ponytail: registry candidates scored but not persisted — upgrade path: polymorphic participant refs
+  for (const m of results.filter((m) => !m.candidate.reportId.startsWith('registry:')).slice(0, 5)) {
+    const [reportAId, reportBId] = [params.reportId, m.candidate.reportId].sort();
+    await saveMatch({ reportAId, reportBId, score: m.score, reasons: m.reasons });
+  }
+
   return results;
 }
 
@@ -85,9 +92,19 @@ export async function reviewMatch(input: {
 }) {
   const match = await prisma.missingPersonMatch.findUnique({ where: { id: input.id } });
   if (!match) throw new NotFoundError('Match not found');
-  return prisma.missingPersonMatch.update({
-    where: { id: input.id },
-    data: { status: input.status, reviewedBy: input.reviewedBy, reviewedAt: new Date() },
+
+  // ponytail: confirming a match resolves both sides of the pair atomically
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const updated = await tx.missingPersonMatch.update({
+      where: { id: input.id },
+      data: { status: input.status, reviewedBy: input.reviewedBy, reviewedAt: new Date() },
+    });
+    if (input.status === 'confirmed') {
+      const resolvedAt = new Date();
+      await tx.report.update({ where: { id: match.reportAId }, data: { status: 'resolved', resolvedAt } });
+      await tx.report.update({ where: { id: match.reportBId }, data: { status: 'resolved', resolvedAt } });
+    }
+    return updated;
   });
 }
 
@@ -104,7 +121,7 @@ export async function listMatches(params: { status?: string }) {
 
 async function fetchMissingCandidates(excludeReportId: string): Promise<MatchCandidate[]> {
   const reports = await prisma.report.findMany({
-    where: { type: 'missing_person', id: { not: excludeReportId } },
+    where: { type: 'missing_person', status: { not: 'resolved' }, id: { not: excludeReportId } },
     select: {
       id: true,
       missingPersonName: true,
@@ -114,8 +131,14 @@ async function fetchMissingCandidates(excludeReportId: string): Promise<MatchCan
       longitude: true,
       createdAt: true,
     },
+    take: 500,
   });
-  return reports.map((r) => ({
+  const registry = await prisma.missingPerson.findMany({
+    where: { status: { not: 'resolved' } },
+    take: 500,
+  });
+
+  const reportCandidates = reports.map((r): MatchCandidate => ({
     reportId: r.id,
     name: r.missingPersonName ?? null,
     age: r.missingPersonAge ?? null,
@@ -124,6 +147,19 @@ async function fetchMissingCandidates(excludeReportId: string): Promise<MatchCan
     longitude: r.longitude,
     createdAt: r.createdAt,
   }));
+
+  // ponytail: registry rows get synthetic `registry:` ids (no backing Report row)
+  const registryCandidates = registry.map((p): MatchCandidate => ({
+    reportId: `registry:${p.id}`,
+    name: p.name,
+    age: p.age,
+    description: p.notes ?? p.photoUrl,
+    latitude: null,
+    longitude: null,
+    createdAt: p.lastSeenAt ?? p.createdAt,
+  }));
+
+  return [...reportCandidates, ...registryCandidates];
 }
 
 export function scoreCandidate(source: MatchSource, candidate: MatchCandidate): MatchResult {

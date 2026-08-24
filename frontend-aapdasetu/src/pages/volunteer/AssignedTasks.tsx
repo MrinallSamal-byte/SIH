@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import { listReports, updateReport } from '../../api/endpoints'
+import { Link } from 'react-router-dom'
+import { listVolunteerTasks, completeVolunteerTask } from '../../api/endpoints'
 import PriorityBadge from '../../components/common/PriorityBadge'
 import Badge from '../../components/common/Badge'
 import Button from '../../components/common/Button'
 import Loader from '../../components/common/Loader'
 import Modal from '../../components/common/Modal'
-import { Field, Textarea } from '../../components/common/Input'
 import { useToast } from '../../components/common/Toast'
 import { timeAgo, getNavigationUrl } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
@@ -17,9 +17,8 @@ export default function AssignedTasks() {
   const [tasks, setTasks] = useState<Report[] | null>(null)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [resolveTarget, setResolveTarget] = useState<Report | null>(null)
-  const [resolutionNotes, setResolutionNotes] = useState('')
 
-  const activeVolunteerId = localStorage.getItem('aapdasetu_volunteer_session')
+  const isAuthed = Boolean(localStorage.getItem('aapdasetu_volunteer_auth'))
 
   const statusLabel = useCallback(
     (status: string) =>
@@ -33,29 +32,22 @@ export default function AssignedTasks() {
 
   const loadTasks = useCallback(async () => {
     try {
-      const reports = await listReports({ status: 'in_progress' })
-      if (!activeVolunteerId) {
-        setTasks([])
-        return
-      }
-      const relevant = reports.filter((r) => r.assignedVolunteerId === activeVolunteerId)
-      setTasks(relevant)
+      setTasks(await listVolunteerTasks())
     } catch {
       toast(t('vt.loadFailed'), 'error')
     }
-  }, [activeVolunteerId, toast, t])
+  }, [toast, t])
 
   useEffect(() => {
     loadTasks()
   }, [loadTasks])
 
-  const updateTaskStatus = async (reportId: string, nextStatus: Report['status'], notes?: string) => {
+  const completeTask = async (reportId: string) => {
     setUpdatingId(reportId)
     try {
-      await updateReport(reportId, { status: nextStatus, resolutionNotes: notes })
-      toast(`${t('vt.taskUpdated')}: ${statusLabel(nextStatus)}`, 'success')
+      await completeVolunteerTask(reportId)
+      toast(`${t('vt.taskUpdated')}: ${statusLabel('resolved')}`, 'success')
       setResolveTarget(null)
-      setResolutionNotes('')
       loadTasks()
     } catch (err) {
       toast(err instanceof Error ? err.message : t('vt.updateFailed'), 'error')
@@ -64,14 +56,14 @@ export default function AssignedTasks() {
     }
   }
 
-  if (!tasks) return <Loader />
-  if (!activeVolunteerId) {
+  if (!isAuthed) {
     return (
       <div className="rounded-2xl border border-amber-300 bg-amber-50 p-6 text-center text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
-        {t('vt.noSession')} <a href="#/volunteer/login" className="font-bold underline">{t('vt.logIn')}</a> {t('vt.toViewTasks')}
+        {t('vt.noSession')} <Link to="/volunteer/login" className="font-bold underline">{t('vt.logIn')}</Link> {t('vt.toViewTasks')}
       </div>
     )
   }
+  if (!tasks) return <Loader />
 
   return (
     <div className="space-y-4">
@@ -89,7 +81,7 @@ export default function AssignedTasks() {
           return (
             <div
               key={task.id}
-              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900"
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
             >
               <div className="flex flex-wrap items-center gap-2">
                 <PriorityBadge label={task.priorityLabel} />
@@ -146,10 +138,7 @@ export default function AssignedTasks() {
                     variant="danger"
                     size="sm"
                     disabled={updatingId === task.id}
-                    onClick={() => {
-                      setResolveTarget(task)
-                      setResolutionNotes(t('vt.defaultResolutionNotes'))
-                    }}
+                    onClick={() => setResolveTarget(task)}
                     className="font-bold"
                   >
                     {t('vt.completeMission')}
@@ -175,15 +164,6 @@ export default function AssignedTasks() {
               {t('vt.confirmResolutionFor')} <strong className="font-mono text-slate-800 dark:text-slate-200">{resolveTarget.trackingId}</strong> ({resolveTarget.type.toUpperCase()}).
             </div>
 
-            <Field label={t('vt.resolutionNotes')}>
-              <Textarea
-                rows={3}
-                value={resolutionNotes}
-                onChange={(e) => setResolutionNotes(e.target.value)}
-                placeholder={t('vt.resolutionPlaceholder')}
-              />
-            </Field>
-
             <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
               <Button variant="secondary" onClick={() => setResolveTarget(null)}>
                 {t('vt.cancel')}
@@ -191,7 +171,7 @@ export default function AssignedTasks() {
               <Button
                 variant="danger"
                 disabled={updatingId === resolveTarget.id}
-                onClick={() => updateTaskStatus(resolveTarget.id, 'resolved', resolutionNotes)}
+                onClick={() => completeTask(resolveTarget.id)}
                 className="font-bold"
               >
                 {updatingId === resolveTarget.id ? t('vt.resolving') : t('vt.confirmResolution')}

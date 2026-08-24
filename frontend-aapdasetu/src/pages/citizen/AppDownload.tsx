@@ -59,7 +59,14 @@ export default function AppDownload() {
     let cancelled = false
     fetch(apkUrl, { method: 'HEAD' })
       .then((res) => {
-        if (!cancelled) setApkState(res.ok ? 'ready' : 'missing')
+        if (cancelled) return
+        // SPA fallbacks happily serve 200 + text/html for missing files — only
+        // trust an Android APK content-type or a real .apk path.
+        const ctype = (res.headers.get('content-type') || '').toLowerCase()
+        const looksLikeApk =
+          ctype.includes('android') || apkUrl.toLowerCase().endsWith('.apk')
+        const isSpaFallback = ctype.includes('text/html')
+        setApkState(res.ok && looksLikeApk && !isSpaFallback ? 'ready' : 'missing')
       })
       .catch(() => {
         if (!cancelled) setApkState('missing')
@@ -96,47 +103,60 @@ export default function AppDownload() {
 
           <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center">
             {apkMissing ? (
-              <>
-                <button
-                  type="button"
-                  disabled
-                  aria-disabled="true"
-                  className="inline-flex cursor-not-allowed items-center justify-center gap-2.5 rounded-xl bg-zinc-300 px-7 py-4 text-base font-extrabold text-zinc-500 shadow-sm dark:bg-[#252525] dark:text-slate-500"
-                >
-                  <Info className="h-5 w-5" />
-                  <span>{t('appdl.uploadingSoon')}</span>
-                </button>
-                <a
-                  href={GITHUB_REPO_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-6 py-3.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 active:scale-[0.98] dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-slate-200 dark:hover:bg-[#252525]"
-                >
-                  <ExternalLink className="h-4.5 w-4.5" />
-                  <span>{t('appdl.getFromGitHub')}</span>
-                </a>
-              </>
+              <button
+                type="button"
+                disabled
+                aria-disabled="true"
+                className="inline-flex cursor-not-allowed items-center justify-center gap-2.5 rounded-xl bg-zinc-300 px-7 py-4 text-base font-extrabold text-zinc-500 shadow-sm dark:bg-[#252525] dark:text-slate-500"
+              >
+                <Info className="h-5 w-5" />
+                <span>{t('appdl.uploadingSoon')}</span>
+              </button>
+            ) : apkState === 'checking' ? (
+              // Download CTA stays disabled until the HEAD probe confirms a real APK.
+              <button
+                type="button"
+                disabled
+                aria-disabled="true"
+                aria-busy="true"
+                aria-label={t('appdl.checkingBuild')}
+                className="inline-flex cursor-not-allowed items-center justify-center gap-2.5 rounded-xl bg-zinc-300 px-7 py-4 text-base font-extrabold text-zinc-500 shadow-sm dark:bg-[#252525] dark:text-slate-500"
+              >
+                <Download className="h-5 w-5" />
+                <span>{t('appdl.checkingBuild')}</span>
+              </button>
             ) : (
-              <>
-                <a
-                  href={apkUrl}
-                  download="soa-mesh.apk"
-                  aria-busy={apkState === 'checking'}
-                  aria-label={apkState === 'checking' ? t('appdl.checkingBuild') : undefined}
-                  className="group inline-flex items-center justify-center gap-2.5 rounded-xl bg-red-600 px-7 py-4 text-base font-extrabold uppercase tracking-tight text-white transition-all hover:bg-red-700 active:scale-[0.98] shadow-md shadow-red-600/20 ring-2 ring-red-600/30"
-                >
-                  <Download className="h-5 w-5 transition-transform group-hover:translate-y-0.5" />
-                  <span>{t('appdl.downloadBtn')}</span>
-                </a>
-                <a
-                  href="#how-to-install"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-6 py-3.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 active:scale-[0.98] dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-slate-200 dark:hover:bg-[#252525]"
-                >
-                  <Smartphone className="h-4.5 w-4.5" />
-                  <span>{t('appdl.howInstallLink')}</span>
-                </a>
-              </>
+              <a
+                href={apkUrl}
+                download="soa-mesh.apk"
+                className="group inline-flex items-center justify-center gap-2.5 rounded-xl bg-red-600 px-7 py-4 text-base font-extrabold uppercase tracking-tight text-white transition-all hover:bg-red-700 active:scale-[0.98] shadow-md shadow-red-600/20 ring-2 ring-red-600/30"
+              >
+                <Download className="h-5 w-5 transition-transform group-hover:translate-y-0.5" />
+                <span>{t('appdl.downloadBtn')}</span>
+              </a>
             )}
+            {apkMissing && (
+              <a
+                href={GITHUB_REPO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-6 py-3.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 active:scale-[0.98] dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-slate-200 dark:hover:bg-[#252525]"
+              >
+                <ExternalLink className="size-[18px]" />
+                <span>{t('appdl.getFromGitHub')}</span>
+              </a>
+            )}
+            {/* ponytail: an href="#how-to-install" anchor gets hijacked by HashRouter — scroll manually instead */}
+            <button
+              type="button"
+              onClick={() =>
+                document.getElementById('how-to-install')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-6 py-3.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 active:scale-[0.98] dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-slate-200 dark:hover:bg-[#252525]"
+            >
+              <Smartphone className="size-[18px]" />
+              <span>{t('appdl.howInstallLink')}</span>
+            </button>
           </div>
 
           <p className="text-xs text-slate-400 dark:text-slate-500">
@@ -265,7 +285,7 @@ export default function AppDownload() {
                 className="flex items-start gap-3.5 rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]"
               >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300">
-                  <Icon className="h-4.5 w-4.5" />
+                  <Icon className="size-[18px]" />
                 </div>
                 <div className="min-w-0 pt-1.5">
                   <span className="mr-2 font-mono text-[10px] font-bold text-slate-400 mono">

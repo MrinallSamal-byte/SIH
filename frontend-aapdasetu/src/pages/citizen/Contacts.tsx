@@ -8,17 +8,30 @@ import {
   Droplets,
   HardHat,
   PhoneCall,
+  HeartHandshake,
+  Baby,
 } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
 
-const contacts = [
+interface Contact {
+  nameKey?: string
+  // ponytail: label override for entries without an i18n key yet (plain string)
+  name?: string
+  num: string
+  icon: typeof Siren
+  highlight?: boolean
+}
+
+const contacts: Contact[] = [
   { nameKey: 'contacts.nationalSos', num: '112', icon: Siren, highlight: true },
   { nameKey: 'contacts.ambulance', num: '108', icon: Ambulance },
   { nameKey: 'contacts.police', num: '100', icon: Shield },
   { nameKey: 'contacts.fire', num: '101', icon: Flame },
-  { nameKey: 'contacts.ndmaHelpline', num: '1070', icon: HeartPulse },
-  { nameKey: 'contacts.floodControl', num: '1070', icon: Droplets },
+  { nameKey: 'contacts.ndmaHelpline', num: '1078', icon: HeartPulse },
+  { name: 'MHA Control Room (Natural Calamities)', num: '1070', icon: Droplets },
   { nameKey: 'contacts.ndrfControl', num: '011-24363260', icon: HardHat },
+  { name: 'Women Helpline', num: '1091', icon: HeartHandshake },
+  { name: 'Child Helpline', num: '1098', icon: Baby },
 ]
 
 export default function Contacts() {
@@ -57,7 +70,7 @@ export default function Contacts() {
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-bold text-red-700 dark:text-red-300">
-                  {t(c.nameKey)}
+                  {c.name ?? (c.nameKey ? t(c.nameKey) : '')}
                 </h3>
                 <span className="mono text-2xl font-extrabold tracking-tight text-red-700 dark:text-red-300">
                   {c.num}
@@ -85,7 +98,7 @@ export default function Contacts() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-sm font-bold text-zinc-800 dark:text-slate-300">
-                    {t(c.nameKey)}
+                    {c.name ?? (c.nameKey ? t(c.nameKey) : '')}
                   </h3>
                   <span className="mono text-lg font-bold tracking-tight text-zinc-800 dark:text-slate-300">
                     {c.num}

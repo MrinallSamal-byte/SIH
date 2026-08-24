@@ -66,6 +66,19 @@ const STORAGE_KEY_DAMAGE = `aapdasetu_mock_damage_${STORAGE_VERSION}`
 if (typeof window !== 'undefined') {
   const currentVer = localStorage.getItem(STORAGE_KEY_VERSION)
   if (currentVer !== STORAGE_VERSION) {
+    // ponytail: purge mock blobs persisted by older schema versions
+    try {
+      const stale: string[] = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i)
+        if (k && k.startsWith('aapdasetu_mock_') && /_v\d+$/.test(k) && !k.endsWith(`_${STORAGE_VERSION}`)) {
+          stale.push(k)
+        }
+      }
+      stale.forEach((k) => localStorage.removeItem(k))
+    } catch {
+      // best-effort cleanup only
+    }
     localStorage.setItem(STORAGE_KEY_VERSION, STORAGE_VERSION)
   }
 }
@@ -692,7 +705,7 @@ function generate150Alerts(): Alert[] {
       message: `${tmpl.template} Affected sectors: ${sector.city} and surrounding wards. Emergency Helpline: 1070 / 112.`,
       severity: tmpl.severity,
       channel: i % 3 === 0 ? 'all' : 'public',
-      region: `${sector.district}, ${sector.state}`,
+      targetArea: `${sector.district}, ${sector.state}`,
       createdAt: new Date(Date.now() - timeAgoMs).toISOString(),
     })
   }
@@ -1023,7 +1036,7 @@ export const mocks = {
       message: payload.body,
       severity: payload.severity,
       channel: payload.channels[0] ?? 'all',
-      region: payload.region,
+      targetArea: payload.region,
       createdAt: new Date().toISOString(),
     }
     alertsStore = [newAlert, ...alertsStore]
@@ -1474,13 +1487,13 @@ export const mocks = {
       infrastructureType: input.infrastructureType || 'broken_home',
       propertyAddress: input.propertyAddress || 'Address on file',
       district: input.district || 'North 24 Parganas',
-      latitude: input.latitude || 22.5726,
-      longitude: input.longitude || 88.3639,
+      latitude: input.latitude ?? 22.5726,
+      longitude: input.longitude ?? 88.3639,
       photoUrl: input.photoUrl,
       damageGrade: input.damageGrade || 'MAJOR',
-      damageScore: input.damageScore || 75.0,
-      confidence: input.confidence || 98.4,
-      compensationInr: input.compensationInr || 47550,
+      damageScore: input.damageScore ?? 75.0,
+      confidence: input.confidence ?? 98.4,
+      compensationInr: input.compensationInr ?? 47550,
       verified: true,
       status: 'approved',
       factors: input.factors || ['Damage verified by AI ResNet-50 Classifier'],

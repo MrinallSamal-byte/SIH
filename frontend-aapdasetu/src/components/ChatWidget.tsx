@@ -157,26 +157,15 @@ export default function ChatWidget() {
     >
       {/* Circular Floating Toggle Button */}
       {!open && (
-        <div className="relative group">
-          {/* Ambient Glowing Aura */}
-          <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-amber-500 via-rose-500 to-orange-500 opacity-70 blur-md transition-all duration-300 group-hover:opacity-100 group-hover:blur-lg animate-pulse" />
-
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            aria-label={t('chat.openAria')}
-            title={t('chat.openTitle')}
-            className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-600 text-white shadow-xl shadow-orange-500/30 ring-2 ring-white/70 transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer dark:ring-slate-900/80"
-          >
-            <Bot className="h-7 w-7 text-white drop-shadow-md transition-transform duration-300 group-hover:rotate-6" />
-
-            {/* Live Indicator Ping Dot */}
-            <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
-            </span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label={t('chat.openAria')}
+          title={t('chat.openTitle')}
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-900 text-white shadow-lg ring-1 ring-black/10 transition-all hover:bg-zinc-700 active:scale-95 cursor-pointer dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+        >
+          <Bot className="h-6 w-6" />
+        </button>
       )}
 
       {/* Floating Chat Modal */}

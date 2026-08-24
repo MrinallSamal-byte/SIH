@@ -1,6 +1,8 @@
 import hashlib
 import sys
 
+# ponytail: DEMO STUBS — damage grading is filename-substring matching and the pHash is simulated;
+# before wiring to real compensation payouts, replace with content-hash dedupe + a real vision model.
 if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8')
 

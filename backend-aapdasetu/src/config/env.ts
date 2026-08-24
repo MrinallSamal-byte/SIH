@@ -4,9 +4,14 @@
  */
 import 'dotenv/config';
 
+const PROD_REQUIRED = new Set(['JWT_SECRET', 'ADMIN_PASSWORD', 'DATABASE_URL', 'VOLUNTEER_ACCESS_CODE']);
+
 function required(name: string, fallback?: string): string {
   const value = process.env[name];
   if (value === undefined || value === '') {
+    if (process.env.NODE_ENV === 'production' && PROD_REQUIRED.has(name)) {
+      throw new Error(`Missing required environment variable in production: ${name}`);
+    }
     if (fallback !== undefined) return fallback;
     throw new Error(`Missing required environment variable: ${name}`);
   }
@@ -26,14 +31,17 @@ export const env = {
   isProduction: process.env.NODE_ENV === 'production',
   host: required('HOST', '0.0.0.0'),
   port: number('PORT', 4000),
+  trustProxy: number('TRUST_PROXY', 0),
 
-  databaseUrl: required('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/aapdasetu'),
+  databaseUrl: required('DATABASE_URL', 'postgresql://aapdasetu:aapdasetu@localhost:5432/aapdasetu?schema=public'),
 
   jwtSecret: required('JWT_SECRET', 'aapdasetu-dev-jwt-secret-key-32chars-min'),
   jwtExpiresIn: required('JWT_EXPIRES_IN', '12h'),
 
   adminEmail: required('ADMIN_EMAIL', 'admin@aapdasetu.org'),
   adminPassword: required('ADMIN_PASSWORD', 'Admin@123'),
+
+  volunteerAccessCode: required('VOLUNTEER_ACCESS_CODE', 'aapdasetu-dev-volunteer-code'),
 
   openRouterApiKey: required('OPENROUTER_API_KEY', ''),
   openRouterBaseUrl: required('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),

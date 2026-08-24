@@ -141,7 +141,8 @@ export default function SafeRoutes() {
   const [osrmFastest, setOsrmFastest] = useState<{ points: GeoPoint[]; distanceKm: number; durationMin: number } | null>(null)
   const [osrmSafe, setOsrmSafe] = useState<{ points: GeoPoint[]; distanceKm: number; durationMin: number } | null>(null)
   const [routingLoading, setRoutingLoading] = useState(false)
-  const [routingFallback, setRoutingFallback] = useState(false)
+  const [fastestFallback, setFastestFallback] = useState(false)
+  const [safeFallback, setSafeFallback] = useState(false)
 
   const hasGps = Boolean(coords)
   const origin: GeoPoint = useMemo(
@@ -164,35 +165,44 @@ export default function SafeRoutes() {
     if (shelters && shelters.length > 0) setDestinationId((id) => id || shelters[0].id)
   }, [shelters])
 
-  const polygonPaths = useMemo<GeoPoint[][]>(() => {
+  // One entry PER FEATURE holding its outer rings (hole rings are skipped so
+  // they never paint as filled hazards). Building geometry and labels from the
+  // same pass fixes the old index mismatch between polygons and their tooltips.
+  const floodZones = useMemo(() => {
     if (!flood || !Array.isArray(flood.features)) return []
     return flood.features
-      .filter((f) => f && f.geometry && Array.isArray(f.geometry.coordinates) && f.geometry.coordinates.length > 0)
-      .flatMap((f) => {
+      .filter((f) => f && f.properties && f.geometry && Array.isArray(f.geometry.coordinates) && f.geometry.coordinates.length > 0)
+      .map((f, i) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const geom: any = f.geometry
+        const toPoints = (ring: number[][]) => ring.map(([lng, lat]) => ({ lat, lng }) as GeoPoint)
+        let outerRings: number[][][] = []
         if (geom.type === 'Polygon') {
-          const rings: number[][][] = geom.coordinates as number[][][]
-          return rings.map((ring) => ring.map(([lng, lat]) => ({ lat, lng }) as GeoPoint))
+          outerRings = [(geom.coordinates as number[][][])[0] ?? []]
+        } else if (geom.type === 'MultiPolygon') {
+          outerRings = ((geom.coordinates as number[][][][]))
+            .map((poly) => poly?.[0] ?? [])
+            .filter((ring) => Array.isArray(ring))
+        } else {
+          outerRings = [geom.coordinates[0] ?? []]
         }
-        if (geom.type === 'MultiPolygon') {
-          const polys: number[][][][] = geom.coordinates as number[][][][]
-          return polys.flatMap((poly) => poly.map((ring) => ring.map(([lng, lat]) => ({ lat, lng }) as GeoPoint)))
+        return {
+          id: `flood-${i}`,
+          points: outerRings.flatMap(toPoints),
+          label: `${f.properties.hazard_type || t('routes.floodZone')} — ${f.properties.severity || t('routes.critical')}${f.properties.water_depth_est_meters ? ` (~${f.properties.water_depth_est_meters}m ${t('routes.waterDepth')})` : ''}`,
         }
-        return [(geom.coordinates[0] ?? []).map(([lng, lat]: number[]) => ({ lat, lng }) as GeoPoint)]
       })
-  }, [flood])
+  }, [flood, t])
 
-  const polygons = useMemo(() => {
-    if (!flood || !Array.isArray(flood.features)) return []
-    return flood.features
-      .filter((f) => f && f.properties)
-      .map((f, i) => ({
-        id: `flood-${i}`,
-        points: polygonPaths[i] ?? [],
-        label: `${f.properties.hazard_type || t('routes.floodZone')} — ${f.properties.severity || t('routes.critical')}${f.properties.water_depth_est_meters ? ` (~${f.properties.water_depth_est_meters}m ${t('routes.waterDepth')})` : ''}`,
-      }))
-  }, [flood, polygonPaths, t])
+  const polygons = useMemo(
+    () =>
+      floodZones
+        .filter((z) => z.points.length >= 3)
+        .map((z) => ({ id: z.id, points: z.points, label: z.label })),
+    [floodZones],
+  )
+
+  const hazardPolys = useMemo(() => floodZones.map((z) => z.points), [floodZones])
 
   const shelterMarkers = useMemo(
     () =>
@@ -242,47 +252,46 @@ export default function SafeRoutes() {
     [destination],
   )
 
-  const fastestFallback = useMemo<GeoPoint[]>(
+  const fastestDirect = useMemo<GeoPoint[]>(
     () => (destPoint ? buildFastestRoute(origin, destPoint) : []),
     [origin, destPoint],
   )
 
-  const safeFallback = useMemo<GeoPoint[]>(
-    () => (destPoint ? buildSafeRoute(origin, destPoint, polygonPaths) : []),
-    [origin, destPoint, polygonPaths],
+  const safeDirect = useMemo<GeoPoint[]>(
+    () => (destPoint ? buildSafeRoute(origin, destPoint, hazardPolys) : []),
+    [origin, destPoint, hazardPolys],
   )
 
   useEffect(() => {
     if (!destPoint) return
     let cancelled = false
     setRoutingLoading(true)
-    setRoutingFallback(false)
+    setFastestFallback(false)
+    setSafeFallback(false)
     setOsrmFastest(null)
     setOsrmSafe(null)
     ;(async () => {
-      const fastest = await fetchOsrmRoute(origin, destPoint, [], 'driving')
+      // ponytail: both legs are walking routes on routed-foot — there is no honest car profile here.
+      const fastest = await fetchOsrmRoute(origin, destPoint)
       if (!cancelled) {
         if (fastest) setOsrmFastest(fastest)
-        else setRoutingFallback(true)
+        else setFastestFallback(true)
       }
-      const safeWaypoints = safeFallback.length > 2 ? safeFallback.slice(1, -1) : []
-      const safe =
-        safeWaypoints.length > 0
-          ? await fetchOsrmRoute(origin, destPoint, safeWaypoints, 'foot')
-          : await fetchOsrmRoute(origin, destPoint, [], 'foot')
+      const safeWaypoints = safeDirect.length > 2 ? safeDirect.slice(1, -1) : []
+      const safe = await fetchOsrmRoute(origin, destPoint, safeWaypoints)
       if (!cancelled) {
         if (safe) setOsrmSafe(safe)
-        else if (!fastest) setRoutingFallback(true)
+        else setSafeFallback(true)
       }
       if (!cancelled) setRoutingLoading(false)
     })()
     return () => {
       cancelled = true
     }
-  }, [origin.lat, origin.lng, destPoint?.lat, destPoint?.lng, safeFallback])
+  }, [origin.lat, origin.lng, destPoint?.lat, destPoint?.lng, safeDirect])
 
-  const fastestRoute = useMemo(() => osrmFastest?.points ?? fastestFallback, [osrmFastest, fastestFallback])
-  const safeRoute = useMemo(() => osrmSafe?.points ?? safeFallback, [osrmSafe, safeFallback])
+  const fastestRoute = useMemo(() => osrmFastest?.points ?? fastestDirect, [osrmFastest, fastestDirect])
+  const safeRoute = useMemo(() => osrmSafe?.points ?? safeDirect, [osrmSafe, safeDirect])
 
   const routes = useMemo(
     () => [
@@ -292,8 +301,9 @@ export default function SafeRoutes() {
         points: fastestRoute ?? [],
         color: '#f59e0b',
         dashed: false,
-        hazard: routingFallback ? t('routes.directLineHazard') : t('routes.followsRoads'),
+        hazard: fastestFallback ? t('routes.directLineHazard') : t('routes.followsRoads'),
         safe: false,
+        fallback: fastestFallback,
         distanceKm: osrmFastest?.distanceKm ?? haversineRouteLength(fastestRoute),
         durationMin: osrmFastest?.durationMin ?? (haversineRouteLength(fastestRoute) / WALK_SPEED_KMPH) * 60,
       },
@@ -303,13 +313,16 @@ export default function SafeRoutes() {
         points: safeRoute ?? [],
         color: '#10b981',
         dashed: true,
-        hazard: t('routes.safeDetourDesc'),
+        // Never claim road-based avoidance when the safe-route fetch failed —
+        // that card is then a straight line, so say so.
+        hazard: safeFallback ? t('routes.directLineHazard') : t('routes.safeDetourDesc'),
         safe: true,
+        fallback: safeFallback,
         distanceKm: osrmSafe?.distanceKm ?? haversineRouteLength(safeRoute),
         durationMin: osrmSafe?.durationMin ?? (haversineRouteLength(safeRoute) / WALK_SPEED_KMPH) * 60,
       },
     ],
-    [fastestRoute, safeRoute, osrmFastest, osrmSafe, routingFallback, t],
+    [fastestRoute, safeRoute, osrmFastest, osrmSafe, fastestFallback, safeFallback, t],
   )
 
   if (!flood || !shelters) return <Loader />
@@ -328,7 +341,7 @@ export default function SafeRoutes() {
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <div className="space-y-3 lg:col-span-1">
-          <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 text-xs dark:border-white/[0.08] dark:bg-[#1a1a1a] shadow-xs">
+          <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 text-xs dark:border-white/[0.08] dark:bg-[#1a1a1a] shadow-sm">
             <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mono">{t('routes.origin')}</label>
             <div className="mt-1 font-medium text-zinc-600 dark:text-slate-200">
               {coords ? `GPS: ${origin.lat.toFixed(4)}°N, ${origin.lng.toFixed(4)}°E` : t('routes.regionFallback')}
@@ -365,7 +378,7 @@ export default function SafeRoutes() {
                 href={getNavigationUrl(destination.latitude, destination.longitude)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-zinc-800 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
+                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-zinc-800 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
               >
                 <Navigation className="h-3.5 w-3.5" />
                 <span>{t('common.directions')}</span>
@@ -376,7 +389,7 @@ export default function SafeRoutes() {
           {routes.map((r) => (
             <div
               key={r.id}
-              className={`flex items-center justify-between gap-3 rounded-2xl border p-4 text-xs shadow-xs ${
+              className={`flex items-center justify-between gap-3 rounded-2xl border p-4 text-xs shadow-sm ${
                 r.safe ? 'border-emerald-300 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20' : 'border-amber-300 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/20'
               }`}
             >
@@ -388,7 +401,7 @@ export default function SafeRoutes() {
                 <div className="mt-1 text-zinc-500 dark:text-slate-400 leading-relaxed">{r.hazard}</div>
               </div>
               <div className="shrink-0 text-right">
-                <div className="font-bold text-zinc-800 dark:text-slate-300 mono text-sm">{r.distanceKm.toFixed(1)} {t('common.km')}{r.distanceKm !== routeLengthKm(r.points) ? '' : routingFallback ? ' ~' : ''}</div>
+                <div className="font-bold text-zinc-800 dark:text-slate-300 mono text-sm">{r.distanceKm.toFixed(1)} {t('common.km')}{r.distanceKm !== routeLengthKm(r.points) ? '' : r.fallback ? ' ~' : ''}</div>
                 <div className="text-slate-500 dark:text-slate-400">
                   ~{formatEta(r.durationMin, t)} {t('routes.walkingTime')}{routingLoading ? ` · ${t('common.loading')}` : ''}
                 </div>
@@ -410,7 +423,7 @@ export default function SafeRoutes() {
           ))}
         </div>
         <div className="lg:col-span-2">
-          <div className="rounded-2xl overflow-hidden shadow-xs border border-zinc-200/80 dark:border-white/[0.08]">
+          <div className="rounded-2xl overflow-hidden shadow-sm border border-zinc-200/80 dark:border-white/[0.08]">
             <LeafletMap
               center={origin}
               zoom={13}

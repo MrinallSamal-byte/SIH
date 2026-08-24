@@ -13,10 +13,11 @@ import { createHash } from 'node:crypto';
 import sharp from 'sharp';
 import exifr from 'exifr';
 import { prisma } from '../lib/prisma.js';
-import { damageMlClient, DamageClassification } from '../adapters/damageMl.client.js';
-import { BadRequestError, ConflictError } from '../lib/errors.js';
+import { damageMlClient, DamageClassification, DamagePrediction } from '../adapters/damageMl.client.js';
+import { BadRequestError, ConflictError, ServiceUnavailableError, UnprocessableEntityError } from '../lib/errors.js';
 import { haversineDistanceKm } from '../lib/haversine.js';
 import { logger } from '../lib/logger.js';
+import { env } from '../config/env.js';
 
 export const SDRF_COMPENSATION: Record<DamageClassification, number> = {
   FULLY_DESTROYED: 95100,
@@ -69,6 +70,7 @@ export async function assessDamage(input: DamageAssessmentInput): Promise<Damage
   const imageHash = await computePerceptualHash(buffer);
   const sha256 = createHash('sha256').update(buffer).digest('hex');
 
+  // ponytail: findFirst-then-create leaves a duplicate-check race window — acceptable risk here; upgrade path: unique index on imageHash + P2002 catch
   const existing = await prisma.damageAssessment.findFirst({
     where: { imageHash },
     orderBy: { createdAt: 'desc' },
@@ -88,13 +90,11 @@ export async function assessDamage(input: DamageAssessmentInput): Promise<Damage
     };
   }
 
-  // 5. ML prediction via FastAPI interface (existing model, provided separately)
-  let prediction: { classification: DamageClassification; confidence: number | null } = {
-    classification: 'MINOR_DAMAGE',
-    confidence: null,
-  };
+  // 5. ML prediction via FastAPI interface (existing model, provided separately).
+  // ponytail: no silent MINOR_DAMAGE fallback — a fabricated classification must never persist
+  let prediction: DamagePrediction;
   try {
-    const result = await damageMlClient.predict({
+    prediction = await damageMlClient.predict({
       imageBase64: input.imageBase64,
       mimeType: input.mimeType,
       metadata: {
@@ -105,11 +105,11 @@ export async function assessDamage(input: DamageAssessmentInput): Promise<Damage
         imageHash: sha256,
       },
     });
-    prediction = result;
   } catch (err) {
-    logger.warn('ML prediction unavailable; storing assessment without model confidence', {
+    logger.warn('Damage ML unavailable; refusing to persist an assessment without a real classification', {
       error: (err as Error).message,
     });
+    throw new ServiceUnavailableError('Damage assessment service unavailable — try again later');
   }
 
   // 6. Compensation calculation
@@ -130,9 +130,10 @@ export async function assessDamage(input: DamageAssessmentInput): Promise<Damage
       locationDistanceM,
       classification: prediction.classification,
       confidence: prediction.confidence,
-      compensation: prediction.confidence !== null ? compensation : 0,
+      compensation,
       rawModelResponse: { classification: prediction.classification, confidence: prediction.confidence, sha256 },
-      status: prediction.confidence !== null && locationVerified ? 'approved' : 'flagged_fraud',
+      // ponytail: missing GPS EXIF means unverifiable origin -> needs_review; flagged_fraud is reserved for hash-duplicate mismatch
+      status: locationVerified ? 'approved' : 'needs_review',
     },
   });
 
@@ -169,11 +170,11 @@ function decodeBase64Image(base64: string): Buffer {
   if (cleaned.length > 25 * 1024 * 1024) {
     throw new BadRequestError('Image payload too large');
   }
-  try {
-    return Buffer.from(cleaned, 'base64');
-  } catch {
-    throw new BadRequestError('Invalid base64 image payload');
+  const buffer = Buffer.from(cleaned, 'base64');
+  if (buffer.length > env.uploadMaxSizeBytes) {
+    throw new UnprocessableEntityError('Decoded image exceeds the maximum allowed upload size');
   }
+  return buffer;
 }
 
 async function validateImage(buffer: Buffer, mimeType?: string): Promise<void> {

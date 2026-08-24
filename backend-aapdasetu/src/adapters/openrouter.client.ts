@@ -42,6 +42,33 @@ const PfaStructuredResponseSchema = z.object({
 
 const MAX_RETRIES = 2;
 
+interface OpenRouterChatResponse {
+  choices?: {
+    message?: {
+      content?: string;
+    };
+  }[];
+}
+
+class OpenRouterHttpError extends Error {
+  readonly status: number;
+
+  constructor(status: number, body: string) {
+    super(`OpenRouter HTTP ${status}: ${body.slice(0, 300)}`);
+    this.name = 'OpenRouterHttpError';
+    this.status = status;
+  }
+}
+
+// ponytail: inverted retry policy — timeouts/429/5xx/network errors retry; other 4xx (bad key/credits) fail fast
+function isRetryableError(err: unknown): boolean {
+  if ((err as Error)?.name === 'AbortError') return true;
+
+  const status = err instanceof OpenRouterHttpError ? err.status : undefined;
+
+  return status === undefined || status === 429 || status >= 500;
+}
+
 /**
  * Core Sahayak policy.
  *
@@ -395,65 +422,61 @@ ${systemPrompt ? `${systemPrompt}\n\n` : ''}
 ${PFA_SYSTEM_PROMPT}
 `;
 
-      const response = await fetch(
-        `${env.openRouterBaseUrl}/chat/completions`,
-        {
-          method: 'POST',
+      let data: OpenRouterChatResponse;
 
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${env.openRouterApiKey}`,
-            'X-Title': 'AapdaSetu PFA',
-          },
+      try {
+        const response = await fetch(
+          `${env.openRouterBaseUrl}/chat/completions`,
+          {
+            method: 'POST',
 
-          body: JSON.stringify({
-            model: env.openRouterModel,
-
-            messages: [
-              {
-                role: 'system',
-                content: combinedSystemPrompt,
-              },
-              ...turns,
-            ],
-
-            /**
-             * Lower temperature makes emergency classification and
-             * structured responses more consistent.
-             */
-            temperature: 0.1,
-
-            max_tokens: 500,
-
-            response_format: {
-              type: 'json_object',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${env.openRouterApiKey}`,
+              'X-Title': 'AapdaSetu PFA',
             },
-          }),
 
-          signal: controller.signal,
-        },
-      );
+            body: JSON.stringify({
+              model: env.openRouterModel,
 
-      clearTimeout(timer);
+              messages: [
+                {
+                  role: 'system',
+                  content: combinedSystemPrompt,
+                },
+                ...turns,
+              ],
 
-      if (!response.ok) {
-        const body = await response.text();
+              /**
+               * Lower temperature makes emergency classification and
+               * structured responses more consistent.
+               */
+              temperature: 0.1,
 
-        throw new Error(
-          `OpenRouter HTTP ${response.status}: ${body.slice(0, 300)}`,
+              max_tokens: 500,
+
+              response_format: {
+                type: 'json_object',
+              },
+            }),
+
+            signal: controller.signal,
+          },
         );
+
+        if (!response.ok) {
+          const body = await response.text();
+
+          throw new OpenRouterHttpError(response.status, body);
+        }
+
+        data = (await response.json()) as OpenRouterChatResponse;
+      } finally {
+        clearTimeout(timer);
       }
 
-      const data = (await response.json()) as {
-        choices?: {
-          message?: {
-            content?: string;
-          };
-        }[];
-      };
-
-      const content =
-        data.choices?.[0]?.message?.content ?? '{}';
+      // ponytail: missing/empty model content must not surface a literal "{}" — treat as empty
+      const content = data.choices?.[0]?.message?.content ?? '';
 
       logger.debug?.('Sahayak LLM response', {
         content,
@@ -463,7 +486,7 @@ ${PFA_SYSTEM_PROMPT}
     } catch (err) {
       lastError = err;
 
-      if ((err as Error).name === 'AbortError') {
+      if (!isRetryableError(err)) {
         break;
       }
 
@@ -527,6 +550,7 @@ function parseStructured(
       },
     );
 
+    // ponytail: unparseable model output must not downgrade safety — keep escalation on (canned fallback for empty content)
     return {
       message:
         sanitizeAssistantText(content) ||
@@ -534,7 +558,7 @@ function parseStructured(
 
       intent: 'general_disaster',
 
-      escalationRequired: false,
+      escalationRequired: true,
     };
   }
 }

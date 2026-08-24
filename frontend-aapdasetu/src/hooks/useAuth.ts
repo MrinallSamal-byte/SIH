@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ADMIN_SESSION_KEY, clearSnapshots } from '../api/client'
 import { adminLogin } from '../api/endpoints'
 import type { AdminUser } from '../types'
 
-const SESSION_KEY = 'aapdasetu_admin_session'
+const SESSION_KEY = ADMIN_SESSION_KEY
 
 // Fallback shown only when a thrown value is not an Error (raw backend messages
 // always pass through untouched). Read outside React — mirrors ErrorBoundary's
@@ -57,6 +58,7 @@ export function useAuth() {
 
   const logout = useCallback(() => {
     localStorage.removeItem(SESSION_KEY)
+    clearSnapshots()
     setUser(null)
   }, [])
 
@@ -65,7 +67,13 @@ export function useAuth() {
 }
 
 export function useIsAdminAuthed(): boolean {
-  const [authed, setAuthed] = useState(() => !!localStorage.getItem(SESSION_KEY))
+  const [authed, setAuthed] = useState(() => {
+    try {
+      return !!localStorage.getItem(SESSION_KEY)
+    } catch {
+      return false
+    }
+  })
   useEffect(() => {
     const onStorage = () => setAuthed(!!localStorage.getItem(SESSION_KEY))
     window.addEventListener('storage', onStorage)
