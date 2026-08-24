@@ -57,12 +57,18 @@ export function errorHandler(
     }
   }
 
+  // Security: Prevent information disclosure (CWE-209) on internal server errors.
+  // Ensure status >= 500 error messages returned to clients do not leak sensitive implementation details.
   if (status >= 500) {
     logger.error(`${req.method} ${req.originalUrl} -> ${status}`, {
       code,
       message: err.message,
       stack: err.stack,
     });
+
+    if (!isHttpError(err)) {
+      message = 'Internal server error';
+    }
   }
 
   res.status(status).json({
