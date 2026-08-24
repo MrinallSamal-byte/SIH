@@ -9,8 +9,10 @@ export default function VolunteerLogin() {
   const { t } = useLanguage()
   const { login, loading, error } = useVolunteerAuth()
   const navigate = useNavigate()
-  const [phone, setPhone] = useState('')
-  const [accessCode, setAccessCode] = useState('')
+  // ponytail: prefilled demo credentials (seeded volunteer #1 + dev access code) —
+  // remove before real deployment; code comes from VOLUNTEER_ACCESS_CODE env
+  const [phone, setPhone] = useState('9876510001')
+  const [accessCode, setAccessCode] = useState('aapdasetu-dev-volunteer-code')
   // ponytail: backend auth is phone + shared access code; require 10-15 digits
   const phoneDigits = phone.replace(/\D/g, '')
   const canSubmit = phoneDigits.length >= 10 && phoneDigits.length <= 15 && accessCode.trim().length > 0
