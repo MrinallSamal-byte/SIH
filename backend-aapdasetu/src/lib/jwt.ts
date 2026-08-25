@@ -24,7 +24,7 @@ export function signAdminToken(payload: AdminTokenPayload): string {
 export function verifyAdminToken(token: string): DecodedToken {
   try {
     const decoded = jwt.verify(token, env.jwtSecret) as DecodedToken;
-    if (!decoded.sub || !decoded.email) throw new Error('missing claims');
+    if (!decoded.sub || !decoded.email || decoded.role === 'volunteer') throw new Error('missing claims');
     return decoded;
   } catch {
     throw new UnauthorizedError('Invalid or expired session token');
