@@ -1,74 +1,79 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Settings as SettingsIcon,
   Smartphone,
-  MessageSquare,
   Cpu,
-  Save,
-  RotateCcw,
-  Sliders,
+  CheckCircle2,
+  XCircle,
+  Radio,
+  ShieldCheck,
+  RefreshCw,
 } from 'lucide-react'
-import { Field, Input } from '../../components/common/Input'
+import { getSystemStatus, type SystemStatus } from '../../api/endpoints'
 import Button from '../../components/common/Button'
+import Loader from '../../components/common/Loader'
 import { useToast } from '../../components/common/Toast'
-import { resetMockDatabase } from '../../api/endpoints'
 import { useLanguage } from '../../lib/i18n'
 
-interface ServerCreds {
-  twilioSid: string
-  twilioAuthToken: string
-  twilioSenderNumber: string
-  whatsappToken: string
-  whatsappPhoneNumberId: string
-  aiVisionEndpoint: string
-  aiTriageEndpoint: string
-  autoEscalateMinutes: string
-}
+/**
+ * Read-only system status. Integration credentials (Twilio, WhatsApp Cloud API,
+ * OpenRouter) are configured via backend environment variables — never through
+ * this page. This view reports the truth about what the server is running with.
+ */
 
-const STORAGE_KEY = 'aapdasetu_server_creds_placeholder'
-const empty: ServerCreds = {
-  twilioSid: '',
-  twilioAuthToken: '',
-  twilioSenderNumber: '+1234567890',
-  whatsappToken: '',
-  whatsappPhoneNumberId: '',
-  aiVisionEndpoint: 'http://localhost:8000/api/ai/damage-assessment',
-  aiTriageEndpoint: 'http://localhost:8000/api/ai/pfa-triage',
-  autoEscalateMinutes: '15',
+function StatusRow({
+  label,
+  configured,
+  detail,
+}: {
+  label: string
+  configured: boolean
+  detail?: string
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-2">
+      <div className="min-w-0">
+        <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{label}</div>
+        {detail && <div className="text-[11px] text-slate-500 dark:text-slate-400 mono truncate">{detail}</div>}
+      </div>
+      <span
+        className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${
+          configured
+            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-900/50'
+            : 'bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+        }`}
+      >
+        {configured ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
+        {configured ? 'Active' : 'Not configured'}
+      </span>
+    </div>
+  )
 }
 
 export default function Settings() {
   const { t } = useLanguage()
   const { toast } = useToast()
-  const [creds, setCreds] = useState<ServerCreds>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      return raw ? { ...empty, ...(JSON.parse(raw) as ServerCreds) } : empty
-    } catch {
-      return empty
-    }
-  })
+  const [status, setStatus] = useState<SystemStatus | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const [saving, setSaving] = useState(false)
-
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault()
-    setSaving(true)
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(creds))
-      toast(t('st.saveSuccess'), 'success')
-    } catch {
-      toast(t('st.saveFailed'), 'error')
-    } finally {
-      setSaving(false)
-    }
+  const load = () => {
+    setLoading(true)
+    getSystemStatus()
+      .then(setStatus)
+      .catch(() => {
+        setStatus(null)
+        toast(t('st.loadFailed', 'Could not load system status'), 'error')
+      })
+      .finally(() => setLoading(false))
   }
 
-  const set = (key: keyof ServerCreds) => (value: string) =>
-    setCreds((prev) => ({ ...prev, [key]: value }))
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
-    <form onSubmit={handleSave} className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -83,158 +88,96 @@ export default function Settings() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button type="submit" className="shadow-sm cursor-pointer flex items-center gap-1.5">
-            <Save className="h-4 w-4" />
-            <span>{saving ? t('st.saving') : t('st.saveChanges')}</span>
-          </Button>
-        </div>
+        <Button variant="outline" onClick={load} disabled={loading} className="cursor-pointer flex items-center gap-1.5">
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          <span>{t('common.refresh', 'Refresh')}</span>
+        </Button>
       </div>
 
-      <div className="grid gap-5 md:grid-cols-2">
-        {/* SMS Gateway Card */}
-        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
-            <Smartphone className="h-4 w-4 text-blue-600" />
-            <span>{t('st.smsGateway')}</span>
-          </div>
-
-          <Field label={t('st.accountSid')}>
-            <Input
-              value={creds.twilioSid}
-              onChange={(e) => set('twilioSid')(e.target.value)}
-              placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-              className="font-mono text-xs"
-            />
-          </Field>
-
-          <Field label={t('st.authToken')}>
-            <Input
-              type="password"
-              value={creds.twilioAuthToken}
-              onChange={(e) => set('twilioAuthToken')(e.target.value)}
-              placeholder="••••••••••••••••••••••••••••••••"
-              className="font-mono text-xs"
-            />
-          </Field>
-
-          <Field label={t('st.senderNumber')}>
-            <Input
-              value={creds.twilioSenderNumber}
-              onChange={(e) => set('twilioSenderNumber')(e.target.value)}
-              placeholder="+1234567890 or AAPDASETU"
-              className="font-mono text-xs"
-            />
-          </Field>
+      {loading && !status ? (
+        <Loader />
+      ) : !status ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
+          {t('st.unavailable', 'System status is unavailable — the backend may be unreachable or your session has expired.')}
         </div>
-
-        {/* WhatsApp Gateway Card */}
-        {/* ponytail: these fields are local notes only — real gateway creds and
-            webhook URLs are configured via backend environment variables. */}
-        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
-            <MessageSquare className="h-4 w-4 text-emerald-600" />
-            <span>{t('st.localNotes', 'Local notes (not synced to server)')}</span>
-          </div>
-
-          <Field label={t('st.cloudApiToken')}>
-            <Input
-              type="password"
-              value={creds.whatsappToken}
-              onChange={(e) => set('whatsappToken')(e.target.value)}
-              placeholder="EAABxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-              className="font-mono text-xs"
+      ) : (
+        <>
+          {/* Broadcast channels */}
+          <div className="space-y-1 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
+              <Smartphone className="h-4 w-4 text-blue-600" />
+              <span>{t('st.broadcastChannels', 'Broadcast channels')}</span>
+            </div>
+            <StatusRow
+              label={t('st.smsGateway')}
+              configured={status.sms.configured}
+              detail={status.sms.provider}
             />
-          </Field>
-
-          <Field label={t('st.phoneNumberId')}>
-            <Input
-              value={creds.whatsappPhoneNumberId}
-              onChange={(e) => set('whatsappPhoneNumberId')(e.target.value)}
-              placeholder="100000000000000"
-              className="font-mono text-xs"
+            <StatusRow
+              label={t('st.whatsappGateway', 'WhatsApp Cloud API')}
+              configured={status.whatsapp.configured}
+              detail={status.whatsapp.provider}
             />
-          </Field>
-
-          <div className="rounded-xl bg-slate-50 p-3 text-[11px] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-            {t('st.webhookCallbackUrl')} {t('st.webhookEnvConfigured', 'Configured via backend environment variables')}
-          </div>
-        </div>
-
-        {/* AI Engine Hooks */}
-        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
-            <Cpu className="h-4 w-4 text-purple-600" />
-            <span>{t('st.aiEndpoints')}</span>
+            <p className="pt-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+              {t(
+                'st.credsNote',
+                'Provider credentials are set as backend environment variables (TWILIO_*, WHATSAPP_*). Without them, broadcasts still persist to the web channel.',
+              )}
+            </p>
           </div>
 
-          <Field label={t('st.visionEndpointLabel')}>
-            <Input
-              value={creds.aiVisionEndpoint}
-              onChange={(e) => set('aiVisionEndpoint')(e.target.value)}
-              placeholder="http://localhost:8000/api/ai/damage-assessment"
-              className="font-mono text-xs"
+          {/* AI engine */}
+          <div className="space-y-1 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
+              <Cpu className="h-4 w-4 text-purple-600" />
+              <span>{t('st.aiEndpoints')}</span>
+            </div>
+            <StatusRow
+              label={t('st.pfaLlm', 'PFA chatbot LLM (OpenRouter)')}
+              configured={status.ai.pfaLlmConfigured}
             />
-          </Field>
-
-          <Field label={t('st.triageModelLabel')}>
-            <Input
-              value={creds.aiTriageEndpoint}
-              onChange={(e) => set('aiTriageEndpoint')(e.target.value)}
-              placeholder="http://localhost:8000/api/ai/pfa-triage"
-              className="font-mono text-xs"
+            <StatusRow
+              label={t('st.damageMl', 'Damage assessment ML service')}
+              configured={status.ai.damageMlConfigured}
+              detail={status.ai.damageMlBaseUrl}
             />
-          </Field>
-        </div>
-
-        {/* Incident Command SOP Parameters */}
-        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
-            <Sliders className="h-4 w-4 text-amber-600" />
-            <span>{t('st.thresholds')}</span>
           </div>
 
-          <Field label={t('st.autoEscalateLabel')}>
-            <Input
-              type="number"
-              value={creds.autoEscalateMinutes}
-              onChange={(e) => set('autoEscalateMinutes')(e.target.value)}
-              placeholder="15"
-              className="font-mono text-xs"
-            />
-          </Field>
+          {/* Runtime */}
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
+                <Radio className="h-4 w-4 text-indigo-600" />
+                <span>{t('st.realtime', 'Realtime transport')}</span>
+              </div>
+              <div className="text-xs text-slate-600 dark:text-slate-300">
+                WebSocket endpoint: <span className="mono font-semibold">{status.realtimePath}</span>
+              </div>
+            </div>
 
-          <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-            {t('st.escalationWarning').replace('{n}', creds.autoEscalateMinutes || '15')}
+            <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
+                <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                <span>{t('st.rateLimits', 'Rate limits')}</span>
+              </div>
+              <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
+                <li className="flex justify-between">
+                  <span>{t('st.rlPublic', 'Public API')}</span>
+                  <span className="mono font-semibold">{status.rateLimits.publicPerMinute}/min</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>{t('st.rlAdmin', 'Admin API')}</span>
+                  <span className="mono font-semibold">{status.rateLimits.adminPer15Min}/15min</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>{t('st.rlUploads', 'Media uploads')}</span>
+                  <span className="mono font-semibold">{status.rateLimits.uploadsPerHour}/hr</span>
+                </li>
+              </ul>
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* Database Diagnostic & Environment Banner */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <RotateCcw className="h-4 w-4 text-slate-500" />
-            <span>{t('st.resetSection')}</span>
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {t('st.resetDesc')}
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={async () => {
-            if (window.confirm(t('st.resetConfirm'))) {
-              await resetMockDatabase()
-              toast(t('st.resetSuccess'), 'success')
-            }
-          }}
-          className="rounded-xl border border-slate-300 bg-slate-50 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 shrink-0 cursor-pointer"
-        >
-          {t('st.resetButton')}
-        </button>
-      </div>
-    </form>
+        </>
+      )}
+    </div>
   )
 }

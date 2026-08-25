@@ -390,8 +390,26 @@ export default function ReportTracker() {
             )}
             <InfoRow label={t('report.descLabel')} value={report.description ?? '—'} />
             <InfoRow label={t('report.phoneLabel')} value={report.reporterPhone ?? '—'} />
-            <InfoRow label={t('track.assignedAgency')} value={report.assignedAgencyName ?? t('tracker.commandFallback')} />
-            <InfoRow label={t('track.assignedVolunteer')} value={report.assignedVolunteerName ?? t('tracker.volunteerQueued')} />
+            <InfoRow
+              label={t('track.assignedAgency')}
+              value={
+                report.assignedAgencyName
+                  ? report.assignedAgencyName
+                  : report.status === 'pending'
+                    ? t('tracker.awaitingAssignment', 'Awaiting assignment')
+                    : t('tracker.commandFallback')
+              }
+            />
+            <InfoRow
+              label={t('track.assignedVolunteer')}
+              value={
+                report.assignedVolunteerName
+                  ? report.assignedVolunteerName
+                  : report.status === 'pending'
+                    ? t('tracker.awaitingAssignment', 'Awaiting assignment')
+                    : t('tracker.volunteerQueued')
+              }
+            />
             {report.resolutionNotes && (
               <InfoRow label={t('tracker.notesLabel')} value={report.resolutionNotes} highlight />
             )}

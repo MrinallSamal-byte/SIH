@@ -93,3 +93,6 @@ adminRouter.post(
   validateBody(schemas.broadcastSchema),
   asyncHandler(sys.adminBroadcastHandler),
 );
+
+// ---- System status (read-only integration truth) ----
+adminRouter.get('/system/status', asyncHandler(sys.adminSystemStatusHandler));

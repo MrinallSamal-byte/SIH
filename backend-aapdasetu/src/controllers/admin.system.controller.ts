@@ -9,6 +9,40 @@ import { listDamageAssessments, flagDuplicateAssessment } from '../services/dama
 import { listHazards, createHazard, updateHazardActive } from '../services/routes.service.js';
 import { updateMissingPerson } from '../services/missing-persons.service.js';
 import { broadcastAlert } from '../services/communications.service.js';
+import { env } from '../config/env.js';
+
+/**
+ * Truthful integration status for the Settings page. Reports only what is
+ * actually configured on the server — the UI must never render editable
+ * credential fields that silently do nothing.
+ */
+export async function adminSystemStatusHandler(_req: Request, res: Response): Promise<void> {
+  res.json({
+    success: true,
+    data: {
+      sms: {
+        provider: 'twilio',
+        configured: Boolean(env.twilioAccountSid && env.twilioAuthToken),
+      },
+      whatsapp: {
+        provider: 'meta_cloud_api',
+        configured: Boolean(env.whatsappCloudApiToken && env.whatsappPhoneNumberId),
+      },
+      ai: {
+        pfaLlmConfigured: Boolean(env.openRouterApiKey),
+        damageMlConfigured: Boolean(env.damageMlBaseUrl),
+        damageMlBaseUrl: env.damageMlBaseUrl,
+      },
+      realtimePath: env.realtimePath,
+      rateLimits: {
+        publicPerMinute: env.rateLimitPublicMax,
+        adminPer15Min: env.rateLimitAdminMax,
+        uploadsPerHour: 30,
+      },
+    },
+  });
+}
+
 
 export async function adminCreateAlertHandler(req: Request, res: Response): Promise<void> {
   const alert = await createAlert({ ...req.body, adminEmail: req.admin!.email });

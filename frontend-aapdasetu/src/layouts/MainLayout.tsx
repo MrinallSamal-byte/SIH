@@ -219,8 +219,8 @@ export default function MainLayout() {
                 className={({ isActive }) =>
                   `rounded-lg px-2.5 py-1.5 text-sm font-medium transition ${
                     isActive
-                      ? 'bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300 font-bold'
-                      : 'text-zinc-500 hover:bg-orange-50 hover:text-orange-700 dark:text-slate-400 dark:hover:bg-orange-950 dark:hover:text-orange-300'
+                      ? 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300 font-bold'
+                      : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-slate-200'
                   }`
                 }
               >
@@ -235,8 +235,8 @@ export default function MainLayout() {
                 onClick={() => setFeaturesOpen((o) => !o)}
                 className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm font-medium transition ${
                   featuresOpen || featureNavItems.some((f) => location.pathname === f.to)
-                    ? 'bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300 font-bold'
-                    : 'text-zinc-500 hover:bg-orange-50 hover:text-orange-700 dark:text-slate-400 dark:hover:bg-orange-950 dark:hover:text-orange-300'
+                    ? 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300 font-bold'
+                    : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-slate-200'
                 }`}
               >
                 <span>{t('nav.features')}</span>
@@ -258,8 +258,8 @@ export default function MainLayout() {
                                 ? 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300 font-bold'
                                 : 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950'
                               : isActive
-                                ? 'bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300 font-bold'
-                                : 'text-zinc-500 hover:bg-orange-50 hover:text-orange-700 dark:text-slate-400 dark:hover:bg-orange-950 dark:hover:text-orange-300'
+                                ? 'bg-zinc-100 text-zinc-800 dark:bg-white/[0.08] dark:text-slate-200 font-bold'
+                                : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-slate-200'
                           }`
                         }
                       >
@@ -299,7 +299,7 @@ export default function MainLayout() {
                   setNotifOpen((o) => !o)
                   setNotifRead(true)
                 }}
-                className="relative rounded-lg border border-zinc-200/80 bg-white p-2.5 text-zinc-500 transition hover:bg-orange-50 hover:text-orange-700 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-400 dark:hover:bg-orange-950 dark:hover:text-orange-300"
+                className="relative rounded-lg border border-zinc-200/80 bg-white p-2.5 text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-400 dark:hover:bg-[#252525] dark:hover:text-slate-200"
                 aria-label={t('layout.notifications')}
               >
                 <Bell className="h-5 w-5" />
@@ -320,7 +320,7 @@ export default function MainLayout() {
                     <Link
                       to="/alerts"
                       onClick={() => setNotifOpen(false)}
-                      className="text-[11px] font-bold text-orange-600 hover:underline dark:text-orange-400"
+                      className="text-[11px] font-bold text-red-600 hover:underline dark:text-red-400"
                     >
                       {t('layout.viewAll')}
                     </Link>

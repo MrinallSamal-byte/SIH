@@ -284,7 +284,7 @@ export default function AppDownload() {
                 key={item.textKey}
                 className="flex items-start gap-3.5 rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]"
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300">
                   <Icon className="size-[18px]" />
                 </div>
                 <div className="min-w-0 pt-1.5">

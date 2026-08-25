@@ -868,3 +868,18 @@ export function createDamageAssessment(input: {
     { mutating: true },
   )
 }
+
+// ---- system status (read-only integration truth) ---------------------------------
+
+export interface SystemStatus {
+  sms: { provider: string; configured: boolean }
+  whatsapp: { provider: string; configured: boolean }
+  ai: { pfaLlmConfigured: boolean; damageMlConfigured: boolean; damageMlBaseUrl?: string }
+  realtimePath: string
+  rateLimits: { publicPerMinute: number; adminPer15Min: number; uploadsPerHour: number }
+}
+
+/** GET /api/v1/admin/system/status — what is actually configured on the server. */
+export function getSystemStatus(): Promise<SystemStatus> {
+  return apiCall<SystemStatus>('GET', '/api/v1/admin/system/status')
+}

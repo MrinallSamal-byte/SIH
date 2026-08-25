@@ -9,10 +9,10 @@ export default function AdminLogin() {
   const { t } = useLanguage()
   const { login, loading, error } = useAuth()
   const navigate = useNavigate()
-  // ponytail: prefilled demo credentials matching backend seed defaults —
-  // remove before real deployment; real password comes from ADMIN_PASSWORD env
-  const [email, setEmail] = useState('admin@aapdasetu.org')
-  const [password, setPassword] = useState('Admin@123')
+  // Credentials are never prefilled — production passwords come from the
+  // backend ADMIN_PASSWORD env (seeded at bootstrap, see src/index.ts).
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()

@@ -356,9 +356,27 @@ export function serializeReport(report: Record<string, unknown>, includeRelation
   return out;
 }
 
-// ponytail: public tracking payload only — no reporter PII, volunteer phone or medicalCondition
+// ponytail: public tracking payload only — no reporter PII, volunteer phone or medicalCondition.
+// Enriched with the fields the citizen tracker actually renders: assigned team
+// display names, resolution notes and the resolvedAt timestamp. Coordinates are
+// rounded to ~11m precision so citizens see where help was sent without
+// exposing the reporter's exact doorstep.
 export function serializePublicTracking(report: Record<string, unknown>) {
-  const r = report as { mediaData?: string | null; mediaType?: string | null; [k: string]: unknown };
+  const r = report as {
+    mediaData?: string | null;
+    mediaType?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    [k: string]: unknown;
+  };
+  const roundCoord = (v: unknown): number | null =>
+    typeof v === 'number' && Number.isFinite(v) ? Math.round(v * 100000) / 100000 : null;
+
+  const relations = report as {
+    assignedVolunteer?: { name?: string | null } | null;
+    assignedAgency?: { name?: string | null } | null;
+  };
+
   return {
     trackingId: r.trackingId,
     type: r.type,
@@ -367,7 +385,15 @@ export function serializePublicTracking(report: Record<string, unknown>) {
     priorityScore: r.priorityScore,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
+    resolvedAt: r.resolvedAt ?? null,
     landmark: r.landmark,
+    description: typeof r.description === 'string' ? r.description.slice(0, 500) : null,
+    latitude: roundCoord(r.latitude),
+    longitude: roundCoord(r.longitude),
     hasMedia: Boolean(r.mediaData || r.mediaType),
+    assignedVolunteerName: relations.assignedVolunteer?.name ?? null,
+    assignedAgencyName: relations.assignedAgency?.name ?? null,
+    resolutionNotes:
+      typeof r.resolutionNotes === 'string' ? r.resolutionNotes.slice(0, 1000) : null,
   };
 }
