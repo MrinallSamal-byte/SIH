@@ -1,0 +1,3 @@
+## 2026-08-26 - Accessible Modal Dialog Keyboard & ARIA Pattern
+**Learning:** Shared UI overlay components such as `Modal` often lack essential screen reader attributes (`role="dialog"`, `aria-modal="true"`, `aria-labelledby`) and keyboard shortcut handlers (`Escape` key dismiss). Adding these at the common component layer instantly elevates accessibility and keyboard UX across all feature pages.
+**Action:** When building or updating overlay dialog components, always generate a unique title ID with `useId()` for `aria-labelledby`, attach `role="dialog"` / `aria-modal="true"`, and register a `window` `Escape` key event listener with cleanup in `useEffect`.
