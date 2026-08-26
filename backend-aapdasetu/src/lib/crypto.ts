@@ -19,32 +19,40 @@ export function hashPassword(password: string): string {
   return `scrypt$${N}$${r}$${p}$${salt.toString('hex')}$${derived.toString('hex')}`;
 }
 
+export const DUMMY_PASSWORD_HASH =
+  'scrypt$16384$8$1$0123456789abcdef0123456789abcdef$0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
 export function verifyPassword(password: string, stored: string): boolean {
-  const parts = stored.split('$');
-  if (parts.length !== 6 || parts[0] !== 'scrypt') return false;
-  const [, nStr, rStr, pStr, saltHex, hashHex] = parts;
-  const parsedN = Number(nStr);
-  const parsedR = Number(rStr);
-  const parsedP = Number(pStr);
-  if (
-    !Number.isSafeInteger(parsedN) ||
-    parsedN < 2 ||
-    parsedN > MAX_N ||
-    !Number.isSafeInteger(parsedR) ||
-    parsedR < 1 ||
-    parsedR > MAX_R ||
-    !Number.isSafeInteger(parsedP) ||
-    parsedP < 1 ||
-    parsedP > MAX_P
-  ) {
-    throw new Error('Invalid scrypt parameters in stored hash');
+  try {
+    const parts = stored.split('$');
+    if (parts.length !== 6 || parts[0] !== 'scrypt') return false;
+    const [, nStr, rStr, pStr, saltHex, hashHex] = parts;
+    const parsedN = Number(nStr);
+    const parsedR = Number(rStr);
+    const parsedP = Number(pStr);
+    if (
+      !Number.isSafeInteger(parsedN) ||
+      parsedN < 2 ||
+      parsedN > MAX_N ||
+      !Number.isSafeInteger(parsedR) ||
+      parsedR < 1 ||
+      parsedR > MAX_R ||
+      !Number.isSafeInteger(parsedP) ||
+      parsedP < 1 ||
+      parsedP > MAX_P
+    ) {
+      return false;
+    }
+    const salt = Buffer.from(saltHex, 'hex');
+    const expected = Buffer.from(hashHex, 'hex');
+    if (salt.length === 0 || expected.length === 0) return false;
+    const derived = scryptSync(password, salt, expected.length, {
+      N: parsedN,
+      r: parsedR,
+      p: parsedP,
+    });
+    return derived.length === expected.length && timingSafeEqual(derived, expected);
+  } catch {
+    return false;
   }
-  const salt = Buffer.from(saltHex, 'hex');
-  const expected = Buffer.from(hashHex, 'hex');
-  const derived = scryptSync(password, salt, expected.length, {
-    N: parsedN,
-    r: parsedR,
-    p: parsedP,
-  });
-  return derived.length === expected.length && timingSafeEqual(derived, expected);
 }

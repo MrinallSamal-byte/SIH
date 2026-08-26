@@ -1,6 +1,6 @@
 /** Admin authentication service (replaces Supabase RPC `verify_admin_login`). */
 import { prisma } from '../lib/prisma.js';
-import { hashPassword, verifyPassword } from '../lib/crypto.js';
+import { hashPassword, verifyPassword, DUMMY_PASSWORD_HASH } from '../lib/crypto.js';
 import { signAdminToken } from '../lib/jwt.js';
 import { BadRequestError, UnauthorizedError } from '../lib/errors.js';
 import { writeAuditLog } from './audit.service.js';
@@ -26,7 +26,12 @@ export async function bootstrapAdminUser(input: {
 export async function loginAdmin(input: { email: string; password: string }) {
   const email = input.email.trim().toLowerCase();
   const admin = await prisma.adminUser.findUnique({ where: { email } });
-  if (!admin || !verifyPassword(input.password, admin.passwordHash)) {
+
+  // Use dummy password hash when user is non-existent to avoid timing attack / user enumeration
+  const hashToVerify = admin ? admin.passwordHash : DUMMY_PASSWORD_HASH;
+  const isValidPassword = verifyPassword(input.password, hashToVerify);
+
+  if (!admin || !isValidPassword) {
     await writeAuditLog({
       adminEmail: email,
       action: 'LOGIN_FAILED',
