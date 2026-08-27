@@ -41,7 +41,7 @@ export async function requireAdmin(req: Request, _res: Response, next: NextFunct
   }
 }
 
-export function requireVolunteer(req: Request, _res: Response, next: NextFunction): void {
+export async function requireVolunteer(req: Request, _res: Response, next: NextFunction): Promise<void> {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {
     next(new UnauthorizedError('Missing authorization header'));
@@ -50,6 +50,19 @@ export function requireVolunteer(req: Request, _res: Response, next: NextFunctio
   const token = header.slice('Bearer '.length).trim();
   try {
     req.volunteer = verifyVolunteerToken(token);
+  } catch (err) {
+    next(err);
+    return;
+  }
+  try {
+    const volunteer = await prisma.volunteer.findUnique({
+      where: { id: req.volunteer.sub },
+      select: { id: true },
+    });
+    if (!volunteer) {
+      next(new UnauthorizedError('Account no longer exists'));
+      return;
+    }
     next();
   } catch (err) {
     next(err);
