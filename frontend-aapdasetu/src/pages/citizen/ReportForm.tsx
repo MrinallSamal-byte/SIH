@@ -318,7 +318,7 @@ export default function ReportForm() {
     // watch. Only an explicit user pin outranks fresh coordinates.
     const liveTrusted =
       hasTrustedFix && coords ? { lat: coords.latitude, lng: coords.longitude } : null
-    let finalLocation =
+    const finalLocation =
       manuallyPinnedRef.current ? customPoint ?? liveTrusted : liveTrusted ?? customPoint
     if (!finalLocation) {
       toast(t('report.errGpsRequired'), 'error')
