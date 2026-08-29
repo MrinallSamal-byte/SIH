@@ -216,27 +216,31 @@ export default function MainLayout() {
         </div>
       )}
 
-      {/* Demo-data honesty banner — the mock fallback must never pass as real
-          emergency information on a life-safety platform. */}
-      {demoData && (
-        <div className="bg-zinc-900 px-4 py-2 text-center text-xs font-bold text-amber-300 shadow-sm dark:bg-black flex items-center justify-center gap-2">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          <span>{t('layout.demoDataNotice', 'Demo mode — the server is unreachable, so the data shown below is SAMPLE data, not real emergencies.')}</span>
-        </div>
-      )}
-
       {/* Main Navigation Header */}
       <header className="sticky top-0 z-40 border-b border-zinc-200/60 bg-white/90 backdrop-blur-md dark:border-white/[0.06] dark:bg-[#181818]/90">
         <div className="mx-auto flex max-w-screen-2xl items-center justify-between px-6 py-4">
-          {/* Logo / Brand */}
-          <Link to="/" className="flex items-center gap-2.5 font-bold tracking-tight group">
-            <AapdaSetuLogo size={34} />
-            <div className="flex flex-col">
-              <span className="text-base font-extrabold leading-none text-zinc-800 dark:text-slate-200 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
-                {t('app.name')}
+          {/* Logo / Brand + demo-data chip */}
+          <div className="flex items-center gap-2.5">
+            <Link to="/" className="flex items-center gap-2.5 font-bold tracking-tight group">
+              <AapdaSetuLogo size={34} />
+              <div className="flex flex-col">
+                <span className="text-base font-extrabold leading-none text-zinc-800 dark:text-slate-200 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                  {t('app.name')}
+                </span>
+              </div>
+            </Link>
+            {/* Tiny honesty marker: sample data is being served because the
+                server isn't connected. Disappears automatically once real
+                data flows — see DEPLOYMENT.md. */}
+            {demoData && (
+              <span
+                title={t('layout.demoDataNotice', 'Sample data — the AapdaSetu server is not connected yet.')}
+                className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300 mono"
+              >
+                {t('layout.demoDataChip', 'Demo data')}
               </span>
-            </div>
-          </Link>
+            )}
+          </div>
 
           {/* Desktop Navigation Links */}
           <nav className="hidden lg:flex items-center gap-3" aria-label={t('layout.navDesktop')}>
