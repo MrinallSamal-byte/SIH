@@ -20,7 +20,8 @@ function accessCodeMatches(candidate: string): boolean {
 // formatting). Both the login lookup and volunteer creation normalize the
 // same way, so '+91-9876510000' and '98765 10000' resolve to one volunteer.
 export function normalizePhone(raw: string): string {
-  return raw.replace(/\D/g, '').slice(-10);
+  const digits = raw.replace(/\D/g, '');
+  return digits.length >= 10 ? digits.slice(-10) : digits;
 }
 
 export async function loginVolunteer(input: { phone: string; accessCode: string }) {
