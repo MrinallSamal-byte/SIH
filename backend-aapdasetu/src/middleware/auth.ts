@@ -41,7 +41,7 @@ export async function requireAdmin(req: Request, _res: Response, next: NextFunct
   }
 }
 
-export function requireVolunteer(req: Request, _res: Response, next: NextFunction): void {
+export async function requireVolunteer(req: Request, _res: Response, next: NextFunction): Promise<void> {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {
     next(new UnauthorizedError('Missing authorization header'));
@@ -50,6 +50,21 @@ export function requireVolunteer(req: Request, _res: Response, next: NextFunctio
   const token = header.slice('Bearer '.length).trim();
   try {
     req.volunteer = verifyVolunteerToken(token);
+  } catch (err) {
+    next(err);
+    return;
+  }
+  // DB existence + revocation check (mirrors requireAdmin): without it a
+  // removed volunteer keeps full task access for the whole 12h token life.
+  try {
+    const volunteer = await prisma.volunteer.findUnique({
+      where: { id: req.volunteer.sub },
+      select: { id: true, isActive: true },
+    });
+    if (!volunteer || !volunteer.isActive) {
+      next(new UnauthorizedError('Volunteer account is disabled'));
+      return;
+    }
     next();
   } catch (err) {
     next(err);

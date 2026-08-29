@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.js';
 import { NotFoundError, ConflictError } from '../lib/errors.js';
 import { writeAuditLog } from './audit.service.js';
 import { realtimeHub } from '../realtime/hub.js';
+import { normalizePhone } from './volunteer-auth.service.js';
 
 export async function listVolunteers(params: { status?: string; skill?: string }) {
   return prisma.volunteer.findMany({
@@ -11,6 +12,9 @@ export async function listVolunteers(params: { status?: string; skill?: string }
       ...(params.skill ? { skills: { has: params.skill as never } } : {}),
     },
     orderBy: { createdAt: 'desc' },
+    // Unbounded findMany with an include would load every assignment on every
+    // roster poll — cap at a sane page for the dashboard.
+    take: 500,
     include: { assignments: { select: { id: true, trackingId: true, status: true } } },
   });
 }
@@ -27,7 +31,9 @@ export async function createVolunteer(input: {
   const volunteer = await prisma.volunteer.create({
     data: {
       name: input.name,
-      phone: input.phone,
+      // Same canonical form the login lookup uses — a formatted phone stored
+      // here would make the volunteer permanently unable to sign in.
+      phone: normalizePhone(input.phone),
       skills: input.skills as never,
       latitude: input.latitude,
       longitude: input.longitude,
@@ -93,7 +99,7 @@ export async function updateVolunteer(input: {
 
   const data: Record<string, unknown> = {};
   if (input.name !== undefined) data.name = input.name;
-  if (input.phone !== undefined) data.phone = input.phone;
+  if (input.phone !== undefined) data.phone = normalizePhone(input.phone);
   if (input.skills !== undefined) data.skills = input.skills;
   if (input.latitude !== undefined) data.latitude = input.latitude;
   if (input.longitude !== undefined) data.longitude = input.longitude;

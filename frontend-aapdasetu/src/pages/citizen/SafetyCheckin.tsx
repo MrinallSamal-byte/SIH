@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   ShieldCheck,
   MapPin,
@@ -6,14 +6,14 @@ import {
   Search,
   AlertTriangle
 } from 'lucide-react'
-import { createSafetyCheckin, listSafetyCheckins } from '../../api/endpoints'
+import { createSafetyCheckin, searchFamilyCheckins, type FamilyCheckinResult } from '../../api/endpoints'
 import { Field, Input, Textarea } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import Badge from '../../components/common/Badge'
 import Loader from '../../components/common/Loader'
 import { useToast } from '../../components/common/Toast'
 import { useLanguage } from '../../lib/i18n'
-import { formatDateTime, maskPhone } from '../../lib/helpers'
+import { formatDateTime } from '../../lib/helpers'
 import { useGeoLocation } from '../../hooks/useLocation'
 import type { CheckinStatus, SafetyCheckin } from '../../types'
 
@@ -35,24 +35,32 @@ export default function SafetyCheckinPage() {
   const [confirm, setConfirm] = useState<SafetyCheckin | null>(null)
   const [phoneError, setPhoneError] = useState<string | null>(null)
 
-  // Search family state
-  const [searchQuery, setSearchQuery] = useState('')
-  const [allCheckins, setAllCheckins] = useState<SafetyCheckin[] | null>(null)
-  const [loadingCheckins, setLoadingCheckins] = useState(false)
+  // Family search state — queries the real public registry by phone number.
+  // Never falls back to demo data: a fabricated "safe" would be the most
+  // harmful lie this app could tell a worried relative.
+  const [searchPhone, setSearchPhone] = useState('')
+  const [familyResults, setFamilyResults] = useState<FamilyCheckinResult[] | null>(null)
+  const [searching, setSearching] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
 
-  const loadCheckins = () => {
-    setLoadingCheckins(true)
-    listSafetyCheckins()
-      .then((data) => setAllCheckins(data))
-      .catch(() => setAllCheckins([]))
-      .finally(() => setLoadingCheckins(false))
-  }
-
-  useEffect(() => {
-    if (activeTab === 'search') {
-      loadCheckins()
+  const runFamilySearch = async (rawPhone: string) => {
+    const digits = rawPhone.replace(/\D/g, '')
+    if (digits.length < 6) {
+      setSearchError(t('checkin.familyNeedPhone', 'Enter the mobile number your family member used to check in.'))
+      return
     }
-  }, [activeTab])
+    setSearching(true)
+    setSearchError(null)
+    try {
+      const results = await searchFamilyCheckins(digits)
+      setFamilyResults(results)
+    } catch {
+      setFamilyResults(null)
+      setSearchError(t('checkin.familySearchFailed', 'Search is unavailable right now — please try again in a moment.'))
+    } finally {
+      setSearching(false)
+    }
+  }
 
   const validatePhone = (raw: string) => {
     // Indian mobile numbers, with optional 0/91 trunk prefixes.
@@ -100,16 +108,6 @@ export default function SafetyCheckinPage() {
       setSending(false)
     }
   }
-
-  const filteredCheckins = (allCheckins ?? []).filter((c) => {
-    if (!searchQuery.trim()) return true
-    const q = searchQuery.toLowerCase().trim()
-    return (
-      (c.fullName ?? '').toLowerCase().includes(q) ||
-      (c.phone && c.phone.includes(q)) ||
-      (c.locationName && c.locationName.toLowerCase().includes(q))
-    )
-  })
 
   return (
     <div className="mx-auto max-w-xl">
@@ -266,43 +264,61 @@ export default function SafetyCheckinPage() {
       {activeTab === 'search' && (
         <div className="mt-4 space-y-4">
           <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+            <p className="mb-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+              {t('checkin.familySearchPrivacy', 'Search by the mobile number used at check-in. Results show first names only — full details stay private.')}
+            </p>
             <Field label={t('checkin.searchLabel')}>
               <div className="relative">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={searchPhone}
+                  onChange={(e) => setSearchPhone(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') void runFamilySearch(searchPhone)
+                  }}
+                  type="tel"
+                  inputMode="numeric"
                   placeholder={t('checkin.searchInputPlaceholder')}
-                  autoFocus
                   className="w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-3.5 py-2.5 text-sm placeholder:text-slate-400 outline-none focus:border-slate-800 dark:border-white/[0.1] dark:bg-[#151515] dark:text-slate-300"
                 />
               </div>
             </Field>
+            <Button
+              className="mt-3 w-full"
+              variant="primary"
+              disabled={searching}
+              onClick={() => void runFamilySearch(searchPhone)}
+            >
+              {searching ? t('common.loading') : t('checkin.searchAction', 'Search registry')}
+            </Button>
+            {searchError && (
+              <p className="mt-2 text-xs font-medium text-red-600 dark:text-red-400">{searchError}</p>
+            )}
           </div>
 
-          {loadingCheckins && (
+          {searching && (
             <div className="flex justify-center py-6">
               <Loader />
             </div>
           )}
 
-          {!loadingCheckins && (
+          {!searching && familyResults !== null && (
             <div className="space-y-3">
-              {filteredCheckins.map((item) => (
+              {familyResults.map((item, idx) => (
                 <div
-                  key={item.id}
+                  key={`${item.checkedInAt}-${idx}`}
                   className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="text-base font-bold text-zinc-800 dark:text-slate-300">
-                        {item.fullName}
+                        {item.firstName}{item.lastNameInitial ? ` ${item.lastNameInitial}` : ''}
                       </div>
                       <div className="text-xs text-slate-500 dark:text-slate-400 mono">
-                        {maskPhone(item.phone)}
+                        {item.phoneMasked}
                       </div>
                     </div>
-                    <Badge value={item.status} label={item.status === 'safe' ? t('checkin.statusSafe') : item.status === 'need_assistance' ? t('checkin.statusNeedHelp') : item.status} />
+                    <Badge value={item.status} label={item.status === 'safe' ? t('checkin.statusSafe') : t('checkin.statusNeedHelp')} />
                   </div>
 
                   {item.locationName && (
@@ -312,19 +328,13 @@ export default function SafetyCheckinPage() {
                     </div>
                   )}
 
-                  {item.notes && (
-                    <p className="mt-1.5 text-xs text-zinc-500 dark:text-slate-400 italic">
-                      "{item.notes}"
-                    </p>
-                  )}
-
                   <div className="mt-2 text-[11px] text-slate-400 mono">
-                    {t('checkin.checkedInAt')} {formatDateTime(item.createdAt)}
+                    {t('checkin.checkedInAt')} {formatDateTime(item.checkedInAt)}
                   </div>
                 </div>
               ))}
 
-              {filteredCheckins.length === 0 && (
+              {familyResults.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-zinc-200 p-8 text-center text-xs text-slate-500 dark:border-white/[0.08] dark:text-slate-400">
                   {t('checkin.emptySearch')}
                 </div>

@@ -15,13 +15,13 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import { createReport } from '../../api/endpoints'
-import { ApiError } from '../../api/client'
+import { isQueueableError } from '../../api/client'
 import { aiTriage } from '../../api/ai'
-import { enqueueOutbox } from '../../lib/outbox'
+import { enqueueOutbox, isQueued } from '../../lib/outbox'
 import LandmarkPicker from '../../components/map/LandmarkPicker'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
-import { compressImage, fileToDataUrl, reverseGeocode } from '../../lib/helpers'
+import { compressImage, fileToDataUrl, reverseGeocode, searchPlaces } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
 import { useGeoLocation } from '../../hooks/useLocation'
 import type { GeoLocationCoordinatesLike } from '../../hooks/useLocation'
@@ -40,7 +40,7 @@ const emergencyTypeOptions: { value: IncidentType; key: string }[] = [
 export default function ReportForm() {
   const { t } = useLanguage()
   const { toast } = useToast()
-  const { coords, address: detectedAddress, accuracy, source, isFallback, locateHighAccuracy, setManualLocation, setAddress } = useGeoLocation() as ReturnType<typeof useGeoLocation> & { source: string; isFallback: boolean; locateHighAccuracy: () => Promise<GeoLocationCoordinatesLike | null> }
+  const { coords, address: detectedAddress, accuracy, source, isFallback, locateHighAccuracy, setManualLocation } = useGeoLocation() as ReturnType<typeof useGeoLocation> & { source: string; isFallback: boolean; locateHighAccuracy: () => Promise<GeoLocationCoordinatesLike | null> }
 
   // coords is never null (hook seeds a hardcoded fallback), so gate on
   // provenance: only trust gps/manual/cached fixes — never the fabricated
@@ -54,6 +54,7 @@ export default function ReportForm() {
   const [showLocationModal, setShowLocationModal] = useState(false)
   const [editAddressText, setEditAddressText] = useState('')
   const [editPoint, setEditPoint] = useState<GeoPoint | null>(null)
+  const [geocodingAddress, setGeocodingAddress] = useState(false)
   const [locatingGps, setLocatingGps] = useState(false)
   const [gpsError, setGpsError] = useState<string | null>(null)
   const [reporterName, setReporterName] = useState('')
@@ -128,29 +129,50 @@ export default function ReportForm() {
     }
   }
 
-  const applyManualLocation = () => {
+  const applyManualLocation = async () => {
     const addrText = editAddressText.trim()
-    // Saving must always yield a trusted fix (manual source) or submission
-    // stays locked — typed-address-only confirms fall back to the current
-    // context fix as the pinned point instead of skipping setManualLocation.
-    const point = editPoint ?? (coords ? { lat: coords.latitude, lng: coords.longitude } : null)
-    if (point) {
+    // Saving must always yield a REAL trusted fix. When no map click happened,
+    // resolve the typed address to coordinates — stamping the context coords
+    // here previously pinned reports to the fabricated Bhubaneswar default
+    // (~1000 km from a GPS-denied user).
+    if (editPoint) {
       manuallyPinnedRef.current = true
-      setCustomPoint(point)
+      setCustomPoint(editPoint)
       if (addrText) {
         setGpsAddress(addrText)
-        setManualLocation(point, addrText)
+        setManualLocation(editPoint, addrText)
       } else {
         setGpsAddress(t('report.locatingAddress'))
-        setManualLocation(point)
-        reverseGeocode(point).then((addr) => { if (addr) setGpsAddress(addr) })
+        setManualLocation(editPoint)
+        reverseGeocode(editPoint).then((addr) => { if (addr) setGpsAddress(addr) })
       }
-    } else if (addrText) {
-      setAddress(addrText)
-      setCustomPoint(null)
+      setShowLocationModal(false)
+      toast(t('sos.savedToast'), 'success')
+      return
     }
-    setShowLocationModal(false)
-    toast(t('sos.savedToast'), 'success')
+    if (!addrText) {
+      toast(t('sos.pickLocationToast'), 'error')
+      return
+    }
+    setGeocodingAddress(true)
+    try {
+      const hit = (await searchPlaces(addrText))[0]
+      if (!hit) {
+        toast(t('sos.addressNotFoundToast', 'Could not find that address — please tap the map instead.'), 'error')
+        return
+      }
+      const point = { lat: hit.lat, lng: hit.lng }
+      manuallyPinnedRef.current = true
+      setCustomPoint(point)
+      setGpsAddress(hit.name || addrText)
+      setManualLocation(point, hit.name || addrText)
+      setShowLocationModal(false)
+      toast(t('sos.savedToast'), 'success')
+    } catch {
+      toast(t('sos.addressNotFoundToast', 'Could not find that address — please tap the map instead.'), 'error')
+    } finally {
+      setGeocodingAddress(false)
+    }
   }
 
   const handleLandmarkPick = async (p: GeoPoint, address?: string) => {
@@ -318,7 +340,7 @@ export default function ReportForm() {
     // watch. Only an explicit user pin outranks fresh coordinates.
     const liveTrusted =
       hasTrustedFix && coords ? { lat: coords.latitude, lng: coords.longitude } : null
-    let finalLocation =
+    const finalLocation =
       manuallyPinnedRef.current ? customPoint ?? liveTrusted : liveTrusted ?? customPoint
     if (!finalLocation) {
       toast(t('report.errGpsRequired'), 'error')
@@ -365,19 +387,24 @@ export default function ReportForm() {
 
       toast(t('report.reportedSuccess'), 'success')
     } catch (err) {
-      // Validation rejections (4xx) surface honestly; network/backend failures
-      // park the report in the global outbox for auto-retry (SOS pattern).
-      if (err instanceof ApiError && err.status >= 400 && err.status < 500) {
-        toast(err.message || t('common.submissionFailed'), 'error')
+      // Queueable failures (offline, timeout, 429, 5xx) park the report in
+      // the global outbox for auto-retry; genuine validation rejections
+      // (other 4xx) surface honestly. A 429 used to be silently DROPPED here.
+      if (!isQueueableError(err)) {
+        toast(err instanceof Error && err.message ? err.message : t('common.submissionFailed'), 'error')
       } else if (input) {
-        enqueueOutbox('report', input)
-        toast(
-          t(
-            'report.offlineQueuedToast',
-            'Offline: report queued — will send automatically when you reconnect.',
-          ),
-          'info',
-        )
+        const itemId = enqueueOutbox('report', input)
+        if (!isQueued(itemId)) {
+          toast(t('report.queueFailedToast', 'Could not save the report on this device (storage full) — please copy the details and retry.'), 'error')
+        } else {
+          toast(
+            t(
+              'report.offlineQueuedToast',
+              'Offline: report queued — will send automatically when you reconnect.',
+            ),
+            'info',
+          )
+        }
       } else {
         toast(err instanceof Error ? err.message : t('common.submissionFailed'), 'error')
       }
@@ -870,10 +897,11 @@ export default function ReportForm() {
             </button>
             <button
               type="button"
-              onClick={applyManualLocation}
-              className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-red-700 cursor-pointer"
+              disabled={geocodingAddress}
+              onClick={() => void applyManualLocation()}
+              className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-red-700 cursor-pointer disabled:opacity-60"
             >
-              {t('sos.saveLocation')}
+              {geocodingAddress ? t('common.loading') : t('sos.saveLocation')}
             </button>
           </div>
         </div>

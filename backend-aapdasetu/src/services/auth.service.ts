@@ -23,10 +23,15 @@ export async function bootstrapAdminUser(input: {
   return { created: true };
 }
 
+// Constant dummy hash so an unknown email still burns the same scrypt work —
+// otherwise the fast-fail on `!admin` is a timing oracle for email enumeration.
+const DUMMY_PASSWORD_HASH = hashPassword('aapdasetu-timing-equalizer');
+
 export async function loginAdmin(input: { email: string; password: string }) {
   const email = input.email.trim().toLowerCase();
   const admin = await prisma.adminUser.findUnique({ where: { email } });
-  if (!admin || !verifyPassword(input.password, admin.passwordHash)) {
+  const passwordOk = verifyPassword(input.password, admin?.passwordHash ?? DUMMY_PASSWORD_HASH);
+  if (!admin || !passwordOk) {
     await writeAuditLog({
       adminEmail: email,
       action: 'LOGIN_FAILED',

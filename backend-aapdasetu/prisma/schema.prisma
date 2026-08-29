@@ -138,6 +138,11 @@ model Report {
   resolutionNotes     String?
   resolvedAt          DateTime?
   source              String? // sos | form | api
+  // Offline-replay idempotency: client-generated UUID per logical submission.
+  // Unique + nullable — legacy rows and direct API calls simply leave it null.
+  clientRequestId     String? @unique
+  // Original on-device time for submissions queued offline and replayed later.
+  clientCreatedAt     DateTime?
 
   assignedVolunteer Volunteer? @relation("VolunteerAssignments", fields: [assignedVolunteerId], references: [id])
   assignedAgency    Agency?    @relation("AgencyAssignments", fields: [assignedAgencyId], references: [id])
@@ -157,6 +162,9 @@ model Report {
   @@index([assignedVolunteerId])
   @@index([assignedAgencyId])
   @@index([createdAt])
+  // Hot query paths: admin queue filters by status (or priority) + sorts by recency.
+  @@index([status, createdAt])
+  @@index([priorityLabel, createdAt])
 }
 
 // ---------------------------------------------------------------------------
@@ -167,6 +175,9 @@ model Volunteer {
   id            String         @id @default(uuid()) @db.Uuid
   name          String
   phone         String
+  // Revocation flag: requireVolunteer checks it in the DB on every request,
+  // so a disabled volunteer's 12h token stops working immediately.
+  isActive      Boolean        @default(true)
   skills        VolunteerSkill[]
   latitude      Float?
   longitude     Float?
@@ -180,6 +191,8 @@ model Volunteer {
 
   @@index([status])
   @@index([latitude, longitude])
+  // Login looks volunteers up by normalized phone on every sign-in.
+  @@index([phone])
 }
 
 // ---------------------------------------------------------------------------
@@ -321,19 +334,24 @@ model MissingPerson {
 // ---------------------------------------------------------------------------
 
 model SafetyCheckin {
-  id           String        @id @default(uuid()) @db.Uuid
-  fullName     String
-  phone        String?
-  locationName String?
-  notes        String?
-  status       CheckinStatus
-  latitude     Float?
-  longitude    Float?
-  createdAt    DateTime      @default(now())
+  id              String        @id @default(uuid()) @db.Uuid
+  fullName        String
+  phone           String?
+  // Digits-only last-10 form of `phone`, written at create time. The public
+  // family search queries this column directly — a bounded scan-then-filter
+  // in JS silently misses people once check-in volume exceeds the page size.
+  phoneNormalized String?
+  locationName    String?
+  notes           String?
+  status          CheckinStatus
+  latitude        Float?
+  longitude       Float?
+  createdAt       DateTime      @default(now())
 
   @@index([status])
   @@index([createdAt])
   @@index([latitude, longitude])
+  @@index([phoneNormalized])
 }
 
 // ---------------------------------------------------------------------------

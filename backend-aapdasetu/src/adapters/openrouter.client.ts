@@ -40,7 +40,13 @@ const PfaStructuredResponseSchema = z.object({
   escalationRequired: z.boolean().optional().default(false),
 });
 
-const MAX_RETRIES = 2;
+// Worst case budget: (MAX_RETRIES + 1) attempts x PER_ATTEMPT_TIMEOUT_MS plus
+// backoff sleeps. It MUST stay under the 60s maxDuration pinned in vercel.json,
+// otherwise the serverless function is killed mid-flight and the deterministic
+// PFA safety fallback never runs — a panicking citizen gets a platform error
+// instead of guided first aid. 2 x 20s + ~1.5s backoff ≈ 42s.
+const PER_ATTEMPT_TIMEOUT_MS = 20_000;
+const MAX_RETRIES = 1;
 
 interface OpenRouterChatResponse {
   choices?: {
@@ -405,7 +411,7 @@ export async function chatStructured(
 
       const timer = setTimeout(() => {
         controller.abort();
-      }, 60000);
+      }, PER_ATTEMPT_TIMEOUT_MS);
 
       /**
        * IMPORTANT:

@@ -19,6 +19,11 @@ export interface CreateSosInput {
   mediaData?: string;
   mediaType?: string;
   source?: string;
+  isOneTapSos?: boolean;
+  // Offline-replay idempotency (see schemas.reportCommon.clientRequestId)
+  clientRequestId?: string;
+  // Original on-device time for submissions queued offline and replayed later
+  clientCreatedAt?: string;
 }
 
 export interface CreateReportInput extends CreateSosInput {
@@ -28,39 +33,115 @@ export interface CreateReportInput extends CreateSosInput {
 }
 
 export async function createSosReport(input: CreateSosInput) {
+  // Idempotency: the outbox replays submissions after timeouts/reconnects.
+  // Without this dedupe a slow 2G network turns one SOS into two dispatches.
+  if (input.clientRequestId) {
+    const existing = await prisma.report.findUnique({
+      where: { clientRequestId: input.clientRequestId },
+    });
+    if (existing) {
+      return {
+        ...serializeReport(existing),
+        triage: {
+          score: existing.priorityScore,
+          label: existing.priorityLabel as PriorityLabel,
+          factors: existing.triageFactors,
+        },
+        duplicate: true,
+      };
+    }
+  }
+
   const triage = computeTriage({
     type: input.type,
     description: input.description,
     medicalCondition: input.medicalCondition,
     landmark: input.landmark,
+    isOneTapSos: input.isOneTapSos ?? input.source === 'sos',
   });
 
-  const report = await prisma.report.create({
-    data: {
-      type: input.type,
-      latitude: input.latitude,
-      longitude: input.longitude,
-      description: input.description,
-      landmark: input.landmark,
-      reporterName: input.reporterName,
-      reporterPhone: input.reporterPhone,
-      medicalCondition: input.medicalCondition,
-      bloodType: input.bloodType,
-      mediaData: input.mediaData,
-      mediaType: input.mediaType ?? (input.mediaData ? 'media' : 'none'),
-      source: input.source ?? 'sos',
-      priorityScore: triage.score,
-      priorityLabel: triage.label as PriorityLabel,
-      triageFactors: triage.factors as unknown as object,
-    },
-  });
+  let report;
+  try {
+    report = await prisma.report.create({
+      data: {
+        type: input.type,
+        latitude: input.latitude,
+        longitude: input.longitude,
+        description: input.description,
+        landmark: input.landmark,
+        reporterName: input.reporterName,
+        reporterPhone: input.reporterPhone,
+        medicalCondition: input.medicalCondition,
+        bloodType: input.bloodType,
+        mediaData: input.mediaData,
+        mediaType: input.mediaType ?? (input.mediaData ? 'media' : 'none'),
+        source: input.source ?? 'sos',
+        clientRequestId: input.clientRequestId,
+        clientCreatedAt: input.clientCreatedAt ? new Date(input.clientCreatedAt) : null,
+        priorityScore: triage.score,
+        priorityLabel: triage.label as PriorityLabel,
+        triageFactors: triage.factors as unknown as object,
+      },
+    });
+  } catch (err) {
+    // Two concurrent replays of the same clientRequestId both pass the
+    // check-then-create above; the unique index makes exactly one win. The
+    // loser must receive the EXISTING report (201 duplicate:true) — a raw
+    // 409 would make the outbox drop the item and the citizen re-send.
+    if (isUniqueViolation(err) && input.clientRequestId) {
+      const winner = await prisma.report.findUnique({
+        where: { clientRequestId: input.clientRequestId },
+      });
+      if (winner) {
+        return {
+          ...serializeReport(winner),
+          triage: {
+            score: winner.priorityScore,
+            label: winner.priorityLabel as PriorityLabel,
+            factors: winner.triageFactors,
+          },
+          duplicate: true,
+        };
+      }
+    }
+    throw err;
+  }
 
   realtimeHub.emitSos(serializeReport(report));
 
   return { ...serializeReport(report), triage };
 }
 
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as { code?: unknown }).code === 'P2002'
+  );
+}
+
 export async function createIncidentReport(input: CreateReportInput) {
+  // Same idempotency contract as the SOS path: the outbox stamps and replays
+  // 'report' items with clientRequestId/clientCreatedAt, so an offline report
+  // replayed after a server-side success must not create a duplicate row, and
+  // must keep its original on-device reporting time.
+  if (input.clientRequestId) {
+    const existing = await prisma.report.findUnique({
+      where: { clientRequestId: input.clientRequestId },
+    });
+    if (existing) {
+      return {
+        ...serializeReport(existing),
+        triage: {
+          score: existing.priorityScore,
+          label: existing.priorityLabel as PriorityLabel,
+          factors: existing.triageFactors,
+        },
+        duplicate: true,
+      };
+    }
+  }
+
   const triage = computeTriage({
     type: input.type,
     description: input.description,
@@ -69,28 +150,51 @@ export async function createIncidentReport(input: CreateReportInput) {
     landmark: input.landmark,
   });
 
-  const report = await prisma.report.create({
-    data: {
-      type: input.type,
-      latitude: input.latitude,
-      longitude: input.longitude,
-      description: input.description,
-      landmark: input.landmark,
-      reporterName: input.reporterName,
-      reporterPhone: input.reporterPhone,
-      missingPersonName: input.missingPersonName,
-      missingPersonAge: input.missingPersonAge,
-      missingPersonDesc: input.missingPersonDesc,
-      medicalCondition: input.medicalCondition,
-      bloodType: input.bloodType,
-      mediaData: input.mediaData,
-      mediaType: input.mediaType ?? (input.mediaData ? 'media' : 'none'),
-      source: input.source ?? 'form',
-      priorityScore: triage.score,
-      priorityLabel: triage.label as PriorityLabel,
-      triageFactors: triage.factors as unknown as object,
-    },
-  });
+  let report;
+  try {
+    report = await prisma.report.create({
+      data: {
+        type: input.type,
+        latitude: input.latitude,
+        longitude: input.longitude,
+        description: input.description,
+        landmark: input.landmark,
+        reporterName: input.reporterName,
+        reporterPhone: input.reporterPhone,
+        missingPersonName: input.missingPersonName,
+        missingPersonAge: input.missingPersonAge,
+        missingPersonDesc: input.missingPersonDesc,
+        medicalCondition: input.medicalCondition,
+        bloodType: input.bloodType,
+        mediaData: input.mediaData,
+        mediaType: input.mediaType ?? (input.mediaData ? 'media' : 'none'),
+        source: input.source ?? 'form',
+        clientRequestId: input.clientRequestId,
+        clientCreatedAt: input.clientCreatedAt ? new Date(input.clientCreatedAt) : null,
+        priorityScore: triage.score,
+        priorityLabel: triage.label as PriorityLabel,
+        triageFactors: triage.factors as unknown as object,
+      },
+    });
+  } catch (err) {
+    if (isUniqueViolation(err) && input.clientRequestId) {
+      const winner = await prisma.report.findUnique({
+        where: { clientRequestId: input.clientRequestId },
+      });
+      if (winner) {
+        return {
+          ...serializeReport(winner),
+          triage: {
+            score: winner.priorityScore,
+            label: winner.priorityLabel as PriorityLabel,
+            factors: winner.triageFactors,
+          },
+          duplicate: true,
+        };
+      }
+    }
+    throw err;
+  }
 
   realtimeHub.broadcast({
     type: 'report:new',
@@ -209,8 +313,11 @@ export async function assignDispatch(input: {
     const updated = await tx.report.update({
       where: { id: input.id },
       data: {
-        assignedVolunteerId: input.volunteerId,
-        assignedAgencyId: input.agencyId,
+        // ?? null — an agency-only reassignment must CLEAR the previous
+        // volunteer link (Prisma treats undefined as "no change", which left
+        // the report pointing at a volunteer already released to available).
+        assignedVolunteerId: input.volunteerId ?? null,
+        assignedAgencyId: input.agencyId ?? null,
         status: report.status === 'pending' ? 'in_progress' : report.status,
       },
       include: {
@@ -261,30 +368,37 @@ export async function unassignDispatch(input: {
   const volunteerId = input.target === 'volunteer' ? null : report.assignedVolunteerId;
   const agencyId = input.target === 'agency' ? null : report.assignedAgencyId;
 
-  if (input.target === 'volunteer' && report.assignedVolunteerId) {
-    await prisma.volunteer.update({
-      where: { id: report.assignedVolunteerId },
-      data: { status: 'available' },
+  // Single transaction — releasing the volunteer and clearing the report link
+  // must succeed or fail together, or the roster and the report disagree
+  // (a "free" volunteer stays blocked by an assignment he is no longer on).
+  const updated = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    if (input.target === 'volunteer' && report.assignedVolunteerId) {
+      await tx.volunteer.update({
+        where: { id: report.assignedVolunteerId },
+        data: { status: 'available' },
+      }).catch(() => {});
+    }
+
+    const updated = await tx.report.update({
+      where: { id: input.id },
+      data: { assignedVolunteerId: volunteerId, assignedAgencyId: agencyId },
+      include: {
+        assignedVolunteer: { select: { id: true, name: true, phone: true } },
+        assignedAgency: { select: { id: true, name: true, type: true } },
+      },
     });
-  }
 
-  const updated = await prisma.report.update({
-    where: { id: input.id },
-    data: { assignedVolunteerId: volunteerId, assignedAgencyId: agencyId },
-    include: {
-      assignedVolunteer: { select: { id: true, name: true, phone: true } },
-      assignedAgency: { select: { id: true, name: true, type: true } },
-    },
-  });
+    await tx.dispatch.create({
+      data: {
+        reportId: input.id,
+        volunteerId: input.target === 'volunteer' ? report.assignedVolunteerId : undefined,
+        agencyId: input.target === 'agency' ? report.assignedAgencyId : undefined,
+        action: 'unassign',
+        assignedBy: input.adminEmail,
+      },
+    });
 
-  await prisma.dispatch.create({
-    data: {
-      reportId: input.id,
-      volunteerId: input.target === 'volunteer' ? report.assignedVolunteerId : undefined,
-      agencyId: input.target === 'agency' ? report.assignedAgencyId : undefined,
-      action: 'unassign',
-      assignedBy: input.adminEmail,
-    },
+    return updated;
   });
 
   await writeAuditLog({

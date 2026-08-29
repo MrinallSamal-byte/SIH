@@ -15,8 +15,9 @@ export const adminRouter = Router();
 adminRouter.post('/auth/login', loginRateLimiter, validateBody(schemas.adminLoginSchema), asyncHandler(core.adminLoginHandler));
 
 // Everything below requires an admin session (guards must sit ABOVE /auth/me and /auth/change-password).
-adminRouter.use(requireAdmin);
+// Limiter BEFORE auth: cheap rejection of token brute-force without a DB hit.
 adminRouter.use(adminRateLimiter);
+adminRouter.use(requireAdmin);
 
 adminRouter.get('/auth/me', asyncHandler(core.adminMeHandler));
 adminRouter.post('/auth/change-password', validateBody(schemas.changePasswordSchema), asyncHandler(core.adminChangePasswordHandler));
@@ -68,6 +69,8 @@ adminRouter.get('/checkins', validateQuery(schemas.paginationQuerySchema.partial
 
 // ---- Missing person matches ----
 adminRouter.get('/missing/matches', validateQuery(schemas.missingMatchQuerySchema), asyncHandler(sys.adminListMatchesHandler));
+// Admin-triggered matching run — persists candidates into the review queue.
+adminRouter.post('/missing/matches/compute', validateBody(schemas.missingMatchSchema), asyncHandler(sys.adminComputeMatchesHandler));
 adminRouter.post('/missing/matches/:id/review', validateParams(schemas.idParamsSchema), validateBody(schemas.reviewMatchSchema), asyncHandler(sys.adminReviewMatchHandler));
 
 // ---- Damage assessments ----

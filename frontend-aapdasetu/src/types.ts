@@ -63,6 +63,11 @@ export interface ReportInput {
   missing?: MissingInfo
   media?: MediaPayload[]
   isOneTapSos?: boolean
+  /** Client-generated idempotency key — one per logical submission. The
+   * outbox replays can then never create a duplicate rescue dispatch. */
+  clientRequestId?: string
+  /** Original on-device time for submissions queued offline and replayed later. */
+  clientCreatedAt?: string
 }
 
 export interface Report {

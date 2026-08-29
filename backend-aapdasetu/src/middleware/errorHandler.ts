@@ -47,6 +47,13 @@ export function errorHandler(
       status = 404;
       code = 'NOT_FOUND';
       message = 'Record not found';
+    } else if (prismaCode.startsWith('P1')) {
+      // P1xxx = connectivity/infrastructure failures (P1001 can't reach DB,
+      // P1017 server closed the connection) — a 400 would tell clients the
+      // request was wrong and hide the outage from monitoring.
+      status = 503;
+      code = 'DB_UNAVAILABLE';
+      message = 'Service temporarily unavailable — please retry shortly';
     }
   } else {
     const statusMaybe = (err as Error & { status?: number }).status;

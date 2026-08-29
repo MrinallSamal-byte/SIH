@@ -1,7 +1,19 @@
 // Central env parsing. Every credential the frontend touches lives here
 // (browser-side only). Server-side credentials are handled in Settings.tsx.
+// API base URL: the backend origin root only (no /api suffix — endpoint paths
+// already start with /api/v1/...). NEVER default to localhost in production
+// builds: the deployed bundle would point every visitor at their own machine
+// and silently degrade the whole app to demo data. In production (unset var)
+// we fall back to same-origin, which works when the deploy proxies /api to
+// the backend — see DEPLOYMENT.md.
+function resolveApiUrl(raw: string | undefined): string {
+  if (raw && raw.trim() !== '') return raw.replace(/\/$/, '')
+  if (import.meta.env.PROD) return ''
+  return 'http://localhost:4000'
+}
+
 export const config = {
-  apiUrl: (import.meta.env.VITE_API_URL || 'http://localhost:4000').replace(/\/$/, ''),
+  apiUrl: resolveApiUrl(import.meta.env.VITE_API_URL),
   aiUrl: (import.meta.env.VITE_AI_URL || 'http://localhost:8080').replace(/\/$/, ''),
   /** Optional Supabase realtime swap-in — see src/hooks/useRealtime.ts */
   supabaseUrl: import.meta.env.VITE_SUPABASE_URL || '',

@@ -28,8 +28,36 @@ const reportCommon = {
   reporterPhone: z.string().max(30).optional().nullable(),
   medicalCondition: z.string().max(500).optional().nullable(),
   bloodType: z.string().max(10).optional().nullable(),
-  mediaData: z.string().max(30_000_000).optional().nullable(),
+  // Base64 media from the client (compressed before upload). The effective
+  // ceiling is Vercel's ~4.5MB request-body cap, so anything larger fails
+  // with a clear validation message rather than an opaque platform 413.
+  mediaData: z.string().max(4_000_000).optional().nullable(),
   mediaType: z.enum(['video', 'audio', 'image', 'none']).optional().nullable(),
+  // 1-Tap SOS provenance — drives the +55 triage boost so an unadorned SOS
+  // can never triage GREEN (see lib/triage.ts ONE_TAP_SOS_BOOST).
+  isOneTapSos: z.boolean().optional().nullable(),
+  // Offline-replay idempotency: the client generates this once per logical
+  // submission; the backend dedupes on it so an outbox replay after a
+  // timeout never creates a duplicate rescue dispatch.
+  clientRequestId: z.string().min(8).max(64).optional().nullable(),
+  // Original on-device timestamp for submissions queued offline and replayed
+  // later — the report time must reflect when the citizen raised it. Bounded:
+  // 1999 test data or year-2099 spoofing degrades to null (server receipt
+  // time applies) instead of poisoning admin queue displays.
+  clientCreatedAt: z
+    .string()
+    .datetime()
+    .optional()
+    .nullable()
+    .transform((v) => {
+      if (!v) return v;
+      const t = Date.parse(v);
+      const now = Date.now();
+      if (!Number.isFinite(t) || t < now - 7 * 24 * 60 * 60 * 1000 || t > now + 5 * 60 * 1000) {
+        return null;
+      }
+      return v;
+    }),
 };
 
 export const createSosSchema = z.object({
@@ -63,6 +91,11 @@ export const nearbySheltersSchema = z.object({
   radiusKm: qnum(z.coerce.number().min(1).max(500)).optional(),
 });
 
+// Public family search by phone — results are PII-masked server-side.
+export const familyCheckinSearchSchema = z.object({
+  phone: z.string().min(6).max(30),
+});
+
 export const pfaChatSchema = z.object({
   message: z.string().min(1).max(4000),
   history: z
@@ -77,7 +110,10 @@ export const pfaChatSchema = z.object({
 });
 
 export const damageAssessmentSchema = z.object({
-  imageBase64: z.string().min(24),
+  // Vercel serverless rejects request bodies > 4.5 MB at the edge before this
+  // route ever runs — a smaller explicit cap fails fast with a clear message
+  // instead of an opaque platform 413 (clients compress before upload).
+  imageBase64: z.string().min(24).max(4_000_000),
   mimeType: z.string().optional(),
   reportedLatitude: latSchema,
   reportedLongitude: lngSchema,
@@ -88,7 +124,9 @@ export const damageAssessmentSchema = z.object({
 
 export const missingMatchSchema = z.object({
   reportId: z.string().uuid(),
-  threshold: z.coerce.number().min(0).max(1).optional(),
+  // Floor of 0.2: recency alone scores above 0, so a threshold of 0 would
+  // let a caller force every candidate to "match".
+  threshold: z.coerce.number().min(0.2).max(1).optional(),
 });
 
 export const createMissingPersonSchema = z.object({
@@ -99,7 +137,9 @@ export const createMissingPersonSchema = z.object({
   lastSeenLocation: z.string().max(300).optional().nullable(),
   clothes: z.string().max(500).optional().nullable(),
   contactPhone: z.string().max(30).optional().nullable(),
-  photoUrl: z.string().max(2000).optional().nullable(),
+  // Citizens submit device-compressed JPEG data URLs (~100-300K chars); the
+  // old 2000-char cap rejected every real submission with a photo attached.
+  photoUrl: z.string().max(4_000_000).optional().nullable(),
   notes: z.string().max(1000).optional().nullable(),
 });
 
@@ -111,7 +151,7 @@ export const updateMissingPersonSchema = z.object({
   lastSeenLocation: z.string().max(300).optional().nullable(),
   clothes: z.string().max(500).optional().nullable(),
   contactPhone: z.string().max(30).optional().nullable(),
-  photoUrl: z.string().max(2000).optional().nullable(),
+  photoUrl: z.string().max(4_000_000).optional().nullable(),
   notes: z.string().max(1000).optional().nullable(),
   status: z.enum(['open', 'matched', 'resolved']).optional(),
 });

@@ -14,7 +14,7 @@ import sharp from 'sharp';
 import exifr from 'exifr';
 import { prisma } from '../lib/prisma.js';
 import { damageMlClient, DamageClassification, DamagePrediction } from '../adapters/damageMl.client.js';
-import { BadRequestError, ConflictError, ServiceUnavailableError, UnprocessableEntityError } from '../lib/errors.js';
+import { BadRequestError, NotFoundError, ServiceUnavailableError, UnprocessableEntityError } from '../lib/errors.js';
 import { haversineDistanceKm } from '../lib/haversine.js';
 import { logger } from '../lib/logger.js';
 import { env } from '../config/env.js';
@@ -57,14 +57,18 @@ export async function assessDamage(input: DamageAssessmentInput): Promise<Damage
   // 2. EXIF extraction (GPS + other metadata)
   const exif = await extractExif(buffer);
 
-  // 3. GPS verification
-  const locationVerified = exif.latitude !== null && exif.longitude !== null;
+  // 3. GPS verification — a photo only counts as verified when EXIF GPS
+  // exists AND it was actually taken within MAX_LOCATION_DISTANCE_KM of the
+  // reported location. Presence of EXIF alone previously auto-approved claims
+  // (and their SDRF compensation) taken anywhere in the country.
   const locationDistanceM =
     exif.latitude !== null && exif.longitude !== null
       ? Math.round(
           haversineDistanceKm(input.reportedLatitude, input.reportedLongitude, exif.latitude, exif.longitude) * 1000,
         )
       : null;
+  const locationVerified =
+    locationDistanceM !== null && locationDistanceM <= MAX_LOCATION_DISTANCE_KM * 1000;
 
   // 4. Perceptual hash + SHA-256 for duplicate detection
   const imageHash = await computePerceptualHash(buffer);
@@ -234,7 +238,7 @@ async function computePerceptualHash(buffer: Buffer): Promise<string> {
 export async function flagDuplicateAssessment(id: string, adminEmail: string) {
   const existing = await prisma.damageAssessment.findUnique({ where: { id } });
   if (!existing) {
-    throw new ConflictError('Assessment not found');
+    throw new NotFoundError('Assessment not found');
   }
   return prisma.damageAssessment.update({
     where: { id },

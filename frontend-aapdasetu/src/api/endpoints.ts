@@ -168,6 +168,10 @@ function toAlert(r: RawAlert): Alert {
     title: r.title,
     message: r.message,
     channel: r.channel ?? undefined,
+    // Without this the citizen Alerts page cannot tell whether an alert
+    // actually affects the user's area — the "affects your area" logic and
+    // area-aware sorting are dead code without it.
+    targetArea: r.targetArea ?? undefined,
     createdAt: r.createdAt,
   }
 }
@@ -181,6 +185,13 @@ function reportBody(input: ReportInput): Record<string, unknown> {
     reporterPhone: input.reporterPhone ?? null,
     latitude: input.location?.lat,
     longitude: input.location?.lng,
+    // Tells the backend to apply the 1-Tap SOS triage boost — without it an
+    // unadorned SOS scores GREEN and never sounds the command-center siren.
+    isOneTapSos: Boolean(input.isOneTapSos),
+    // Offline-replay idempotency: generated once per logical submission so a
+    // replayed outbox item is deduped server-side instead of double-dispatching.
+    clientRequestId: input.clientRequestId,
+    clientCreatedAt: input.clientCreatedAt,
   }
 
   if (input.victim) {
@@ -342,11 +353,31 @@ export function getOverviewKPIs(): Promise<OverviewKPIs> {
 
 // ---- safety check-ins ----------------------------------------------------------
 
-/** GET /api/v1/admin/checkins — recent check-ins. */
+/** GET /api/v1/admin/checkins — recent check-ins (admin console). */
 export function listSafetyCheckins(): Promise<SafetyCheckin[]> {
   return withMockFallback(
     () => apiCall<{ items: SafetyCheckin[] }>('GET', '/api/v1/admin/checkins').then((d) => d.items ?? []),
     () => mocks.listSafetyCheckins(),
+  )
+}
+
+export interface FamilyCheckinResult {
+  firstName: string
+  lastNameInitial: string | null
+  phoneMasked: string | null
+  status: 'safe' | 'need_assistance'
+  locationName: string | null
+  checkedInAt: string
+}
+
+/** GET /api/v1/checkins/search?phone= — public family search, PII-masked.
+ * Deliberately NO mock fallback: a fabricated "safe" answer for a worried
+ * relative is the single most harmful lie this app could tell. Failures
+ * surface as errors the user can retry. */
+export function searchFamilyCheckins(phone: string): Promise<FamilyCheckinResult[]> {
+  return apiCall<FamilyCheckinResult[]>(
+    'GET',
+    `/api/v1/checkins/search?phone=${encodeURIComponent(phone)}`,
   )
 }
 
@@ -518,6 +549,17 @@ export function listMissingMatches(): Promise<MissingMatch[]> {
         })),
       ),
     () => [],
+  )
+}
+
+/** POST /api/v1/admin/missing/matches/compute — admin-triggered matching run.
+ * The ONLY path that persists match rows; the public compute endpoint is
+ * read-only by design. */
+export function runMissingPersonMatching(reportId: string): Promise<unknown> {
+  return withMockFallback(
+    () => apiCall<unknown>('POST', '/api/v1/admin/missing/matches/compute', { reportId }),
+    async () => undefined,
+    { mutating: true },
   )
 }
 

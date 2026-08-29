@@ -9,7 +9,7 @@ import {
   AlertTriangle,
   Send
 } from 'lucide-react'
-import { aiPfaChat, cleanAiOutput } from '../api/ai'
+import { aiPfaChat, cleanAiOutput, isAiProviderConfigured } from '../api/ai'
 import { createReport } from '../api/endpoints'
 import { useToast } from './common/Toast'
 import { useLanguage } from '../lib/i18n'
@@ -25,7 +25,11 @@ export function openChatWidget() {
 export default function ChatWidget() {
   const { toast } = useToast()
   const { t, lang } = useLanguage()
-  const { coords } = useGeoLocation()
+  const { coords, source, cachedAt } = useGeoLocation()
+  // Honest status: the widget used to claim "LIVE ASSIST" even when no AI
+  // provider was configured (pure canned-keyword mode) — contradicting the
+  // PfaChat page, which tells the truth.
+  const [aiConfigured] = useState(() => isAiProviderConfigured())
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<PfaChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -106,10 +110,28 @@ export default function ChatWidget() {
       return
     }
 
+    // Provenance gate — a rescue callback must NEVER be pinned to a fabricated
+    // default position (the old code silently sent it to Kolkata when GPS was
+    // unavailable). Require a live GPS fix, a manual pin, or a fresh cached fix.
+    const CACHED_FIX_MAX_AGE_MS = 30 * 60 * 1000
+    const cachedFixIsFresh =
+      source === 'cached' && typeof cachedAt === 'number' && Date.now() - cachedAt < CACHED_FIX_MAX_AGE_MS
+    const hasTrustedFix =
+      (source === 'gps' || source === 'manual' || cachedFixIsFresh) &&
+      typeof coords?.latitude === 'number' &&
+      typeof coords?.longitude === 'number'
+    if (!hasTrustedFix) {
+      toast(
+        t('chat.needLocationToast', 'Location not verified yet — open the SOS page and confirm your dispatch location first.'),
+        'error',
+      )
+      return
+    }
+
     setSubmittingCallback(msgIndex)
     try {
-      const lat = coords?.latitude ?? 22.5726
-      const lng = coords?.longitude ?? 88.3639
+      const lat = coords.latitude
+      const lng = coords.longitude
 
       const report = await createReport({
         type: 'other',
@@ -184,10 +206,16 @@ export default function ChatWidget() {
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="font-bold text-xs">AapdaMitra AI</span>
-                  <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold text-emerald-300 flex items-center gap-1 mono">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    {t('chat.badgeLive')}
-                  </span>
+                  {aiConfigured ? (
+                    <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold text-emerald-300 flex items-center gap-1 mono">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      {t('chat.badgeLive')}
+                    </span>
+                  ) : (
+                    <span className="rounded bg-slate-500/20 px-1.5 py-0.5 text-[9px] font-bold text-slate-300 flex items-center gap-1 mono">
+                      {t('chat.badgeOffline', 'OFFLINE GUIDANCE')}
+                    </span>
+                  )}
                 </div>
                 <p className="truncate text-[10px] text-slate-400">{t('chat.subtitle')}</p>
               </div>

@@ -198,7 +198,10 @@ function notifyNewRedIncidents(items: Report[]): void {
 export default function LiveSOS() {
   const { t } = useLanguage()
   const { toast } = useToast()
-  const fetchReports = useCallback(() => listReports({ status: 'pending' }), [])
+  // pageSize 200 (backend max): the default first-50 page made SOS #51+
+  // invisible in a mass-casualty event even though the header showed the
+  // true total — those incidents could never be acknowledged from here.
+  const fetchReports = useCallback(() => listReports({ status: 'pending', pageSize: 200 }), [])
   const reportsPage = useRealtime<{ items: Report[]; total: number }>(fetchReports, 3000)
   const reports = reportsPage?.items ?? []
 

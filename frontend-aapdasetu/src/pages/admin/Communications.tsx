@@ -7,7 +7,8 @@ import {
   Radio,
   Send,
   Sparkles,
-  CheckCircle2
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react'
 import { broadcastAlert } from '../../api/endpoints'
 import { Field, Input, Textarea } from '../../components/common/Input'
@@ -69,12 +70,17 @@ export default function Communications() {
   const [channels, setChannels] = useState<string[]>(['web', 'sms'])
   const [recipients, setRecipients] = useState('')
   const [sending, setSending] = useState(false)
+  // A mis-click here sends a false evacuation order system-wide — critical
+  // broadcasts require an explicit second confirmation step.
+  const [awaitingConfirm, setAwaitingConfirm] = useState(false)
 
   const applyPreset = (p: (typeof PRESETS)[0]) => {
     setTitle(p.title)
     setBody(p.body)
     setSeverity(p.severity)
     setRegion(p.region)
+    // Loading a fresh preset must disarm a previously armed confirm state.
+    setAwaitingConfirm(false)
     toast(`${t('cm.presetApplied')}: ${t(p.labelKey)}`)
   }
 
@@ -89,6 +95,13 @@ export default function Communications() {
       toast(t('cm.errRequired'), 'error')
       return
     }
+    // First press on a critical broadcast arms the confirm step instead of
+    // transmitting; the operator must press "Confirm send" to actually fire.
+    if (severity === 'critical' && !awaitingConfirm) {
+      setAwaitingConfirm(true)
+      return
+    }
+    setAwaitingConfirm(false)
     setSending(true)
     try {
       const result = await broadcastAlert({
@@ -258,6 +271,15 @@ export default function Communications() {
             />
           </Field>
 
+          {awaitingConfirm && severity === 'critical' && (
+            <div className="flex items-start gap-2 rounded-xl border border-red-300 bg-red-50 p-3 text-xs font-semibold text-red-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                {t('cm.confirmCritical', 'You are about to transmit a CRITICAL alert to every citizen channel. Press "Confirm — transmit" again to send, or edit the message.')}
+              </span>
+            </div>
+          )}
+
           <Button
             variant="danger"
             onClick={send}
@@ -265,7 +287,13 @@ export default function Communications() {
             className="w-full py-3.5 text-sm font-bold shadow-md cursor-pointer flex items-center justify-center gap-2"
           >
             <Send className="h-4 w-4" />
-            <span>{sending ? t('cm.transmitting') : t('cm.transmitBroadcast')}</span>
+            <span>
+              {sending
+                ? t('cm.transmitting')
+                : awaitingConfirm && severity === 'critical'
+                ? t('cm.confirmTransmit', 'Confirm — transmit')
+                : t('cm.transmitBroadcast')}
+            </span>
           </Button>
         </div>
 

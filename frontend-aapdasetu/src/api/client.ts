@@ -138,7 +138,10 @@ async function apiCall<T>(method: string, path: string, body?: unknown): Promise
   if (mutating && typeof navigator !== 'undefined' && navigator.onLine === false) {
     throw new OfflineError()
   }
-  if (apiIsUnreachable())
+  // The reachability cool-off only short-circuits READS. A citizen tapping
+  // SOS during a congested-network cool-down must still get a real network
+  // attempt — one flaky GET can never block an emergency submission.
+  if (apiIsUnreachable() && !mutating)
     throw new ApiError(503, 'Cannot reach the AapdaSetu server right now. Please try again shortly.')
 
   const headers: Record<string, string> = {}
@@ -161,13 +164,19 @@ async function apiCall<T>(method: string, path: string, body?: unknown): Promise
           headers,
           body: bodyJson,
         },
-        bodyJson && bodyJson.length > 1_000_000 ? 30_000 : undefined,
+        // Mutating submissions (SOS on 2G) deserve a longer window than the
+        // 6 s read timeout before the caller queues the item offline.
+        mutating ? (bodyJson && bodyJson.length > 1_000_000 ? 30_000 : 15_000) : bodyJson && bodyJson.length > 1_000_000 ? 30_000 : undefined,
       )
       const payload = (await res.json().catch(() => null)) as
         | { success: boolean; data?: T; error?: { message?: string } }
         | null
 
       if (!res.ok || !payload?.success) {
+        // A 200 whose body is not the API envelope (e.g. the SPA catch-all
+        // answered for an unproxied /api path) is a server-side problem —
+        // map it to 502 so callers treat it as retryable, not client error.
+        if (res.ok && !payload) throw new ApiError(502, 'The server response was not valid API data.')
         throw new ApiError(res.status, payload?.error?.message ?? `${method} ${path} failed (${res.status})`)
       }
       return payload.data as T
@@ -178,6 +187,10 @@ async function apiCall<T>(method: string, path: string, body?: unknown): Promise
         // the cool-off window instead of retrying on every poll tick.
         markApiDown()
         throw tagMutating(toFriendlyNetworkError(err))
+      }
+      if (err.status === 401) {
+        handleUnauthorized(path)
+        throw tagMutating(err)
       }
       if (err.status >= 400 && err.status < 500) throw tagMutating(err)
       // ponytail: retry only idempotent reads — a replayed POST could double-submit
@@ -194,6 +207,45 @@ async function apiCall<T>(method: string, path: string, body?: unknown): Promise
     }
     return err
   }
+}
+
+/**
+ * Expired/invalid sessions must never silently degrade into a mock dashboard —
+ * clear the stale token and bounce to the matching login screen. Excluded:
+ * login itself, and change-password (a wrong current password is a 401 that
+ * must NOT log the operator out).
+ */
+function handleUnauthorized(path: string): void {
+  try {
+    const exempt = path.includes('/auth/login') || path.includes('/auth/change-password')
+    if (path.startsWith('/api/v1/admin') && !exempt) {
+      localStorage.removeItem(ADMIN_SESSION_KEY)
+      if (window.location.pathname.startsWith('/admin') && !window.location.pathname.endsWith('/login')) {
+        window.location.assign('/admin/login')
+      }
+    } else if (path.startsWith('/api/v1/volunteer') && !exempt) {
+      localStorage.removeItem(VOLUNTEER_AUTH_KEY)
+      if (window.location.pathname.startsWith('/volunteer') && !window.location.pathname.endsWith('/login')) {
+        window.location.assign('/volunteer/login')
+      }
+    }
+  } catch {
+    // storage blocked — nothing else to do
+  }
+}
+
+/**
+ * True when a failed submission is safe to queue for automatic replay:
+ * never-reached (0), server trouble (5xx/502), throttled (429), or offline.
+ * Client/validation errors (other 4xx) would fail again — callers should
+ * surface them instead of queueing.
+ */
+export function isQueueableError(err: unknown): boolean {
+  if (err instanceof OfflineError) return true
+  if (err instanceof ApiError) {
+    return err.status === 0 || err.status === 429 || err.status >= 500
+  }
+  return false
 }
 
 /**

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { volunteerMe, listVolunteerTasks, setVolunteerStatus } from '../../api/endpoints'
 import Button from '../../components/common/Button'
@@ -14,13 +14,20 @@ export default function Dashboard() {
   const [activeTasks, setActiveTasks] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
 
+  const loadErrorToastedRef = useRef(false)
   const load = useCallback(async () => {
     try {
       const me = await volunteerMe()
       setVolunteer(me)
       setActiveTasks(await listVolunteerTasks())
+      loadErrorToastedRef.current = false
     } catch {
-      toast(t('vd.loadFailed'), 'error')
+      // Poll errors toast only ONCE — 12s polling during an outage must
+      // not spam toasts nonstop.
+      if (!loadErrorToastedRef.current) {
+        loadErrorToastedRef.current = true
+        toast(t('vd.loadFailed'), 'error')
+      }
     } finally {
       setLoading(false)
     }
@@ -28,6 +35,13 @@ export default function Dashboard() {
 
   useEffect(() => {
     load()
+    // Poll for new assignments — the WS hub is dormant on serverless, so this
+    // is the only way a dispatched rescue reaches the volunteer's screen.
+    const tick = () => {
+      if (!document.hidden && navigator.onLine) void load()
+    }
+    const id = window.setInterval(tick, 12_000)
+    return () => window.clearInterval(id)
   }, [load])
 
   const statusLabel = useCallback(

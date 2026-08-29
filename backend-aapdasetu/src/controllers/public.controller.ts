@@ -6,7 +6,7 @@ import {
   getReportByTrackingId,
   serializePublicTracking,
 } from '../services/reports.service.js';
-import { createCheckin } from '../services/checkins.service.js';
+import { createCheckin, searchCheckinsForFamily } from '../services/checkins.service.js';
 import { findNearbyShelters, listShelters } from '../services/shelters.service.js';
 import { listActiveAlerts } from '../services/alerts.service.js';
 import { getPfaReply, isOpenRouterConfigured } from '../services/pfa.service.js';
@@ -16,7 +16,11 @@ import { listActiveHazards, computeSafeReroute } from '../services/routes.servic
 import { listMissingPersons, createMissingPerson } from '../services/missing-persons.service.js';
 
 export async function sosHandler(req: Request, res: Response): Promise<void> {
-  const result = await createSosReport(req.body);
+  // The /sos route IS the 1-Tap emergency button — force the triage boost
+  // and provenance server-side so a client that omits or mislabels them can
+  // never land a real SOS in the GREEN queue (the bug that silenced the
+  // command-center siren).
+  const result = await createSosReport({ ...req.body, isOneTapSos: true, source: 'sos' });
   res.status(201).json({ success: true, data: result });
 }
 
@@ -35,6 +39,12 @@ export async function trackingHandler(req: Request, res: Response): Promise<void
 export async function checkinHandler(req: Request, res: Response): Promise<void> {
   const checkin = await createCheckin(req.body);
   res.status(201).json({ success: true, data: checkin });
+}
+
+export async function familyCheckinSearchHandler(req: Request, res: Response): Promise<void> {
+  const { phone } = (req as Request & { validatedQuery: { phone: string } }).validatedQuery;
+  const results = await searchCheckinsForFamily({ phone });
+  res.json({ success: true, data: results });
 }
 
 export async function nearbySheltersHandler(req: Request, res: Response): Promise<void> {
@@ -71,7 +81,10 @@ export async function damageAssessmentHandler(req: Request, res: Response): Prom
 
 export async function missingMatchesHandler(req: Request, res: Response): Promise<void> {
   const { reportId, threshold } = req.body;
-  const matches = await findMissingPersonMatches({ reportId, threshold });
+  // Public path computes scores read-only. It must NOT persist match rows:
+  // an anonymous caller could otherwise poison the admin review queue with
+  // junk pairs that auto-resolve real missing-person reports when confirmed.
+  const matches = await findMissingPersonMatches({ reportId, threshold, persist: false });
   res.json({ success: true, data: matches });
 }
 

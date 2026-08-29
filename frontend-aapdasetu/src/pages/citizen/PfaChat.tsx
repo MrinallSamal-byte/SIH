@@ -30,7 +30,7 @@ const promptShortcuts = [
 export default function PfaChatPage() {
   const { toast } = useToast()
   const { t, lang } = useLanguage()
-  const { coords } = useGeoLocation()
+  const { coords, source, cachedAt } = useGeoLocation()
   const [messages, setMessages] = useState<PfaChatMessage[]>([])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
@@ -123,10 +123,27 @@ export default function PfaChatPage() {
       return
     }
 
+    // Provenance gate — never fabricate a dispatch position (the old code
+    // silently pinned callbacks to Kolkata when GPS was unavailable).
+    const CACHED_FIX_MAX_AGE_MS = 30 * 60 * 1000
+    const cachedFixIsFresh =
+      source === 'cached' && typeof cachedAt === 'number' && Date.now() - cachedAt < CACHED_FIX_MAX_AGE_MS
+    const hasTrustedFix =
+      (source === 'gps' || source === 'manual' || cachedFixIsFresh) &&
+      typeof coords?.latitude === 'number' &&
+      typeof coords?.longitude === 'number'
+    if (!hasTrustedFix) {
+      toast(
+        t('chat.needLocationToast', 'Location not verified yet — open the SOS page and confirm your dispatch location first.'),
+        'error',
+      )
+      return
+    }
+
     setSubmittingCallback(msgIndex)
     try {
-      const lat = coords?.latitude ?? 22.5726
-      const lng = coords?.longitude ?? 88.3639
+      const lat = coords.latitude
+      const lng = coords.longitude
 
       const report = await createReport({
         type: 'other',

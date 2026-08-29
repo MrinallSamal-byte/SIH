@@ -32,15 +32,30 @@ export function useRealtime<T>(
 
   useEffect(() => {
     let cancelled = false
+    // Snapshot writes are throttled: serializing the full payload to
+    // localStorage on every 4-8 s poll tick is constant main-thread churn.
+    let lastSnapshotJson: string | null = null
+    let lastSnapshotAt = 0
+    const SNAPSHOT_MIN_INTERVAL_MS = 60_000
 
-    const execute = async () => {
-      // Pause background polling when tab is inactive to preserve responder battery
-      if (document.hidden) return
+    const execute = async (force = false) => {
+      // Pause background polling when tab is inactive to preserve responder
+      // battery — but the INITIAL fetch always runs, or a page opened in a
+      // background tab shows skeletons forever.
+      if (!force && document.hidden) return
       try {
         const result = await fetcherRef.current()
         if (cancelled) return
         setData(result)
-        if (snapshotKey) writeSnapshot(snapshotKey, result)
+        if (snapshotKey) {
+          const json = JSON.stringify(result)
+          const changed = json !== lastSnapshotJson
+          if (changed || Date.now() - lastSnapshotAt > SNAPSHOT_MIN_INTERVAL_MS) {
+            writeSnapshot(snapshotKey, result)
+            lastSnapshotJson = json
+            lastSnapshotAt = Date.now()
+          }
+        }
       } catch {
         // Keep last known valid state on transient network glitch
       }
@@ -58,8 +73,8 @@ export function useRealtime<T>(
       return intervalMs
     }
 
-    // 1. Initial fetch
-    execute()
+    // 1. Initial fetch (forced — see execute)
+    void execute(true)
 
     // 2. Periodic polling interval — always (re)started via startPolling so the
     //    adaptive cadence is recomputed from live connection state, never reused stale.
@@ -90,7 +105,7 @@ export function useRealtime<T>(
           id = undefined
         }
       } else {
-        execute()
+        void execute(true)
         startPolling()
       }
     }

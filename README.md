@@ -1,6 +1,6 @@
-# 🛡️ AapdaSetu (आपदासेतु / આપદાસେતુ / ଆପଦାସେତୁ / आपदाসেতু)
+# 🛡️ AapdaSetu (आपदासेतु / আপদাসেতু / ଆପଦାସେତୁ / આપદાસેતુ)
 
-> **The Ultimate Disaster Response, AI Triage, and Multi-Agency Incident Command Ecosystem.**  
+> **A disaster reporting and coordination platform: citizen SOS & reports, AI-assisted triage, and a multi-agency command dashboard.**  
 > *Architected with React 19, TypeScript, Vite 6, Tailwind CSS, Leaflet.js GIS + OSRM Road Routing, Realtime Event Bus, Prisma 6 PostgreSQL, FastAPI AI Microservices, and Offline-First PWA.*
 
 [![Initiative](https://img.shields.io/badge/Initiative-SIH%20Disaster%20Management-orange.svg)](https://github.com/MrinallSamal-byte/SIH)
@@ -45,7 +45,7 @@ During cyclones, flash floods, earthquakes, and industrial explosions, public he
 2. **AapdaMitra AI Lifeline:** `PfaChat.tsx` + global `ChatWidget.tsx` — 24/7 PFA with 4-4-4 Box Breathing, trauma grounding, scope-limited to disaster/website topics (blocks `reverse string`/`py code`), OpenRouter 7-model fallback → `mocks.aiPfaChat` with trapped/collapse priority.
 3. **Command Center:** 11 views under `AdminLayout` (`/admin`) — Live SOS siren (`LiveSOS.tsx` 880/440Hz), incident queue (`Reports.tsx`), GIS map, shelters, damage approvals, volunteers, agencies, broadcast (`Communications.tsx`), analytics (`Analytics.tsx`), audit logs, settings.
 4. **Volunteer Portal:** `VolunteerLayout` (`/volunteer`) — Dashboard, AssignedTasks (strict `assignedVolunteerId` filter, no auto-impersonation), CheckIn with GPS.
-5. **AI Engine:** `src/api/ai.ts` + `apps/ai-engine/app/*.py` — triage scoring, flood GeoJSON, ResNet-50 damage grading (now ensemble avg).
+5. **AI Engine:** `src/api/ai.ts` + `apps/ai-engine/app/*.py` — triage scoring, flood GeoJSON, automated damage grading.
 6. **Real Infrastructure:** `LeafletMap.tsx` + `lib/routing.ts` (`fetchOsrmRoute` via `router.project-osrm.org` with `foot`/`driving`, India bounds `[6,68]-[37.5,97.5]`), OSM/OpenTopoMap tiles, `ScaleControl`.
 
 ---
@@ -244,7 +244,7 @@ The citizen portal is completely **zero-authentication**—no sign-up, email, or
 | **Missing Persons Registry**<br>`#/missing-persons` | Public search database and registration portal to help families find separated loved ones during chaotic evacuations. | Missing person name, approximate age, gender, last seen location, clothing description, photo upload. | Searchable public bulletin, match status (`Open`, `Matched`, `Resolved`), direct guardian contact trigger. |
 | **Community Safety Check-in**<br>`#/check-in` | "I Am Safe" registry allowing citizens in disaster zones to mark themselves and family safe, reducing search team overhead. | Full name, phone number, district/sector, status (`Safe` / `Need Assistance`), personal message. | Public searchable safety board for relatives and relief agencies. |
 | **SDRF Property Damage Claim**<br>`#/report-damage` | Crowdsourced structural damage assessment portal. Citizens upload photos of destroyed property to receive automated AI damage grading and SDRF compensation estimates. | Property owner name, contact number, address, infrastructure category, damaged property photo. | Perceptual hash deduplication check, AI damage severity grade (Grade 1/2/3), estimated SDRF relief grant (up to ₹1,20,000), claim ID. |
-| **Public Warning Alerts**<br>`#/alerts` | Direct bulletin feed broadcasting official alerts from NDMA, SDMA, and District Disaster Management Authorities. | Category filters (`Critical`, `Warning`, `Advisories`). | Real-time warning banners, affected region badges, timestamped safety directives. |
+| **Public Warning Alerts**<br>`#/alerts` | Bulletin feed of alerts published by the operators of this deployment (district control room / command center). | Category filters (`Critical`, `Warning`, `Advisories`). | Real-time warning banners, affected region badges, timestamped safety directives. |
 | **AapdaMitra AI Crisis Lifeline**<br>`#/pfa-chat` & `ChatWidget` | 24/7 Psychological First Aid and survival assistant with 4-4-4 Box Breathing, 5-4-3-2-1 Sensory Grounding, and 1-tap callback dispatch. Available as a dedicated page and a glowing circular floating button. | Text or voice queries, quick disaster prompts. | Clean multi-lingual guidance without reasoning tokens, emergency callback trigger, hotline fast dial. |
 
 ---
@@ -266,12 +266,12 @@ Command Center (/admin)
 ├── 🏢 Multi-Agency Inter-Departmental Coordination
 ├── 📢 Emergency Multi-Channel Broadcaster (SMS/WhatsApp/Web)
 ├── 📈 Incident Analytics & Recharts Telemetry
-├── 📜 Tamper-Evident Audit Trails & Security Logs
+├── 📜 Timestamped Audit Logs & Security Logs
 └── ⚙️ System Settings & API Gateway Integrations
 ```
 
 ### Admin Subsystem Capabilities:
-1. **Live SOS Stream (`#/admin/live-sos`)**: Continuous WebSocket feed that triggers a synthesized dual-frequency (880Hz / 440Hz) audible siren whenever a `RED` (Score $\ge 80$) critical incident is registered.
+1. **Live SOS Stream (`#/admin/live-sos`)**: Fast REST polling (3 s) that triggers a synthesized dual-frequency (880Hz / 440Hz) audible siren whenever a `RED` (Score ≥ 80) critical incident is registered.
 2. **Incident Dispatch Queue (`#/admin/reports`)**: Filterable, sortable incident registry with status transitions (`pending` $\rightarrow$ `in_progress` $\rightarrow$ `resolved`), volunteer assignment modal with distance ranking, and CSV export.
 3. **Interactive GIS Command Map**: Displays real-time incident clusters, volunteer locations, shelter occupancy, and Sentinel-1 SAR flood inundation polygons.
 4. **Shelter & Resource Manager (`#/admin/shelters`)**: Real-time capacity adjustment, inventory tracking (food, clean water, medical supplies, fuel), and facility status toggles.
@@ -280,7 +280,7 @@ Command Center (/admin)
 7. **Multi-Agency Inter-Departmental Coordination (`#/admin/agencies`)**: Multi-agency dispatch management across NDRF, SDRF, Fire Department, Police, Hospitals, and NGOs.
 8. **Emergency Communications Broadcaster (`#/admin/communications`)**: Geo-targeted emergency alerts distributed simultaneously across Web Push, Twilio SMS, and WhatsApp Cloud API.
 9. **Analytics & Recharts Telemetry (`#/admin/analytics`)**: Interactive data visualizations showing emergency trends, priority distribution, resolution times, and regional heatmaps.
-10. **Audit Logs & Security Trails (`#/admin/audit-logs`)**: Immutable timestamped action logs recording every administrative action, volunteer dispatch, and priority adjustment.
+10. **Audit Logs & Security Trails (`#/admin/audit-logs`)**: Timestamped action logs recording every administrative action, volunteer dispatch, and priority adjustment.
 
 ---
 
@@ -316,8 +316,8 @@ $$d = 2R \cdot \arcsin \left( \sqrt{\sin^2\left(\frac{\Delta \text{lat}}{2}\righ
 $$D_H(H_1, H_2) = \sum_{i=1}^{64} (H_{1,i} \oplus H_{2,i}) < 5$$
 *(Flags stolen or duplicate photos across damage claims submitted across districts).*
 
-### 4. Sentinel-1 SAR Radar Satellite Flood Mapping (`satellite_flood_mapping.py`)
-- Processes Sentinel-1 Synthetic Aperture Radar (SAR) imagery.
+### 4. Flood Mapping Engine (`satellite_flood_mapping.py`) — algorithmic simulation
+- Designed for Sentinel-1 SAR input; in this repo it runs as an Otsu-thresholding simulation on demo imagery (no live satellite feed is wired up).
 - Applies Otsu adaptive thresholding to detect water-covered surfaces and converts binary raster masks into GeoJSON MultiPolygon layers for Leaflet map pathfinding avoidance.
 
 ---
@@ -330,7 +330,7 @@ $$D_H(H_1, H_2) = \sum_{i=1}^{64} (H_{1,i} \oplus H_{2,i}) < 5$$
 
 2. **BitChat Android BLE Mesh (`bitchat-android`):**
    - Peer-to-peer mesh networking utilizing Bluetooth Low Energy (BLE) and Wi-Fi Aware.
-   - Relays 256-byte encrypted emergency packets hop-by-hop across mobile nodes until an internet-connected gateway relays the signal to the AapdaSetu Command Center.
+   - Relays encrypted messages hop-by-hop across mobile nodes so nearby phones can communicate when towers are down (standalone phone-to-phone chat; no backend gateway integration yet).
 
 ---
 
@@ -482,7 +482,7 @@ erDiagram
 | **Styling & UI Tokens** | Tailwind CSS 3.4, Lucide React | Glassmorphism, dark/light theme, accessible micro-interactions |
 | **GIS & Maps** | Leaflet.js 1.9, React-Leaflet | Real-time map rendering, marker clustering, hazard avoidance polygons |
 | **Data Visualizations** | Recharts 3 | Responsive interactive charts for command center analytics |
-| **Realtime Engine** | Realtime Event Bus, WebSockets | Instant pub-sub synchronization across citizens, admins, and responders |
+| **Realtime Engine** | Polling + cross-tab Realtime Event Bus (BroadcastChannel) | Near-instant synchronization across citizens, admins, and responders (WebSocket hub dormant on serverless) |
 | **Backend & ORM** | Node.js, Express, TypeScript, Prisma 6 | Enterprise REST API endpoints with PostgreSQL persistence |
 | **Database** | PostgreSQL 16 | Relational data persistence with UUID primary keys and compound indexes |
 | **AI Microservices** | Python 3.10+, FastAPI, PyTorch, OpenCV, OpenRouter | Explainable Triage, PFA Chatbot, SAR Flood Mapping & Image Damage Classifier |

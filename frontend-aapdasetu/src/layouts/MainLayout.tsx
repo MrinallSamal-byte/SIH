@@ -26,6 +26,7 @@ import ChatWidget from '../components/ChatWidget'
 import { LANGUAGES, useLanguage, type Language } from '../lib/i18n'
 import { useTheme } from '../lib/theme'
 import { listAlerts } from '../api/endpoints'
+import { useDemoMode } from '../hooks/useDemoMode'
 import { initGlobalOutboxSync } from '../lib/outbox'
 import type { Alert } from '../types'
 
@@ -149,13 +150,27 @@ export default function MainLayout() {
   useEffect(() => {
     let active = true
     let cancelled = false
+    // Track the newest alert id so the unread badge only fires for GENUINELY
+    // new alerts — the old `length > 0` check re-flagged the bell 45 s after
+    // every read, forever.
+    const seenIdsRef = { current: new Set<string>() }
+    let firstLoad = true
     const loadBulletins = () => {
       listAlerts().then((data) => {
         if (active && !cancelled) {
           // Defensive: a malformed feed payload must never poison render state
           const list = Array.isArray(data) ? data : []
           setBulletins(list)
-          if (list.length > 0) setNotifRead(false)
+          if (firstLoad) {
+            // Seed seen-ids on first load — reopening the app must not spam
+            // the badge with alerts published before this session.
+            seenIdsRef.current = new Set(list.map((a) => a.id))
+            firstLoad = false
+          } else {
+            const hasNew = list.some((a) => !seenIdsRef.current.has(a.id))
+            if (hasNew) setNotifRead(false)
+            list.forEach((a) => seenIdsRef.current.add(a.id))
+          }
         }
       }).catch(() => {})
     }
@@ -168,6 +183,11 @@ export default function MainLayout() {
       window.clearInterval(id)
     }
   }, [])
+
+  // Demo-data honesty pill: when the backend is unreachable, citizen pages
+  // silently render generated demo content (alerts, shelters, missing
+  // persons). That must NEVER look like real emergency data.
+  const demoData = useDemoMode()
 
   // Track online/offline status
   useEffect(() => {
@@ -193,6 +213,15 @@ export default function MainLayout() {
           <a href="tel:112" className="ml-2 underline font-extrabold text-amber-100 hover:text-white">
             {t('header.callOffline')}
           </a>
+        </div>
+      )}
+
+      {/* Demo-data honesty banner — the mock fallback must never pass as real
+          emergency information on a life-safety platform. */}
+      {demoData && (
+        <div className="bg-zinc-900 px-4 py-2 text-center text-xs font-bold text-amber-300 shadow-sm dark:bg-black flex items-center justify-center gap-2">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span>{t('layout.demoDataNotice', 'Demo mode — the server is unreachable, so the data shown below is SAMPLE data, not real emergencies.')}</span>
         </div>
       )}
 

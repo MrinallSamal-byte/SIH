@@ -16,11 +16,24 @@ function accessCodeMatches(candidate: string): boolean {
   return timingSafeEqual(a, b);
 }
 
+// Canonical phone form: digits only, last 10 (strips +91 / 0 prefixes and
+// formatting). Both the login lookup and volunteer creation normalize the
+// same way, so '+91-9876510000' and '98765 10000' resolve to one volunteer.
+export function normalizePhone(raw: string): string {
+  return raw.replace(/\D/g, '').slice(-10);
+}
+
 export async function loginVolunteer(input: { phone: string; accessCode: string }) {
-  const phone = input.phone.replace(/\D/g, '');
+  const phone = normalizePhone(input.phone);
+  // Compare the access code unconditionally — short-circuiting on an unknown
+  // phone would give attackers a timing oracle for phone enumeration.
+  const codeOk = accessCodeMatches(input.accessCode);
   const volunteer = await prisma.volunteer.findFirst({ where: { phone } });
-  if (!volunteer || !accessCodeMatches(input.accessCode)) {
+  if (!volunteer || !codeOk) {
     throw new UnauthorizedError('Invalid credentials');
+  }
+  if (!volunteer.isActive) {
+    throw new UnauthorizedError('Volunteer account is disabled');
   }
 
   const token = signVolunteerToken({

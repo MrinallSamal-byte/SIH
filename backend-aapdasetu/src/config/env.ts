@@ -26,12 +26,18 @@ function number(name: string, fallback: number): number {
   return parsed;
 }
 
+// Vercel serverless always sits behind exactly one proxy hop that sets
+// x-forwarded-for. Without `trust proxy`, express-rate-limit v7 throws
+// ERR_ERL_UNEXPECTED_X_FORWARDED_FOR on every request and the whole public
+// API 500s — so default to 1 whenever we detect a Vercel runtime.
+const VERCEL_RUNTIME = process.env.VERCEL === '1' || process.env.VERCEL === 'true';
+
 export const env = {
   nodeEnv: required('NODE_ENV', 'development'),
   isProduction: process.env.NODE_ENV === 'production',
   host: required('HOST', '0.0.0.0'),
   port: number('PORT', 4000),
-  trustProxy: number('TRUST_PROXY', 0),
+  trustProxy: number('TRUST_PROXY', VERCEL_RUNTIME ? 1 : 0),
 
   databaseUrl: required('DATABASE_URL', 'postgresql://aapdasetu:aapdasetu@localhost:5432/aapdasetu?schema=public'),
 

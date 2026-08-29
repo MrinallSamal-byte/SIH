@@ -27,6 +27,12 @@ async function main() {
   const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@aapdasetu.org';
   const adminPassword = process.env.ADMIN_PASSWORD ?? 'Admin@123';
 
+  // Refuse to install the publicly-known default password into any
+  // production-looking database — it would be a full admin compromise.
+  if (adminPassword === 'Admin@123' && process.env.NODE_ENV === 'production') {
+    throw new Error('Refusing to seed the default ADMIN_PASSWORD in production — set ADMIN_EMAIL/ADMIN_PASSWORD.');
+  }
+
   const existingAdmin = await prisma.adminUser.findUnique({ where: { email: adminEmail } });
   if (!existingAdmin) {
     await prisma.adminUser.create({
@@ -56,7 +62,9 @@ async function main() {
       const sec = DISASTER_SECTORS[i % DISASTER_SECTORS.length];
       volData.push({
         name: `${f} ${l}`,
-        phone: `+91-98765${(10000 + i).toString()}`,
+        // Digits-only last-10 form — the same normalization the volunteer
+        // login applies, otherwise seeded volunteers could never sign in.
+        phone: `98765${(10000 + i).toString()}`,
         skills: skillsList[i % skillsList.length],
         latitude: sec.lat + (Math.sin(i) * 0.02),
         longitude: sec.lng + (Math.cos(i) * 0.02),

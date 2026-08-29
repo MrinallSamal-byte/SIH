@@ -89,12 +89,15 @@ export async function updateMissingPerson(input: {
   const person = await prisma.missingPerson.update({ where: { id: input.id }, data });
 
   if (input.adminEmail) {
+    const { photoUrl: _photoUrl, ...auditInput } = input;
     await writeAuditLog({
       adminEmail: input.adminEmail,
       action: 'UPDATE_MISSING_PERSON',
       entityType: 'missing_person',
       entityId: input.id,
-      details: { status: input.status, ...input },
+      // photoUrl can be a multi-hundred-KB base64 data URL — storing it in
+      // the audit row would bloat every admin audit-logs page that ships it.
+      details: { status: input.status, ...auditInput },
     });
   }
 

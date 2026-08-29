@@ -8,7 +8,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { haversineDistanceKm } from '../lib/haversine.js';
-import { NotFoundError } from '../lib/errors.js';
+import { BadRequestError, NotFoundError } from '../lib/errors.js';
 
 export interface MatchCandidate {
   reportId: string;
@@ -50,9 +50,19 @@ export async function findMissingPersonMatches(params: {
   reportId: string;
   candidates?: MatchCandidate[];
   threshold?: number;
+  /** Persist confirmed-candidate pairs into the review queue. The PUBLIC
+   * endpoint passes false — matches are computed read-only for anonymous
+   * callers so the queue cannot be poisoned. */
+  persist?: boolean;
 }) {
   const report = await prisma.report.findUnique({ where: { id: params.reportId } });
   if (!report) throw new NotFoundError('Missing person report not found');
+  if (report.type !== 'missing_person') {
+    // Matches only make sense between missing-person reports; without this
+    // guard any report UUID could be used to seed fake match pairs that, once
+    // confirmed, auto-resolve unrelated incidents.
+    throw new BadRequestError('Matches can only be computed for missing-person reports');
+  }
 
   const query = params.candidates
     ? params.candidates
@@ -64,9 +74,11 @@ export async function findMissingPersonMatches(params: {
     .sort((a, b) => b.score - a.score);
 
   // ponytail: registry candidates scored but not persisted — upgrade path: polymorphic participant refs
-  for (const m of results.filter((m) => !m.candidate.reportId.startsWith('registry:')).slice(0, 5)) {
-    const [reportAId, reportBId] = [params.reportId, m.candidate.reportId].sort();
-    await saveMatch({ reportAId, reportBId, score: m.score, reasons: m.reasons });
+  if (params.persist !== false) {
+    for (const m of results.filter((m) => !m.candidate.reportId.startsWith('registry:')).slice(0, 5)) {
+      const [reportAId, reportBId] = [params.reportId, m.candidate.reportId].sort();
+      await saveMatch({ reportAId, reportBId, score: m.score, reasons: m.reasons });
+    }
   }
 
   return results;
@@ -112,6 +124,7 @@ export async function listMatches(params: { status?: string }) {
   return prisma.missingPersonMatch.findMany({
     where: params.status ? { status: params.status as never } : {},
     orderBy: { score: 'desc' },
+    take: 500,
     include: {
       reportA: { select: { id: true, trackingId: true, missingPersonName: true, missingPersonAge: true } },
       reportB: { select: { id: true, trackingId: true, missingPersonName: true, missingPersonAge: true } },

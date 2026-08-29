@@ -23,8 +23,11 @@ export function signAdminToken(payload: AdminTokenPayload): string {
 
 export function verifyAdminToken(token: string): DecodedToken {
   try {
-    const decoded = jwt.verify(token, env.jwtSecret) as DecodedToken;
+    // Pin the algorithm — hardening against cross-algorithm confusion if the
+    // secret format ever changes.
+    const decoded = jwt.verify(token, env.jwtSecret, { algorithms: ['HS256'] }) as DecodedToken;
     if (!decoded.sub || !decoded.email) throw new Error('missing claims');
+    if (decoded.role !== 'admin') throw new Error('wrong role');
     return decoded;
   } catch {
     throw new UnauthorizedError('Invalid or expired session token');
@@ -50,7 +53,7 @@ export function signVolunteerToken(payload: VolunteerTokenPayload): string {
 
 export function verifyVolunteerToken(token: string): DecodedVolunteerToken {
   try {
-    const decoded = jwt.verify(token, env.jwtSecret) as DecodedVolunteerToken;
+    const decoded = jwt.verify(token, env.jwtSecret, { algorithms: ['HS256'] }) as DecodedVolunteerToken;
     if (!decoded.sub || decoded.role !== 'volunteer') throw new Error('missing claims');
     return decoded;
   } catch {

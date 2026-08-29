@@ -10,7 +10,7 @@ import {
   XCircle,
   GitCompareArrows
 } from 'lucide-react'
-import { listMissingPersons, listMissingMatches, reviewMissingMatch, updateMissingPerson } from '../../api/endpoints'
+import { listMissingPersons, listMissingMatches, reviewMissingMatch, updateMissingPerson, listReports, runMissingPersonMatching } from '../../api/endpoints'
 import type { MissingPerson } from '../../types'
 import type { MissingMatch } from '../../api/endpoints'
 import { Select } from '../../components/common/Input'
@@ -55,6 +55,27 @@ export default function MissingPersons() {
       toast(err instanceof Error ? err.message : t('mp_admin.matchReviewFailed', 'Failed to review match'), 'error')
     } finally {
       setReviewingId(null)
+    }
+  }
+
+  // Admin-triggered matching run: the ONLY writer of match rows (the public
+  // endpoint computes read-only so it cannot be poisoned). Runs the
+  // deterministic matcher for each open missing-person report, then refreshes.
+  const [runningMatch, setRunningMatch] = useState(false)
+  const runMatching = async () => {
+    setRunningMatch(true)
+    try {
+      const { items } = await listReports({ type: 'missing_person', pageSize: 25 })
+      const open = items.filter((r) => r.status !== 'resolved')
+      for (const r of open) {
+        await runMissingPersonMatching(r.id).catch(() => {})
+      }
+      setMatches(await listMissingMatches())
+      toast(`${t('mp_admin.matchingDone', 'Matching run complete')} (${open.length} ${t('mp_admin.reportsScanned', 'reports scanned')})`, 'success')
+    } catch {
+      toast(t('mp_admin.matchingFailed', 'Matching run failed'), 'error')
+    } finally {
+      setRunningMatch(false)
     }
   }
 
@@ -271,11 +292,22 @@ export default function MissingPersons() {
 
       {/* Pending Match Review Queue */}
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3.5 dark:border-slate-800">
-          <GitCompareArrows className="h-4 w-4 text-amber-600" />
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mono">
-            {t('mp_admin.pendingMatches', 'Pending match reviews')} ({matches?.length ?? 0})
-          </span>
+        <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-5 py-3.5 dark:border-slate-800">
+          <div className="flex items-center gap-2">
+            <GitCompareArrows className="h-4 w-4 text-amber-600" />
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mono">
+              {t('mp_admin.pendingMatches', 'Pending match reviews')} ({matches?.length ?? 0})
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => void runMatching()}
+            disabled={runningMatch}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-[11px] font-bold text-amber-800 hover:bg-amber-100 disabled:opacity-60 cursor-pointer dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300"
+          >
+            <GitCompareArrows className={`h-3 w-3 ${runningMatch ? 'animate-pulse' : ''}`} />
+            {runningMatch ? t('common.loading') : t('mp_admin.runMatching', 'Run matching')}
+          </button>
         </div>
 
         {matches !== null && matches.length > 0 && (

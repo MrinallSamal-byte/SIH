@@ -25,18 +25,40 @@ function readStoredLanguage(): keyof typeof LOGIN_FAILED_STRINGS {
   return 'en'
 }
 
-// @TODO BUILD: when a real backend exists this session is persisted via
-// POST /api/admin/login -> { token, email, name } (server-side bcrypt compare).
-// Optionally validate the token against the backend on load.
-export function useAuth() {
-  const [user, setUser] = useState<AdminUser | null>(() => {
-    try {
-      const raw = localStorage.getItem(SESSION_KEY)
-      return raw ? (JSON.parse(raw) as AdminUser) : null
-    } catch {
+// Decodes the JWT payload to check expiry client-side. An expired token used
+// to keep `isAuthed` true, every admin call 401'd, and the mock fallback then
+// served a plausible FAKE command dashboard — operators must be logged out.
+function isTokenExpired(token: string | undefined): boolean {
+  if (!token) return true
+  try {
+    const payloadPart = token.split('.')[1]
+    if (!payloadPart) return false // not a JWT — treat as opaque session value
+    const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/')
+    const payload = JSON.parse(atob(base64)) as { exp?: number }
+    if (typeof payload.exp !== 'number') return false
+    return Date.now() / 1000 >= payload.exp
+  } catch {
+    return false
+  }
+}
+
+function readStoredAdmin(): AdminUser | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY)
+    if (!raw) return null
+    const session = JSON.parse(raw) as AdminUser
+    if (isTokenExpired(session.token)) {
+      localStorage.removeItem(SESSION_KEY)
       return null
     }
-  })
+    return session
+  } catch {
+    return null
+  }
+}
+
+export function useAuth() {
+  const [user, setUser] = useState<AdminUser | null>(() => readStoredAdmin())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -67,15 +89,9 @@ export function useAuth() {
 }
 
 export function useIsAdminAuthed(): boolean {
-  const [authed, setAuthed] = useState(() => {
-    try {
-      return !!localStorage.getItem(SESSION_KEY)
-    } catch {
-      return false
-    }
-  })
+  const [authed, setAuthed] = useState(() => readStoredAdmin() !== null)
   useEffect(() => {
-    const onStorage = () => setAuthed(!!localStorage.getItem(SESSION_KEY))
+    const onStorage = () => setAuthed(readStoredAdmin() !== null)
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
   }, [])

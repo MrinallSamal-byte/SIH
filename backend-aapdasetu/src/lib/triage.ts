@@ -35,6 +35,10 @@ export interface TriageInput {
   missingPersonAge?: number | null;
   landmark?: string | null;
   bloodType?: string | null;
+  /** 1-Tap SOS submissions carry almost no description text, so without this
+   * boost they always triage GREEN and never sound the command-center siren.
+   * The citizen pressed a dedicated emergency button — treat it that way. */
+  isOneTapSos?: boolean | null;
 }
 
 export interface TriageResult {
@@ -71,6 +75,11 @@ export const MEDICAL_SCORES: Array<{ keywords: string[]; points: number; label: 
 export const CHILD_MAX_AGE = 12;
 export const ELDER_MIN_AGE = 60;
 
+// 1-Tap SOS floor: base 30 + type "other" 5 = 35 (GREEN) is never acceptable
+// for an explicit emergency button. +55 lands every unadorned SOS at 90 (RED)
+// while richer reports still climb higher via keyword/medical boosts.
+export const ONE_TAP_SOS_BOOST = 55;
+
 function matchAny(text: string, keywords: string[]): string | undefined {
   const lower = text.toLowerCase();
   return keywords.find((k) => lower.includes(k));
@@ -100,6 +109,12 @@ export function computeTriage(input: TriageInput): TriageResult {
       score += group.points;
       factors.push({ rule: 'KEYWORD', points: group.points, matched });
     }
+  }
+
+  // Stage 2b: explicit 1-Tap SOS emergency button
+  if (input.isOneTapSos) {
+    score += ONE_TAP_SOS_BOOST;
+    factors.push({ rule: 'ONE_TAP_SOS', points: ONE_TAP_SOS_BOOST });
   }
 
   // Stage 3a: demographic vulnerability boosts

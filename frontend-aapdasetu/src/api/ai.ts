@@ -204,6 +204,27 @@ export function detectDangerLevel(text: string): DangerLevel {
   return 'LOW'
 }
 
+// Self-harm / suicidal-intent detection is SEPARATE from disaster triage: a
+// person expressing this must reach a crisis counselor, not a survival
+// checklist. Tele-MANAS (Govt. of India) is free, 24/7, multilingual.
+export const SELF_HARM_HELPLINES = 'Tele-MANAS 14416 | KIRAN 1800-599-0019 | Emergency 112'
+
+export function detectSelfHarm(text: string): boolean {
+  const lower = text.toLowerCase()
+  const selfHarmKeywords = [
+    'suicide', 'suicidal', 'kill myself', 'killing myself', 'end my life', 'end it all',
+    'want to die', 'wanna die', 'better off dead', 'no reason to live', 'harm myself',
+    'hurt myself', 'self harm', 'self-harm', 'selfharm', 'cut myself',
+    'आत्महत्या', 'आत्मघाती', 'जान देना चाहता', 'जान देना चाहती', 'मरना चाहता', 'मरना चाहती',
+    'जीना नहीं चाहता', 'जीना नहीं चाहती', 'खुदकुशी',
+    'আত্মহত্যা', 'মরতে চাই', 'বাঁচতে চাই না',
+    'ଆତ୍ମହତ୍ୟା', 'ମରିବାକୁ ଚାହୁଁଛି',
+    'atmhatya', 'atmahatya', 'marna chahta', 'marna chahti', 'jeena nahi',
+    'morto chai', 'banchte chai na',
+  ]
+  return selfHarmKeywords.some((kw) => lower.includes(kw))
+}
+
 export function detectBreathingExercise(text: string): string | undefined {
   const lower = text.toLowerCase()
   const panicKeywords = [
@@ -232,12 +253,13 @@ function detectGroundingNeed(text: string): boolean {
 }
 
 /** Localized fixed replies for the offline/degraded path (no LLM key or provider chain failed). */
-const DEGRADED_REPLIES: Record<AiLang, { greeting: string; breathing: string; grounding: string; crisis: string; offTopic: string }> = {
+const DEGRADED_REPLIES: Record<AiLang, { greeting: string; breathing: string; grounding: string; crisis: string; selfHarm: string; offTopic: string }> = {
   en: {
     greeting: 'Namaste! I am AapdaMitra AI. I am currently running in offline mode with limited answers. Tell me your emergency (flood, bleeding, trapped, fire, panic) and I will give you immediate survival steps. For life-threatening danger, tap the SOS button or call 112 right now.',
     breathing: 'You are safe right now. Calm your body with 4-4-4 box breathing:\n1. Breathe IN through your nose for 4 seconds.\n2. HOLD the breath gently for 4 seconds.\n3. Breathe OUT through your mouth for 4 seconds.\nRepeat this cycle 4 to 6 times until your heartbeat slows. You are not alone — I am here with you.',
     grounding: 'Anchor yourself in the present with the 5-4-3-2-1 grounding technique:\n1. Name 5 things you can SEE around you.\n2. Touch and name 4 things near you.\n3. Listen for 3 sounds you can HEAR.\n4. Notice 2 things you can SMELL or feel.\n5. Take 1 slow, deep breath out.\nRepeat once more if the fear returns.',
     crisis: 'THIS IS A LIFE-THREATENING EMERGENCY. Act NOW:\n1. Tap the red SOS button in the app or call 112 immediately (ambulance: 108).\n2. Move to the safest spot you can reach and stay visible to rescuers.\n3. Do not attempt risky rescues alone.\nRescue teams have been alerted — help is on the way.',
+    selfHarm: 'I hear you, and what you are feeling matters. You do not have to carry this alone — please talk to a trained counselor right now:\n• Tele-MANAS (Govt. of India, free, 24/7, all languages): 14416 or 1-800-891-4416\n• KIRAN helpline: 1800-599-0019\n• If you are in immediate danger, call 112.\nPlease stay with someone you trust until you can reach them. You matter.',
     offTopic: 'I can only help with disaster, emergency, and AapdaSetu website topics (SOS, Report, Shelter, Track, Medical guidance). Please ask about flood, injury, shelter, or tracking. Example: "water entering house" or "severe bleeding".'
   },
   hi: {
@@ -245,6 +267,7 @@ const DEGRADED_REPLIES: Record<AiLang, { greeting: string; breathing: string; gr
     breathing: 'आप इस समय सुरक्षित हैं। 4-4-4 बॉक्स ब्रीदिंग से शरीर को शांत करें:\n1. नाक से 4 सेकंड तक सांस लें।\n2. 4 सेकंड तक सांस धीरे रोकें।\n3. मुंह से 4 सेकंड में सांस छोड़ें।\nदिल की धड़कन धीमी होने तक यह चक्र 4 से 6 बार दोहराएं। आप अकेले नहीं हैं — मैं आपके साथ हूँ।',
     grounding: '5-4-3-2-1 ग्राउंडिंग तकनीक से खुद को वर्तमान में वापस लाएं:\n1. चारों ओर दिखने वाली 5 चीज़ें गिनें।\n2. पास की 4 चीज़ें छूकर नाम लें।\n3. सुनाई देने वाली 3 आवाज़ें सुनें।\n4. 2 चीज़ों की गंध या स्पर्श महसूस करें।\n5. एक धीमी, गहरी सांस बाहर छोड़ें।\nडर लौटे तो एक बार और दोहराएँ।',
     crisis: 'यह जानलेवा आपात स्थिति है। तुरंत करें:\n1. ऐप का लाल SOS बटन दबाएं या 112 पर कॉल करें (एम्बुलेंस: 108)।\n2. जिस सबसे सुरक्षित जगह तक पहुँच सकते हैं वहाँ जाएं और बचावकर्ताओं को दिखते रहें।\n3. अकेले जोखिम भरा बचाव करने की कोशिश न करें।\nबचाव टीमों को सूचना दे दी गई है — मदद रास्ते में है।',
+    selfHarm: 'मैं आपकी बात सुन रहा हूँ, और आप जो महसूस कर रहे हैं वह मायने रखता है। आपको यह अकेले नहीं झेलना होगा — कृपया अभी प्रशिक्षित काउंसलर से बात करें:\n• टेली-मनस (भारत सरकार, निःशुल्क, 24/7, सभी भाषाएँ): 14416 या 1-800-891-4416\n• किरण हेल्पलाइन: 1800-599-0019\n• तत्काल खतरा हो तो 112 पर कॉल करें।\nकृपया किसी भरोसेमंद व्यक्ति के पास रहें। आप महत्वपूर्ण हैं।',
     offTopic: 'मैं केवल आपदा, आपातकाल और AapdaSetu वेबसाइट से जुड़े विषयों में मदद कर सकता हूँ (SOS, रिपोर्ट, आश्रय, ट्रैकिंग, चिकित्सा मार्गदर्शन)। कृपया बाढ़, चोट, आश्रय या ट्रैकिंग के बारे में पूछें। उदाहरण: "घर में पानी भर रहा है" या "तेज़ खून बह रहा है"।'
   },
   bn: {
@@ -252,6 +275,7 @@ const DEGRADED_REPLIES: Record<AiLang, { greeting: string; breathing: string; gr
     breathing: 'আপনি এই মুহূর্তে নিরাপদ। ৪-৪-৪ বক্স শ্বাস-প্রশ্বাস দিয়ে শরীর শান্ত করুন:\n১. নাক দিয়ে ৪ সেকেন্ড শ্বাস নিন।\n২. ৪ সেকেন্ড আলতো করে ধরে রাখুন।\n৩. মুখ দিয়ে ৪ সেকেন্ডে শ্বাস ছাড়ুন।\nহৃদস্পন্দন ধীর না হওয়া পর্যন্ত এই চক্র ৪–৬ বার করুন। আপনি একা নন — আমি আপনার সঙ্গে আছি।',
     grounding: '৫-৪-৩-২-১ গ্রাউন্ডিং কৌশলে নিজেকে বর্তমান মুহূর্তে ফিরিয়ে আনুন:\n১. চারপাশে দেখা যাচ্ছে এমন ৫টি জিনিস গুনুন।\n২. কাছের ৪টি জিনিস ছুঁয়ে চিনুন।\n৩. শোনা যাচ্ছে এমন ৩টি শব্দ শুনুন।\n৪. ২টি জিনিসের গন্ধ বা স্পর্শ টের পান।\n৫. একটা ধীর, গভীর শ্বাস ছাড়ুন।\nভয় ফিরলে আবার একবার করুন।',
     crisis: 'এটি একটি প্রাণঘাতী জরুরি অবস্থা। এখনই করুন:\n১. অ্যাপের লাল SOS বোতাম চাপুন বা ১১২ নম্বরে কল করুন (অ্যাম্বুলেন্স: ১০৮)।\n২. যেখানে পৌঁছাতে পারেন সবচেয়ে নিরাপদ সেখানে যান এবং উদ্ধারকারীদের কাছে দৃশ্যমান থাকুন।\n৩. একা ঝুঁকিপূর্ণ উদ্ধারের চেষ্টা করবেন না।\nউদ্ধারকারী দলকে খবর দেওয়া হয়েছে — সাহায্য পথে আছে।',
+    selfHarm: 'আমি আপনার কথা শুনছি, এবং আপনি যা অনুভব করছেন তা গুরুত্বপূর্ণ। আপনাকে একা এটি বহন করতে হবে না — অনুগ্রহ করে এখনই প্রশিক্ষিত কাউন্সেলরের সঙ্গে কথা বলুন:\n• টেলি-মানস (ভারত সরকার, বিনামূল্যে, ২৪/৭): ১৪৪১৬ বা ১-৮০০-৮৯১-৪৪১৬\n• কিরণ হেল্পলাইন: ১৮০০-৫৯৯-০০১৯\n• তাৎক্ষণিক বিপদে ১১২ নম্বরে কল করুন।\nঅনুগ্রহ করে আপনার বিশ্বাসযোগ্য কারও কাছে থাকুন। আপনি গুরুত্বপূর্ণ।',
     offTopic: 'আমি শুধু দুর্যোগ, জরুরি অবস্থা এবং AapdaSetu ওয়েবসাইট সম্পর্কিত বিষয়ে সাহায্য করতে পারি (SOS, রিপোর্ট, আশ্রয়, ট্র্যাকিং, চিকিৎসা পরামর্শ)। বন্যা, আঘাত, আশ্রয় বা ট্র্যাকিং সম্পর্কে জিজ্ঞাসা করুন। উদাহরণ: "বাড়িতে জল ঢুকছে" বা "প্রচণ্ড রক্তক্ষরণ"।'
   },
   or: {
@@ -259,6 +283,7 @@ const DEGRADED_REPLIES: Record<AiLang, { greeting: string; breathing: string; gr
     breathing: 'ଆପଣ ଏହି ମୁହୂର୍ତ୍ତରେ ସୁରକ୍ଷିତ। ୪-୪-୪ ବକ୍ସ୍ ଶ୍ୱାସ-ପ୍ରଶ୍ୱାସ ଦ୍ୱାରା ଶରୀରକୁ ଶାନ୍ତ କରନ୍ତୁ:\n୧. ନାକ ଦେଇ ୪ ସେକେଣ୍ଡ ଶ୍ୱାସ ନିଅନ୍ତୁ।\n୨. ୪ ସେକେଣ୍ଡ ଆଳିସେ ଧରି ରଖନ୍ତୁ।\n୩. ପାଟି ଦେଇ ୪ ସେକେଣ୍ଡରେ ଶ୍ୱାସ ଛାଡ଼ନ୍ତୁ।\nହୃଦସ୍ପନ୍ଦନ ଧୀର ନ ହେବା ପର୍ଯ୍ୟନ୍ତ ଏହି ଚକ୍ର ୪–୬ ଥର କରନ୍ତୁ। ଆପଣ ଏକା ନୁହଁନ୍ତି — ମୁଁ ଆପଣଙ୍କ ସହ ଅଛି।',
     grounding: '୫-୪-୩-୨-୧ ଗ୍ରାଉଣ୍ଡିଂ କୌଶଳ ଦ୍ୱାରା ନିଜକୁ ବର୍ତ୍ତମାନ ମୁହୂର୍ତ୍ତକୁ ଫେରାନ୍ତୁ:\n୧. ଚାରିପାଖରେ ଦେଖାଯାଉଥିବା ୫ଟି ଜିନିଷ ଗଣନ୍ତୁ।\n୨. ପାଖରେ ଥିବା ୪ଟି ଜିନିଷ ଛୁଇଁ ଚିହ୍ନନ୍ତୁ।\n୩. ଶୁଣାଯାଉଥିବା ୩ଟି ଶବ୍ଦ ଶୁଣନ୍ତୁ।\n୪. ୨ଟି ଜିନିଷର ଗନ୍ଧ ବା ସ୍ପର୍ଶ ଅନୁଭବ କରନ୍ତୁ।\n୫. ଗୋଟିଏ ଧୀର, ଗଭୀର ଶ୍ୱାସ ବାହାରକୁ ଛାଡ଼ନ୍ତୁ।\nଭୟ ଫେରିଲେ ପୁଣି ଥରେ କରନ୍ତୁ।',
     crisis: 'ଏହା ଏକ ଜୀବନଘାତକ ଜରୁରୀକାଳୀନ ପରିସ୍ଥିତି। ଏବେ ତୁରନ୍ତ କରନ୍ତୁ:\n୧. ଆପର ଲାଲ SOS ବଟନ୍ ଦବାନ୍ତୁ କିମ୍ବା ୧୧୨କୁ କଲ୍ କରନ୍ତୁ (ଆମ୍ବୁଲାନ୍ସ: ୧୦୮)।\n୨. ପହଞ୍ଚିପାରିବା ସବୁଠାରୁ ସୁରକ୍ଷିତ ସ୍ଥାନକୁ ଯାଆନ୍ତୁ ଏବଂ ଉଦ୍ଧାରକାରୀଙ୍କୁ ଦେଖାଯାଉଥିବା ରୁହନ୍ତୁ।\n୩. ଏକୁଟିଆ ବିପଜ୍ଜନକ ଉଦ୍ଧାର ଚେଷ୍ଟା କରନ୍ତୁ ନାହିଁ।\nଉଦ୍ଧାରକାରୀ ଦଳକୁ ଖବର ଦିଆଯାଇଛି — ସାହାଯ୍ୟ ବାଟରେ ଅଛି।',
+    selfHarm: 'ମୁଁ ଆପଣଙ୍କ କଥା ଶୁଣୁଛି, ଏବଂ ଆପଣ ଯାହା ଅନୁଭବ କରୁଛନ୍ତି ତାହା ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ। ଆପଣଙ୍କୁ ଏହା ଏକୁଟିଆ ସହିବାକୁ ହେବ ନାହିଁ — ଦୟାକରି ଏବେ ପ୍ରଶିକ୍ଷିତ କାଉନସେଲରଙ୍କ ସହ କଥା ହୁଅନ୍ତୁ:\n• ଟେଲି-ମାନସ (ଭାରତ ସରକାର, ମାଗଣା, ୨୪/୭): ୧୪୪୧୬ କିମ୍ବା ୧-୮୦୦-୮୯୧-୪୪୧୬\n• କିରଣ ହେଲ୍ପଲାଇନ: ୧୮୦୦-୫୯୯-୦୦୧୯\n• ତୁରନ୍ତ ବିପଦରେ ୧୧୨କୁ କଲ୍ କରନ୍ତୁ।\nଦୟାକରି ବିଶ୍ୱସ୍ତ କାହା ପାଖରେ ରୁହନ୍ତୁ। ଆପଣ ମହତ୍ୱପୂର୍ଣ୍ଣ।',
     offTopic: 'ମୁଁ କେବଳ ବିପର୍ଯ୍ୟୟ, ଜରୁରୀକାଳୀନ ଏବଂ AapdaSetu ୱେବସାଇଟ୍ ସମ୍ବନ୍ଧୀୟ ବିଷୟରେ ସହାୟତା କରିପାରିବି (SOS, ରିପୋର୍ଟ, ଆଶ୍ରୟ, ଟ୍ରାକିଂ, ଡାକ୍ତରୀ ପରାମର୍ଶ)। ବନ୍ୟା, ଆଘାତ, ଆଶ୍ରୟ କିମ୍ବା ଟ୍ରାକିଂ ବିଷୟରେ ପଚାରନ୍ତୁ। ଉଦାହରଣ: "ଘରକୁ ପାଣି ଭରିବା" କିମ୍ବା "ପ୍ରବଳ ରକ୍ତସ୍ରାବ"।'
   }
 }
@@ -442,6 +467,21 @@ export async function aiPfaChat(
   const lowerScope = message.toLowerCase()
   const scopePattern = /\b(flood|bleed|cut|drown|sinking|cardiac|heart|snake|burn|fracture|chok|help|rescue|shelter|track|sos|report|aapdasetu|emergency|danger|pain|hurt|wound|panic|water|food|medicine|hospital|ambulance|fire|earthquake|collapse|trapped|missing|damage|helpline|112|108)\b/i
   const unrelatedPattern = /\b(reverse|py\s*code|python|java\s*code|javascript|programming|algorithm|leetcode|homework|essay|poem|joke|song|movie|game|translate|write\s*code|give\s*code|code\s*snippet|reverse\s*string)\b/i
+
+  // Self-harm short-circuits everything — never an off-topic rejection, never
+  // a generic greeting. Route straight to the crisis-counselor reply.
+  const selfHarm = detectSelfHarm(message)
+  if (selfHarm) {
+    return {
+      reply: DEGRADED_REPLIES[lang]?.selfHarm ?? DEGRADED_REPLIES.en.selfHarm,
+      exerciseType: '4-4-4_BOX_BREATHING',
+      isCritical: true,
+      dangerLevel: 'CRITICAL',
+      helpline: '14416',
+      safetyChecklist: [SELF_HARM_HELPLINES],
+    }
+  }
+
   if (unrelatedPattern.test(lowerScope) && !scopePattern.test(lowerScope)) {
     return {
       reply: DEGRADED_REPLIES[lang].offTopic,
@@ -453,7 +493,10 @@ export async function aiPfaChat(
     }
   }
   try {
-    const aiReply = await callOpenRouter(message, history, lang)
+    // Hard wall-clock deadline: the previous worst case (2 providers x 7
+    // models x 20 s) could spin "thinking..." for minutes to a person in
+    // crisis. One deadline for the whole provider chain, then degrade.
+    const aiReply = await withDeadline(callOpenRouter(message, history, lang), 20_000)
     // ponytail: detectDangerLevel never returns falsy — rank both texts instead
     const levels = [detectDangerLevel(message), detectDangerLevel(aiReply)]
     const dangerLevel: DangerLevel = levels.includes('CRITICAL')
@@ -491,7 +534,11 @@ export async function aiPfaChat(
     }
     // The mock engine guesses language from the message text; when its guess does not
     // match the UI language the user selected, replace it with a localized fixed reply.
-    if (!replyMatchesScript(fallbackReply, lang)) {
+    if (selfHarm) {
+      // The mock keyword engine has no self-harm handling — never let its
+      // generic greeting replace the crisis-counselor reply.
+      fallbackReply = degraded.selfHarm
+    } else if (!replyMatchesScript(fallbackReply, lang)) {
       fallbackReply =
         dangerLevel === 'CRITICAL'
           ? degraded.crisis
@@ -507,10 +554,28 @@ export async function aiPfaChat(
       exerciseType,
       isCritical: dangerLevel === 'CRITICAL',
       dangerLevel,
-      helpline: dangerLevel === 'CRITICAL' ? '112' : dangerLevel === 'MODERATE' ? '108' : undefined,
-      safetyChecklist: ['National Emergency: 112 | Ambulance: 108'],
+      helpline: selfHarm ? '14416' : dangerLevel === 'CRITICAL' ? '112' : dangerLevel === 'MODERATE' ? '108' : undefined,
+      safetyChecklist: selfHarm ? [SELF_HARM_HELPLINES] : ['National Emergency: 112 | Ambulance: 108'],
     }
   }
+}
+
+/** Rejects a promise if it has not settled within `ms` — caps the total wait
+ * for fallback chains that would otherwise try many slow providers. */
+function withDeadline<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('AI provider deadline exceeded')), ms)
+    promise.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (err) => {
+        clearTimeout(timer)
+        reject(err)
+      },
+    )
+  })
 }
 
 export interface DamageVerdict {

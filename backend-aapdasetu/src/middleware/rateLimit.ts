@@ -13,6 +13,21 @@ export const publicRateLimiter = rateLimit({
   },
 });
 
+// Dedicated, more generous bucket for the 1-Tap SOS route. The general public
+// limiter is shared across every citizen endpoint, so during congestion a
+// burst of shelter/alert polling could exhaust it and start rejecting actual
+// SOS submissions with 429 — unacceptable for a life-safety endpoint.
+export const sosRateLimiter = rateLimit({
+  windowMs: env.rateLimitPublicWindowMs,
+  limit: Math.max(env.rateLimitPublicMax, 30),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: { code: 'RATE_LIMITED', message: 'Too many SOS requests from this network. Please try again shortly.' },
+  },
+});
+
 export const adminRateLimiter = rateLimit({
   windowMs: env.rateLimitAdminWindowMs,
   limit: env.rateLimitAdminMax,

@@ -4,7 +4,7 @@ import {
   createReport,
   createSafetyCheckin,
 } from '../api/endpoints'
-import { ApiError, OfflineError } from '../api/client'
+import { ApiError, OfflineError, isQueueableError } from '../api/client'
 
 /**
  * Global offline submission outbox. Every citizen write (SOS, reports, etc.)
@@ -58,13 +58,18 @@ function readOutbox(): OutboxItem[] {
   }
 }
 
-function writeOutbox(items: OutboxItem[]): void {
+function writeOutbox(items: OutboxItem[]): boolean {
+  let persisted = true
   try {
     localStorage.setItem(OUTBOX_KEY, JSON.stringify(items))
   } catch {
-    // Storage blocked/full (private mode) — queue is best-effort only
+    // Storage blocked/full (private mode, big base64 payloads) — queue is
+    // best-effort only; callers verify and must warn the user when an item
+    // did NOT persist, otherwise submissions are silently lost.
+    persisted = false
   }
   notifyOutboxListeners()
+  return persisted
 }
 
 // ---- change notifications -----------------------------------------------------
@@ -103,13 +108,53 @@ function newId(): string {
   return `outbox-${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
-/** Queue a payload for later submission. Returns the generated item id. */
+/** Queue a payload for later submission. Returns the generated item id.
+ * SOS/report payloads are stamped with a stable clientRequestId and the
+ * original clientCreatedAt so outbox replays can never create duplicate
+ * rescue dispatches and keep their true reporting time. */
 export function enqueueOutbox(kind: OutboxKind, payload: unknown): string {
   const id = newId()
   const items = readOutbox()
-  items.push({ id, kind, payload, createdAt: Date.now(), attempts: 0 })
+  let itemPayload = payload
+  if ((kind === 'sos' || kind === 'report') && itemPayload && typeof itemPayload === 'object') {
+    const obj = { ...(itemPayload as Record<string, unknown>) }
+    if (!obj.clientRequestId) obj.clientRequestId = newId()
+    if (!obj.clientCreatedAt) obj.clientCreatedAt = new Date().toISOString()
+    itemPayload = obj
+  }
+  items.push({ id, kind, payload: itemPayload, createdAt: Date.now(), attempts: 0 })
   writeOutbox(items)
+  // Best-effort: on browsers that support Background Sync, the service
+  // worker re-fires the flush event after connectivity returns (even if the
+  // tab was reloaded). Note the SW nudges open clients — closed-tab delivery
+  // still relies on the next app launch. Unsupported browsers fall back to
+  // the 'online' event and the 20s retry timer.
+  registerBackgroundSync()
   return id
+}
+
+/** True if the item actually persisted (localStorage can silently drop writes
+ * when full — callers must tell the user instead of faking success). */
+export function isQueued(id: string): boolean {
+  return readOutbox().some((item) => item.id === id)
+}
+
+function registerBackgroundSync(): void {
+  try {
+    const sw = 'serviceWorker' in navigator ? navigator.serviceWorker : undefined
+    if (!sw) return
+    void sw.ready
+      .then((reg) => {
+        // Feature-detected: SyncManager is Chromium-only.
+        const sync = (reg as ServiceWorkerRegistration & { sync?: { register: (tag: string) => Promise<void> } }).sync
+        return sync ? sync.register('aapdasetu-outbox') : undefined
+      })
+      .catch(() => {
+        /* background sync unavailable — retry timer covers us */
+      })
+  } catch {
+    // ignore
+  }
 }
 
 export function getOutbox(): OutboxItem[] {
@@ -213,17 +258,18 @@ async function runFlush(): Promise<FlushResult> {
           // Persist the attempt bump BEFORE sending: a crash mid-send may
           // cause one at-least-once resend, but can never retry forever.
           writeOutbox(readOutbox().map((i) => (i.id === original.id ? { ...original, attempts: original.attempts + 1 } : i)))
+          // Heartbeat the cross-tab lock BEFORE each send: a pass over slow/
+          // unreachable items can outlive OUTBOX_LOCK_TTL_MS, and an expired
+          // lock lets another tab flush the same items concurrently.
+          try {
+            localStorage.setItem(OUTBOX_LOCK_KEY, JSON.stringify({ token: lockToken, ts: Date.now() }))
+          } catch {
+            // storage hiccup — TTL self-heals via releaseOutboxLock
+          }
           try {
             await replayItem(original)
             removeFromOutbox(original.id)
             synced++
-            // ponytail: heartbeat the lock TTL after each success so a long
-            // flush can never outlive OUTBOX_LOCK_TTL_MS and be double-flushed
-            try {
-              localStorage.setItem(OUTBOX_LOCK_KEY, JSON.stringify({ token: lockToken, ts: Date.now() }))
-            } catch {
-              // storage hiccup — TTL self-heals via releaseOutboxLock
-            }
           } catch (err) {
             if (err instanceof OfflineError || isOffline()) {
               // Device dropped mid-flush: refund the attempt and stop — items
@@ -243,6 +289,13 @@ async function runFlush(): Promise<FlushResult> {
               // succeed — drop so it cannot clog the queue forever.
               removeFromOutbox(original.id)
               console.warn('[aapdasetu] outbox item permanently rejected, dropping:', original.kind, err.message)
+            } else if (isQueueableError(err)) {
+              // Refund the attempt: a backend outage / throttle must not burn
+              // the finite retry budget while the device stays online — that
+              // used to strand queued SOS submissions permanently after
+              // ~100s of unavailability (the exact scenario the outbox
+              // exists for). The 20s retry timer's backoff bounds the load.
+              writeOutbox(readOutbox().map((i) => (i.id === original.id ? original : i)))
             }
           }
         }
@@ -308,12 +361,20 @@ function migrateLegacySosQueue(): void {
 let cleanupSync: (() => void) | null = null
 let consumers = 0
 
+// Bounded backoff for the while-online retry timer: the 'online' event and
+// Background Sync miss the common case where the backend was down but the
+// device stayed online — without this timer a queued SOS would sit stranded
+// until the user reloaded the page.
+const RETRY_INTERVAL_MS = 20_000
+let nextRetryAt = 0
+
 /**
  * Arms global outbox syncing: migrates legacy data, flushes immediately, then
- * re-flushes on window 'online' and on the service worker's OUTBOX_FLUSH nudge
- * (Background Sync). Idempotent and refcounted — multiple pages/layouts may
- * subscribe; listeners stay armed until the LAST consumer cleans up (so one
- * page unmounting can never disarm syncing for the rest of the app).
+ * re-flushes on window 'online', on the service worker's OUTBOX_FLUSH nudge
+ * (Background Sync), and on a 20 s retry timer while items remain queued.
+ * Idempotent and refcounted — multiple pages/layouts may subscribe; listeners
+ * stay armed until the LAST consumer cleans up (so one page unmounting can
+ * never disarm syncing for the rest of the app).
  */
 export function initGlobalOutboxSync(): () => void {
   if (!cleanupSync) {
@@ -321,19 +382,33 @@ export function initGlobalOutboxSync(): () => void {
     void flushOutbox()
 
     const handleOnline = () => {
+      nextRetryAt = 0
       void flushOutbox()
     }
     const sw = 'serviceWorker' in navigator ? navigator.serviceWorker : undefined
     const handleMessage = (event: MessageEvent) => {
       if ((event.data as { type?: string } | null)?.type === 'OUTBOX_FLUSH') {
+        nextRetryAt = 0
         void flushOutbox()
       }
     }
+    const retryTimer = window.setInterval(() => {
+      if (isOffline() || Date.now() < nextRetryAt) return
+      // Only spend the attempt when there is actually something to send.
+      if (readOutbox().length === 0) return
+      void flushOutbox().then((result) => {
+        if (result.synced === 0 && result.failed > 0) {
+          // Backend still unreachable — back off instead of hot-looping.
+          nextRetryAt = Date.now() + RETRY_INTERVAL_MS * 2
+        }
+      })
+    }, RETRY_INTERVAL_MS)
 
     window.addEventListener('online', handleOnline)
     sw?.addEventListener('message', handleMessage)
 
     cleanupSync = () => {
+      window.clearInterval(retryTimer)
       window.removeEventListener('online', handleOnline)
       sw?.removeEventListener('message', handleMessage)
     }

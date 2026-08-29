@@ -1361,7 +1361,7 @@ export const mocks = {
       if (isHindi) {
         reply = '1. संपत्ति के नुकसान की भरपाई और SDRF क्लेम के लिए "Damage Assessment" टैब पर जाएं। 2. प्रभावित घर, खेत या दुकान की फोटो अपलोड करें; AI तुरंत नुकसान का स्कोर और अनुमानित राहत राशि तय करेगा।'
       } else {
-        reply = '1. Visit the "Damage Assessment" tab to upload geotagged photos of damaged infrastructure. 2. Our AI ResNet-50 model computes the damage score and SDRF compensation entitlement automatically.'
+        reply = '1. Visit the "Damage Assessment" tab to upload geotagged photos of damaged infrastructure. 2. Our automated damage-grading model computes an indicative damage score and SDRF compensation estimate for review.'
       }
     }
     // 16. Missing Person Lookup / Report
@@ -1496,7 +1496,7 @@ export const mocks = {
       compensationInr: input.compensationInr ?? 47550,
       verified: true,
       status: 'approved',
-      factors: input.factors || ['Damage verified by AI ResNet-50 Classifier'],
+      factors: input.factors || ['Indicative result from the automated damage classifier'],
       huggingFaceModel: 'Divyanshu-Kumar19/aapdasetu-damage-assessment',
       createdAt: new Date().toISOString(),
     }

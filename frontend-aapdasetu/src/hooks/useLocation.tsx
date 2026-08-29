@@ -23,6 +23,9 @@ export interface LocationValue {
   accuracy: number | null
   source: LocationSource
   isFallback: boolean
+  /** When the current cached fix was captured (ms epoch). Life-critical
+   * consumers use this to refuse stale coordinates as a dispatch location. */
+  cachedAt: number | null
   refresh: () => void
   locateHighAccuracy: () => Promise<GeoLocationCoordinatesLike | null>
   setManualLocation: (point: GeoPoint, customAddress?: string) => void
@@ -42,20 +45,28 @@ const DEFAULT_FALLBACK_LOCATION: GeoLocationCoordinatesLike = {
   speed: null,
 }
 
-function getStoredLocation(): GeoLocationCoordinatesLike | null {
+interface StoredLocation {
+  coords: GeoLocationCoordinatesLike
+  at: number | null
+}
+
+function getStoredLocation(): StoredLocation | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_LOCATION)
     if (raw) {
       const parsed = JSON.parse(raw)
       if (typeof parsed.latitude === 'number' && typeof parsed.longitude === 'number') {
         return {
-          latitude: parsed.latitude,
-          longitude: parsed.longitude,
-          altitude: null,
-          accuracy: parsed.accuracy ?? 100,
-          altitudeAccuracy: null,
-          heading: null,
-          speed: null,
+          coords: {
+            latitude: parsed.latitude,
+            longitude: parsed.longitude,
+            altitude: null,
+            accuracy: parsed.accuracy ?? 100,
+            altitudeAccuracy: null,
+            heading: null,
+            speed: null,
+          },
+          at: typeof parsed.at === 'number' ? parsed.at : null,
         }
       }
     }
@@ -73,13 +84,16 @@ function getStoredAddress(): string | null {
   }
 }
 
+const initialStored = getStoredLocation()
+
 const defaultLocationValue: LocationValue = {
-  coords: getStoredLocation() || DEFAULT_FALLBACK_LOCATION,
+  coords: initialStored?.coords || DEFAULT_FALLBACK_LOCATION,
   address: getStoredAddress() || 'Bhubaneswar, Odisha',
   status: 'idle',
-  accuracy: 100,
-  source: getStoredLocation() ? 'cached' : 'default',
+  accuracy: initialStored?.coords.accuracy ?? 100,
+  source: initialStored ? 'cached' : 'default',
   isFallback: true,
+  cachedAt: initialStored?.at ?? null,
   refresh: () => {},
   locateHighAccuracy: async () => null,
   setManualLocation: () => {},
@@ -92,14 +106,15 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
   const initialCached = useMemo(() => getStoredLocation(), [])
   const initialAddress = useMemo(() => getStoredAddress(), [])
   const [coords, setCoords] = useState<GeoLocationCoordinatesLike | null>(
-    initialCached || DEFAULT_FALLBACK_LOCATION
+    initialCached?.coords || DEFAULT_FALLBACK_LOCATION
   )
   const [address, setAddressState] = useState<string | null>(
     initialAddress || 'Bhubaneswar, Odisha'
   )
   const [status, setStatus] = useState<LocationStatus>(initialCached ? 'fallback' : 'idle')
-  const [accuracy, setAccuracy] = useState<number | null>(initialCached?.accuracy ?? null)
+  const [accuracy, setAccuracy] = useState<number | null>(initialCached?.coords.accuracy ?? null)
   const [source, setSource] = useState<LocationSource>(initialCached ? 'cached' : 'default')
+  const [cachedAt, setCachedAt] = useState<number | null>(initialCached?.at ?? null)
   const isManualRef = useRef<boolean>(false)
 
   const setAddress = useCallback((addr: string) => {
@@ -111,24 +126,43 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // Reverse geocoding is rate-limited on the public Nominatim instance and
+  // battery-hungry at watchPosition frequency (~1 Hz) — quantize to one call
+  // per 45 s or per ~150 m of movement, whichever comes first.
+  const lastGeocodeRef = useRef<{ at: number; lat: number; lng: number }>({ at: 0, lat: NaN, lng: NaN })
+
   const saveLocation = useCallback(
     (c: GeoLocationCoordinatesLike, src: LocationSource, skipReverseGeocode = false) => {
       // A manually pinned location must never be clobbered by a late-resolving
       // one-shot GPS/IP promise (detect() can still be in flight for ~10s).
       if (isManualRef.current && src !== 'manual') return
+      const capturedAt = Date.now()
       setCoords(c)
       setAccuracy(c.accuracy)
       setSource(src)
+      setCachedAt(capturedAt)
       try {
         localStorage.setItem(
           STORAGE_KEY_LOCATION,
-          JSON.stringify({ latitude: c.latitude, longitude: c.longitude, accuracy: c.accuracy })
+          JSON.stringify({ latitude: c.latitude, longitude: c.longitude, accuracy: c.accuracy, at: capturedAt })
         )
       } catch {
         // Storage unavailable
       }
 
       if (skipReverseGeocode || isManualRef.current) return
+
+      const last = lastGeocodeRef.current
+      const movedKm =
+        Number.isFinite(last.lat)
+          ? Math.hypot(c.latitude - last.lat, c.longitude - last.lng) * 111
+          : Infinity
+      if (Date.now() - last.at < 45_000 && movedKm < 0.15) return
+
+      // Arm the throttle BEFORE the call: if the geocoder is erroring/timing
+      // out, a rejected promise must not leave the throttle disengaged while
+      // the GPS watch streams fixes at ~1 Hz.
+      lastGeocodeRef.current = { at: Date.now(), lat: c.latitude, lng: c.longitude }
 
       // Auto reverse geocode
       reverseGeocode({ lat: c.latitude, lng: c.longitude })
@@ -357,12 +391,13 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
       accuracy,
       source,
       isFallback: source !== 'gps',
+      cachedAt,
       refresh,
       locateHighAccuracy,
       setManualLocation,
       setAddress,
     }),
-    [coords, address, status, accuracy, source, refresh, locateHighAccuracy, setManualLocation, setAddress],
+    [coords, address, status, accuracy, source, cachedAt, refresh, locateHighAccuracy, setManualLocation, setAddress],
   )
 
   return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>

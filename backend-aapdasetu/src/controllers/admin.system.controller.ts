@@ -4,7 +4,7 @@ import { createAlert, listAlerts } from '../services/alerts.service.js';
 import { getAnalytics } from '../services/analytics.service.js';
 import { listAuditLogs } from '../services/audit.service.js';
 import { listCheckins } from '../services/checkins.service.js';
-import { listMatches, reviewMatch } from '../services/missing.service.js';
+import { findMissingPersonMatches, listMatches, reviewMatch } from '../services/missing.service.js';
 import { listDamageAssessments, flagDuplicateAssessment } from '../services/damage.service.js';
 import { listHazards, createHazard, updateHazardActive } from '../services/routes.service.js';
 import { updateMissingPerson } from '../services/missing-persons.service.js';
@@ -76,6 +76,15 @@ export async function adminListCheckinsHandler(req: Request, res: Response): Pro
 export async function adminListMatchesHandler(req: Request, res: Response): Promise<void> {
   const q = (req as Request & { validatedQuery: Record<string, unknown> }).validatedQuery;
   const matches = await listMatches(q as never);
+  res.json({ success: true, data: matches });
+}
+
+/** Admin-triggered matching run — the ONLY path that persists match rows
+ * (the public /missing/matches endpoint computes read-only so anonymous
+ * callers cannot poison the review queue). */
+export async function adminComputeMatchesHandler(req: Request, res: Response): Promise<void> {
+  const { reportId, threshold } = req.body;
+  const matches = await findMissingPersonMatches({ reportId, threshold, persist: true });
   res.json({ success: true, data: matches });
 }
 

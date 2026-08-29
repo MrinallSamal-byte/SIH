@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { listVolunteerTasks, completeVolunteerTask } from '../../api/endpoints'
 import PriorityBadge from '../../components/common/PriorityBadge'
@@ -30,16 +30,31 @@ export default function AssignedTasks() {
     [t],
   )
 
+  const loadErrorToastedRef = useRef(false)
   const loadTasks = useCallback(async () => {
     try {
       setTasks(await listVolunteerTasks())
+      loadErrorToastedRef.current = false
     } catch {
-      toast(t('vt.loadFailed'), 'error')
+      // Poll errors toast only ONCE — 12s polling during an outage must
+      // not spam toasts nonstop.
+      if (!loadErrorToastedRef.current) {
+        loadErrorToastedRef.current = true
+        toast(t('vt.loadFailed'), 'error')
+      }
     }
   }, [toast, t])
 
   useEffect(() => {
     loadTasks()
+    // The realtime WebSocket hub is dormant on Vercel serverless — without
+    // polling, a volunteer never learns about an assignment made after this
+    // page loaded. 12 s poll, paused while the tab is hidden.
+    const tick = () => {
+      if (!document.hidden && navigator.onLine) void loadTasks()
+    }
+    const id = window.setInterval(tick, 12_000)
+    return () => window.clearInterval(id)
   }, [loadTasks])
 
   const completeTask = async (reportId: string) => {

@@ -46,57 +46,78 @@ const GUIDED_PROTOCOLS: Record<string, { intent: PfaIntent; protocol: 'box_breat
   disorientation: { intent: 'disorientation', protocol: 'grounding_521' },
 };
 
+// Parity with the frontend detector (frontend-AapdaSetu/src/api/ai.ts). This
+// deterministic layer is the safety net whenever the LLM is unconfigured or
+// degraded — it must recognize emergencies in Hindi/Bengali/Odia and common
+// transliterations, not just English. Matched with includes() (not \b): word
+// boundaries miss "my hand burns" / "snake bit me", and missing an emergency
+// is far worse than an occasional false positive.
 const ESCALATION_KEYWORDS = [
-  'bleeding',
-  'chest pain',
-  'can\'t breathe',
-  'can not breathe',
-  'cant breathe',
-  'heart attack',
-  'unconscious',
-  'fire',
-  'burn',
-  'trapped',
-  'flooded',
-  'drown',
-  'drowning',
-  'sink',
-  'sinking',
-  'electric shock',
-  'snake bite',
-  'डूब',
-  'आग',
-  'मदद'
+  'bleed', 'blood', 'hemorrhage', 'unconscious', 'fainted', 'trapped',
+  'drown', 'sinking', 'heart attack', 'chest pain', 'stroke', 'electrocute',
+  'severe burn', 'fire', 'choking', 'snake', 'snakebite', 'poison', 'collapse',
+  'debris', 'fracture', 'broken bone', 'crush', 'dying', 'flood rising', 'water level',
+  "can't breathe", 'cant breathe', 'can not breathe', 'burn', 'sink', 'flooded',
+  'electric shock', 'मदद',
+  'खून', 'बेहोश', 'फंसा', 'डूब', 'हार्ट अटैक', 'सांप', 'आग', 'बिजली',
+  'রক্ত', 'অজ্ঞান', 'আটকে', 'ডুব', 'সাপ', 'আগুন',
+  'ରକ୍ତ', 'ଚେତାଶୂନ୍ୟ', 'ଫସିରହିଛି', 'ନିଆଁ',
+  // Trapped (hi/bn/or native + Latin transliterations)
+  'फंस गया', 'फंस गई', 'फंसा हुआ', 'मलबे में', 'fas gaya', 'fas gayi', 'fase hai', 'phansa', 'malbe me',
+  'ধ্বসে', 'চাপা', 'atke ache', 'dhoshe', 'chapa poreche',
+  'ମଳବା ତଳେ', 'ଚାପି ପଡ଼ିଛି', 'phansila', 'chapila',
+  // Drowning
+  'doob', 'doob raha', 'dub gaya', 'paani me gir', 'pani me doob',
+  'ডুবে যাচ্ছে', 'jole dubche', 'dublo',
+  'ବୁଡ଼ିଯାଉଛି', 'budi jauchhi',
+  // Bleeding / blood
+  'khoon', 'khoon beh', 'khoon nikal', 'ragat', 'rokto jhore',
+  'खून निकल', 'रक्तस्राव', 'রক্তক্ষরণ', 'ରକ୍ତସ୍ରାବ', 'rakta sraba',
+  // Unconscious
+  'behosh', 'behos', 'hos nahi', 'ogyan hoye', 'অজ্ঞান হয়ে',
+  'ଚେତା ନାହିଁ', 'chetala nahi',
+  // Fire
+  'aag lagi', 'aag lag', 'lagi aag', 'aagun lagche', 'agan lagiche',
+  'ନିଆଁ ଲାଗିଛି', 'niam lagichi',
+  // Collapse / rubble
+  'building gira', 'ghar gira', 'deewar giri', 'malba', 'ध्वस्त', 'भवन गिरा',
+  'ভবন ধসেছে', 'দেয়াল ভেঙে', 'bhavan dhaseche', 'deyal bhenge',
+  'ଗୃହ ଧ୍ୱଂସ', 'ଦେଉଳି ଭାଙ୍ଗିଲା', 'griha dhwansa', 'deuli bhangila',
+  // Water level rising / flood surge
+  'पानी बढ़', 'पानी घुस', 'बाढ़', 'paani badh', 'pani badh', 'paani chadh', 'baadh aayi', 'barh aaya',
+  'জল বাড়ছে', 'বন্যা', 'jol barche', 'banya ashe',
+  'ପାଣି ବଢ଼ୁଛି', 'ପାଣି ଭରିବା', 'ବନ୍ୟା', 'pani badhuchhi', 'banya asuchi',
+  // Chest pain / cardiac distress
+  'छाती में दर्द', 'सीने में दर्द', 'chaati me dard', 'seene me dard',
+  'বুকে ব্যথা', 'বুক ফাটা', 'শ্বাসকষ্ট', 'buke byatha', 'buker betha', 'shash koshto',
+  'ଛାତି ଯନ୍ତ୍ରଣା', 'ଛାତି ବ୍ୟଥା', 'ଶ୍ୱାସ କଷ୍ଟ', 'chhati yantanara', 'shwas kasta',
 ];
 
+// Parity with the frontend self-harm detector — the mandatory Tele-MANAS
+// guidance must trigger in every language a citizen might type in.
 const SELF_HARM_KEYWORDS = [
-  'suicide',
-  'kill myself',
-  'end my life',
-  'suicidal',
-  'आत्महत्या',
-  'जान दे',
-  'ଆତ୍ମହତ୍ୟା'
+  'suicide', 'suicidal', 'kill myself', 'killing myself', 'end my life', 'end it all',
+  'want to die', 'wanna die', 'better off dead', 'no reason to live', 'harm myself',
+  'hurt myself', 'self harm', 'self-harm', 'selfharm', 'cut myself',
+  'आत्महत्या', 'आत्मघाती', 'जान देना चाहता', 'जान देना चाहती', 'मरना चाहता', 'मरना चाहती',
+  'जीना नहीं चाहता', 'जीना नहीं चाहती', 'खुदकुशी',
+  'আত্মহত্যা', 'মরতে চাই', 'বাঁচতে চাই না',
+  'ଆତ୍ମହତ୍ୟା', 'ମରିବାକୁ ଚାହୁଁଛି',
+  'atmhatya', 'atmahatya', 'marna chahta', 'marna chahti', 'jeena nahi',
+  'morto chai', 'banchte chai na',
 ];
 
 const CRISIS_GUIDANCE =
   'If you are having thoughts of harming yourself, please call Tele-MANAS 14416 (24x7, free) or emergency 112 right now — you are not alone.';
 
-function keywordMatches(text: string, keyword: string): boolean {
-  // ponytail: ASCII keywords match on word boundaries so 'burnt toast'/'firefighter'/'sinking feeling' do not false-positive; \b is unreliable for Devanagari/Odia so those fall back to plain includes
-  if (/^[\x20-\x7e]+$/.test(keyword)) {
-    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return new RegExp(`\\b${escaped}\\b`, 'i').test(text);
-  }
-  return text.includes(keyword);
-}
-
 function detectEmergency(text: string): boolean {
-  return ESCALATION_KEYWORDS.some((k) => keywordMatches(text, k));
+  const lower = text.toLowerCase();
+  return ESCALATION_KEYWORDS.some((k) => lower.includes(k));
 }
 
 function detectSelfHarm(text: string): boolean {
-  return SELF_HARM_KEYWORDS.some((k) => keywordMatches(text, k));
+  const lower = text.toLowerCase();
+  return SELF_HARM_KEYWORDS.some((k) => lower.includes(k));
 }
 
 export async function getPfaReply(

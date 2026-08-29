@@ -13,15 +13,15 @@ import {
   Edit3,
 } from 'lucide-react'
 import { createReport } from '../../api/endpoints'
-import { ApiError } from '../../api/client'
+import { isQueueableError } from '../../api/client'
 import { aiTriage } from '../../api/ai'
-import { enqueueOutbox, getOutbox, initGlobalOutboxSync, subscribeOutbox } from '../../lib/outbox'
+import { enqueueOutbox, getOutbox, initGlobalOutboxSync, isQueued, subscribeOutbox } from '../../lib/outbox'
 import { Field, Input } from '../../components/common/Input'
 import Modal from '../../components/common/Modal'
 import LandmarkPicker from '../../components/map/LandmarkPicker'
 import { useToast } from '../../components/common/Toast'
 import { useLanguage } from '../../lib/i18n'
-import { getHighPrecisionPosition, generateEmergencySms } from '../../lib/helpers'
+import { getHighPrecisionPosition, generateEmergencySms, searchPlaces } from '../../lib/helpers'
 import { useGeoLocation } from '../../hooks/useLocation'
 import type { IncidentType, Report, ReportInput, GeoPoint } from '../../types'
 
@@ -40,12 +40,12 @@ export default function SOS() {
   const {
     coords,
     address,
-    setAddress,
     setManualLocation,
     status: geoStatus,
     accuracy,
     locateHighAccuracy,
     source,
+    cachedAt,
   } = useGeoLocation() as ReturnType<typeof useGeoLocation> & { isFallback: boolean }
 
   const [name, setName] = useState('')
@@ -67,6 +67,7 @@ export default function SOS() {
   const [showLocationModal, setShowLocationModal] = useState(false)
   const [editAddressText, setEditAddressText] = useState('')
   const [editPoint, setEditPoint] = useState<GeoPoint | null>(null)
+  const [geocodingAddress, setGeocodingAddress] = useState(false)
   const phoneInputRef = useRef<HTMLInputElement>(null)
   // Belt-and-braces against double-click double-submits: state `triggering`
   // only applies after re-render; the ref blocks synchronously.
@@ -150,8 +151,14 @@ export default function SOS() {
       const typeLabel = foundType ? t(foundType.labelKey) : t('sos.typeFallback')
 
       // coords is never null (hook seeds a hardcoded fallback), so gate on provenance:
-      // only trust gps/manual/cached/ip fixes — never the fabricated default location.
-      const hasTrustedFix = source === 'gps' || source === 'manual' || source === 'cached'
+      // only trust gps/manual fixes — and cached fixes only while they are
+      // fresh. Coordinates from a previous session/city must never become a
+      // dispatch location, so anything untrusted falls through to a fresh
+      // high-accuracy fix or the manual location modal.
+      const CACHED_FIX_MAX_AGE_MS = 30 * 60 * 1000
+      const cachedFixIsFresh =
+        source === 'cached' && typeof cachedAt === 'number' && Date.now() - cachedAt < CACHED_FIX_MAX_AGE_MS
+      const hasTrustedFix = source === 'gps' || source === 'manual' || cachedFixIsFresh
       let lat = hasTrustedFix ? coords?.latitude : undefined
       let lng = hasTrustedFix ? coords?.longitude : undefined
 
@@ -177,6 +184,16 @@ export default function SOS() {
       const fullLandmark =
         [address, landmark.trim()].filter(Boolean).join(' | ').slice(0, 500) || undefined
 
+      // One stable idempotency key per logical submission: it rides on the
+      // direct POST and on any outbox replay, so a timeout-then-retry can
+      // never produce two rescue dispatches for the same tap.
+      let clientRequestId: string
+      try {
+        clientRequestId = crypto.randomUUID()
+      } catch {
+        clientRequestId = `sos-${Date.now()}-${Math.random().toString(36).slice(2)}`
+      }
+
       const input: ReportInput = {
         type: selectedType,
         description: `${t('sos.autoDescription')}: ${typeLabel}`,
@@ -185,15 +202,21 @@ export default function SOS() {
         reporterPhone: phone.trim(),
         location: { lat, lng },
         landmark: fullLandmark,
+        clientRequestId,
+        clientCreatedAt: new Date().toISOString(),
       }
       pendingInput = input
 
       if (!navigator.onLine) {
         // Park in the global outbox — it auto-dispatches on reconnect.
         // Banner count updates via the subscribeOutbox listener.
-        enqueueOutbox('sos', input)
-        navigator.vibrate?.([200, 100, 200])
-        toast(t('sos.offlineQueuedToast'), 'info')
+        const itemId = enqueueOutbox('sos', input)
+        if (!isQueued(itemId)) {
+          toast(t('sos.queueFailedToast', 'Could not save the SOS on this device (storage full) — try the SMS option below.'), 'error')
+        } else {
+          navigator.vibrate?.([200, 100, 200])
+          toast(t('sos.offlineQueuedToast'), 'info')
+        }
         setTriggering(false)
         return
       }
@@ -228,14 +251,19 @@ export default function SOS() {
 
       toast(t('sos.sent'))
     } catch (err) {
-      // Validation rejections (4xx) surface honestly; network/backend failures
-      // never lose the SOS — park it in the global outbox for auto-retry.
-      if (err instanceof ApiError && err.status >= 400 && err.status < 500) {
-        toast(err.message || t('common.submissionFailed'), 'error')
+      // Queueable failures (offline, timeout, 429 throttling, 5xx) never lose
+      // the SOS — park it in the global outbox for auto-retry. Genuine
+      // validation rejections (other 4xx) surface honestly instead.
+      if (!isQueueableError(err)) {
+        toast(err instanceof Error && err.message ? err.message : t('common.submissionFailed'), 'error')
       } else if (pendingInput) {
-        enqueueOutbox('sos', pendingInput)
-        navigator.vibrate?.([200, 100, 200])
-        toast(t('sos.offlineQueuedToast'), 'info')
+        const itemId = enqueueOutbox('sos', pendingInput)
+        if (!isQueued(itemId)) {
+          toast(t('sos.queueFailedToast', 'Could not save the SOS on this device (storage full) — try the SMS option below.'), 'error')
+        } else {
+          navigator.vibrate?.([200, 100, 200])
+          toast(t('sos.offlineQueuedToast'), 'info')
+        }
       } else {
         toast(err instanceof Error ? err.message : t('common.submissionFailed'), 'error')
       }
@@ -694,18 +722,42 @@ export default function SOS() {
             </button>
             <button
               type="button"
-              onClick={() => {
+              disabled={geocodingAddress}
+              onClick={async () => {
                 if (editPoint) {
                   setManualLocation(editPoint, editAddressText.trim() || undefined)
-                } else if (editAddressText.trim()) {
-                  setAddress(editAddressText.trim())
+                  setShowLocationModal(false)
+                  toast(t('sos.savedToast'), 'success')
+                  return
                 }
-                setShowLocationModal(false)
-                toast(t('sos.savedToast'), 'success')
+                // Typed address only: resolve it to real coordinates — without
+                // this the save left source at ip/default and the SOS tap looped
+                // back to "pick a location" forever.
+                const query = editAddressText.trim()
+                if (!query) {
+                  toast(t('sos.pickLocationToast'), 'error')
+                  return
+                }
+                setGeocodingAddress(true)
+                try {
+                  const results = await searchPlaces(query)
+                  const hit = results[0]
+                  if (!hit) {
+                    toast(t('sos.addressNotFoundToast', 'Could not find that address — please tap the map instead.'), 'error')
+                    return
+                  }
+                  setManualLocation({ lat: hit.lat, lng: hit.lng }, hit.name || query)
+                  setShowLocationModal(false)
+                  toast(t('sos.savedToast'), 'success')
+                } catch {
+                  toast(t('sos.addressNotFoundToast', 'Could not find that address — please tap the map instead.'), 'error')
+                } finally {
+                  setGeocodingAddress(false)
+                }
               }}
-              className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-red-700 cursor-pointer"
+              className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-red-700 cursor-pointer disabled:opacity-60"
             >
-              {t('sos.saveLocation')}
+              {geocodingAddress ? t('common.loading') : t('sos.saveLocation')}
             </button>
           </div>
         </div>
