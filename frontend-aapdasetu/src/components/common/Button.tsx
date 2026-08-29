@@ -32,7 +32,7 @@ export default function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`font-semibold transition-all disabled:opacity-50 ${styles[variant]} ${sizes[size]} ${className}`}
+      className={`font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-500 dark:focus-visible:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 ${styles[variant]} ${sizes[size]} ${className}`}
       {...rest}
     >
       {children}
