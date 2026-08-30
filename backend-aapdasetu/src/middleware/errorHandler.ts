@@ -61,6 +61,10 @@ export function errorHandler(
       status = statusMaybe;
       message = err.message;
       code = 'HTTP_ERROR';
+    } else if (statusMaybe && statusMaybe >= 500) {
+      status = statusMaybe;
+      message = 'Internal server error';
+      code = 'INTERNAL_ERROR';
     }
   }
 
