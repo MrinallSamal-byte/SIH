@@ -1653,22 +1653,72 @@ export const mocks = {
     }
   },
 
-  aiSatelliteFloodMap(): FloodGeoJson {
+  aiSatelliteFloodMap(payload?: { district?: string; center?: { lat: number; lng: number }; radiusKm?: number }): FloodGeoJson {
+    const lat = payload?.center?.lat ?? 22.5726
+    const lng = payload?.center?.lng ?? 88.3639
+
     return {
       type: 'FeatureCollection',
       features: [
         {
           type: 'Feature',
-          properties: { hazard_type: 'flood', severity: 'critical', water_depth_est_meters: 1.8 },
+          properties: {
+            hazard_type: 'Flash Flood & Waterlogging',
+            severity: 'critical',
+            water_depth_est_meters: 1.6,
+            road_status: 'Impassable for light vehicles',
+          },
           geometry: {
             type: 'Polygon',
             coordinates: [
               [
-                [88.35, 22.56],
-                [88.38, 22.56],
-                [88.39, 22.59],
-                [88.36, 22.59],
-                [88.35, 22.56],
+                [lng + 0.008, lat + 0.004],
+                [lng + 0.018, lat + 0.005],
+                [lng + 0.016, lat + 0.014],
+                [lng + 0.006, lat + 0.012],
+                [lng + 0.008, lat + 0.004],
+              ],
+            ],
+          },
+        },
+        {
+          type: 'Feature',
+          properties: {
+            hazard_type: 'Low-Lying Drainage Overflow',
+            severity: 'high',
+            water_depth_est_meters: 0.9,
+            road_status: 'Heavy congestion / partial submergence',
+          },
+          geometry: {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [lng - 0.012, lat + 0.002],
+                [lng - 0.004, lat + 0.001],
+                [lng - 0.005, lat + 0.009],
+                [lng - 0.014, lat + 0.008],
+                [lng - 0.012, lat + 0.002],
+              ],
+            ],
+          },
+        },
+        {
+          type: 'Feature',
+          properties: {
+            hazard_type: 'Structural Debris & Tree Fall',
+            severity: 'moderate',
+            water_depth_est_meters: 0.4,
+            road_status: 'SDRF clearance in progress',
+          },
+          geometry: {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [lng + 0.002, lat - 0.011],
+                [lng + 0.010, lat - 0.010],
+                [lng + 0.009, lat - 0.004],
+                [lng + 0.001, lat - 0.005],
+                [lng + 0.002, lat - 0.011],
               ],
             ],
           },

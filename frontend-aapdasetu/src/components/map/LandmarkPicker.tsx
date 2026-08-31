@@ -270,20 +270,22 @@ export default function LandmarkPicker({
         <MapContainer
           center={[center.lat, center.lng]}
           zoom={view?.zoom ?? (value ? 16 : 13)}
-          minZoom={5}
-          maxZoom={18}
+          minZoom={4}
+          maxZoom={20}
           maxBounds={INDIA_BOUNDS}
           maxBoundsViscosity={1.0}
           worldCopyJump={false}
+          attributionControl={false}
           style={{ height, width: '100%' }}
         >
           <ScaleControl position="bottomleft" imperial={false} />
           <TileLayer
-            attribution="&copy; <a href=&quot;https://www.openstreetmap.org/copyright&quot;>OpenStreetMap</a> contributors &copy; <a href=&quot;https://carto.com/attributions&quot;>CARTO</a>"
-            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-            subdomains="abcd"
+            attribution=""
+            url="https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
+            subdomains={['0', '1', '2', '3']}
             detectRetina
-            keepBuffer={4}
+            maxZoom={20}
+            keepBuffer={6}
             updateWhenIdle={false}
             updateWhenZooming={false}
           />

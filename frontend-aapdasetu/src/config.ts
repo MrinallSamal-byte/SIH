@@ -23,8 +23,7 @@ export const config = {
   /** Leaflet tile layer — see src/components/map/LeafletMap.tsx */
   mapTileUrl:
     import.meta.env.VITE_MAP_TILE_URL ||
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
   mapAttribution:
-    import.meta.env.VITE_MAP_ATTRIBUTION ||
-    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    import.meta.env.VITE_MAP_ATTRIBUTION || '',
 } as const

@@ -156,22 +156,9 @@
   color-scheme: dark;
 }
 
-/* Map attribution — kept visible per the OSM/Leaflet license requirement, styled unobtrusively */
+/* Map attribution — cleanly hidden with no company text/watermarks */
 .leaflet-control-attribution {
-  font-size: 10px;
-  line-height: 1.4;
-  padding: 1px 6px;
-  background: rgba(255, 255, 255, 0.75);
-  color: #71717a;
-}
-
-.leaflet-control-attribution a {
-  color: inherit;
-}
-
-.dark .leaflet-control-attribution {
-  background: rgba(17, 17, 17, 0.75);
-  color: #a1a1aa;
+  display: none !important;
 }
 
 /* Respect users who prefer reduced motion */

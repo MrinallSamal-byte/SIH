@@ -10,7 +10,7 @@ const STATIC_ASSETS = [
 ]
 
 // Basemap tile hosts cached cache-first so maps render offline (FIFO capped).
-const TILE_HOST_PATTERN = /^([abc]\.)?tile\.openstreetmap\.org$|^tile\.opentopomap\.org$|^([abcd]\.)?basemaps\.cartocdn\.com$/
+const TILE_HOST_PATTERN = /^mt[0-3]\.google\.com$|^([abc]\.)?tile\.openstreetmap\.org$|^tile\.opentopomap\.org$|^([abcd]\.)?basemaps\.cartocdn\.com$|^server\.arcgisonline\.com$/
 const TILE_CACHE_LIMIT = 300
 const API_CACHE_LIMIT = 100
 

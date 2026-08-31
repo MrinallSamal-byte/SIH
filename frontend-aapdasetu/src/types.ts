@@ -253,6 +253,7 @@ export interface FloodFeature {
     severity: string
     water_depth_est_meters?: number
     affected_villages?: string[]
+    road_status?: string
   }
   geometry: {
     type: 'Polygon'

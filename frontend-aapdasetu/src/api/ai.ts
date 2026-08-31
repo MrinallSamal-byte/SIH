@@ -627,6 +627,6 @@ export function aiDamageAssessment(
 export function aiSatelliteFloodMap(payload: { district?: string; center?: { lat: number; lng: number }; radiusKm?: number } = {}): Promise<FloodGeoJson> {
   return withMockFallback(
     () => aiCall<FloodGeoJson>('POST', '/ai/satelliteflood-map', payload),
-    () => mocks.aiSatelliteFloodMap(),
+    () => mocks.aiSatelliteFloodMap(payload),
   )
 }

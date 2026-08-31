@@ -19,6 +19,7 @@ import {
   Map as MapIcon,
   Moon,
   Maximize2,
+  Navigation,
 } from 'lucide-react'
 import type { GeoPoint } from '../../types'
 
@@ -59,6 +60,9 @@ export interface MapPolygon {
   id: string
   points: GeoPoint[]
   color?: string
+  fillColor?: string
+  fillOpacity?: number
+  weight?: number
   label?: string
 }
 
@@ -67,6 +71,8 @@ export interface MapPolyline {
   points: GeoPoint[]
   color?: string
   dashed?: boolean
+  weight?: number
+  opacity?: number
   label?: string
 }
 
@@ -79,52 +85,66 @@ export const INDIA_CENTER: GeoPoint = { lat: 22.0, lng: 79.0 }
 /** Above this many markers, switch from DOM divIcons to canvas CircleMarkers */
 export const CANVAS_MARKER_THRESHOLD = 80
 
-export type MapLayerMode = 'satellite' | 'streets' | 'osm' | 'terrain' | 'dark'
+export type MapLayerMode = 'streets' | 'satellite' | 'terrain' | 'dark' | 'traffic' | 'osm'
 
 interface LayerDef {
   name: string
   url: string
   attribution: string
   subdomains: string | string[]
+  maxZoom?: number
   retina?: boolean
   overlayUrl?: string
   overlayAttribution?: string
 }
 
 const MAP_LAYERS: Record<MapLayerMode, LayerDef> = {
-  satellite: {
-    name: 'Satellite',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-    subdomains: 'abc',
-    overlayUrl: 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-    overlayAttribution: 'Labels &copy; Esri',
-  },
   streets: {
-    name: 'Streets (Voyager)',
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: 'abcd',
+    name: 'High-Definition Streets',
+    url: 'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+    attribution: '',
+    subdomains: ['0', '1', '2', '3'],
+    maxZoom: 20,
     retina: true,
   },
-  osm: {
-    name: 'Classic OSM',
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    subdomains: 'abc',
+  satellite: {
+    name: 'Satellite (Hybrid)',
+    url: 'https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+    attribution: '',
+    subdomains: ['0', '1', '2', '3'],
+    maxZoom: 20,
+    retina: true,
   },
   terrain: {
-    name: 'Terrain (Esri Topo)',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles &copy; Esri',
-    subdomains: 'abc',
+    name: 'Topographic Terrain',
+    url: 'https://mt{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
+    attribution: '',
+    subdomains: ['0', '1', '2', '3'],
+    maxZoom: 20,
+    retina: true,
   },
   dark: {
     name: 'Tactical Dark',
     url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    attribution: '',
     subdomains: 'abcd',
+    maxZoom: 20,
     retina: true,
+  },
+  traffic: {
+    name: 'Traffic & Routes',
+    url: 'https://mt{s}.google.com/vt/lyrs=m,traffic&x={x}&y={y}&z={z}',
+    attribution: '',
+    subdomains: ['0', '1', '2', '3'],
+    maxZoom: 20,
+    retina: true,
+  },
+  osm: {
+    name: 'Classic Roadmap',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '',
+    subdomains: 'abc',
+    maxZoom: 19,
   },
 }
 
@@ -367,19 +387,6 @@ function MarkerPopupContent({
       )}
     </div>
   )
-}
-
-/** Removes the bulky "Leaflet" prefix so the control stays compact */
-function CompactAttribution() {
-  const map = useMap()
-  useEffect(() => {
-    try {
-      map.attributionControl?.setPrefix('')
-    } catch {
-      // attribution control unavailable
-    }
-  }, [map])
-  return null
 }
 
 function MapController({
@@ -697,7 +704,20 @@ export default function LeafletMap({
             </button>
 
             {showLayerMenu && (
-              <div className="absolute right-0 top-9 mt-1 flex flex-col gap-1 rounded-xl border border-slate-200 bg-white/95 p-1.5 shadow-xl backdrop-blur-md dark:border-white/[0.1] dark:bg-slate-900/95 min-w-[170px] z-50">
+              <div className="absolute right-0 top-9 mt-1 flex flex-col gap-1 rounded-xl border border-slate-200 bg-white/95 p-1.5 shadow-xl backdrop-blur-md dark:border-white/[0.1] dark:bg-slate-900/95 min-w-[185px] z-50">
+                <button
+                  type="button"
+                  onClick={() => selectLayer('streets')}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
+                    layerMode === 'streets'
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                      : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <MapIcon className="h-3.5 w-3.5" />
+                  <span>High-Definition Streets</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => selectLayer('satellite')}
@@ -713,32 +733,6 @@ export default function LeafletMap({
 
                 <button
                   type="button"
-                  onClick={() => selectLayer('streets')}
-                  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
-                    layerMode === 'streets'
-                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                      : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <MapIcon className="h-3.5 w-3.5" />
-                  <span>Streets (Voyager)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => selectLayer('osm')}
-                  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
-                    layerMode === 'osm'
-                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                      : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-                  }`}
-                >
-                  <MapIcon className="h-3.5 w-3.5" />
-                  <span>Classic OSM</span>
-                </button>
-
-                <button
-                  type="button"
                   onClick={() => selectLayer('terrain')}
                   className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
                     layerMode === 'terrain'
@@ -747,7 +741,7 @@ export default function LeafletMap({
                   }`}
                 >
                   <Mountain className="h-3.5 w-3.5" />
-                  <span>Terrain (Esri Topo)</span>
+                  <span>Topographic Terrain</span>
                 </button>
 
                 <button
@@ -762,6 +756,19 @@ export default function LeafletMap({
                   <Moon className="h-3.5 w-3.5" />
                   <span>Tactical Dark</span>
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => selectLayer('traffic')}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
+                    layerMode === 'traffic'
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                      : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <Navigation className="h-3.5 w-3.5" />
+                  <span>Traffic & Routes</span>
+                </button>
               </div>
             )}
           </div>
@@ -771,27 +778,27 @@ export default function LeafletMap({
       <MapContainer
         center={[center.lat, center.lng]}
         zoom={zoom}
-        minZoom={5}
-        maxZoom={19}
+        minZoom={4}
+        maxZoom={20}
         maxBounds={INDIA_BOUNDS}
         maxBoundsViscosity={0.7}
         worldCopyJump={false}
         preferCanvas
         zoomControl={false}
+        attributionControl={false}
         style={{ height: '100%', width: '100%', zIndex: 1 }}
       >
         <ScaleControl position="bottomleft" imperial={false} />
         <ZoomControl position="bottomright" />
-        <CompactAttribution />
 
         {/* Base Layer */}
         <TileLayer
           key={layerMode}
-          attribution={currentLayer.attribution}
+          attribution=""
           url={currentLayer.url}
           subdomains={currentLayer.subdomains || 'abc'}
-          maxZoom={19}
-          keepBuffer={4}
+          maxZoom={currentLayer.maxZoom ?? 20}
+          keepBuffer={6}
           updateWhenIdle={false}
           updateWhenZooming={false}
           detectRetina={currentLayer.retina === true}
@@ -801,11 +808,11 @@ export default function LeafletMap({
         {currentLayer.overlayUrl && (
           <TileLayer
             key={`${layerMode}-overlay`}
-            attribution={currentLayer.overlayAttribution ?? ''}
+            attribution=""
             url={currentLayer.overlayUrl}
             subdomains="abc"
-            maxZoom={19}
-            keepBuffer={4}
+            maxZoom={currentLayer.maxZoom ?? 20}
+            keepBuffer={6}
             updateWhenIdle={false}
             updateWhenZooming={false}
           />
@@ -830,15 +837,15 @@ export default function LeafletMap({
               key={p.id}
               pathOptions={{
                 color: p.color ?? '#dc2626',
-                fillColor: p.color ?? '#dc2626',
-                fillOpacity: 0.38,
-                weight: 2,
+                fillColor: p.fillColor ?? p.color ?? '#dc2626',
+                fillOpacity: p.fillOpacity ?? 0.38,
+                weight: p.weight ?? 2,
               }}
               positions={p.points.map((pt) => [pt.lat, pt.lng] as [number, number])}
             >
               {p.label && (
                 <Popup>
-                  <div className="text-xs font-bold text-slate-900 p-1">{p.label}</div>
+                  <div className="text-xs font-bold text-slate-900 dark:text-slate-100 p-1">{p.label}</div>
                 </Popup>
               )}
             </Polygon>
@@ -852,17 +859,17 @@ export default function LeafletMap({
               key={p.id}
               pathOptions={{
                 color: p.color ?? '#3b82f6',
-                weight: 5,
-                opacity: 0.92,
+                weight: p.weight ?? (p.dashed ? 4 : 5),
+                opacity: p.opacity ?? 0.92,
                 lineCap: 'round',
                 lineJoin: 'round',
-                dashArray: p.dashed ? '10 10' : undefined,
+                dashArray: p.dashed ? '8 8' : undefined,
               }}
               positions={p.points.map((pt) => [pt.lat, pt.lng] as [number, number])}
             >
               {p.label && (
                 <Popup>
-                  <div className="text-xs font-bold text-slate-900 p-1">{p.label}</div>
+                  <div className="text-xs font-bold text-slate-900 dark:text-slate-100 p-1.5 max-w-[220px]">{p.label}</div>
                 </Popup>
               )}
             </Polyline>

@@ -204,14 +204,6 @@ export default function SafeRoutes() {
       })
   }, [flood, t])
 
-  const polygons = useMemo(
-    () =>
-      floodZones
-        .filter((z) => z.points.length >= 3)
-        .map((z) => ({ id: z.id, points: z.points, label: z.label })),
-    [floodZones],
-  )
-
   const hazardPolys = useMemo(() => floodZones.map((z) => z.points), [floodZones])
 
   const destination = useMemo(
@@ -354,23 +346,7 @@ export default function SafeRoutes() {
       })
     })
 
-    // 4. Hazard Danger Points (Red Warning Triangles where flood zones exist)
-    floodZones.forEach((fz, idx) => {
-      if (fz.center && fz.center.lat && fz.center.lng) {
-        list.push({
-          id: `hazard-point-${idx}`,
-          position: fz.center,
-          title: `${fz.hazardType} (${fz.severity})`,
-          subtitle: `~${fz.depth}m water depth. Active flood zone avoided by Safe Detour Route.`,
-          color: '#dc2626',
-          isHazard: true,
-          markerKind: 'hazard',
-          badgeText: 'DANGER',
-        })
-      }
-    })
-
-    // 5. Other Available Shelters in region
+    // 4. Other Available Shelters in region
     ;(shelters ?? [])
       .filter((s) => s.id !== destinationId && typeof s.latitude === 'number' && typeof s.longitude === 'number')
       .forEach((s) => {
@@ -580,7 +556,6 @@ export default function SafeRoutes() {
               center={origin}
               zoom={13}
               markers={markers}
-              polygons={polygons}
               polylines={polylines}
               height="100%"
               autoFit={true}
@@ -598,9 +573,6 @@ export default function SafeRoutes() {
             </span>
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-2.5 w-2.5 rounded-sm bg-emerald-600" /> {t('routes.safeWaypoint', 'Safe detour')}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-sm bg-red-600" /> {t('routes.hazardActive')}
             </span>
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-0 w-4 border-t-2 border-dashed border-amber-500" /> {t('routes.fastestRoute')}
