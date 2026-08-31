@@ -450,7 +450,7 @@ export default function LiveSOS() {
           <span>{t('ls.activeDistressMap')} ({markers.length} {t('ls.geolocatedIncidents')})</span>
           <span className="text-[11px] text-slate-400">{t('ls.layerSwitcherHint')}</span>
         </div>
-        <div className="h-72 rounded-2xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800">
+        <div className="h-72 sm:h-96 lg:h-[420px] rounded-2xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800">
           <LeafletMap
             center={mapCenter}
             markers={markers}

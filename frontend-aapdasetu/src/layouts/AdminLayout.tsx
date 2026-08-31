@@ -20,7 +20,8 @@ import {
   Keyboard,
   Sun,
   Moon,
-  X
+  X,
+  Menu
 } from 'lucide-react'
 import AapdaSetuLogo from '../components/common/AapdaSetuLogo'
 import { apiHealth } from '../api/client'
@@ -174,6 +175,7 @@ export default function AdminLayout() {
     navigate('/admin/login')
   }
 
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
   const lastSuccessAt = apiHealth?.lastSuccessAt ?? null
   const mode = 'OPERATIONAL'
   const pillClasses = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
@@ -182,8 +184,8 @@ export default function AdminLayout() {
   return (
     // h-screen + overflow-hidden keeps the sidebar fixed; only the main column scrolls
     <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-slate-950">
-      {/* Admin Sidebar */}
-      <aside className={`flex flex-col border-r border-slate-800 bg-zinc-800 text-slate-100 transition-[width] duration-200 ${collapsed ? 'w-16' : 'w-64'}`}>
+      {/* Desktop Admin Sidebar */}
+      <aside className={`hidden md:flex flex-col border-r border-slate-800 bg-zinc-800 text-slate-100 transition-[width] duration-200 ${collapsed ? 'w-16' : 'w-64'}`}>
         {/* Brand Header */}
         <div className={`flex items-center gap-3 border-b border-slate-800 px-3 py-4 ${collapsed ? 'justify-center' : 'px-5'}`}>
           <AapdaSetuLogo size={32} />
@@ -274,10 +276,98 @@ export default function AdminLayout() {
         </div>
       </aside>
 
+      {/* Mobile Drawer Overlay */}
+      {mobileDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setMobileDrawerOpen(false)}
+          />
+          <aside className="relative flex w-72 flex-col bg-zinc-800 text-slate-100 shadow-2xl z-10">
+            <div className="flex items-center justify-between border-b border-slate-800 px-4 py-4">
+              <div className="flex items-center gap-2.5">
+                <AapdaSetuLogo size={28} />
+                <div>
+                  <div className="text-sm font-bold tracking-tight text-white">{t('adminNav.title')}</div>
+                  <div className="text-[10px] text-slate-400">{t('adminNav.subtitle')}</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileDrawerOpen(false)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-zinc-700 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+              {adminViews.map((v) => {
+                const Icon = v.icon
+                const labelText = t(v.labelKey)
+                return (
+                  <NavLink
+                    key={v.to}
+                    to={v.to}
+                    end={v.end}
+                    onClick={() => setMobileDrawerOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-colors ${
+                        isActive
+                          ? 'bg-slate-100 text-slate-950 font-bold'
+                          : 'text-slate-300 hover:bg-zinc-700 hover:text-white'
+                      }`
+                    }
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{labelText}</span>
+                  </NavLink>
+                )
+              })}
+            </nav>
+
+            <div className="border-t border-slate-800 p-3 space-y-2">
+              {user?.email && (
+                <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-400 truncate">
+                  <User className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{user.email}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  className="flex items-center justify-center gap-1.5 flex-1 rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 text-center text-xs font-medium text-slate-300 hover:bg-slate-700"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  <span>{t('adminNav.publicApp')}</span>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-1 rounded-xl border border-red-900/40 bg-red-950/40 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-900/60 cursor-pointer"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  <span>{t('adminNav.exit')}</span>
+                </button>
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
+
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col min-w-0">
         {/* Ops Status Bar */}
-        <div className="flex items-center gap-3 border-b border-slate-200 bg-white px-6 py-1.5 text-[11px] dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-center gap-2 sm:gap-3 border-b border-slate-200 bg-white px-3 sm:px-6 py-2 text-[11px] dark:border-slate-800 dark:bg-slate-900">
+          <button
+            type="button"
+            onClick={() => setMobileDrawerOpen(true)}
+            className="md:hidden flex items-center justify-center rounded-lg border border-slate-200 p-1.5 text-slate-600 dark:border-slate-700 dark:text-slate-300"
+            aria-label="Open command menu"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
+
           <span
             className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-bold tracking-wide mono ${pillClasses}`}
             title={t('adminOps.liveHint', 'National Incident Response System Active')}
@@ -286,12 +376,12 @@ export default function AdminLayout() {
             <span>{mode}</span>
           </span>
 
-          <span className="flex items-center gap-1.5 font-semibold text-slate-500 dark:text-slate-400">
+          <span className="hidden sm:flex items-center gap-1.5 font-semibold text-slate-500 dark:text-slate-400">
             <span className={`h-2 w-2 rounded-full ${online ? 'bg-emerald-500' : 'bg-red-500'}`} />
             <span>{online ? t('adminOps.online', 'Online') : t('adminOps.offline', 'Offline')}</span>
           </span>
 
-          <span className="text-slate-400 dark:text-slate-500 mono">
+          <span className="hidden sm:inline text-slate-400 dark:text-slate-500 mono">
             {t('adminOps.lastSync', 'Sync')} {relativeSyncTime(lastSuccessAt, t)}
           </span>
 
@@ -318,7 +408,7 @@ export default function AdminLayout() {
           </div>
         </div>
 
-        <main className="flex-1 overflow-y-auto p-6 md:p-8">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6 md:p-8">
           <Outlet />
         </main>
       </div>

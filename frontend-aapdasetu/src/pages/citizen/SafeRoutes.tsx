@@ -575,14 +575,14 @@ export default function SafeRoutes() {
         </div>
 
         <div className="lg:col-span-2">
-          <div className="rounded-2xl overflow-hidden shadow-sm border border-zinc-200/80 dark:border-white/[0.08]">
+          <div className="rounded-2xl overflow-hidden shadow-sm border border-zinc-200/80 dark:border-white/[0.08] h-[360px] sm:h-[480px] lg:h-[560px]">
             <LeafletMap
               center={origin}
               zoom={13}
               markers={markers}
               polygons={polygons}
               polylines={polylines}
-              height="520px"
+              height="100%"
               autoFit={true}
               selectedId={destination ? `dest-${destination.id}` : null}
             />

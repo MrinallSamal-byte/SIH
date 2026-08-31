@@ -186,7 +186,7 @@ export default function PfaChatPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col h-[calc(100vh-7.5rem)] lg:max-w-5xl">
+    <div className="mx-auto flex w-full max-w-3xl flex-col h-[calc(100dvh-10.5rem)] md:h-[calc(100vh-7.5rem)] lg:max-w-5xl">
       {/* Top Banner */}
       <div className="flex items-center justify-between rounded-t-2xl border border-zinc-200/80 bg-white p-4 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]">
         <div className="flex items-center gap-3">

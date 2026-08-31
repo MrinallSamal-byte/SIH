@@ -401,6 +401,7 @@ export default function MainLayout() {
                   key={item.to}
                   to={item.to}
                   end={item.end}
+                  onClick={() => setMobileMenuOpen(false)}
                   className={({ isActive }) =>
                     `flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition ${
                       isActive
@@ -426,6 +427,7 @@ export default function MainLayout() {
                     key={item.to}
                     to={item.to}
                     end={item.end}
+                    onClick={() => setMobileMenuOpen(false)}
                     className={({ isActive }) =>
                       item.isSos
                         ? `col-span-2 flex items-center justify-center gap-2 rounded-xl bg-red-600 p-2.5 text-xs font-bold text-white shadow-sm`
@@ -445,12 +447,14 @@ export default function MainLayout() {
               <div className="col-span-2 border-t border-slate-100 my-1 pt-1 dark:border-white/[0.08] grid grid-cols-2 gap-1">
                 <Link
                   to="/admin"
+                  onClick={() => setMobileMenuOpen(false)}
                   className="rounded-lg px-3 py-2 text-xs text-slate-500 hover:bg-zinc-50 dark:text-slate-400 dark:hover:bg-zinc-800 font-medium"
                 >
                   {t('nav.admin')}
                 </Link>
                 <Link
                   to="/volunteer"
+                  onClick={() => setMobileMenuOpen(false)}
                   className="rounded-lg px-3 py-2 text-xs text-slate-500 hover:bg-zinc-50 dark:text-slate-400 dark:hover:bg-zinc-800 font-medium"
                 >
                   {t('nav.volunteer')}
