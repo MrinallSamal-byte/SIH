@@ -29,7 +29,7 @@
 
 ## 🌐 Live Deployments & Repositories
 
-- **Live Web Application:** [https://sih-ochre-xi.vercel.app/](https://sih-ochre-xi.vercel.app/)
+- **Live Web Application:** [https://sih-ochre-xi.vercel.app/](https://aapdasetu-v3.vercel.app/)
 - **Local Dev Server:** `http://localhost:5173/` (Vite) + `http://localhost:4000` (Express) + `http://localhost:8080` (FastAPI AI)
 - **One-Command Dev:** `npm run dev` (concurrently runs frontend + backend)
 - **GitHub Repository:** [https://github.com/MrinallSamal-byte/SIH](https://github.com/MrinallSamal-byte/SIH)
