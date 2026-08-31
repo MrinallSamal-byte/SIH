@@ -500,7 +500,7 @@ export default function SafeRoutes() {
                 href={getNavigationUrl(destination.latitude, destination.longitude)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-zinc-800 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
+                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-zinc-900 py-2.5 text-xs font-semibold text-white shadow-xs transition hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
               >
                 <Navigation className="h-3.5 w-3.5" />
                 <span>{t('common.directions')}</span>
@@ -513,24 +513,22 @@ export default function SafeRoutes() {
             <div
               key={r.id}
               onClick={() => setActiveRouteView(r.id)}
-              className={`flex items-center justify-between gap-3 rounded-2xl border p-4 text-xs shadow-sm transition cursor-pointer ${
+              className={`flex items-center justify-between gap-3 rounded-2xl border p-4 text-xs shadow-xs transition cursor-pointer ${
                 activeRouteView === r.id || activeRouteView === 'both'
-                  ? r.safe
-                    ? 'border-emerald-400 bg-emerald-50/80 ring-2 ring-emerald-500/40 dark:border-emerald-800 dark:bg-emerald-950/30'
-                    : 'border-amber-400 bg-amber-50/80 ring-2 ring-amber-500/40 dark:border-amber-800 dark:bg-amber-950/30'
-                  : 'border-slate-200 bg-white opacity-70 hover:opacity-100 dark:border-white/[0.08] dark:bg-[#1a1a1a]'
+                  ? 'border-zinc-300 bg-zinc-50/80 dark:border-zinc-700 dark:bg-zinc-900'
+                  : 'border-zinc-200/80 bg-white opacity-70 hover:opacity-100 dark:border-zinc-800 dark:bg-zinc-900'
               }`}
             >
               <div>
-                <div className={`flex items-center gap-1.5 font-bold ${r.safe ? 'text-emerald-800 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-300'}`}>
-                  {r.safe ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertTriangle className="h-4 w-4 text-amber-600" />}
+                <div className="flex items-center gap-1.5 font-bold text-zinc-900 dark:text-zinc-100">
+                  {r.safe ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertTriangle className="h-4 w-4 text-amber-500" />}
                   <span>{r.safe ? t('routes.safeDistance') : t('routes.directDistance')}</span>
                 </div>
-                <div className="mt-1 text-zinc-500 dark:text-slate-400 leading-relaxed">{r.hazard}</div>
+                <div className="mt-1 text-zinc-500 dark:text-zinc-400 leading-relaxed">{r.hazard}</div>
               </div>
               <div className="shrink-0 text-right">
-                <div className="font-bold text-zinc-800 dark:text-slate-300 mono text-sm">{r.distanceKm.toFixed(1)} {t('common.km')}{r.distanceKm !== routeLengthKm(r.points) ? '' : r.fallback ? ' ~' : ''}</div>
-                <div className="text-slate-500 dark:text-slate-400">
+                <div className="font-bold text-zinc-900 dark:text-zinc-100 mono text-sm">{r.distanceKm.toFixed(1)} {t('common.km')}{r.distanceKm !== routeLengthKm(r.points) ? '' : r.fallback ? ' ~' : ''}</div>
+                <div className="text-zinc-500 dark:text-zinc-400">
                   ~{formatEta(r.durationMin, t)} {t('routes.walkingTime')}{routingLoading ? ` · ${t('common.loading')}` : ''}
                 </div>
               </div>

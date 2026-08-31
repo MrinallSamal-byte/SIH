@@ -405,7 +405,7 @@ export default function ShelterFinder() {
         weight: activeRouteView === 'safe' ? 6 : 5,
         opacity: 0.95,
         dashed: false,
-        label: `🛡️ ${dualRoutes.safe.name}: ${dualRoutes.safe.distanceKm} km (~${dualRoutes.safe.durationMin} min) · ${dualRoutes.safe.confidencePercent}% Safety Confidence`,
+        label: `${dualRoutes.safe.name}: ${dualRoutes.safe.distanceKm} km (~${dualRoutes.safe.durationMin} min) · ${dualRoutes.safe.confidencePercent}% Safety Confidence`,
       })
     }
 
@@ -418,7 +418,7 @@ export default function ShelterFinder() {
         weight: activeRouteView === 'shortest' ? 5 : 4,
         opacity: 0.9,
         dashed: true,
-        label: `⚡ ${dualRoutes.shortest.name}: ${dualRoutes.shortest.distanceKm} km (~${dualRoutes.shortest.durationMin} min) · ${dualRoutes.shortest.confidencePercent}% Confidence (Low Ground Risk)`,
+        label: `${dualRoutes.shortest.name}: ${dualRoutes.shortest.distanceKm} km (~${dualRoutes.shortest.durationMin} min) · ${dualRoutes.shortest.confidencePercent}% Confidence (Low Ground Risk)`,
       })
     }
 
@@ -449,7 +449,7 @@ export default function ShelterFinder() {
       list.push({
         id: 'nav-sim-beacon',
         position: simulatedPosition,
-        title: '🔴 LIVE GPS Transit Beacon',
+        title: 'Live GPS Transit Beacon',
         subtitle: `Transit Speed: 24 km/h · Heading to ${selectedShelter?.name || 'Shelter'}`,
         color: '#10b981',
         isSos: true,
@@ -472,7 +472,7 @@ export default function ShelterFinder() {
 
       const popupActions = [
         {
-          label: isSelected ? 'Active Destination' : isRecommended ? '🌟 Auto-Route to Recommended' : 'Select & Route Here',
+          label: isSelected ? 'Active Destination' : isRecommended ? 'Auto-Route to Recommended' : 'Select & Route Here',
           onClick: () => handleSelect(s.id),
         },
         {
@@ -490,14 +490,14 @@ export default function ShelterFinder() {
       list.push({
         id: s.id || `shel-fallback-${i}`,
         position: { lat: s.latitude, lng: s.longitude },
-        title: isRecommended ? `🌟 ${s.name} (Recommended)` : (s.name || t('shelter.markerFallback', 'Safe Shelter')),
-        subtitle: `${isRecommended ? '🌟 AI Nearest Verified Haven · ' : ''}${statusLabel} · Capacity ${occ}/${cap} (${s.address ?? ''})`,
+        title: isRecommended ? `${s.name} (Recommended)` : (s.name || t('shelter.markerFallback', 'Safe Shelter')),
+        subtitle: `${isRecommended ? 'Nearest Verified Haven · ' : ''}${statusLabel} · Capacity ${occ}/${cap} (${s.address ?? ''})`,
         color: isSelected ? '#10b981' : isRecommended ? '#059669' : isSaved ? '#f59e0b' : s.status === 'open' ? '#0d9488' : '#d97706',
         isShelter: true,
         isSaved,
         isMedical: hasMedical && !isSaved,
         markerKind: isSelected ? 'destination' : isSaved ? 'saved' : hasMedical ? 'medical' : 'shelter',
-        badgeText: isRecommended ? '🌟 BEST' : `${occ}/${cap}`,
+        badgeText: isRecommended ? 'RECOMMENDED' : `${occ}/${cap}`,
         popupActions,
       })
     }
@@ -509,7 +509,7 @@ export default function ShelterFinder() {
         list.push({
           id: 'safe-waypoint-mid',
           position: midPoint,
-          title: '🛡️ Safe Disaster Transit Corridor',
+          title: 'Safe Disaster Transit Corridor',
           subtitle: 'Elevated roadway · SDRF clear zone & emergency vehicle priority',
           color: '#059669',
           markerKind: 'waypoint',
@@ -567,8 +567,8 @@ export default function ShelterFinder() {
               {t('shelter.title', 'Safe Shelter & Real-Time Evacuation Corridor')}
             </h1>
           </div>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Real-time disaster routing comparing high-confidence disaster corridors vs shortest paths with hazard clearance.
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            Real-time evacuation routing comparing high-confidence corridors against direct paths.
           </p>
         </div>
 
@@ -577,11 +577,11 @@ export default function ShelterFinder() {
             <button
               type="button"
               onClick={autoRecommendToNearest}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:from-emerald-700 hover:to-teal-700 cursor-pointer animate-fade-in"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-300 bg-zinc-900 px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-zinc-800 dark:border-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white cursor-pointer animate-fade-in"
               title="Instantly select and route to the nearest verified open shelter"
             >
-              <Sparkles className="h-3.5 w-3.5 text-amber-300 fill-amber-300" />
-              <span>Auto-Recommend Nearest</span>
+              <Sparkles className="h-3.5 w-3.5 text-zinc-300 dark:text-zinc-700" />
+              <span>Recommend Nearest</span>
             </button>
           )}
 
@@ -589,49 +589,49 @@ export default function ShelterFinder() {
             type="button"
             onClick={refresh}
             disabled={status === 'locating'}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200 shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 shadow-xs cursor-pointer"
           >
-            <MapPin className="h-3.5 w-3.5 text-zinc-800 dark:text-slate-300" />
+            <MapPin className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
             <span>
               {status === 'locating'
                 ? t('shelter.locating', 'Locating GPS...')
                 : userPos
-                ? t('shelter.updateLocation', 'Update GPS Location')
+                ? t('shelter.updateLocation', 'Update Location')
                 : t('shelter.detectLocation', 'Detect Live Location')}
             </span>
           </button>
         </div>
       </div>
 
-      {/* AI Auto-Recommended Nearest Shelter Quick Card */}
+      {/* Recommended Nearest Shelter Quick Card */}
       {recommendedShelter && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-400/80 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-emerald-500/5 p-4 text-xs text-emerald-950 dark:border-emerald-700/60 dark:bg-[#122419] dark:text-emerald-200 shadow-sm animate-fade-in">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4 text-xs dark:border-zinc-800 dark:bg-zinc-900/60 shadow-xs animate-fade-in">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs shrink-0">
-              <Sparkles className="h-5 w-5 text-amber-300 fill-amber-300" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-800 shadow-xs shrink-0 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-100">
+              <Sparkles className="h-4 w-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
-                  🌟 AI Auto-Recommended Safe Haven
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                  Recommended Safe Haven
                 </span>
-                <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-xs">
+                <span className="rounded-md border border-zinc-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700 dark:border-zinc-750 dark:bg-zinc-800 dark:text-zinc-300">
                   Nearest & Available
                 </span>
               </div>
-              <div className="font-extrabold text-sm text-zinc-900 dark:text-slate-100 mt-0.5">
+              <div className="font-bold text-sm text-zinc-900 dark:text-zinc-100 mt-0.5">
                 {recommendedShelter.name}
               </div>
-              <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-2">
+              <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 flex flex-wrap items-center gap-2">
                 <span>{recommendedShelter.address || 'Relief Shelter'}</span>
                 <span>·</span>
-                <span className="font-semibold text-emerald-700 dark:text-emerald-300">
+                <span className="font-semibold text-zinc-700 dark:text-zinc-300">
                   {Math.max(0, (recommendedShelter.capacity ?? 100) - (recommendedShelter.occupancy ?? 0))} spots available
                 </span>
                 {userPos && typeof recommendedShelter.latitude === 'number' && typeof recommendedShelter.longitude === 'number' && (
                   <>
                     <span>·</span>
-                    <span className="font-bold text-zinc-800 dark:text-slate-200">
+                    <span className="font-medium text-zinc-700 dark:text-zinc-300">
                       {haversineKm(userPos, { lat: recommendedShelter.latitude, lng: recommendedShelter.longitude }).toFixed(1)} km away
                     </span>
                   </>
@@ -639,8 +639,8 @@ export default function ShelterFinder() {
                 {Array.isArray(recommendedShelter.facilities) && recommendedShelter.facilities.includes('medical_station') && (
                   <>
                     <span>·</span>
-                    <span className="font-semibold text-red-600 dark:text-red-400">
-                      + Medical Station Available
+                    <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                      Medical Station
                     </span>
                   </>
                 )}
@@ -652,14 +652,14 @@ export default function ShelterFinder() {
             <button
               type="button"
               onClick={autoRecommendToNearest}
-              className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold shadow-xs transition cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold shadow-xs transition cursor-pointer ${
                 selectedId === recommendedShelter.id
-                  ? 'bg-emerald-700 text-white shadow-md'
-                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                  : 'border border-zinc-300 bg-white text-zinc-800 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'
               }`}
             >
               <Navigation className="h-3.5 w-3.5" />
-              <span>{selectedId === recommendedShelter.id ? 'Route Active' : '⚡ Auto-Route to Nearest Haven'}</span>
+              <span>{selectedId === recommendedShelter.id ? 'Route Active' : 'Auto-Route Here'}</span>
             </button>
           </div>
         </div>
@@ -667,19 +667,19 @@ export default function ShelterFinder() {
 
       {/* Real-time Dual-Route HUD Panel */}
       {selectedShelter && dualRoutes && (
-        <div className="overflow-hidden rounded-2xl border border-emerald-300/80 bg-white dark:border-emerald-900/60 dark:bg-[#161e19] shadow-md transition-all">
+        <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 shadow-xs transition-all">
           {/* Top Bar: Target shelter name & Route Mode Switcher */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-100 bg-emerald-50/70 px-4 py-3 dark:border-emerald-950/80 dark:bg-emerald-950/40">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 bg-zinc-50/70 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/80">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs">
-                <ShieldCheck className="h-5 w-5" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-900 text-white shadow-xs dark:bg-zinc-100 dark:text-zinc-900">
+                <ShieldCheck className="h-4 w-4" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-zinc-900 dark:text-slate-100 text-sm">
-                    Target Safe Haven: {selectedShelter.name}
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100 text-sm">
+                    Target Haven: {selectedShelter.name}
                   </span>
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-900/70 dark:text-emerald-200 flex items-center gap-1">
+                  <span className="rounded-md border border-zinc-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 flex items-center gap-1">
                     {isCalculatingRoute ? (
                       <>
                         <Loader2 className="h-2.5 w-2.5 animate-spin" />
@@ -690,47 +690,47 @@ export default function ShelterFinder() {
                     )}
                   </span>
                 </div>
-                <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
                   {selectedShelter.address || 'Designated relief facility'}
                 </div>
               </div>
             </div>
 
             {/* Route Selector Tabs: Safe vs Shortest vs Both */}
-            <div className="flex items-center rounded-xl border border-emerald-200 bg-white/90 p-1 shadow-xs dark:border-emerald-900/60 dark:bg-[#1e2a22]">
+            <div className="flex items-center rounded-xl border border-zinc-200 bg-zinc-100/80 p-1 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
               <button
                 type="button"
                 onClick={() => setActiveRouteView('safe')}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
                   activeRouteView === 'safe'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-emerald-900 hover:bg-emerald-100/60 dark:text-emerald-300 dark:hover:bg-emerald-900/40'
+                    ? 'bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-zinc-100'
+                    : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200'
                 }`}
               >
-                <ShieldCheck className="h-3.5 w-3.5" />
-                <span>🛡️ Safe Passage (98% Conf)</span>
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Safe Passage (98%)</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveRouteView('shortest')}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
                   activeRouteView === 'shortest'
-                    ? 'bg-amber-600 text-white shadow-xs'
-                    : 'text-zinc-700 hover:bg-amber-100/60 dark:text-slate-300 dark:hover:bg-amber-950/40'
+                    ? 'bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-zinc-100'
+                    : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200'
                 }`}
               >
                 <Zap className="h-3.5 w-3.5 text-amber-500" />
-                <span>⚡ Shortest Path (72% Conf)</span>
+                <span>Direct Route (72%)</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveRouteView('both')}
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition cursor-pointer ${
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition cursor-pointer ${
                   activeRouteView === 'both'
-                    ? 'bg-zinc-800 text-white dark:bg-white dark:text-zinc-900 shadow-xs'
-                    : 'text-zinc-600 hover:bg-zinc-100 dark:text-slate-300 dark:hover:bg-zinc-800'
+                    ? 'bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-zinc-100'
+                    : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200'
                 }`}
                 title="Compare both routes simultaneously on map"
               >
@@ -746,52 +746,50 @@ export default function ShelterFinder() {
               {/* Route Option 1: High-Confidence Safe Corridor */}
               <div
                 onClick={() => setActiveRouteView('safe')}
-                className="group relative cursor-pointer rounded-2xl border-2 border-emerald-500 bg-gradient-to-b from-emerald-50/70 to-white p-4 shadow-xs transition hover:shadow-md dark:border-emerald-600 dark:bg-gradient-to-b dark:from-emerald-950/40 dark:to-[#162019]"
+                className="group relative cursor-pointer rounded-2xl border border-zinc-200 bg-white p-4 shadow-xs transition hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="flex h-3 w-6 items-center justify-center rounded-full bg-emerald-500">
-                      <span className="h-1.5 w-4 rounded-full bg-white" />
-                    </span>
-                    <span className="font-extrabold text-sm text-emerald-900 dark:text-emerald-200">
-                      🛡️ Safe Evacuation Corridor
+                    <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                    <span className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
+                      Safe Evacuation Corridor
                     </span>
                   </div>
-                  <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
-                    98% High Confidence
+                  <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
+                    98% Confidence
                   </span>
                 </div>
 
                 <div className="mt-3 flex items-baseline gap-2">
-                  <span className="text-2xl font-black text-emerald-700 dark:text-emerald-300">
+                  <span className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
                     {dualRoutes.safe.distanceKm} km
                   </span>
-                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
                     ~{dualRoutes.safe.durationMin}m walk · ~{dualRoutes.safe.driveDurationMin}m drive
                   </span>
                 </div>
 
-                <div className="mt-2 space-y-1 text-[11px] font-medium text-slate-600 dark:text-slate-300 border-t border-emerald-200/60 pt-2 dark:border-emerald-900/50">
+                <div className="mt-2 space-y-1 text-[11px] text-zinc-600 dark:text-zinc-400 border-t border-zinc-100 pt-2 dark:border-zinc-800">
                   <div className="flex items-center justify-between">
                     <span>Road Quality:</span>
-                    <span className="font-bold text-emerald-700 dark:text-emerald-300">{dualRoutes.safe.roadCondition}</span>
+                    <span className="font-medium text-zinc-900 dark:text-zinc-200">{dualRoutes.safe.roadCondition}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Elevation:</span>
-                    <span className="font-bold text-emerald-700 dark:text-emerald-300">{dualRoutes.safe.elevationLabel}</span>
+                    <span className="font-medium text-zinc-900 dark:text-zinc-200">{dualRoutes.safe.elevationLabel}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>Hazard Clearance:</span>
-                    <span className="font-bold text-emerald-700 dark:text-emerald-300">100% Flood Avoided (Dry Path)</span>
+                    <span>Clearance:</span>
+                    <span className="font-medium text-zinc-900 dark:text-zinc-200">100% Flood Avoided</span>
                   </div>
                 </div>
 
                 <div className="mt-3 flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 group-hover:underline">
-                    Click to Focus Safe Route Only →
+                  <span className="text-[11px] font-medium text-zinc-500 group-hover:text-zinc-900 dark:group-hover:text-zinc-200">
+                    Select Safe Route →
                   </span>
-                  <span className="rounded-lg bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200">
-                    Solid Green Line
+                  <span className="text-[10px] font-mono text-zinc-400">
+                    Solid Line
                   </span>
                 </div>
               </div>
@@ -799,52 +797,50 @@ export default function ShelterFinder() {
               {/* Route Option 2: General / Shortest Direct Route */}
               <div
                 onClick={() => setActiveRouteView('shortest')}
-                className="group relative cursor-pointer rounded-2xl border-2 border-amber-400/80 bg-gradient-to-b from-amber-50/70 to-white p-4 shadow-xs transition hover:shadow-md dark:border-amber-700/80 dark:bg-gradient-to-b dark:from-amber-950/40 dark:to-[#1a1f18]"
+                className="group relative cursor-pointer rounded-2xl border border-zinc-200 bg-white p-4 shadow-xs transition hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="flex h-3 w-6 items-center justify-center rounded-full bg-amber-500">
-                      <span className="h-0.5 w-4 border-b border-dashed border-white" />
-                    </span>
-                    <span className="font-extrabold text-sm text-amber-900 dark:text-amber-200">
-                      ⚡ General / Direct Route
+                    <span className="flex h-2.5 w-2.5 rounded-full bg-amber-500" />
+                    <span className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
+                      Direct Route
                     </span>
                   </div>
-                  <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-extrabold text-white shadow-xs">
-                    72% Road Confidence
+                  <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
+                    72% Confidence
                   </span>
                 </div>
 
                 <div className="mt-3 flex items-baseline gap-2">
-                  <span className="text-2xl font-black text-amber-700 dark:text-amber-300">
+                  <span className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
                     {dualRoutes.shortest.distanceKm} km
                   </span>
-                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
                     ~{dualRoutes.shortest.durationMin}m walk · ~{dualRoutes.shortest.driveDurationMin}m drive
                   </span>
                 </div>
 
-                <div className="mt-2 space-y-1 text-[11px] font-medium text-slate-600 dark:text-slate-300 border-t border-amber-200/60 pt-2 dark:border-amber-900/50">
+                <div className="mt-2 space-y-1 text-[11px] text-zinc-600 dark:text-zinc-400 border-t border-zinc-100 pt-2 dark:border-zinc-800">
                   <div className="flex items-center justify-between">
                     <span>Road Quality:</span>
-                    <span className="font-bold text-amber-700 dark:text-amber-300">{dualRoutes.shortest.roadCondition}</span>
+                    <span className="font-medium text-zinc-900 dark:text-zinc-200">{dualRoutes.shortest.roadCondition}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Elevation:</span>
-                    <span className="font-bold text-amber-700 dark:text-amber-300">{dualRoutes.shortest.elevationLabel}</span>
+                    <span className="font-medium text-zinc-900 dark:text-zinc-200">{dualRoutes.shortest.elevationLabel}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>Disaster Advisory:</span>
-                    <span className="font-bold text-amber-700 dark:text-amber-300">Caution: Near Low Drainage Dip</span>
+                    <span>Advisory:</span>
+                    <span className="font-medium text-zinc-900 dark:text-zinc-200">Caution: Near Low Drainage</span>
                   </div>
                 </div>
 
                 <div className="mt-3 flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300 group-hover:underline">
-                    Click to Focus General Route Only →
+                  <span className="text-[11px] font-medium text-zinc-500 group-hover:text-zinc-900 dark:group-hover:text-zinc-200">
+                    Select Direct Route →
                   </span>
-                  <span className="rounded-lg bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-900/60 dark:text-amber-200">
-                    Dashed Amber Line
+                  <span className="text-[10px] font-mono text-zinc-400">
+                    Dashed Line
                   </span>
                 </div>
               </div>
@@ -852,20 +848,20 @@ export default function ShelterFinder() {
           ) : (
             <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4 animate-fade-in">
               {/* Metric 1: Road Safety Confidence */}
-              <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 dark:border-white/[0.08] dark:bg-[#1a231c]">
-                <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-center justify-between text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                   <span>Road Confidence</span>
-                  <Activity className="h-3.5 w-3.5 text-emerald-500" />
+                  <Activity className="h-3.5 w-3.5 text-zinc-600 dark:text-zinc-400" />
                 </div>
                 <div className="mt-1 flex items-baseline gap-2">
-                  <span className={`text-xl font-extrabold ${currentActiveRoute?.confidencePercent && currentActiveRoute.confidencePercent >= 90 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                  <span className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
                     {currentActiveRoute?.confidencePercent}%
                   </span>
-                  <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                  <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
                     {currentActiveRoute?.riskLevel === 'LOW' ? 'Verified Safe' : 'Caution Advised'}
                   </span>
                 </div>
-                <div className="mt-1.5 h-1.5 w-full rounded-full bg-slate-200 dark:bg-zinc-700 overflow-hidden">
+                <div className="mt-1.5 h-1.5 w-full rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${currentActiveRoute?.confidencePercent && currentActiveRoute.confidencePercent >= 90 ? 'bg-emerald-500' : 'bg-amber-500'}`}
                     style={{ width: `${currentActiveRoute?.confidencePercent ?? 0}%` }}
@@ -874,50 +870,50 @@ export default function ShelterFinder() {
               </div>
 
               {/* Metric 2: Distance & ETA */}
-              <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 dark:border-white/[0.08] dark:bg-[#1a231c]">
-                <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  <span>Travel Distance & ETA</span>
-                  <Clock className="h-3.5 w-3.5 text-blue-500" />
+              <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-center justify-between text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                  <span>Distance & ETA</span>
+                  <Clock className="h-3.5 w-3.5 text-zinc-600 dark:text-zinc-400" />
                 </div>
                 <div className="mt-1 flex items-baseline gap-1.5">
-                  <span className="text-xl font-extrabold text-zinc-900 dark:text-slate-100">
+                  <span className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
                     {currentActiveRoute?.distanceKm} km
                   </span>
-                  <span className="text-xs font-bold text-slate-500">
+                  <span className="text-xs text-zinc-500">
                     (~{currentActiveRoute?.durationMin}m walk)
                   </span>
                 </div>
-                <div className="mt-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                <div className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
                   <Car className="h-3 w-3" />
-                  <span>Vehicle: ~{currentActiveRoute?.driveDurationMin} mins</span>
+                  <span>Drive: ~{currentActiveRoute?.driveDurationMin} mins</span>
                 </div>
               </div>
 
               {/* Metric 3: Road Surface & Elevation */}
-              <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 dark:border-white/[0.08] dark:bg-[#1a231c]">
-                <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  <span>Road Surface Quality</span>
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+              <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-center justify-between text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                  <span>Road Quality</span>
+                  <ShieldCheck className="h-3.5 w-3.5 text-zinc-600 dark:text-zinc-400" />
                 </div>
-                <div className="mt-1 font-bold text-xs text-zinc-800 dark:text-slate-200 line-clamp-1">
+                <div className="mt-1 font-semibold text-xs text-zinc-800 dark:text-zinc-200 line-clamp-1">
                   {currentActiveRoute?.roadCondition}
                 </div>
-                <div className="mt-1 text-[11px] text-emerald-700 dark:text-emerald-300 font-semibold">
-                  Elevation: {currentActiveRoute?.elevationLabel}
+                <div className="mt-1 text-[11px] text-zinc-600 dark:text-zinc-400">
+                  {currentActiveRoute?.elevationLabel}
                 </div>
               </div>
 
               {/* Metric 4: Hazard Clearance */}
-              <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 dark:border-white/[0.08] dark:bg-[#1a231c]">
-                <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  <span>Disaster Clearance</span>
-                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+              <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-center justify-between text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                  <span>Clearance</span>
+                  <AlertTriangle className="h-3.5 w-3.5 text-zinc-600 dark:text-zinc-400" />
                 </div>
-                <div className="mt-1 font-bold text-xs text-zinc-800 dark:text-slate-200">
+                <div className="mt-1 font-semibold text-xs text-zinc-800 dark:text-zinc-200">
                   {activeRouteView === 'safe' ? '100% Flood Avoidance' : 'Low Drainage Proximity'}
                 </div>
-                <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                  {floodZones.length} Active Hazard Zones Tracked
+                <div className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                  {floodZones.length} Hazard Zones Monitored
                 </div>
               </div>
             </div>
@@ -1152,11 +1148,11 @@ export default function ShelterFinder() {
 
         {dualRoutes && (
           <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1 text-emerald-600 font-bold">
-              <span className="h-1.5 w-4 rounded-full bg-emerald-500 inline-block" /> 98% Safe Corridor
+            <span className="flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300 font-medium">
+              <span className="h-1.5 w-3.5 rounded-full bg-emerald-500 inline-block" /> Safe Corridor (98%)
             </span>
-            <span className="flex items-center gap-1 text-amber-600 font-bold">
-              <span className="h-1.5 w-4 rounded-full bg-amber-500 inline-block border-b border-dashed" /> 72% Direct Path
+            <span className="flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300 font-medium">
+              <span className="h-1.5 w-3.5 rounded-full bg-amber-500 inline-block border-b border-dashed" /> Direct Route (72%)
             </span>
           </div>
         )}
@@ -1164,7 +1160,7 @@ export default function ShelterFinder() {
 
       {/* Quick stat strip */}
       <div
-        className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-slate-600 dark:text-slate-300 pt-2"
+        className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-zinc-600 dark:text-zinc-300 pt-2"
         role="status"
       >
         <span className="inline-flex items-center gap-1.5">
@@ -1219,13 +1215,13 @@ export default function ShelterFinder() {
               tabIndex={0}
               role="button"
               aria-pressed={isSelected}
-              className={`relative overflow-hidden rounded-2xl outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-slate-500 hover:-translate-y-0.5 cursor-pointer ${
+              className={`relative overflow-hidden rounded-2xl outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 hover:-translate-y-0.5 cursor-pointer ${
                 isSelected
-                  ? 'ring-2 ring-emerald-600 dark:ring-emerald-400 shadow-md'
+                  ? 'ring-2 ring-zinc-800 dark:ring-zinc-200 shadow-sm'
                   : isRecommended
-                  ? 'ring-2 ring-emerald-500/90 dark:ring-emerald-400/90 shadow-sm'
+                  ? 'ring-1 ring-zinc-400 dark:ring-zinc-600 shadow-xs'
                   : isNearestOpen
-                  ? 'ring-2 ring-emerald-500 dark:ring-emerald-400'
+                  ? 'ring-1 ring-zinc-300 dark:ring-zinc-700'
                   : ''
               } ${isOpen ? '' : 'opacity-60 hover:opacity-100'} ${
                 hasCoords ? '' : 'pointer-events-none opacity-40'
@@ -1237,21 +1233,21 @@ export default function ShelterFinder() {
                   aria-hidden="true"
                 />
               )}
-              <Card className={`flex flex-col rounded-2xl border bg-white p-5 sm:p-6 shadow-xs dark:bg-[#1a1a1a] ${
+              <Card className={`flex flex-col rounded-2xl border bg-white p-5 sm:p-6 shadow-xs dark:bg-zinc-900 ${
                 isRecommended
-                  ? 'border-emerald-300 dark:border-emerald-800/80 bg-gradient-to-b from-emerald-50/20 to-white dark:from-emerald-950/20 dark:to-[#1a1a1a]'
-                  : 'border-zinc-200/80 dark:border-white/[0.08]'
+                  ? 'border-zinc-300 dark:border-zinc-700'
+                  : 'border-zinc-200/80 dark:border-zinc-800'
               }`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-                      <span className="truncate font-bold text-zinc-800 dark:text-slate-300 text-base">
+                      <span className="truncate font-bold text-zinc-900 dark:text-zinc-100 text-base">
                         {s.name || t('shelter.cardFallback', 'Safe Shelter')}
                       </span>
                       {isRecommended && !isSaved && (
-                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white shadow-xs">
-                          <Sparkles className="h-2.5 w-2.5 text-amber-300 fill-amber-300" aria-hidden="true" />
-                          <span>AI Recommended</span>
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-zinc-200 bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                          <Sparkles className="h-2.5 w-2.5 text-zinc-500" aria-hidden="true" />
+                          <span>Recommended</span>
                         </span>
                       )}
                       {isSaved && (
@@ -1260,14 +1256,14 @@ export default function ShelterFinder() {
                         </span>
                       )}
                       {isNearestOpen && !isSaved && !isRecommended && (
-                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-xs">
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                           <Crosshair className="h-2.5 w-2.5" aria-hidden="true" />
                           {t('sh.nearest', 'Nearest')}
                         </span>
                       )}
                     </div>
-                    <div className="mt-1 flex items-start gap-1 line-clamp-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                      <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5 text-slate-400" />
+                    <div className="mt-1 flex items-start gap-1 line-clamp-2 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                      <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5 text-zinc-400" />
                       <span>{s.address || t('shelter.addressFallback', 'Shelter Location')}</span>
                     </div>
                   </div>

@@ -212,7 +212,7 @@ function generateRouteSteps(
       distanceMeters: Math.round(totalMeters * 0.25),
       durationMin: Math.max(2, Math.round((distKm * 0.25 / WALK_SPEED_KMPH) * 60)),
       roadName: 'Main Arterial Bypass (Elevated)',
-      safetyNote: '🛡️ High Ground: Zero water accumulation observed',
+      safetyNote: 'High Ground: Zero water accumulation observed',
       icon: 'depart',
     })
     steps.push({
@@ -221,7 +221,7 @@ function generateRouteSteps(
       distanceMeters: Math.round(totalMeters * 0.45),
       durationMin: Math.max(3, Math.round((distKm * 0.45 / WALK_SPEED_KMPH) * 60)),
       roadName: 'Civil Defense Relief Highway',
-      safetyNote: '✅ Active SDRF / NDRF emergency patrol & rescue vehicle clearance',
+      safetyNote: 'Active SDRF / NDRF emergency patrol & rescue vehicle clearance',
       icon: 'right',
     })
     steps.push({
@@ -249,7 +249,7 @@ function generateRouteSteps(
       distanceMeters: Math.round(totalMeters * 0.35),
       durationMin: Math.max(2, Math.round((distKm * 0.35 / WALK_SPEED_KMPH) * 60)),
       roadName: 'Direct Urban Sector Road',
-      safetyNote: '⚠️ Low-lying road: Minor waterlogging may be present (~0.2m)',
+      safetyNote: 'Low-lying road: Minor waterlogging may be present (~0.2m)',
       icon: 'depart',
     })
     steps.push({
@@ -258,7 +258,7 @@ function generateRouteSteps(
       distanceMeters: Math.round(totalMeters * 0.4),
       durationMin: Math.max(3, Math.round((distKm * 0.4 / WALK_SPEED_KMPH) * 60)),
       roadName: 'Central Commercial Link',
-      safetyNote: '⚠️ Water depth ~0.4m - 0.7m. Caution advised for two-wheelers and pedestrians',
+      safetyNote: 'Water depth ~0.4m - 0.7m. Caution advised for two-wheelers and pedestrians',
       icon: 'warning',
     })
     steps.push({
