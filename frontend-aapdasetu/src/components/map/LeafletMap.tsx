@@ -391,7 +391,6 @@ function MarkerPopupContent({
 
 function MapController({
   center,
-  zoom,
   markers = [],
   polygons = [],
   polylines = [],
@@ -400,7 +399,6 @@ function MapController({
   fitTrigger = 0,
 }: {
   center: GeoPoint
-  zoom?: number
   markers?: MapMarker[]
   polygons?: MapPolygon[]
   polylines?: MapPolyline[]
@@ -416,11 +414,10 @@ function MapController({
   const lastCenterKeyRef = useRef(`${center?.lat?.toFixed(4) ?? '0'},${center?.lng?.toFixed(4) ?? '0'}`)
   const lastFitTriggerRef = useRef(fitTrigger)
 
-  // Track user interaction (pan / zoom gestures) so background polling NEVER overrides user view
+  // Track user interaction (pan / zoom gestures) so background updates NEVER override user view
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handleUserInteraction = (e: any) => {
-      if (e?.originalEvent && !isProgrammaticMoveRef.current) {
+    const handleUserInteraction = () => {
+      if (!isProgrammaticMoveRef.current) {
         userInteractedRef.current = true
       }
     }
@@ -467,7 +464,7 @@ function MapController({
     ]
   }, [markers, polygons, polylines])
 
-  // 1. Initial Fit Bounds OR User-Triggered Fit Bounds
+  // 1. Initial Fit Bounds OR User-Triggered Fit Bounds (runs ONLY once or on explicit fitTrigger)
   useEffect(() => {
     const isManualTrigger = fitTrigger !== lastFitTriggerRef.current
     if (isManualTrigger) {
@@ -483,7 +480,7 @@ function MapController({
         isProgrammaticMoveRef.current = true
         map.fitBounds(
           points.map((pt) => [pt.lat, pt.lng] as [number, number]),
-          { padding: [40, 40], maxZoom: 15, animate: hasInitialFitRef.current },
+          { padding: [40, 40], maxZoom: 15, animate: false },
         )
         hasInitialFitRef.current = true
         setTimeout(() => {
@@ -493,7 +490,7 @@ function MapController({
         // fitBounds error
       }
     }
-  }, [map, points, fitTrigger, autoFit])
+  }, [map, points.length, fitTrigger, autoFit])
 
   // 2. Focused marker / selectedId change: Center on selected marker without resetting user zoom
   useEffect(() => {
@@ -514,21 +511,20 @@ function MapController({
         }
       }
     }
-  }, [map, selectedId, markers])
+  }, [map, selectedId])
 
   // 3. Center prop change (e.g. user clicked locate or explicit recenter)
   useEffect(() => {
     if (!center || typeof center.lat !== 'number' || typeof center.lng !== 'number') return
     const key = `${center.lat.toFixed(4)},${center.lng.toFixed(4)}`
 
-    // Only update if center genuinely changed and user hasn't actively zoomed/panned elsewhere,
-    // OR if user explicitly changed center
+    // Only update if center genuinely changed and user hasn't actively zoomed/panned elsewhere
     if (key !== lastCenterKeyRef.current) {
       lastCenterKeyRef.current = key
-      if (!userInteractedRef.current || selectedId) {
+      if (!userInteractedRef.current) {
         try {
           isProgrammaticMoveRef.current = true
-          map.setView([center.lat, center.lng], zoom ?? map.getZoom(), { animate: true })
+          map.setView([center.lat, center.lng], map.getZoom(), { animate: true })
           setTimeout(() => {
             isProgrammaticMoveRef.current = false
           }, 400)
@@ -537,7 +533,7 @@ function MapController({
         }
       }
     }
-  }, [map, center, zoom, selectedId])
+  }, [map, center])
 
   return null
 }
@@ -820,7 +816,6 @@ export default function LeafletMap({
 
         <MapController
           center={center}
-          zoom={zoom}
           markers={markers}
           polygons={polygons}
           polylines={polylines}

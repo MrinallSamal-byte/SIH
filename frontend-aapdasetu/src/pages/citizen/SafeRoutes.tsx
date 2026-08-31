@@ -237,6 +237,11 @@ export default function SafeRoutes() {
     return []
   }, [safeDirect])
 
+  const safeWaypointsKey = useMemo(
+    () => safeWaypoints.map((p) => `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`).join(';'),
+    [safeWaypoints],
+  )
+
   useEffect(() => {
     if (!destPoint) return
     let cancelled = false
@@ -261,7 +266,7 @@ export default function SafeRoutes() {
     return () => {
       cancelled = true
     }
-  }, [origin.lat, origin.lng, destPoint?.lat, destPoint?.lng, safeWaypoints])
+  }, [origin.lat, origin.lng, destPoint?.lat, destPoint?.lng, safeWaypointsKey])
 
   const fastestRoute = useMemo(() => osrmFastest?.points ?? fastestDirect, [osrmFastest, fastestDirect])
   const safeRoute = useMemo(() => osrmSafe?.points ?? safeDirect, [osrmSafe, safeDirect])
@@ -558,7 +563,7 @@ export default function SafeRoutes() {
               markers={markers}
               polylines={polylines}
               height="100%"
-              autoFit={true}
+              autoFit={false}
               selectedId={destination ? `dest-${destination.id}` : null}
             />
           </div>
