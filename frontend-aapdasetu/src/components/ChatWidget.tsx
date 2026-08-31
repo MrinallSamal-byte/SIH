@@ -183,8 +183,9 @@ export default function ChatWidget() {
           type="button"
           onClick={() => setOpen(true)}
           aria-label={t('chat.openAria')}
+          aria-expanded={open}
           title={t('chat.openTitle')}
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-900 text-white shadow-lg ring-1 ring-black/10 transition-all hover:bg-zinc-700 active:scale-95 cursor-pointer dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-900 text-white shadow-lg ring-1 ring-black/10 transition-all hover:bg-zinc-700 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900 dark:focus-visible:ring-slate-100 cursor-pointer dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
         >
           <Bot className="h-6 w-6" />
         </button>
