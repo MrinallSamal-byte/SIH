@@ -66,6 +66,8 @@ export default function ReportForm() {
   const [copied, setCopied] = useState(false)
   // ponytail: sticky manual-pin flag — a fresh GPS fix must not clobber a pin the user placed
   const manuallyPinnedRef = useRef(false)
+  const editAddressInitRef = useRef('')
+  const editPointChosenRef = useRef(false)
 
   // Voice/Video recording state
   const [isRecordingAudio, setIsRecordingAudio] = useState(false)
@@ -100,7 +102,7 @@ export default function ReportForm() {
           setGpsAddress(`${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
         })
     }
-  }, [coords])
+  }, [coords, hasTrustedFix])
 
   const handleRetryGps = async () => {
     setLocatingGps(true)
@@ -131,11 +133,10 @@ export default function ReportForm() {
 
   const applyManualLocation = async () => {
     const addrText = editAddressText.trim()
-    // Saving must always yield a REAL trusted fix. When no map click happened,
-    // resolve the typed address to coordinates — stamping the context coords
-    // here previously pinned reports to the fabricated Bhubaneswar default
-    // (~1000 km from a GPS-denied user).
-    if (editPoint) {
+    const addressChanged = addrText !== editAddressInitRef.current.trim()
+
+    // If user explicitly picked a map point, use it
+    if (editPoint && (!addressChanged || editPointChosenRef.current)) {
       manuallyPinnedRef.current = true
       setCustomPoint(editPoint)
       if (addrText) {
@@ -150,10 +151,12 @@ export default function ReportForm() {
       toast(t('sos.savedToast'), 'success')
       return
     }
+
     if (!addrText) {
       toast(t('sos.pickLocationToast'), 'error')
       return
     }
+
     setGeocodingAddress(true)
     try {
       const hit = (await searchPlaces(addrText))[0]
@@ -194,6 +197,10 @@ export default function ReportForm() {
 
   // Audio Recording Controller
   const startAudioRecording = async () => {
+    if (media.length >= 3) {
+      toast(t('report.maxAttachments', 'Maximum 3 attachments allowed'), 'error')
+      return
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       audioStreamRef.current = stream
@@ -210,15 +217,19 @@ export default function ReportForm() {
         const reader = new FileReader()
         reader.onloadend = () => {
           const dataUrl = reader.result as string
-          setMedia((prev) => [
-            ...prev,
-            {
-              kind: 'audio',
-              name: `voice_note_${new Date().toISOString().slice(11, 19).replace(/:/g, '-')}.webm`,
-              mime: 'audio/webm',
-              dataUrl,
-            },
-          ])
+          setMedia((prev) =>
+            prev.length < 3
+              ? [
+                  ...prev,
+                  {
+                    kind: 'audio',
+                    name: `voice_note_${new Date().toISOString().slice(11, 19).replace(/:/g, '-')}.webm`,
+                    mime: 'audio/webm',
+                    dataUrl,
+                  },
+                ]
+              : prev
+          )
         }
         reader.readAsDataURL(audioBlob)
         stream.getTracks().forEach((track) => track.stop())
@@ -603,8 +614,11 @@ export default function ReportForm() {
             <button
               type="button"
               onClick={() => {
+                const currentAddr = gpsAddress || detectedAddress || ''
+                editAddressInitRef.current = currentAddr
+                editPointChosenRef.current = false
                 setEditPoint(coords ? { lat: coords.latitude, lng: coords.longitude } : null)
-                setEditAddressText(detectedAddress || '')
+                setEditAddressText(currentAddr)
                 setShowLocationModal(true)
               }}
               className="shrink-0 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-700 cursor-pointer"
@@ -876,8 +890,9 @@ export default function ReportForm() {
                     : { lat: 20.2706, lng: 85.8334 })
                 }
                 onChange={(p, addr) => {
+                  editPointChosenRef.current = true
                   setEditPoint(p)
-                  if (addr && !editAddressText.trim()) {
+                  if (addr) {
                     setEditAddressText(addr)
                   }
                 }}

@@ -148,7 +148,7 @@ export default function PfaChatPage() {
       const report = await createReport({
         type: 'other',
         isOneTapSos: true,
-        reporterPhone: phone,
+        reporterPhone: clean,
         description: `AapdaMitra AI Critical Rescue Request: ${userPromptText.slice(0, 120)}`,
         location: { lat, lng },
         landmark: 'AapdaMitra AI Mental Health & First-Aid Emergency Escalation',
@@ -322,7 +322,7 @@ export default function PfaChatPage() {
                         />
                         <button
                           type="button"
-                          onClick={() => handleEmergencyCallback(i, m.content)}
+                          onClick={() => handleEmergencyCallback(i, messages[i - 1]?.content || m.content)}
                           disabled={submittingCallback === i}
                           className="shrink-0 rounded-xl bg-red-600 px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-sm transition hover:bg-red-700 disabled:opacity-50"
                         >

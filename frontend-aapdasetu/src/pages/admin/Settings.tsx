@@ -163,15 +163,15 @@ export default function Settings() {
               <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
                 <li className="flex justify-between">
                   <span>{t('st.rlPublic', 'Public API')}</span>
-                  <span className="mono font-semibold">{status.rateLimits.publicPerMinute}/min</span>
+                  <span className="mono font-semibold">{status.rateLimits?.publicPerMinute ?? '—'}/min</span>
                 </li>
                 <li className="flex justify-between">
                   <span>{t('st.rlAdmin', 'Admin API')}</span>
-                  <span className="mono font-semibold">{status.rateLimits.adminPer15Min}/15min</span>
+                  <span className="mono font-semibold">{status.rateLimits?.adminPer15Min ?? '—'}/15min</span>
                 </li>
                 <li className="flex justify-between">
                   <span>{t('st.rlUploads', 'Media uploads')}</span>
-                  <span className="mono font-semibold">{status.rateLimits.uploadsPerHour}/hr</span>
+                  <span className="mono font-semibold">{status.rateLimits?.uploadsPerHour ?? '—'}/hr</span>
                 </li>
               </ul>
             </div>

@@ -4,12 +4,14 @@ import { volunteerMe, listVolunteerTasks, setVolunteerStatus } from '../../api/e
 import Button from '../../components/common/Button'
 import Loader from '../../components/common/Loader'
 import { useToast } from '../../components/common/Toast'
+import { useVolunteerAuth } from '../../hooks/useVolunteerAuth'
 import { useLanguage } from '../../lib/i18n'
 import type { Report } from '../../types'
 
 export default function Dashboard() {
   const { t } = useLanguage()
   const { toast } = useToast()
+  const { user: authUser } = useVolunteerAuth()
   const [volunteer, setVolunteer] = useState<(Awaited<ReturnType<typeof volunteerMe>> & { status?: string }) | null>(null)
   const [activeTasks, setActiveTasks] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
@@ -22,6 +24,16 @@ export default function Dashboard() {
       setActiveTasks(await listVolunteerTasks())
       loadErrorToastedRef.current = false
     } catch {
+      if (authUser) {
+        setVolunteer({
+          id: authUser.id,
+          name: authUser.name,
+          email: authUser.email || '',
+          phone: authUser.phone,
+          skills: authUser.skills,
+          status: 'available',
+        })
+      }
       // Poll errors toast only ONCE — 12s polling during an outage must
       // not spam toasts nonstop.
       if (!loadErrorToastedRef.current) {
@@ -31,7 +43,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false)
     }
-  }, [toast, t])
+  }, [toast, t, authUser])
 
   useEffect(() => {
     load()

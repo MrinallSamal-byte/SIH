@@ -347,7 +347,10 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
               <img src={photoDataUrl} alt={t('missing.previewAlt')} className="h-full w-full object-cover" />
               <button
                 type="button"
-                onClick={() => setPhotoDataUrl(null)}
+                onClick={() => {
+                  setPhotoDataUrl(null)
+                  if (fileInputRef.current) fileInputRef.current.value = ''
+                }}
                 className="absolute right-0 top-0 rounded-bl bg-red-600 p-0.5 text-[9px] text-white"
               >
                 <X className="h-3 w-3" />

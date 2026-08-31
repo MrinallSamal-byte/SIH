@@ -160,7 +160,7 @@ export default function Analytics() {
                   innerRadius={50}
                   outerRadius={80}
                   paddingAngle={4}
-                  label={({ name, percent }: { name?: string; percent?: number }) => `${name ?? ''} ${(((percent ?? 0) * 100)).toFixed(0)}%`}
+                  label={({ name, percent }: { name?: string; percent?: number }) => `${name ?? ''} ${Number.isFinite(percent) ? ((percent! * 100)).toFixed(0) : '0'}%`}
                 >
                   {byPriority.map((entry) => (
                     <Cell key={entry.name} fill={PRIORITY_COLORS[entry.name] ?? '#94a3b8'} />
@@ -193,7 +193,7 @@ export default function Analytics() {
                   innerRadius={50}
                   outerRadius={80}
                   paddingAngle={4}
-                  label={({ name, percent }: { name?: string; percent?: number }) => `${(name ?? '').replace('_', ' ')} ${(((percent ?? 0) * 100)).toFixed(0)}%`}
+                  label={({ name, percent }: { name?: string; percent?: number }) => `${(name ?? '').replace('_', ' ')} ${Number.isFinite(percent) ? ((percent! * 100)).toFixed(0) : '0'}%`}
                 >
                   {byStatus.map((entry) => (
                     <Cell

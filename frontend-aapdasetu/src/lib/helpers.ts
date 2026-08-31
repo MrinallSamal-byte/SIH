@@ -631,7 +631,7 @@ export function generateEmergencySms(options: {
   if (options.phone) parts.push(`PHONE:${options.phone}`)
   if (options.address) parts.push(`LOC:${options.address}`)
   if (options.landmark) parts.push(`NEAR:${options.landmark}`)
-  if (options.lat && options.lng) {
+  if (typeof options.lat === 'number' && typeof options.lng === 'number' && !isNaN(options.lat) && !isNaN(options.lng)) {
     parts.push(`GPS:${options.lat.toFixed(5)},${options.lng.toFixed(5)}`)
     parts.push(`MAPS:https://maps.google.com/?q=${options.lat},${options.lng}`)
   }

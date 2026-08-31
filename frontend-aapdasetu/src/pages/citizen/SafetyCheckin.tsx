@@ -22,7 +22,7 @@ type ActiveTab = 'checkin' | 'search'
 export default function SafetyCheckinPage() {
   const { t } = useLanguage()
   const { toast } = useToast()
-  const { coords, status: geoStatus, isFallback } = useGeoLocation()
+  const { coords, status: geoStatus, isFallback, source } = useGeoLocation() as ReturnType<typeof useGeoLocation> & { source?: string }
   const [activeTab, setActiveTab] = useState<ActiveTab>('checkin')
 
   // Checkin form state
@@ -87,9 +87,14 @@ export default function SafetyCheckinPage() {
     setPhoneError(null)
     setSending(true)
     try {
-      // Provenance gate: attach coordinates only from a granted, non-fallback
-      // fix — never the fabricated default/IP estimate.
-      const hasVerifiedCoords = geoStatus === 'granted' && !isFallback
+      // Provenance gate: attach coordinates from a granted GPS fix or manual selection
+      const hasVerifiedCoords = Boolean(
+        coords &&
+        (geoStatus === 'granted' || source === 'manual' || source === 'gps') &&
+        source !== 'default' &&
+        typeof coords.latitude === 'number' &&
+        typeof coords.longitude === 'number'
+      )
       const input: Omit<SafetyCheckin, 'id' | 'createdAt'> = {
         fullName: fullName.trim().slice(0, 100),
         phone: phone.replace(/\D/g, ''),

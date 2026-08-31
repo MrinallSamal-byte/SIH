@@ -101,6 +101,7 @@ export default function Reports() {
 
   useEffect(() => {
     setPage(1)
+    setSelectedIds(new Set())
   }, [statusFilter, priorityFilter, typeFilter, query])
 
   useEffect(() => {

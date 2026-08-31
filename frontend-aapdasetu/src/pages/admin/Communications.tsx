@@ -15,6 +15,7 @@ import { Field, Input, Textarea } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import { useLanguage } from '../../lib/i18n'
+import { emitRealtimeUpdate } from '../../lib/realtimeEventBus'
 import type { AlertSeverity } from '../../types'
 
 const PRESETS: {
@@ -111,9 +112,10 @@ export default function Communications() {
         region: region.trim() || undefined,
         channels,
         recipientNumbers: recipients
-          ? recipients.split(',').map((s) => s.trim()).filter(Boolean)
+          ? recipients.split(',').map((s) => s.replace(/[\s-]/g, '').trim()).filter(Boolean)
           : undefined,
       })
+      emitRealtimeUpdate('alert_created')
       // Per-channel honesty: the backend reports each channel's outcome in details[].
       const details = result.details ?? []
       const okCount = details.filter((d) => d.ok).length
@@ -204,7 +206,10 @@ export default function Communications() {
           <Field label={t('cm.headlineLabel')}>
             <Input
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setTitle(e.target.value)
+                setAwaitingConfirm(false)
+              }}
               placeholder={t('cm.headlinePlaceholder')}
               className="font-bold text-sm"
             />
@@ -214,7 +219,10 @@ export default function Communications() {
             <Textarea
               rows={4}
               value={body}
-              onChange={(e) => setBody(e.target.value)}
+              onChange={(e) => {
+                setBody(e.target.value)
+                setAwaitingConfirm(false)
+              }}
               placeholder={t('cm.messagePlaceholder')}
             />
             <div className="mt-1 flex justify-between text-[11px] text-slate-400 mono">

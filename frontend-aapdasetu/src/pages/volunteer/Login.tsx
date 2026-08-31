@@ -1,13 +1,14 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Button from '../../components/common/Button'
 import { Field, Input } from '../../components/common/Input'
-import { useVolunteerAuth } from '../../hooks/useVolunteerAuth'
+import { useVolunteerAuth, useIsVolunteerAuthed } from '../../hooks/useVolunteerAuth'
 import { useLanguage } from '../../lib/i18n'
 
 export default function VolunteerLogin() {
   const { t } = useLanguage()
   const { login, loading, error } = useVolunteerAuth()
+  const isAuthed = useIsVolunteerAuthed()
   const navigate = useNavigate()
   // Credentials are never prefilled — the access code is distributed by
   // coordinators and configured via VOLUNTEER_ACCESS_CODE on the backend.
@@ -16,6 +17,12 @@ export default function VolunteerLogin() {
   // ponytail: backend auth is phone + shared access code; require 10-15 digits
   const phoneDigits = phone.replace(/\D/g, '')
   const canSubmit = phoneDigits.length >= 10 && phoneDigits.length <= 15 && accessCode.trim().length > 0
+
+  useEffect(() => {
+    if (isAuthed) {
+      navigate('/volunteer', { replace: true })
+    }
+  }, [isAuthed, navigate])
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()

@@ -215,7 +215,10 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
     }
   }, [saveLocation, setAddress])
 
+  const ipInFlightRef = useRef(false)
   const fallbackToIp = useCallback(async (isDenied = false) => {
+    if (ipInFlightRef.current) return
+    ipInFlightRef.current = true
     try {
       const ipGeo = await getIpGeolocation()
       if (ipGeo) {
@@ -238,6 +241,8 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
       }
     } catch {
       // IP geocode failed
+    } finally {
+      ipInFlightRef.current = false
     }
     setStatus(isDenied ? 'denied' : 'error')
   }, [saveLocation, setAddress])
@@ -360,14 +365,14 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
           try { navigator.geolocation.clearWatch(watchIdRef.current) } catch { /* already cleared */ }
           watchIdRef.current = null
         }
-      } else if (watchIdRef.current === null && source === 'gps' && !isManualRef.current) {
+      } else if (watchIdRef.current === null && status !== 'denied' && !isManualRef.current) {
         const c = detect()
         void c
       }
     }
     document.addEventListener('visibilitychange', onVis)
     return () => document.removeEventListener('visibilitychange', onVis)
-  }, [detect, source])
+  }, [detect, status])
 
   const releaseManualOverride = useCallback(() => {
     isManualRef.current = false

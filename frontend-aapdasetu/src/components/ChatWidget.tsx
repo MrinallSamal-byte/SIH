@@ -136,7 +136,7 @@ export default function ChatWidget() {
       const report = await createReport({
         type: 'other',
         isOneTapSos: true,
-        reporterPhone: phone,
+        reporterPhone: clean,
         description: `AapdaMitra AI Priority Callback Dispatch: ${userPromptText.slice(0, 120)}`,
         location: { lat, lng },
       })

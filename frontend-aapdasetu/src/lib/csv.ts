@@ -45,5 +45,11 @@ export function downloadCsv(filename: string, rows: Record<string, unknown>[]): 
   document.body.appendChild(anchor)
   anchor.click()
   anchor.remove()
-  URL.revokeObjectURL(url)
+  setTimeout(() => {
+    try {
+      URL.revokeObjectURL(url)
+    } catch {
+      // ignore
+    }
+  }, 1500)
 }

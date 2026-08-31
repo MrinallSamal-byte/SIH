@@ -186,7 +186,7 @@ function notifyNewRedIncidents(items: Report[]): void {
           ? `${r.latitude.toFixed(3)}, ${r.longitude.toFixed(3)}`
           : s.locationUnavailable)
       new Notification(s.notifTitle, {
-        body: `${r.type.replace('_', ' ').toUpperCase()} • ${where} • ${r.trackingId}`,
+        body: `${(r.type ?? 'emergency').replace('_', ' ').toUpperCase()} • ${where} • ${r.trackingId}`,
         tag: r.id,
       })
     } catch {
@@ -262,6 +262,11 @@ export default function LiveSOS() {
     if (isFirstLoadRef.current) {
       knownRedIdsRef.current = currentRedIds
       isFirstLoadRef.current = false
+      if (currentRedReports.length > 0 && sirenArmed && hasGesture) {
+        setMuted(false)
+        sirenEngine.start()
+        notifyNewRedIncidents(currentRedReports)
+      }
       return
     }
 
@@ -335,7 +340,7 @@ export default function LiveSOS() {
   const markers = useMemo<MapMarker[]>(() => {
     if (!reports) return []
     return reports
-      .filter((r) => r.latitude && r.longitude)
+      .filter((r) => typeof r.latitude === 'number' && typeof r.longitude === 'number' && !isNaN(r.latitude) && !isNaN(r.longitude))
       .map((r) => {
         const actions: MapPopupAction[] = [
           {
@@ -343,17 +348,15 @@ export default function LiveSOS() {
             onClick: () => acknowledge(r.id),
           },
         ]
-        if (r.latitude && r.longitude) {
-          actions.push({
-            label: t('ls.popupNavigate', 'Navigate'),
-            onClick: () =>
-              window.open(getNavigationUrl(r.latitude!, r.longitude!), '_blank', 'noopener,noreferrer'),
-          })
-        }
+        actions.push({
+          label: t('ls.popupNavigate', 'Navigate'),
+          onClick: () =>
+            window.open(getNavigationUrl(r.latitude!, r.longitude!), '_blank', 'noopener,noreferrer'),
+        })
         return {
           id: r.id,
           position: { lat: r.latitude!, lng: r.longitude! },
-          title: `${t('ls.sos')} ${r.type.toUpperCase()} (${r.trackingId})`,
+          title: `${t('ls.sos')} ${(r.type ?? 'emergency').toUpperCase()} (${r.trackingId})`,
           subtitle: `${r.description ?? ''} - ${t('ls.reportedAgo', 'Reported {t}').replace('{t}', timeAgo(r.createdAt))}`,
           color: r.priorityLabel === 'RED' ? '#dc2626' : '#f59e0b',
           isSos: true,

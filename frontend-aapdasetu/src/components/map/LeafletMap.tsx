@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   CircleMarker,
   MapContainer,
@@ -12,13 +12,30 @@ import {
   ScaleControl,
 } from 'react-leaflet'
 import L from 'leaflet'
-import { Layers, Globe, Mountain, Map as MapIcon, Moon } from 'lucide-react'
+import {
+  Layers,
+  Globe,
+  Mountain,
+  Map as MapIcon,
+  Moon,
+  Maximize2,
+} from 'lucide-react'
 import type { GeoPoint } from '../../types'
 
 export interface MapPopupAction {
   label: string
   onClick: () => void
 }
+
+export type MarkerKind =
+  | 'user'
+  | 'shelter'
+  | 'saved'
+  | 'medical'
+  | 'hazard'
+  | 'waypoint'
+  | 'destination'
+  | 'default'
 
 export interface MapMarker {
   id: string
@@ -28,6 +45,13 @@ export interface MapMarker {
   color?: string
   isSos?: boolean
   isShelter?: boolean
+  isSaved?: boolean
+  isMedical?: boolean
+  isHazard?: boolean
+  isWaypoint?: boolean
+  isDestination?: boolean
+  markerKind?: MarkerKind
+  badgeText?: string
   popupActions?: MapPopupAction[]
 }
 
@@ -62,7 +86,6 @@ interface LayerDef {
   url: string
   attribution: string
   subdomains: string | string[]
-  /** only true for providers whose URLs contain the {r} placeholder */
   retina?: boolean
   overlayUrl?: string
   overlayAttribution?: string
@@ -77,7 +100,6 @@ const MAP_LAYERS: Record<MapLayerMode, LayerDef> = {
     overlayUrl: 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
     overlayAttribution: 'Labels &copy; Esri',
   },
-  // Fast global CDN, clean look — default basemap
   streets: {
     name: 'Streets (Voyager)',
     url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
@@ -91,7 +113,6 @@ const MAP_LAYERS: Record<MapLayerMode, LayerDef> = {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     subdomains: 'abc',
   },
-  // OpenTopoMap throttles hard under load — Esri World Topo is fast and global
   terrain: {
     name: 'Terrain (Esri Topo)',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
@@ -111,48 +132,180 @@ const MAP_LAYERS: Record<MapLayerMode, LayerDef> = {
 // fresh L.divIcon per render destroys/re-adds every DOM marker. Cache instead.
 const ICON_CACHE = new Map<string, L.DivIcon>()
 
-function iconCacheKey(color: string, isSos: boolean, isShelter: boolean, selected: boolean) {
-  return `${color}|${isSos ? 1 : 0}|${isShelter ? 1 : 0}|${selected ? 1 : 0}`
+function resolveMarkerKind(m: {
+  isSos?: boolean
+  isShelter?: boolean
+  isSaved?: boolean
+  isMedical?: boolean
+  isHazard?: boolean
+  isWaypoint?: boolean
+  isDestination?: boolean
+  markerKind?: MarkerKind
+}): MarkerKind {
+  if (m.markerKind) return m.markerKind
+  if (m.isSaved) return 'saved'
+  if (m.isHazard) return 'hazard'
+  if (m.isWaypoint) return 'waypoint'
+  if (m.isDestination) return 'destination'
+  if (m.isMedical) return 'medical'
+  if (m.isSos) return 'user'
+  if (m.isShelter) return 'shelter'
+  return 'default'
 }
 
-function markerIcon(color: string, isSos = false, isShelter = false, selected = false): L.DivIcon {
-  const key = iconCacheKey(color, isSos, isShelter, selected)
+function iconCacheKey(kind: MarkerKind, color: string, selected: boolean, badgeText?: string) {
+  return `${kind}|${color}|${selected ? 1 : 0}|${badgeText ?? ''}`
+}
+
+function markerIcon(
+  color: string,
+  markerMeta: {
+    isSos?: boolean
+    isShelter?: boolean
+    isSaved?: boolean
+    isMedical?: boolean
+    isHazard?: boolean
+    isWaypoint?: boolean
+    isDestination?: boolean
+    markerKind?: MarkerKind
+    badgeText?: string
+  },
+  selected = false,
+): L.DivIcon {
+  const kind = resolveMarkerKind(markerMeta)
+  const badgeText = markerMeta.badgeText
+  const key = iconCacheKey(kind, color, selected, badgeText)
   const cached = ICON_CACHE.get(key)
   if (cached) return cached
 
   let icon: L.DivIcon
 
-  if (isSos) {
-    const size = selected ? 44 : 32
-    const core = selected ? 24 : 18
-    // Infinite ping animation ONLY on the selected marker — one compositing
-    // layer beats hundreds of animated layers during zoom.
+  if (kind === 'user') {
+    // You Are Here / GPS Live Location: Pulsing high-contrast radar ring
+    const size = selected ? 44 : 34
+    const core = selected ? 22 : 18
     icon = L.divIcon({
       className: '',
       html: `
         <div style="position:relative;display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;">
-          <div style="position:absolute;width:${size}px;height:${size}px;border-radius:50%;background:#ef4444;opacity:${selected ? '0.75' : '0.6'};${selected ? 'animation:apd-ping 1s cubic-bezier(0,0,0.2,1) infinite;' : ''}"></div>
+          <div style="position:absolute;width:${size}px;height:${size}px;border-radius:50%;background:#3b82f6;opacity:${selected ? '0.6' : '0.45'};animation:apd-ping 1.6s cubic-bezier(0,0,0.2,1) infinite;"></div>
           ${
             selected
-              ? `<div style="position:absolute;width:${core + 12}px;height:${core + 12}px;border-radius:50%;border:3px solid rgba(220,38,38,0.55);"></div>`
+              ? `<div style="position:absolute;width:${core + 12}px;height:${core + 12}px;border-radius:50%;border:2px solid rgba(59,130,246,0.6);"></div>`
               : ''
           }
-          <div style="position:relative;width:${core}px;height:${core}px;border-radius:50%;background:#dc2626;border:2.5px solid white;box-shadow:0 3px 8px rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;">
-            <div style="width:${selected ? 7 : 5}px;height:${selected ? 7 : 5}px;border-radius:50%;background:white;"></div>
+          <div style="position:relative;width:${core}px;height:${core}px;border-radius:50%;background:#2563eb;border:2.5px solid white;box-shadow:0 3px 8px rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;">
+            <div style="width:${selected ? 8 : 6}px;height:${selected ? 8 : 6}px;border-radius:50%;background:white;"></div>
           </div>
         </div>
       `,
       iconSize: [size, size],
       iconAnchor: [size / 2, size / 2],
     })
-  } else if (isShelter) {
-    const size = selected ? 34 : 28
+  } else if (kind === 'saved') {
+    // Saved / Bookmarked Safe Shelter: Golden amber badge with Star SVG
+    const size = selected ? 38 : 32
+    const box = selected ? 32 : 26
+    icon = L.divIcon({
+      className: '',
+      html: `
+        <div style="position:relative;display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;">
+          <div style="position:absolute;width:${size}px;height:${size}px;border-radius:10px;background:#f59e0b;opacity:${selected ? '0.5' : '0.3'};"></div>
+          <div style="position:relative;width:${box}px;height:${box}px;border-radius:8px;background:#d97706;border:2px solid #fff;box-shadow:${selected ? '0 0 0 3px rgba(245,158,11,0.6), ' : ''}0 3px 8px rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;color:white;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#fbbf24" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+          </div>
+          ${badgeText ? `<div style="position:absolute;top:-6px;right:-6px;background:#1e293b;color:#f8fafc;font-size:9px;font-weight:800;padding:1px 4px;border-radius:999px;border:1px solid white;">${badgeText}</div>` : ''}
+        </div>
+      `,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+    })
+  } else if (kind === 'medical') {
+    // Medical Relief Center: White box with bold Red Medical Cross
+    const size = selected ? 36 : 30
     const box = selected ? 30 : 24
     icon = L.divIcon({
       className: '',
       html: `
         <div style="position:relative;display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;">
-          <div style="width:${box}px;height:${box}px;border-radius:8px;background:${color};border:2px solid white;box-shadow:${selected ? `0 0 0 3px rgba(59,130,246,0.45), ` : ''}0 3px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;font-size:12px;">
+          <div style="width:${box}px;height:${box}px;border-radius:8px;background:#ffffff;border:2.5px solid #dc2626;box-shadow:${selected ? '0 0 0 3px rgba(220,38,38,0.45), ' : ''}0 3px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:#dc2626;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M10 3h4v6h6v4h-6v6h-4v-6H4V9h6V3z"/>
+            </svg>
+          </div>
+        </div>
+      `,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+    })
+  } else if (kind === 'hazard') {
+    // Hazard / Danger Point on Route: Crimson Alert Triangle
+    const size = selected ? 36 : 28
+    const box = selected ? 30 : 24
+    icon = L.divIcon({
+      className: '',
+      html: `
+        <div style="position:relative;display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;">
+          <div style="position:absolute;width:${size}px;height:${size}px;border-radius:50%;background:#ef4444;opacity:0.35;animation:apd-ping 1.8s cubic-bezier(0,0,0.2,1) infinite;"></div>
+          <div style="width:${box}px;height:${box}px;border-radius:8px;background:#dc2626;border:2px solid white;box-shadow:${selected ? '0 0 0 3px rgba(220,38,38,0.5), ' : ''}0 3px 8px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;color:white;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </div>
+        </div>
+      `,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+    })
+  } else if (kind === 'waypoint') {
+    // Safe Route Waypoint Checkpoint: Emerald Shield / Checkpoint
+    const size = selected ? 32 : 26
+    const box = selected ? 26 : 20
+    icon = L.divIcon({
+      className: '',
+      html: `
+        <div style="position:relative;display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;">
+          <div style="width:${box}px;height:${box}px;border-radius:6px;background:#059669;border:2px solid white;box-shadow:${selected ? '0 0 0 3px rgba(16,185,129,0.5), ' : ''}0 2px 6px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:white;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+          ${badgeText ? `<div style="position:absolute;bottom:-6px;background:#047857;color:#fff;font-size:8px;font-weight:bold;padding:0 3px;border-radius:4px;border:1px solid white;">${badgeText}</div>` : ''}
+        </div>
+      `,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+    })
+  } else if (kind === 'destination') {
+    // Destination Beacon: Safe Haven Destination Flag
+    const size = selected ? 38 : 32
+    const box = selected ? 32 : 26
+    icon = L.divIcon({
+      className: '',
+      html: `
+        <div style="position:relative;display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;">
+          <div style="position:absolute;width:${size}px;height:${size}px;border-radius:50%;background:#10b981;opacity:0.35;"></div>
+          <div style="width:${box}px;height:${box}px;border-radius:8px;background:#047857;border:2px solid white;box-shadow:${selected ? '0 0 0 3px rgba(16,185,129,0.55), ' : ''}0 3px 8px rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;color:white;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
+            </svg>
+          </div>
+        </div>
+      `,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+    })
+  } else if (kind === 'shelter') {
+    // Standard Safe Shelter: Rounded square with House SVG
+    const size = selected ? 36 : 28
+    const box = selected ? 30 : 24
+    icon = L.divIcon({
+      className: '',
+      html: `
+        <div style="position:relative;display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;">
+          <div style="width:${box}px;height:${box}px;border-radius:8px;background:${color || '#10b981'};border:2px solid white;box-shadow:${selected ? '0 0 0 3px rgba(59,130,246,0.45), ' : ''}0 3px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;font-size:12px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           </div>
         </div>
@@ -161,13 +314,14 @@ function markerIcon(color: string, isSos = false, isShelter = false, selected = 
       iconAnchor: [size / 2, size / 2],
     })
   } else {
+    // Generic pinpoint
     const size = selected ? 30 : 22
     const dotSize = selected ? 22 : 16
     icon = L.divIcon({
       className: '',
       html: `
         <div style="position:relative;display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;">
-          <div style="width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:${selected ? `0 0 0 3px rgba(59,130,246,0.45), ` : ''}0 2px 6px rgba(0,0,0,0.5);"></div>
+          <div style="width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:${color || '#3b82f6'};border:2.5px solid white;box-shadow:${selected ? '0 0 0 3px rgba(59,130,246,0.45), ' : ''}0 2px 6px rgba(0,0,0,0.5);"></div>
         </div>
       `,
       iconSize: [size, size],
@@ -191,11 +345,11 @@ function MarkerPopupContent({
   actions: MapPopupAction[]
 }) {
   return (
-    <div className="min-w-[180px] p-1">
-      <div className="text-sm font-bold text-slate-900">{title}</div>
-      {subtitle && <div className="mt-0.5 text-xs text-slate-600 leading-tight">{subtitle}</div>}
+    <div className="min-w-[190px] p-1">
+      <div className="text-sm font-bold text-slate-900 leading-tight">{title}</div>
+      {subtitle && <div className="mt-1 text-xs text-slate-600 leading-snug">{subtitle}</div>}
       {actions.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1.5">
+        <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-slate-100 pt-2">
           {actions.map((action) => (
             <button
               key={action.label}
@@ -204,7 +358,7 @@ function MarkerPopupContent({
                 e.stopPropagation()
                 action.onClick()
               }}
-              className="rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-bold text-white transition hover:bg-slate-700 cursor-pointer"
+              className="rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-bold text-white transition hover:bg-slate-700 cursor-pointer shadow-xs"
             >
               {action.label}
             </button>
@@ -235,7 +389,8 @@ function MapController({
   polygons = [],
   polylines = [],
   autoFit = false,
-  height,
+  selectedId = null,
+  fitTrigger = 0,
 }: {
   center: GeoPoint
   zoom?: number
@@ -243,104 +398,139 @@ function MapController({
   polygons?: MapPolygon[]
   polylines?: MapPolyline[]
   autoFit?: boolean
-  height?: string
+  selectedId?: string | null
+  fitTrigger?: number
 }) {
   const map = useMap()
-  const hasFittedRef = useRef(false)
-  const lastCenterRef = useRef(`${center?.lat?.toFixed(4) ?? '0'},${center?.lng?.toFixed(4) ?? '0'}`)
-  const lastFitSigRef = useRef<string | null>(null)
+  const hasInitialFitRef = useRef(false)
+  const userInteractedRef = useRef(false)
+  const isProgrammaticMoveRef = useRef(false)
+  const lastSelectedIdRef = useRef<string | null>(null)
+  const lastCenterKeyRef = useRef(`${center?.lat?.toFixed(4) ?? '0'},${center?.lng?.toFixed(4) ?? '0'}`)
+  const lastFitTriggerRef = useRef(fitTrigger)
 
+  // Track user interaction (pan / zoom gestures) so background polling NEVER overrides user view
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handleUserInteraction = (e: any) => {
+      if (e?.originalEvent && !isProgrammaticMoveRef.current) {
+        userInteractedRef.current = true
+      }
+    }
+
+    map.on('dragstart', handleUserInteraction)
+    map.on('zoomstart', handleUserInteraction)
+    map.on('movestart', handleUserInteraction)
+
+    return () => {
+      map.off('dragstart', handleUserInteraction)
+      map.off('zoomstart', handleUserInteraction)
+      map.off('movestart', handleUserInteraction)
+    }
+  }, [map])
+
+  // Invalidate size once after mounting
   useEffect(() => {
     const t = setTimeout(() => {
       try {
         map.invalidateSize()
       } catch {
-        // map may be unmounted/destroyed between the timeout scheduling and firing
+        // Map unmounted
       }
     }, 120)
     return () => clearTimeout(t)
-  }, [map, height])
-
-  useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') {
-        setTimeout(() => {
-          try {
-            map.invalidateSize()
-          } catch {
-            // map may be unmounted/destroyed before the visibility timeout fires
-          }
-        }, 100)
-      }
-    }
-    document.addEventListener('visibilitychange', onVisible)
-    return () => document.removeEventListener('visibilitychange', onVisible)
   }, [map])
 
-  // 1. Fit bounds on mount or when the underlying geometry actually changes.
-  // Polling parents recreate the markers array every tick — refitting on every
-  // poll yanks the viewport, so compare a cheap signature before fitting.
-  useEffect(() => {
+  // Collect all active points
+  const points: GeoPoint[] = useMemo(() => {
     const safeMarkers = markers ?? []
     const safePolygons = polygons ?? []
     const safePolylines = polylines ?? []
 
-    const points: GeoPoint[] = [
-      ...safeMarkers.map((m) => m?.position).filter((p): p is GeoPoint => Boolean(p && typeof p.lat === 'number' && typeof p.lng === 'number')),
-      ...safePolygons.flatMap((p) => p?.points ?? []).filter((p): p is GeoPoint => Boolean(p && typeof p.lat === 'number' && typeof p.lng === 'number')),
-      ...safePolylines.flatMap((p) => p?.points ?? []).filter((p): p is GeoPoint => Boolean(p && typeof p.lat === 'number' && typeof p.lng === 'number')),
+    return [
+      ...safeMarkers
+        .map((m) => m?.position)
+        .filter((p): p is GeoPoint => Boolean(p && typeof p.lat === 'number' && typeof p.lng === 'number')),
+      ...safePolygons
+        .flatMap((p) => p?.points ?? [])
+        .filter((p): p is GeoPoint => Boolean(p && typeof p.lat === 'number' && typeof p.lng === 'number')),
+      ...safePolylines
+        .flatMap((p) => p?.points ?? [])
+        .filter((p): p is GeoPoint => Boolean(p && typeof p.lat === 'number' && typeof p.lng === 'number')),
     ]
+  }, [markers, polygons, polylines])
 
-    if (
-      (!hasFittedRef.current || autoFit) &&
-      (safeMarkers.length > 0 || safePolygons.length > 0 || safePolylines.length > 0)
-    ) {
-      const lats = points.map((pt) => pt.lat)
-      const lngs = points.map((pt) => pt.lng)
-      const sig =
-        points.length <= 1
-          ? ''
-          : `${points.length}:${Math.min(...lats).toFixed(3)},${Math.max(...lats).toFixed(3)},${Math.min(...lngs).toFixed(3)},${Math.max(...lngs).toFixed(3)}`
-      const shouldFit = !hasFittedRef.current || (autoFit && sig !== lastFitSigRef.current)
-      if (shouldFit && points.length > 1) {
+  // 1. Initial Fit Bounds OR User-Triggered Fit Bounds
+  useEffect(() => {
+    const isManualTrigger = fitTrigger !== lastFitTriggerRef.current
+    if (isManualTrigger) {
+      lastFitTriggerRef.current = fitTrigger
+      userInteractedRef.current = false
+    }
+
+    const shouldInitialFit = !hasInitialFitRef.current && autoFit && points.length > 1
+    const shouldManualFit = isManualTrigger && points.length > 1
+
+    if (shouldInitialFit || shouldManualFit) {
+      try {
+        isProgrammaticMoveRef.current = true
+        map.fitBounds(
+          points.map((pt) => [pt.lat, pt.lng] as [number, number]),
+          { padding: [40, 40], maxZoom: 15, animate: hasInitialFitRef.current },
+        )
+        hasInitialFitRef.current = true
+        setTimeout(() => {
+          isProgrammaticMoveRef.current = false
+        }, 400)
+      } catch {
+        // fitBounds error
+      }
+    }
+  }, [map, points, fitTrigger, autoFit])
+
+  // 2. Focused marker / selectedId change: Center on selected marker without resetting user zoom
+  useEffect(() => {
+    if (selectedId && selectedId !== lastSelectedIdRef.current) {
+      lastSelectedIdRef.current = selectedId
+      const targetMarker = (markers ?? []).find((m) => m.id === selectedId)
+      if (targetMarker?.position) {
         try {
-          map.fitBounds(
-            points.map((pt) => [pt.lat, pt.lng] as [number, number]),
-            { padding: [40, 40], maxZoom: 15 },
-          )
-          hasFittedRef.current = true
-          lastFitSigRef.current = sig
+          isProgrammaticMoveRef.current = true
+          const currentZoom = map.getZoom()
+          const targetZoom = Math.max(currentZoom, 14)
+          map.setView([targetMarker.position.lat, targetMarker.position.lng], targetZoom, { animate: true })
+          setTimeout(() => {
+            isProgrammaticMoveRef.current = false
+          }, 400)
         } catch {
-          // fitBounds may fail if bounds are zero-area or map is unmounted
+          // setView failed
         }
       }
     }
-  }, [map, markers, polygons, polylines, autoFit])
+  }, [map, selectedId, markers])
 
-  useEffect(() => {
-    const t = setTimeout(() => {
-      try {
-        map.invalidateSize()
-      } catch {
-        // map may be unmounted/destroyed between the timeout scheduling and firing
-      }
-    }, 150)
-    return () => clearTimeout(t)
-  }, [map, markers.length, polylines.length, polygons.length])
-
-  // 2. Recenter smoothly
+  // 3. Center prop change (e.g. user clicked locate or explicit recenter)
   useEffect(() => {
     if (!center || typeof center.lat !== 'number' || typeof center.lng !== 'number') return
     const key = `${center.lat.toFixed(4)},${center.lng.toFixed(4)}`
-    if (key !== lastCenterRef.current) {
-      lastCenterRef.current = key
-      try {
-        map.setView([center.lat, center.lng], zoom ?? map.getZoom(), { animate: true })
-      } catch {
-        // setView may fail if map instance is unmounting
+
+    // Only update if center genuinely changed and user hasn't actively zoomed/panned elsewhere,
+    // OR if user explicitly changed center
+    if (key !== lastCenterKeyRef.current) {
+      lastCenterKeyRef.current = key
+      if (!userInteractedRef.current || selectedId) {
+        try {
+          isProgrammaticMoveRef.current = true
+          map.setView([center.lat, center.lng], zoom ?? map.getZoom(), { animate: true })
+          setTimeout(() => {
+            isProgrammaticMoveRef.current = false
+          }, 400)
+        } catch {
+          // setView failed
+        }
       }
     }
-  }, [map, center, zoom])
+  }, [map, center, zoom, selectedId])
 
   return null
 }
@@ -356,6 +546,7 @@ export default function LeafletMap({
   defaultLayer = 'streets',
   popupActions,
   selectedId = null,
+  showControls = true,
 }: {
   center: GeoPoint
   zoom?: number
@@ -367,6 +558,7 @@ export default function LeafletMap({
   defaultLayer?: MapLayerMode
   popupActions?: MapPopupAction[]
   selectedId?: string | null
+  showControls?: boolean
 }) {
   const [layerMode, setLayerMode] = useState<MapLayerMode>(() => {
     try {
@@ -379,6 +571,7 @@ export default function LeafletMap({
   })
 
   const [showLayerMenu, setShowLayerMenu] = useState(false)
+  const [fitTrigger, setFitTrigger] = useState(0)
 
   const selectLayer = (mode: MapLayerMode) => {
     setLayerMode(mode)
@@ -390,10 +583,12 @@ export default function LeafletMap({
     }
   }
 
+  const handleFitBounds = useCallback(() => {
+    setFitTrigger((c) => c + 1)
+  }, [])
+
   const currentLayer = MAP_LAYERS[layerMode]
 
-  // Rebuild the marker element tree only when inputs genuinely change — parent
-  // polling recreates arrays but the contents stay equal, so memoize on refs.
   const visibleMarkers = useMemo(
     () =>
       (markers ?? []).filter(
@@ -408,7 +603,6 @@ export default function LeafletMap({
 
   const useCanvas = visibleMarkers.length > CANVAS_MARKER_THRESHOLD
 
-  // On canvas, draw order == paint order, so put the selected circle last.
   const orderedCanvasMarkers = useMemo(() => {
     if (!useCanvas || selectedId == null) return visibleMarkers
     return [...visibleMarkers].sort(
@@ -426,7 +620,7 @@ export default function LeafletMap({
               <Marker
                 key={m.id}
                 position={[m.position.lat, m.position.lng]}
-                icon={markerIcon(m.color ?? '#3b82f6', m.isSos, m.isShelter, isSelected)}
+                icon={markerIcon(m.color ?? '#3b82f6', m, isSelected)}
                 zIndexOffset={isSelected ? 1000 : 0}
               >
                 <Popup>
@@ -451,7 +645,7 @@ export default function LeafletMap({
               <CircleMarker
                 key={m.id}
                 center={[m.position.lat, m.position.lng]}
-                radius={isSelected ? 9 : 7}
+                radius={isSelected ? 10 : 7}
                 pathOptions={{
                   fillColor: m.color ?? '#3b82f6',
                   fillOpacity: 0.95,
@@ -475,87 +669,104 @@ export default function LeafletMap({
 
   return (
     <div className="relative w-full overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs" style={{ height }}>
-      {/* Floating Realistic Layer Selector Switcher */}
-      <div className="absolute top-3 right-3 z-[1000] flex flex-col items-end">
-        <button
-          type="button"
-          onClick={() => setShowLayerMenu((o) => !o)}
-          className="flex items-center gap-1.5 rounded-xl border border-slate-300/80 bg-white/95 px-3 py-1.5 text-xs font-bold text-slate-800 shadow-md backdrop-blur-md transition hover:bg-white dark:border-white/[0.1] dark:bg-slate-900/95 dark:text-slate-100 cursor-pointer"
-          title="Change Map View"
-        >
-          <Layers className="h-3.5 w-3.5 text-slate-900 dark:text-slate-100" />
-          <span>{currentLayer.name} View</span>
-        </button>
+      {/* Floating Tactical Map Controls */}
+      {showControls && (
+        <div className="absolute top-3 right-3 z-[1000] flex items-center gap-1.5">
+          {/* Fit all bounds / Reset View */}
+          <button
+            type="button"
+            onClick={handleFitBounds}
+            className="flex items-center gap-1 rounded-xl border border-slate-300/80 bg-white/95 px-2.5 py-1.5 text-xs font-bold text-slate-800 shadow-md backdrop-blur-md transition hover:bg-white dark:border-white/[0.1] dark:bg-slate-900/95 dark:text-slate-100 cursor-pointer"
+            title="Fit all markers in view"
+            aria-label="Fit all markers in view"
+          >
+            <Maximize2 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Fit All</span>
+          </button>
 
-        {showLayerMenu && (
-          <div className="mt-1.5 flex flex-col gap-1 rounded-xl border border-slate-200 bg-white/95 p-1.5 shadow-xl backdrop-blur-md dark:border-white/[0.1] dark:bg-slate-900/95">
+          {/* Layer Selector */}
+          <div className="relative flex flex-col items-end">
             <button
               type="button"
-              onClick={() => selectLayer('satellite')}
-              className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
-                layerMode === 'satellite'
-                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                  : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-              }`}
+              onClick={() => setShowLayerMenu((o) => !o)}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-300/80 bg-white/95 px-3 py-1.5 text-xs font-bold text-slate-800 shadow-md backdrop-blur-md transition hover:bg-white dark:border-white/[0.1] dark:bg-slate-900/95 dark:text-slate-100 cursor-pointer"
+              title="Change Map View"
             >
-              <Globe className="h-3.5 w-3.5" />
-              <span>Satellite (Hybrid)</span>
+              <Layers className="h-3.5 w-3.5 text-slate-900 dark:text-slate-100" />
+              <span>{currentLayer.name}</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => selectLayer('streets')}
-              className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
-                layerMode === 'streets'
-                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                  : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-              }`}
-            >
-              <MapIcon className="h-3.5 w-3.5" />
-              <span>Streets (Voyager)</span>
-            </button>
+            {showLayerMenu && (
+              <div className="absolute right-0 top-9 mt-1 flex flex-col gap-1 rounded-xl border border-slate-200 bg-white/95 p-1.5 shadow-xl backdrop-blur-md dark:border-white/[0.1] dark:bg-slate-900/95 min-w-[170px] z-50">
+                <button
+                  type="button"
+                  onClick={() => selectLayer('satellite')}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
+                    layerMode === 'satellite'
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                      : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <Globe className="h-3.5 w-3.5" />
+                  <span>Satellite (Hybrid)</span>
+                </button>
 
-            <button
-              type="button"
-              onClick={() => selectLayer('osm')}
-              className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
-                layerMode === 'osm'
-                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                  : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-              }`}
-            >
-              <MapIcon className="h-3.5 w-3.5" />
-              <span>Classic OSM</span>
-            </button>
+                <button
+                  type="button"
+                  onClick={() => selectLayer('streets')}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
+                    layerMode === 'streets'
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                      : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <MapIcon className="h-3.5 w-3.5" />
+                  <span>Streets (Voyager)</span>
+                </button>
 
-            <button
-              type="button"
-              onClick={() => selectLayer('terrain')}
-              className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
-                layerMode === 'terrain'
-                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                  : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-              }`}
-            >
-              <Mountain className="h-3.5 w-3.5" />
-              <span>Terrain (Esri Topo)</span>
-            </button>
+                <button
+                  type="button"
+                  onClick={() => selectLayer('osm')}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
+                    layerMode === 'osm'
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                      : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <MapIcon className="h-3.5 w-3.5" />
+                  <span>Classic OSM</span>
+                </button>
 
-            <button
-              type="button"
-              onClick={() => selectLayer('dark')}
-              className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
-                layerMode === 'dark'
-                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                  : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-              }`}
-            >
-              <Moon className="h-3.5 w-3.5" />
-              <span>Tactical Dark</span>
-            </button>
+                <button
+                  type="button"
+                  onClick={() => selectLayer('terrain')}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
+                    layerMode === 'terrain'
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                      : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <Mountain className="h-3.5 w-3.5" />
+                  <span>Terrain (Esri Topo)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => selectLayer('dark')}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
+                    layerMode === 'dark'
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                      : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <Moon className="h-3.5 w-3.5" />
+                  <span>Tactical Dark</span>
+                </button>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <MapContainer
         center={[center.lat, center.lng]}
@@ -563,7 +774,7 @@ export default function LeafletMap({
         minZoom={5}
         maxZoom={19}
         maxBounds={INDIA_BOUNDS}
-        maxBoundsViscosity={1.0}
+        maxBoundsViscosity={0.7}
         worldCopyJump={false}
         preferCanvas
         zoomControl={false}
@@ -607,7 +818,8 @@ export default function LeafletMap({
           polygons={polygons}
           polylines={polylines}
           autoFit={autoFit}
-          height={height}
+          selectedId={selectedId}
+          fitTrigger={fitTrigger}
         />
 
         {/* Hazard Polygons */}
@@ -632,7 +844,7 @@ export default function LeafletMap({
             </Polygon>
           ))}
 
-        {/* Road-following Routes (OSRM) */}
+        {/* Road-following Routes (OSRM / Detour paths) */}
         {(polylines ?? [])
           .filter((p) => p && Array.isArray(p.points) && p.points.length >= 2)
           .map((p) => (

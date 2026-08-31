@@ -26,23 +26,48 @@ function readStoredLanguage(): keyof typeof LOGIN_FAILED_STRINGS {
   return 'en'
 }
 
-export function useVolunteerAuth() {
-  const [user, setUser] = useState<VolunteerUser | null>(() => {
-    try {
-      const raw = localStorage.getItem(VOLUNTEER_AUTH_KEY)
-      return raw ? (JSON.parse(raw) as VolunteerUser) : null
-    } catch {
+function isTokenExpired(token: string | undefined): boolean {
+  if (!token) return true
+  try {
+    const payloadPart = token.split('.')[1]
+    if (!payloadPart) return false
+    const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/')
+    const pad = base64.length % 4
+    const padded = pad ? base64 + '='.repeat(4 - pad) : base64
+    const payload = JSON.parse(atob(padded)) as { exp?: number }
+    if (typeof payload.exp !== 'number') return false
+    return Date.now() / 1000 >= payload.exp
+  } catch {
+    return false
+  }
+}
+
+function readStoredVolunteer(): VolunteerUser | null {
+  try {
+    const raw = localStorage.getItem(VOLUNTEER_AUTH_KEY)
+    if (!raw) return null
+    const session = JSON.parse(raw) as VolunteerUser
+    if (isTokenExpired(session.token)) {
+      localStorage.removeItem(VOLUNTEER_AUTH_KEY)
+      localStorage.removeItem(VOLUNTEER_ID_KEY)
       return null
     }
-  })
+    return session
+  } catch {
+    return null
+  }
+}
+
+export function useVolunteerAuth() {
+  const [user, setUser] = useState<VolunteerUser | null>(() => readStoredVolunteer())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (phone: string, accessCode: string) => {
     setLoading(true)
     setError(null)
     try {
-      const data = await volunteerLogin(email, password)
+      const data = await volunteerLogin(phone, accessCode)
       localStorage.setItem(VOLUNTEER_AUTH_KEY, JSON.stringify(data))
       localStorage.setItem(VOLUNTEER_ID_KEY, data.id)
       setUser(data)
@@ -70,15 +95,9 @@ export function useVolunteerAuth() {
 }
 
 export function useIsVolunteerAuthed(): boolean {
-  const [authed, setAuthed] = useState(() => {
-    try {
-      return !!localStorage.getItem(VOLUNTEER_AUTH_KEY)
-    } catch {
-      return false
-    }
-  })
+  const [authed, setAuthed] = useState(() => readStoredVolunteer() !== null)
   useEffect(() => {
-    const onStorage = () => setAuthed(!!localStorage.getItem(VOLUNTEER_AUTH_KEY))
+    const onStorage = () => setAuthed(readStoredVolunteer() !== null)
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
   }, [])

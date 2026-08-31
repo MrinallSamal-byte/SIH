@@ -46,7 +46,9 @@ export default function Alerts() {
       .then((addr) => {
         if (!cancelled && addr) setUserArea(addr.toLowerCase())
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!cancelled) lastAreaFixRef.current = ''
+      })
     return () => {
       cancelled = true
     }

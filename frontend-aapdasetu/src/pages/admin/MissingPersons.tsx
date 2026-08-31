@@ -22,6 +22,7 @@ import { useRealtime } from '../../hooks/useRealtime'
 import { useToast } from '../../components/common/Toast'
 import { formatDateTime } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
+import { emitRealtimeUpdate } from '../../lib/realtimeEventBus'
 
 export default function MissingPersons() {
   const { t } = useLanguage()
@@ -49,6 +50,7 @@ export default function MissingPersons() {
     setReviewingId(match.id)
     try {
       await reviewMissingMatch(match.id, decision)
+      emitRealtimeUpdate('missing_updated', match.id)
       toast(`${t('mp_admin.matchReviewed', 'Match reviewed')}: ${decision}`, 'success')
       refreshMatches()
     } catch (err) {
@@ -65,7 +67,7 @@ export default function MissingPersons() {
   const runMatching = async () => {
     setRunningMatch(true)
     try {
-      const { items } = await listReports({ type: 'missing_person', pageSize: 25 })
+      const { items } = await listReports({ type: 'missing_person', pageSize: 200 })
       const open = items.filter((r) => r.status !== 'resolved')
       for (const r of open) {
         await runMissingPersonMatching(r.id).catch(() => {})
@@ -82,6 +84,7 @@ export default function MissingPersons() {
   const update = async (id: string, patch: Partial<MissingPerson>) => {
     try {
       await updateMissingPerson(id, patch)
+      emitRealtimeUpdate('missing_updated', id)
       toast(`${t('mp_admin.statusUpdated')}: ${patch.status?.toUpperCase()}`, 'success')
     } catch {
       toast(t('mp_admin.updateFailed'), 'error')

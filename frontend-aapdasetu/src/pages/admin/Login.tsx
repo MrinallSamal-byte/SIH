@@ -1,18 +1,25 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Button from '../../components/common/Button'
 import { Field, Input } from '../../components/common/Input'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth, useIsAdminAuthed } from '../../hooks/useAuth'
 import { useLanguage } from '../../lib/i18n'
 
 export default function AdminLogin() {
   const { t } = useLanguage()
   const { login, loading, error } = useAuth()
+  const isAuthed = useIsAdminAuthed()
   const navigate = useNavigate()
   // Credentials are never prefilled — production passwords come from the
   // backend ADMIN_PASSWORD env (seeded at bootstrap, see src/index.ts).
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+
+  useEffect(() => {
+    if (isAuthed) {
+      navigate('/admin', { replace: true })
+    }
+  }, [isAuthed, navigate])
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()

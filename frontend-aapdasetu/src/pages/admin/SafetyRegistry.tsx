@@ -215,22 +215,24 @@ export default function SafetyRegistry() {
                   </div>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  {c.phone ? (
-                    <a
-                      href={`tel:${c.phone}`}
-                      className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200"
-                    >
-                      <Phone className="h-3 w-3" />
-                      <span>{t('sr.btnContact')}</span>
-                    </a>
-                  ) : (
+                  <div className="flex items-center justify-end gap-1.5">
+                    {c.phone && (
+                      <a
+                        href={`tel:${c.phone}`}
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200"
+                        title={t('sr.btnContact')}
+                      >
+                        <Phone className="h-3 w-3" />
+                        <span>{t('sr.btnContact')}</span>
+                      </a>
+                    )}
                     <button
                       onClick={() => setSelectedCheckin(c)}
                       className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
                     >
                       {t('sr.btnInspect')}
                     </button>
-                  )}
+                  </div>
                 </td>
               </tr>
             ))}

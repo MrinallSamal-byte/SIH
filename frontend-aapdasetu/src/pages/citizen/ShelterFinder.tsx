@@ -8,18 +8,22 @@ import {
   Search,
   X,
   Crosshair,
-  WifiOff
+  WifiOff,
+  Bookmark,
+  BookmarkCheck,
+  ShieldCheck,
+  Footprints,
 } from 'lucide-react'
 import { listShelters } from '../../api/endpoints'
 import Card from '../../components/common/Card'
 import Badge from '../../components/common/Badge'
-import LeafletMap from '../../components/map/LeafletMap'
+import LeafletMap, { type MapMarker, type MapPolyline } from '../../components/map/LeafletMap'
 import { useGeoLocation } from '../../hooks/useLocation'
 import { useRealtime } from '../../hooks/useRealtime'
 import { useLanguage } from '../../lib/i18n'
 import { haversineKm, getNavigationUrl } from '../../lib/helpers'
+import { fetchOsrmRoute } from '../../lib/routing'
 import type { GeoPoint, Shelter } from '../../types'
-import type { MapMarker } from '../../components/map/LeafletMap'
 
 type SortMode = 'distance' | 'capacity'
 
@@ -41,8 +45,40 @@ export default function ShelterFinder() {
 
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedFacility, setSelectedFacility] = useState<string | null>(null)
+  const [filterSavedOnly, setFilterSavedOnly] = useState(false)
   const [sortMode, setSortMode] = useState<SortMode>('distance')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  // Saved / Bookmarked shelters saved in local storage for offline access
+  const [savedIds, setSavedIds] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem('aapdasetu_saved_shelters')
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) return new Set(parsed)
+      }
+    } catch {
+      // Storage unavailable
+    }
+    return new Set()
+  })
+
+  const toggleSaveShelter = useCallback((id: string) => {
+    setSavedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      try {
+        localStorage.setItem('aapdasetu_saved_shelters', JSON.stringify(Array.from(next)))
+      } catch {
+        // Storage unavailable
+      }
+      return next
+    })
+  }, [])
 
   const cardRefs = useRef<Map<string, HTMLDivElement | null>>(new Map())
 
@@ -83,6 +119,7 @@ export default function ShelterFinder() {
       .filter((s) => {
         if (!s) return false
         if (s.status === 'closed') return false
+        if (filterSavedOnly && !savedIds.has(s.id)) return false
         if (q) {
           const haystack = `${s.name || ''} ${s.address || ''}`.toLowerCase()
           if (!haystack.includes(q)) return false
@@ -107,7 +144,7 @@ export default function ShelterFinder() {
         if (db == null) return -1
         return da - db
       })
-  }, [shelters, userPos, searchQuery, selectedFacility, sortMode, distanceById])
+  }, [shelters, userPos, searchQuery, selectedFacility, filterSavedOnly, savedIds, sortMode, distanceById])
 
   const stats = useMemo(() => {
     const list = Array.isArray(shelters) ? shelters : []
@@ -143,6 +180,49 @@ export default function ShelterFinder() {
     return shelters.find((s) => s?.id === selectedId) ?? null
   }, [shelters, selectedId])
 
+  // Active route calculation to selected shelter
+  const [selectedRoute, setSelectedRoute] = useState<{
+    points: GeoPoint[]
+    distanceKm: number
+    durationMin: number
+  } | null>(null)
+
+  useEffect(() => {
+    if (
+      !userPos ||
+      !selectedShelter ||
+      typeof selectedShelter.latitude !== 'number' ||
+      typeof selectedShelter.longitude !== 'number'
+    ) {
+      setSelectedRoute(null)
+      return
+    }
+
+    let cancelled = false
+    const destPoint: GeoPoint = { lat: selectedShelter.latitude, lng: selectedShelter.longitude }
+
+    fetchOsrmRoute(userPos, destPoint).then((res) => {
+      if (!cancelled) {
+        if (res && res.points.length > 1) {
+          setSelectedRoute(res)
+        } else {
+          // Direct fallback route
+          const directPoints = [userPos, destPoint]
+          const dist = haversineKm(userPos, destPoint)
+          setSelectedRoute({
+            points: directPoints,
+            distanceKm: dist,
+            durationMin: (dist / 4) * 60,
+          })
+        }
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [userPos, selectedShelter])
+
   const center: GeoPoint = useMemo(() => {
     if (
       selectedShelter &&
@@ -161,18 +241,7 @@ export default function ShelterFinder() {
     return { lat: 22.5726, lng: 88.3639 }
   }, [selectedShelter, userPos, filteredAndSorted])
 
-  // Content signature lets identical poll payloads skip marker object rebuilds entirely.
-  const markerSignature = useMemo(
-    () =>
-      filteredAndSorted
-        .map(
-          (s) =>
-            `${s.id}:${s.latitude},${s.longitude},${s.status},${s.occupancy},${s.capacity},${s.name},${s.address ?? ''}`,
-        )
-        .join('|'),
-    [filteredAndSorted],
-  )
-
+  // Distinct marker generation for each shelter type (saved, medical, open, full)
   const markers = useMemo(() => {
     const list: MapMarker[] = []
     if (userPos) {
@@ -185,8 +254,10 @@ export default function ShelterFinder() {
           : t('shelter.currentLocation'),
         color: '#3b82f6',
         isSos: true,
+        markerKind: 'user',
       })
     }
+
     for (let i = 0; i < filteredAndSorted.length; i++) {
       const s = filteredAndSorted[i]
       if (!s) continue
@@ -194,18 +265,50 @@ export default function ShelterFinder() {
       const statusLabel = s.status === 'full' ? t('shelter.full') : t('shelter.statusOpen')
       const occ = s.occupancy ?? 0
       const cap = s.capacity ?? 100
+      const isSaved = savedIds.has(s.id)
+      const hasMedical = Array.isArray(s.facilities) && s.facilities.includes('medical_station')
+
+      const popupActions = [
+        {
+          label: isSaved ? `★ ${t('sh.savedBadge', 'Saved')}` : `☆ ${t('sh.saveShelter', 'Save Shelter')}`,
+          onClick: () => toggleSaveShelter(s.id),
+        },
+        {
+          label: t('common.directions'),
+          onClick: () => {
+            window.open(getNavigationUrl(s.latitude, s.longitude), '_blank')
+          },
+        },
+      ]
+
       list.push({
         id: s.id || `shel-fallback-${i}`,
         position: { lat: s.latitude, lng: s.longitude },
         title: s.name || t('shelter.markerFallback'),
         subtitle: `${statusLabel} · ${t('routes.occupancy')} ${occ}/${cap} (${s.address ?? ''})`,
-        color: s.status === 'open' ? '#10b981' : '#f59e0b',
+        color: isSaved ? '#f59e0b' : s.status === 'open' ? '#10b981' : '#f59e0b',
         isShelter: true,
+        isSaved,
+        isMedical: hasMedical && !isSaved,
+        markerKind: isSaved ? 'saved' : hasMedical ? 'medical' : 'shelter',
+        badgeText: `${occ}/${cap}`,
+        popupActions,
       })
     }
     return list
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [markerSignature, userPos, accuracy, t])
+  }, [filteredAndSorted, userPos, accuracy, savedIds, toggleSaveShelter, t])
+
+  const polylines: MapPolyline[] = useMemo(() => {
+    if (!selectedRoute || selectedRoute.points.length < 2) return []
+    return [
+      {
+        id: 'selected-shelter-route',
+        points: selectedRoute.points,
+        color: '#10b981',
+        label: `${t('routes.safeDistance')}: ${selectedRoute.distanceKm.toFixed(1)} km (~${Math.round(selectedRoute.durationMin)} min)`,
+      },
+    ]
+  }, [selectedRoute, t])
 
   const handleSelect = useCallback((id: string | null) => {
     setSelectedId(id)
@@ -218,6 +321,7 @@ export default function ShelterFinder() {
   const resetFilters = useCallback(() => {
     setSearchQuery('')
     setSelectedFacility(null)
+    setFilterSavedOnly(false)
   }, [])
 
   if (!shelters) {
@@ -236,7 +340,7 @@ export default function ShelterFinder() {
   }
 
   const shelterCount = Array.isArray(shelters) ? shelters.length : 0
-  const hasActiveFilters = Boolean(searchQuery.trim()) || selectedFacility != null
+  const hasActiveFilters = Boolean(searchQuery.trim()) || selectedFacility != null || filterSavedOnly
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -330,15 +434,33 @@ export default function ShelterFinder() {
             </span>
             <button
               type="button"
-              onClick={() => setSelectedFacility(null)}
+              onClick={() => {
+                setSelectedFacility(null)
+                setFilterSavedOnly(false)
+              }}
               className={`rounded-lg px-3 py-1 text-xs font-semibold transition cursor-pointer ${
-                selectedFacility === null
+                selectedFacility === null && !filterSavedOnly
                   ? 'bg-zinc-800 text-white dark:bg-slate-100 dark:text-zinc-800'
                   : 'border border-zinc-200/80 bg-[#f4f4f5] text-zinc-600 hover:bg-zinc-100 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300'
               }`}
             >
               {t('shelter.allShelters')} ({shelterCount})
             </button>
+
+            {/* Saved Shelters Filter Chip */}
+            <button
+              type="button"
+              onClick={() => setFilterSavedOnly((s) => !s)}
+              className={`flex items-center gap-1 rounded-lg px-3 py-1 text-xs font-semibold transition cursor-pointer ${
+                filterSavedOnly
+                  ? 'bg-amber-600 text-white dark:bg-amber-500 dark:text-slate-900'
+                  : 'border border-amber-300/80 bg-amber-50/60 text-amber-800 hover:bg-amber-100 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300'
+              }`}
+            >
+              <Bookmark className="h-3 w-3 fill-current" />
+              <span>{t('sh.savedTab', 'Saved')} ({savedIds.size})</span>
+            </button>
+
             {criticalFacilities.map((f) => (
               <button
                 key={f.key}
@@ -364,15 +486,84 @@ export default function ShelterFinder() {
         </div>
       )}
 
-      {/* Map-first layout: stacks above the list naturally on mobile */}
-      <div className="mt-4 h-[320px] sm:h-[420px] lg:h-[520px] rounded-2xl overflow-hidden shadow-sm border border-zinc-200/80 dark:border-white/[0.08]">
+      {/* Selected Shelter Live Navigation Corridor Banner */}
+      {selectedShelter && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-300/80 bg-emerald-50/80 p-3.5 text-xs text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200 shadow-sm animate-fade-in">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-emerald-600 shrink-0" />
+            <div>
+              <div className="font-bold">
+                {t('routes.targetShelter', 'Active Target Shelter')}: {selectedShelter.name}
+              </div>
+              <div className="text-[11px] text-emerald-700 dark:text-emerald-300">
+                {selectedRoute
+                  ? `${selectedRoute.distanceKm.toFixed(1)} km · ~${Math.round(selectedRoute.durationMin)} min walking ETA`
+                  : t('common.loading')}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => toggleSaveShelter(selectedShelter.id)}
+              className="inline-flex items-center gap-1 rounded-xl border border-emerald-400/60 bg-white/90 px-3 py-1.5 text-xs font-bold text-emerald-800 shadow-xs hover:bg-white dark:bg-emerald-900/60 dark:text-emerald-100 cursor-pointer"
+            >
+              {savedIds.has(selectedShelter.id) ? (
+                <>
+                  <BookmarkCheck className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                  <span>{t('sh.savedBadge', 'Saved')}</span>
+                </>
+              ) : (
+                <>
+                  <Bookmark className="h-3.5 w-3.5" />
+                  <span>{t('sh.saveShelter', 'Save Shelter')}</span>
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedId(null)}
+              className="rounded-xl border border-emerald-400/40 p-1.5 text-emerald-700 hover:bg-emerald-100 dark:text-emerald-300 dark:hover:bg-emerald-900/50 cursor-pointer"
+              title="Clear selection"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Map-first layout */}
+      <div className="mt-4 h-[340px] sm:h-[440px] lg:h-[520px] rounded-2xl overflow-hidden shadow-sm border border-zinc-200/80 dark:border-white/[0.08]">
         <LeafletMap
           center={center}
           zoom={14}
           markers={markers}
+          polylines={polylines}
           height="100%"
+          autoFit={false}
           selectedId={selectedId}
         />
+      </div>
+
+      {/* Map Legend */}
+      <div className="mt-2.5 flex flex-wrap items-center gap-3.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-blue-600 ring-2 ring-blue-300" /> {t('common.youAreHere')}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-sm bg-emerald-600" /> {t('sh.statOpen')}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-sm bg-amber-500" /> {t('sh.savedTab', 'Saved Shelters')} (★)
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-sm bg-red-600" /> {t('shelter.filterMedical')}
+        </span>
+        {selectedRoute && (
+          <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
+            <Footprints className="h-3.5 w-3.5" /> {t('routes.safeDetour')}
+          </span>
+        )}
       </div>
 
       {/* Quick stat strip */}
@@ -392,6 +583,10 @@ export default function ShelterFinder() {
           <span className="h-2 w-2 rounded-full bg-red-500" aria-hidden="true" />
           {stats.closed} {t('sh.statClosed')}
         </span>
+        <span className="inline-flex items-center gap-1.5 ml-auto text-amber-600 dark:text-amber-400">
+          <Bookmark className="h-3 w-3 fill-current" />
+          {savedIds.size} {t('sh.savedBadge', 'Saved')}
+        </span>
       </div>
 
       {/* Shelter Cards — full width grid */}
@@ -405,11 +600,11 @@ export default function ShelterFinder() {
           const distance = userPos && point ? haversineKm(userPos, point) : null
           const cap = s.capacity ?? 100
           const occ = s.occupancy ?? 0
-          // Clamp guards NaN/overflow labels when cap is 0 or occupancy exceeds it.
           const pct = Math.max(0, Math.min(100, Math.round((occ / (cap || 100)) * 100)))
           const facilitiesList = Array.isArray(s.facilities) ? s.facilities : []
           const isOpen = s.status !== 'full' && s.status !== 'closed'
           const isSelected = selectedId === s.id
+          const isSaved = savedIds.has(s.id)
           const isNearestOpen = isOpen && nearestOpenId != null && nearestOpenId === s.id
 
           return (
@@ -429,7 +624,7 @@ export default function ShelterFinder() {
               aria-pressed={isSelected}
               className={`relative overflow-hidden rounded-2xl outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-slate-500 hover:-translate-y-0.5 cursor-pointer ${
                 isSelected
-                  ? 'ring-2 ring-zinc-800 dark:ring-slate-200'
+                  ? 'ring-2 ring-emerald-600 dark:ring-emerald-400 shadow-md'
                   : isNearestOpen
                   ? 'ring-2 ring-emerald-500 dark:ring-emerald-400'
                   : ''
@@ -450,7 +645,12 @@ export default function ShelterFinder() {
                       <span className="truncate font-bold text-zinc-800 dark:text-slate-300 text-base">
                         {s.name || t('shelter.cardFallback')}
                       </span>
-                      {isNearestOpen && (
+                      {isSaved && (
+                        <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                          ★ {t('sh.savedBadge', 'Saved')}
+                        </span>
+                      )}
+                      {isNearestOpen && !isSaved && (
                         <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm">
                           <Crosshair className="h-2.5 w-2.5" aria-hidden="true" />
                           {t('sh.nearest')}
@@ -463,6 +663,24 @@ export default function ShelterFinder() {
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
+                    {/* Bookmark Toggle */}
+                    <button
+                      type="button"
+                      aria-label={isSaved ? 'Remove bookmark' : 'Bookmark shelter'}
+                      title={isSaved ? 'Remove bookmark' : 'Bookmark shelter'}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleSaveShelter(s.id)
+                      }}
+                      className={`rounded-lg border p-1.5 transition cursor-pointer ${
+                        isSaved
+                          ? 'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300'
+                          : 'border-zinc-200 bg-white text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-400 dark:hover:bg-[#2a2a2a]'
+                      }`}
+                    >
+                      {isSaved ? <BookmarkCheck className="h-3.5 w-3.5 fill-current" /> : <Bookmark className="h-3.5 w-3.5" />}
+                    </button>
+
                     {hasCoords && (
                       <button
                         type="button"
@@ -474,7 +692,7 @@ export default function ShelterFinder() {
                         }}
                         className={`rounded-lg border p-1.5 transition cursor-pointer ${
                           isSelected
-                            ? 'border-zinc-800 bg-zinc-800 text-white dark:border-slate-200 dark:bg-slate-200 dark:text-zinc-900'
+                            ? 'border-emerald-600 bg-emerald-600 text-white dark:border-emerald-500 dark:bg-emerald-500 dark:text-zinc-900'
                             : 'border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 dark:hover:bg-[#2a2a2a]'
                         }`}
                       >

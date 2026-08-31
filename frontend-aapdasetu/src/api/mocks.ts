@@ -19,6 +19,7 @@ import type {
   TriageResult,
   Volunteer,
   VolunteerStatus,
+  VolunteerUser,
 } from '../types'
 import { computeTriage } from '../lib/triage'
 import { generateTrackingId } from '../lib/helpers'
@@ -38,7 +39,9 @@ function loadLocal<T>(key: string, fallback: () => T): T {
     }
     return JSON.parse(raw) as T
   } catch {
-    return fallback()
+    const initial = fallback()
+    saveLocal(key, initial)
+    return initial
   }
 }
 
@@ -1007,6 +1010,52 @@ export const mocks = {
     return this.updateVolunteer(id, { status })
   },
 
+  volunteerMe(): Omit<VolunteerUser, 'token'> & { status?: string } {
+    const rawId = typeof localStorage !== 'undefined' ? localStorage.getItem('aapdasetu_volunteer_session') : null
+    const vol = (rawId && volunteersStore.find((v) => v.id === rawId)) || volunteersStore[0] || {
+      id: 'vol-001',
+      name: 'Priya Mohanty (Disaster Response Lead)',
+      phone: '+91-9876543210',
+      skills: ['first_aid', 'search_rescue', 'flood_navigation'],
+      status: 'available' as const,
+    }
+    return {
+      id: vol.id,
+      name: vol.name,
+      email: `${vol.name.toLowerCase().replace(/[^a-z]/g, '')}@volunteer.aapdasetu.in`,
+      phone: vol.phone,
+      skills: vol.skills,
+      status: vol.status,
+    }
+  },
+
+  listVolunteerTasks(): Report[] {
+    const rawId = typeof localStorage !== 'undefined' ? localStorage.getItem('aapdasetu_volunteer_session') : null
+    const targetId = rawId || 'vol-001'
+    return reportsStore.filter((r) => r.assignedVolunteerId === targetId && r.status !== 'resolved')
+  },
+
+  completeVolunteerTask(reportId: string): void {
+    const r = reportsStore.find((item) => item.id === reportId || item.trackingId === reportId)
+    if (r) {
+      r.status = 'resolved'
+      r.resolutionNotes = 'Rescue mission successfully completed by field volunteer team.'
+      saveLocal(STORAGE_KEY_REPORTS, reportsStore)
+      emitRealtimeUpdate('report_updated', r.id, r)
+    }
+  },
+
+  setVolunteerStatus(status: 'available' | 'offline'): void {
+    const rawId = typeof localStorage !== 'undefined' ? localStorage.getItem('aapdasetu_volunteer_session') : null
+    const targetId = rawId || 'vol-001'
+    const vol = volunteersStore.find((v) => v.id === targetId)
+    if (vol) {
+      vol.status = status
+      saveLocal(STORAGE_KEY_VOLUNTEERS, volunteersStore)
+      emitRealtimeUpdate('volunteer_updated', vol.id, vol)
+    }
+  },
+
   // ---- Agencies ----
   listAgencies(): Agency[] {
     return agenciesStore
@@ -1048,6 +1097,28 @@ export const mocks = {
   // ---- Safety Checkins ----
   listSafetyCheckins(): SafetyCheckin[] {
     return checkinsStore
+  },
+
+  searchFamilyCheckins(phone: string) {
+    const digits = phone.replace(/\D/g, '')
+    if (!digits) return []
+    return checkinsStore
+      .filter((c) => c.phone && c.phone.replace(/\D/g, '').includes(digits))
+      .map((c) => {
+        const parts = (c.fullName || '').trim().split(/\s+/)
+        const firstName = parts[0] || 'Unknown'
+        const lastNameInitial = parts.length > 1 ? `${parts[parts.length - 1][0]}.` : null
+        const rawDigits = (c.phone || '').replace(/\D/g, '')
+        const phoneMasked = rawDigits.length >= 10 ? `+91 ******${rawDigits.slice(-4)}` : 'Phone on file'
+        return {
+          firstName,
+          lastNameInitial,
+          phoneMasked,
+          status: c.status,
+          locationName: c.locationName || null,
+          checkedInAt: c.createdAt,
+        }
+      })
   },
 
   createSafetyCheckin(input: Omit<SafetyCheckin, 'id' | 'createdAt'>): SafetyCheckin {

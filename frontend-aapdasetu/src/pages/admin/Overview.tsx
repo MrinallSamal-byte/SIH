@@ -20,6 +20,7 @@ import { useRealtime } from '../../hooks/useRealtime'
 import { useToast } from '../../components/common/Toast'
 import { timeAgo } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
+import { emitRealtimeUpdate } from '../../lib/realtimeEventBus'
 import type { OverviewKPIs, Report } from '../../types'
 
 export default function Overview() {
@@ -35,6 +36,7 @@ export default function Overview() {
   const handleAcknowledge = async (id: string) => {
     try {
       await updateReport(id, { status: 'in_progress' })
+      emitRealtimeUpdate('report_updated', id)
       toast(t('ov.ackSuccess'), 'success')
     } catch {
       toast(t('ov.ackFailed'), 'error')
@@ -261,7 +263,7 @@ export default function Overview() {
           <div className="space-y-4 my-2 text-xs">
             <Bar
               label={t('ov.barHandled')}
-              value={kpis.totalReports - kpis.openCases}
+              value={Math.max(0, kpis.totalReports - kpis.openCases)}
               max={Math.max(kpis.totalReports, 1)}
               color="bg-emerald-600"
             />

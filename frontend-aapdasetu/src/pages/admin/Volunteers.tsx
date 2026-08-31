@@ -6,6 +6,7 @@ import Loader from '../../components/common/Loader'
 import { useRealtime } from '../../hooks/useRealtime'
 import { useToast } from '../../components/common/Toast'
 import { useLanguage } from '../../lib/i18n'
+import { emitRealtimeUpdate } from '../../lib/realtimeEventBus'
 import type { Volunteer } from '../../types'
 
 type RosterVolunteer = Volunteer & { assignedTrackingId?: string }
@@ -19,6 +20,7 @@ export default function Volunteers() {
   const update = async (id: string, patch: Partial<Volunteer>) => {
     try {
       await updateVolunteer(id, patch)
+      emitRealtimeUpdate('volunteer_updated', id)
       toast(t('vl.volunteerUpdated'))
     } catch (err) {
       toast(err instanceof Error ? err.message : t('vl.volunteerUpdateFailed', 'Failed to update volunteer'), 'error')

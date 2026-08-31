@@ -18,6 +18,7 @@ import LandmarkPicker from '../../components/map/LandmarkPicker'
 import { useRealtime } from '../../hooks/useRealtime'
 import { useToast } from '../../components/common/Toast'
 import { useLanguage } from '../../lib/i18n'
+import { emitRealtimeUpdate } from '../../lib/realtimeEventBus'
 import type { GeoPoint, Shelter, ShelterStatus } from '../../types'
 
 export type FacilityType = 'food' | 'water' | 'medical_station' | 'power_generator'
@@ -93,7 +94,7 @@ export default function AdminShelters() {
     setCapacity(s.capacity.toString())
     setOccupancy(s.occupancy.toString())
     setContactPhone(s.contactPhone || '')
-    setFacilities(s.facilities)
+    setFacilities([...s.facilities])
     setStatus(s.status)
     setShowLocationPicker(false)
     setModalOpen(true)
@@ -118,6 +119,8 @@ export default function AdminShelters() {
     const latNum = Number(latitude)
     const lngNum = Number(longitude)
     if (
+      !latitude.trim() ||
+      !longitude.trim() ||
       !Number.isFinite(latNum) || latNum < -90 || latNum > 90 ||
       !Number.isFinite(lngNum) || lngNum < -180 || lngNum > 180
     ) {
@@ -129,6 +132,7 @@ export default function AdminShelters() {
     try {
       const capNum = Math.max(1, Number(capacity) || 100)
       const occNum = Math.min(capNum, Math.max(0, Number(occupancy) || 0))
+      const cleanPhone = contactPhone.trim() === '+91-' ? undefined : contactPhone.trim() || undefined
 
       if (editingShelter) {
         await updateShelter(editingShelter.id, {
@@ -139,12 +143,13 @@ export default function AdminShelters() {
           capacity: capNum,
           occupancy: occNum,
           facilities,
-          contactPhone: contactPhone.trim() || undefined,
+          contactPhone: cleanPhone,
           status,
         })
+        emitRealtimeUpdate('shelter_updated', editingShelter.id)
         toast(`${t('sh.updated')} "${name}"`, 'success')
       } else {
-        await createShelter({
+        const created = await createShelter({
           name: name.trim(),
           address: address.trim(),
           latitude: latNum,
@@ -152,9 +157,10 @@ export default function AdminShelters() {
           capacity: capNum,
           occupancy: 0,
           facilities,
-          contactPhone: contactPhone.trim() || undefined,
+          contactPhone: cleanPhone,
           status,
         })
+        emitRealtimeUpdate('shelter_created', created.id)
         toast(`${t('sh.created')} "${name}"`, 'success')
       }
 
@@ -170,6 +176,7 @@ export default function AdminShelters() {
   const handleQuickStatus = async (s: Shelter, newStatus: ShelterStatus) => {
     try {
       await updateShelter(s.id, { status: newStatus })
+      emitRealtimeUpdate('shelter_updated', s.id)
       toast(`${t('sh.statusChangedTo')} ${statusText(newStatus)}`)
     } catch {
       toast(t('sh.statusChangeFailed'), 'error')
@@ -184,6 +191,7 @@ export default function AdminShelters() {
         occupancy: safeOcc,
         status: safeOcc >= s.capacity ? 'full' : s.status === 'closed' ? 'closed' : 'open',
       })
+      emitRealtimeUpdate('shelter_updated', s.id)
       toast(`${t('sh.occupancyUpdatedTo')} ${safeOcc}/${s.capacity}`)
     } catch {
       toast(t('sh.occupancyUpdateFailed'), 'error')
@@ -217,14 +225,26 @@ export default function AdminShelters() {
 
   // Map Markers
   const mapMarkers = useMemo<MapMarker[]>(() => {
-    return filtered.map((s) => ({
-      id: s.id,
-      position: { lat: s.latitude, lng: s.longitude },
-      title: s.name,
-      subtitle: `${statusText(s.status)} · ${t('sh.occupancy')}: ${s.occupancy}/${s.capacity} · ${s.address ?? ''}`,
-      color: s.status === 'open' ? '#10b981' : s.status === 'full' ? '#f59e0b' : '#ef4444',
-      isShelter: true,
-    }))
+    return filtered.map((s) => {
+      const hasMedical = s.facilities.includes('medical_station')
+      return {
+        id: s.id,
+        position: { lat: s.latitude, lng: s.longitude },
+        title: s.name,
+        subtitle: `${statusText(s.status)} · ${t('sh.occupancy')}: ${s.occupancy}/${s.capacity} · ${s.address ?? ''}`,
+        color: s.status === 'open' ? '#10b981' : s.status === 'full' ? '#f59e0b' : '#ef4444',
+        isShelter: true,
+        isMedical: hasMedical,
+        markerKind: hasMedical ? 'medical' : 'shelter',
+        badgeText: `${s.occupancy}/${s.capacity}`,
+        popupActions: [
+          {
+            label: t('sh.edit', 'Edit Details'),
+            onClick: () => handleOpenEdit(s),
+          },
+        ],
+      }
+    })
   }, [filtered, statusText, t])
 
   const mapCenter: GeoPoint = useMemo(() => {

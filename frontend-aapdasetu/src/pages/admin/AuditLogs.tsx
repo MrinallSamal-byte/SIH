@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import {
   Search,
   Lock,
@@ -13,18 +13,16 @@ import Loader from '../../components/common/Loader'
 import { downloadCsv } from '../../lib/csv'
 import { formatDateTime } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
+import { useRealtime } from '../../hooks/useRealtime'
 import type { AuditLog } from '../../types'
 
 export default function AuditLogs() {
   const { t } = useLanguage()
-  const [page, setPage] = useState<{ items: AuditLog[]; total: number } | null>(null)
+  const fetchLogs = useCallback(() => listAuditLogs(), [])
+  const page = useRealtime<{ items: AuditLog[]; total: number }>(fetchLogs, 8000)
   const [search, setSearch] = useState('')
   const [actionFilter, setActionFilter] = useState<string>('all')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
-
-  useEffect(() => {
-    listAuditLogs().then(setPage)
-  }, [])
 
   const logs = page?.items ?? []
 
@@ -65,7 +63,7 @@ export default function AuditLogs() {
   // ponytail: count/KPIs use the server-returned total; unique admins and the
   // action chips stay computed from the fetched page until filter params ship.
   const totalCount = page.total
-  const uniqueAdmins = Array.from(new Set(logs.map((l) => l.adminEmail))).length
+  const uniqueAdmins = Array.from(new Set(logs.map((l) => l.adminEmail).filter(Boolean))).length
   const allActions = Array.from(new Set(logs.map((l) => l.action)))
 
   return (

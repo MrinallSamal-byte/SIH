@@ -75,11 +75,12 @@ if (typeof window !== 'undefined') {
  * Emit a real-time event across the current tab and all other open tabs.
  */
 export function emitRealtimeUpdate(type: RealtimeEventType, entityId?: string, payload?: unknown) {
-  const event: RealtimeEvent = {
+  const event: RealtimeEvent & { nonce?: number } = {
     type,
     entityId,
     timestamp: Date.now(),
     payload,
+    nonce: Math.random(),
   }
 
   // 1. Notify in-memory listeners in current window

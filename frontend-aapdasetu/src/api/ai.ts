@@ -344,10 +344,10 @@ export function cleanAiOutput(rawText: string): string {
   }
 
   // 3. Remove thinking process headers or internal commentary
-  text = text.replace(/^(?:Here(?:'s| is) (?:a |the )?thinking process:?|Thinking Process:?|Reasoning:?)[\s\S]*?(?=\n\n\n|\n[A-Z]|$)/gmi, '')
-  text = text.replace(/^(?:Okay,\s*the\s*user\s*is[\s\S]*?(?=\n\n|\n[A-Z\p{sc=Devanagari}\p{sc=Bengali}]|$))/gmiu, '')
-  text = text.replace(/^(?:Looking\s*at\s*the\s*history[\s\S]*?(?=\n\n|\n[A-Z\p{sc=Devanagari}\p{sc=Bengali}]|$))/gmiu, '')
-  text = text.replace(/^(?:According\s*to\s*my\s*instructions[\s\S]*?(?=\n\n|\n[A-Z\p{sc=Devanagari}\p{sc=Bengali}]|$))/gmiu, '')
+  text = text.replace(/^(?:Here(?:'s| is) (?:a |the )?thinking process:?|Thinking Process:?|Reasoning:?)[\s\S]*?(?=\n\n|\n[A-Z\p{sc=Devanagari}\p{sc=Bengali}\p{sc=Oriya}]|$)/gmiu, '')
+  text = text.replace(/^(?:Okay,\s*the\s*user\s*is[\s\S]*?(?=\n\n|\n[A-Z\p{sc=Devanagari}\p{sc=Bengali}\p{sc=Oriya}]|$))/gmiu, '')
+  text = text.replace(/^(?:Looking\s*at\s*the\s*history[\s\S]*?(?=\n\n|\n[A-Z\p{sc=Devanagari}\p{sc=Bengali}\p{sc=Oriya}]|$))/gmiu, '')
+  text = text.replace(/^(?:According\s*to\s*my\s*instructions[\s\S]*?(?=\n\n|\n[A-Z\p{sc=Devanagari}\p{sc=Bengali}\p{sc=Oriya}]|$))/gmiu, '')
 
   // 4. Remove rule echo lines e.g. "• Rule 1: ...", "1. Analyze User Input: ...", "• Since it's..."
   text = text.replace(/^\s*(?:\d+\.\s*(?:Analyze|Check Rules|Determine|Evaluate|Reasoning)|•\s*(?:Rule\s*\d+:|Reply in|Give ONLY|No thinking|Since it's|It's a|I need to)).*$/gmi, '')
@@ -484,7 +484,7 @@ export async function aiPfaChat(
 
   if (unrelatedPattern.test(lowerScope) && !scopePattern.test(lowerScope)) {
     return {
-      reply: DEGRADED_REPLIES[lang].offTopic,
+      reply: DEGRADED_REPLIES[lang]?.offTopic ?? DEGRADED_REPLIES.en.offTopic,
       exerciseType: undefined,
       isCritical: false,
       dangerLevel: 'LOW',
@@ -628,6 +628,5 @@ export function aiSatelliteFloodMap(payload: { district?: string; center?: { lat
   return withMockFallback(
     () => aiCall<FloodGeoJson>('POST', '/ai/satelliteflood-map', payload),
     () => mocks.aiSatelliteFloodMap(),
-    { mutating: true },
   )
 }

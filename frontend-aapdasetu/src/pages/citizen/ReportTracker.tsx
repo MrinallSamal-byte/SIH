@@ -25,6 +25,8 @@ export default function ReportTracker() {
   const { t } = useLanguage()
   const [searchParams, setSearchParams] = useSearchParams()
   const [trackingId, setTrackingId] = useState(() => searchParams.get('id') || '')
+  const trackingIdRef = useRef(trackingId)
+  trackingIdRef.current = trackingId
   const [loading, setLoading] = useState(false)
   const [report, setReport] = useState<Report | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -44,15 +46,15 @@ export default function ReportTracker() {
 
   const lookup = useCallback(
     async (idToSearch?: string) => {
-      const id = (idToSearch !== undefined ? idToSearch : trackingId).trim()
+      const id = (idToSearch !== undefined ? idToSearch : trackingIdRef.current).trim()
       if (!id) return
 
+      lastSearchedRef.current = id
       setLoading(true)
       setError(null)
       try {
         const res = await getReport(id)
         setReport(res)
-        lastSearchedRef.current = res.trackingId
 
         // Save to recent tracked
         try {
@@ -83,7 +85,7 @@ export default function ReportTracker() {
         setLoading(false)
       }
     },
-    [trackingId, searchParams, setSearchParams, t]
+    [searchParams, setSearchParams, t]
   )
 
   const queryParamId = searchParams.get('id')?.trim() || ''
@@ -256,7 +258,7 @@ export default function ReportTracker() {
 
       {/* Incident Details Card */}
       {report && !loading && (
-        <div className="mt-6 space-y-6 rounded-2xl border border-zinc-200/80 bg-white p-5 sm:p-4 sm:p-6 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+        <div className="mt-6 space-y-6 rounded-2xl border border-zinc-200/80 bg-white p-5 sm:p-6 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]">
           {/* Header */}
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4 dark:border-white/[0.08]">
             <div>
@@ -459,7 +461,7 @@ export default function ReportTracker() {
 
 function InfoRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div className="flex justify-between border-b border-zinc-200/80/60 pb-1.5 last:border-none last:pb-0 dark:border-white/[0.08]">
+    <div className="flex justify-between border-b border-zinc-200/80 pb-1.5 last:border-none last:pb-0 dark:border-white/[0.08]">
       <span className="text-slate-500 dark:text-slate-400">{label}:</span>
       <span
         className={`max-w-[65%] text-right font-medium ${

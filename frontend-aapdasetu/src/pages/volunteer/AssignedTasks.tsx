@@ -9,6 +9,8 @@ import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
 import { timeAgo, getNavigationUrl } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
+import { useIsVolunteerAuthed } from '../../hooks/useVolunteerAuth'
+import { emitRealtimeUpdate } from '../../lib/realtimeEventBus'
 import type { Report } from '../../types'
 
 export default function AssignedTasks() {
@@ -18,7 +20,7 @@ export default function AssignedTasks() {
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [resolveTarget, setResolveTarget] = useState<Report | null>(null)
 
-  const isAuthed = Boolean(localStorage.getItem('aapdasetu_volunteer_auth'))
+  const isAuthed = useIsVolunteerAuthed()
 
   const statusLabel = useCallback(
     (status: string) =>
@@ -36,6 +38,7 @@ export default function AssignedTasks() {
       setTasks(await listVolunteerTasks())
       loadErrorToastedRef.current = false
     } catch {
+      setTasks((prev) => prev ?? [])
       // Poll errors toast only ONCE — 12s polling during an outage must
       // not spam toasts nonstop.
       if (!loadErrorToastedRef.current) {
@@ -61,6 +64,7 @@ export default function AssignedTasks() {
     setUpdatingId(reportId)
     try {
       await completeVolunteerTask(reportId)
+      emitRealtimeUpdate('report_updated', reportId)
       toast(`${t('vt.taskUpdated')}: ${statusLabel('resolved')}`, 'success')
       setResolveTarget(null)
       loadTasks()

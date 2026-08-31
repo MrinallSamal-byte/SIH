@@ -67,7 +67,7 @@ export default function ReportDamage() {
   const [analysisUnavailable, setAnalysisUnavailable] = useState(false)
   const [copied, setCopied] = useState(false)
   const hasGps = Boolean(geoCoords && !isFallback && source === 'gps')
-  const coords = hasGps && geoCoords ? { lat: geoCoords.latitude, lng: geoCoords.longitude } : null
+  const coords = geoCoords ? { lat: geoCoords.latitude, lng: geoCoords.longitude } : null
 
   const onFiles = async (files: FileList | null) => {
     if (!files) return
@@ -99,9 +99,7 @@ export default function ReportDamage() {
 
   const removePhoto = (idx: number) => {
     setPhotos((prev) => prev.filter((_, i) => i !== idx))
-    // Stored per-image scores are indexed by photo position — clear them so
-    // badges can't show another photo's score after removal.
-    setPerImageVerdicts([])
+    setPerImageVerdicts((prev) => prev.filter((_, i) => i !== idx))
   }
 
   const assess = async () => {
@@ -118,10 +116,6 @@ export default function ReportDamage() {
       toast(t('damage.errAddressRequired'), 'error')
       return
     }
-    if (!hasGps) {
-      toast(t('sos.gpsFailToast'), 'error')
-      return
-    }
     if (!description.trim()) {
       toast(t('damage.errDescription'), 'error')
       return
@@ -133,8 +127,8 @@ export default function ReportDamage() {
       // never block or lose the save.
       const saved = await createDamageAssessment({
         photoDataUrl: photos[0],
-        latitude: coords!.lat,
-        longitude: coords!.lng,
+        latitude: coords?.lat,
+        longitude: coords?.lng,
         reporterName: ownerName.trim() || undefined,
         reporterPhone: cleanPhone,
       })
@@ -154,9 +148,11 @@ export default function ReportDamage() {
 
       // Indicative AI grade for display only; failure degrades to a warning chip.
       try {
+        const targetLat = coords?.lat ?? 22.5726
+        const targetLng = coords?.lng ?? 88.3639
         const verdicts = await Promise.all(
           photos.map((p) =>
-            aiDamageAssessment(p, coords!.lat, coords!.lng, description, infraType)
+            aiDamageAssessment(p, targetLat, targetLng, description, infraType)
           )
         )
         setPerImageVerdicts(verdicts)

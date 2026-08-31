@@ -4,12 +4,13 @@ import {
   Navigation,
   AlertTriangle,
   CheckCircle2,
-  MapPin
+  MapPin,
+  ShieldCheck,
 } from 'lucide-react'
 import { aiSatelliteFloodMap } from '../../api/ai'
 import { listShelters } from '../../api/endpoints'
 import Loader from '../../components/common/Loader'
-import LeafletMap from '../../components/map/LeafletMap'
+import LeafletMap, { type MapMarker, type MapPolyline } from '../../components/map/LeafletMap'
 import { useGeoLocation } from '../../hooks/useLocation'
 import { useLanguage } from '../../lib/i18n'
 import { getNavigationUrl } from '../../lib/helpers'
@@ -138,6 +139,8 @@ export default function SafeRoutes() {
   const [flood, setFlood] = useState<FloodGeoJson | null>(null)
   const [shelters, setShelters] = useState<Shelter[] | null>(null)
   const [destinationId, setDestinationId] = useState<string>('')
+  const [activeRouteView, setActiveRouteView] = useState<'safe' | 'fastest' | 'both'>('both')
+
   const [osrmFastest, setOsrmFastest] = useState<{ points: GeoPoint[]; distanceKm: number; durationMin: number } | null>(null)
   const [osrmSafe, setOsrmSafe] = useState<{ points: GeoPoint[]; distanceKm: number; durationMin: number } | null>(null)
   const [routingLoading, setRoutingLoading] = useState(false)
@@ -165,9 +168,7 @@ export default function SafeRoutes() {
     if (shelters && shelters.length > 0) setDestinationId((id) => id || shelters[0].id)
   }, [shelters])
 
-  // One entry PER FEATURE holding its outer rings (hole rings are skipped so
-  // they never paint as filled hazards). Building geometry and labels from the
-  // same pass fixes the old index mismatch between polygons and their tooltips.
+  // Hazard polygon structures
   const floodZones = useMemo(() => {
     if (!flood || !Array.isArray(flood.features)) return []
     return flood.features
@@ -186,9 +187,18 @@ export default function SafeRoutes() {
         } else {
           outerRings = [geom.coordinates[0] ?? []]
         }
+
+        const pts = outerRings.flatMap(toPoints)
+        const centerLat = pts.length > 0 ? pts.reduce((a, b) => a + b.lat, 0) / pts.length : 0
+        const centerLng = pts.length > 0 ? pts.reduce((a, b) => a + b.lng, 0) / pts.length : 0
+
         return {
           id: `flood-${i}`,
-          points: outerRings.flatMap(toPoints),
+          points: pts,
+          center: { lat: centerLat, lng: centerLng } as GeoPoint,
+          severity: f.properties.severity || 'HIGH',
+          depth: f.properties.water_depth_est_meters || 1.5,
+          hazardType: f.properties.hazard_type || t('routes.floodZone'),
           label: `${f.properties.hazard_type || t('routes.floodZone')} — ${f.properties.severity || t('routes.critical')}${f.properties.water_depth_est_meters ? ` (~${f.properties.water_depth_est_meters}m ${t('routes.waterDepth')})` : ''}`,
         }
       })
@@ -203,41 +213,6 @@ export default function SafeRoutes() {
   )
 
   const hazardPolys = useMemo(() => floodZones.map((z) => z.points), [floodZones])
-
-  const shelterMarkers = useMemo(
-    () =>
-      (shelters ?? [])
-        .filter((s) => typeof s.latitude === 'number' && typeof s.longitude === 'number')
-        .map((s) => ({
-          id: s.id,
-          position: { lat: s.latitude, lng: s.longitude } as GeoPoint,
-          title: s.name,
-          subtitle: `${s.status === 'full' ? t('shelter.full') : t('shelter.statusOpen')} · ${t('routes.occupancy')} ${s.occupancy || 0}/${s.capacity || 0}`,
-          color: '#10b981',
-          isShelter: true,
-        })),
-    [shelters, t],
-  )
-
-  const userMarker = useMemo(
-    () =>
-      coords
-        ? {
-            id: 'you',
-            position: origin,
-            title: t('common.youAreHere'),
-            subtitle: accuracy ? `${t('common.gpsAccuracy')}${Math.round(accuracy)}m` : t('routes.liveLocation'),
-            color: '#3b82f6',
-            isSos: true,
-          }
-        : null,
-    [coords, origin, accuracy, t],
-  )
-
-  const markers = useMemo(
-    () => [...(userMarker ? [userMarker] : []), ...shelterMarkers],
-    [userMarker, shelterMarkers],
-  )
 
   const destination = useMemo(
     () => (shelters ?? []).find((s) => s.id === destinationId) ?? (shelters?.[0] ?? null),
@@ -262,6 +237,14 @@ export default function SafeRoutes() {
     [origin, destPoint, hazardPolys],
   )
 
+  // Safe detour waypoints
+  const safeWaypoints = useMemo<GeoPoint[]>(() => {
+    if (safeDirect.length > 2) {
+      return safeDirect.slice(1, -1)
+    }
+    return []
+  }, [safeDirect])
+
   useEffect(() => {
     if (!destPoint) return
     let cancelled = false
@@ -271,13 +254,11 @@ export default function SafeRoutes() {
     setOsrmFastest(null)
     setOsrmSafe(null)
     ;(async () => {
-      // ponytail: both legs are walking routes on routed-foot — there is no honest car profile here.
       const fastest = await fetchOsrmRoute(origin, destPoint)
       if (!cancelled) {
         if (fastest) setOsrmFastest(fastest)
         else setFastestFallback(true)
       }
-      const safeWaypoints = safeDirect.length > 2 ? safeDirect.slice(1, -1) : []
       const safe = await fetchOsrmRoute(origin, destPoint, safeWaypoints)
       if (!cancelled) {
         if (safe) setOsrmSafe(safe)
@@ -288,53 +269,213 @@ export default function SafeRoutes() {
     return () => {
       cancelled = true
     }
-  }, [origin.lat, origin.lng, destPoint?.lat, destPoint?.lng, safeDirect])
+  }, [origin.lat, origin.lng, destPoint?.lat, destPoint?.lng, safeWaypoints])
 
   const fastestRoute = useMemo(() => osrmFastest?.points ?? fastestDirect, [osrmFastest, fastestDirect])
   const safeRoute = useMemo(() => osrmSafe?.points ?? safeDirect, [osrmSafe, safeDirect])
 
-  const routes = useMemo(
-    () => [
-      {
-        id: 'fastest',
-        label: t('routes.fastestRoute'),
+  // Distinct Route Polylines
+  const polylines: MapPolyline[] = useMemo(() => {
+    const list: MapPolyline[] = []
+    if (activeRouteView === 'safe' || activeRouteView === 'both') {
+      list.push({
+        id: 'safe-detour-route',
+        points: safeRoute ?? [],
+        color: '#10b981',
+        dashed: false,
+        label: `${t('routes.safeDetour')}: ${(osrmSafe?.distanceKm ?? haversineRouteLength(safeRoute)).toFixed(1)} km (~${Math.round(osrmSafe?.durationMin ?? (haversineRouteLength(safeRoute) / WALK_SPEED_KMPH) * 60)} min)`,
+      })
+    }
+    if (activeRouteView === 'fastest' || activeRouteView === 'both') {
+      list.push({
+        id: 'fastest-direct-route',
         points: fastestRoute ?? [],
         color: '#f59e0b',
-        dashed: false,
-        hazard: fastestFallback ? t('routes.directLineHazard') : t('routes.followsRoads'),
-        safe: false,
-        fallback: fastestFallback,
-        distanceKm: osrmFastest?.distanceKm ?? haversineRouteLength(fastestRoute),
-        durationMin: osrmFastest?.durationMin ?? (haversineRouteLength(fastestRoute) / WALK_SPEED_KMPH) * 60,
-      },
+        dashed: true,
+        label: `${t('routes.fastestRoute')}: ${(osrmFastest?.distanceKm ?? haversineRouteLength(fastestRoute)).toFixed(1)} km (~${Math.round(osrmFastest?.durationMin ?? (haversineRouteLength(fastestRoute) / WALK_SPEED_KMPH) * 60)} min)`,
+      })
+    }
+    return list
+  }, [safeRoute, fastestRoute, osrmSafe, osrmFastest, activeRouteView, t])
+
+  // Distinct Markers for all points:
+  // 1. Origin (User radar)
+  // 2. Destination Safe Haven
+  // 3. Safe detour waypoints (Green shields)
+  // 4. Hazard danger points (Red alert triangles)
+  // 5. Other safe shelters
+  const markers = useMemo(() => {
+    const list: MapMarker[] = []
+
+    // 1. Origin marker
+    list.push({
+      id: 'origin-marker',
+      position: origin,
+      title: t('common.youAreHere'),
+      subtitle: accuracy ? `${t('common.gpsAccuracy')}${Math.round(accuracy)}m` : t('routes.liveLocation'),
+      color: '#3b82f6',
+      isSos: true,
+      markerKind: 'user',
+    })
+
+    // 2. Destination Safe Haven Marker
+    if (destination && destPoint) {
+      list.push({
+        id: `dest-${destination.id}`,
+        position: destPoint,
+        title: `${t('routes.targetShelter', 'Target Safe Haven')}: ${destination.name}`,
+        subtitle: `${destination.status === 'full' ? t('shelter.full') : t('shelter.statusOpen')} · ${t('routes.occupancy')} ${destination.occupancy || 0}/${destination.capacity || 0}`,
+        color: '#047857',
+        isDestination: true,
+        markerKind: 'destination',
+        badgeText: 'HAVEN',
+        popupActions: [
+          {
+            label: t('common.directions'),
+            onClick: () => {
+              window.open(getNavigationUrl(destPoint.lat, destPoint.lng), '_blank')
+            },
+          },
+        ],
+      })
+    }
+
+    // 3. Safe Route Waypoint Markers (Green Shields)
+    safeWaypoints.forEach((wp, idx) => {
+      list.push({
+        id: `safe-waypoint-${idx}`,
+        position: wp,
+        title: `${t('routes.safeWaypoint', 'Safe Detour Checkpoint')} #${idx + 1}`,
+        subtitle: t('routes.safeWaypointDesc', 'Hazard clearance node keeping you away from flooded zones'),
+        color: '#059669',
+        isWaypoint: true,
+        markerKind: 'waypoint',
+        badgeText: `WP${idx + 1}`,
+      })
+    })
+
+    // 4. Hazard Danger Points (Red Warning Triangles where flood zones exist)
+    floodZones.forEach((fz, idx) => {
+      if (fz.center && fz.center.lat && fz.center.lng) {
+        list.push({
+          id: `hazard-point-${idx}`,
+          position: fz.center,
+          title: `⚠️ ${fz.hazardType} (${fz.severity})`,
+          subtitle: `~${fz.depth}m water depth. Active flood zone avoided by Safe Detour Route.`,
+          color: '#dc2626',
+          isHazard: true,
+          markerKind: 'hazard',
+          badgeText: 'DANGER',
+        })
+      }
+    })
+
+    // 5. Other Available Shelters in region
+    ;(shelters ?? [])
+      .filter((s) => s.id !== destinationId && typeof s.latitude === 'number' && typeof s.longitude === 'number')
+      .forEach((s) => {
+        list.push({
+          id: s.id,
+          position: { lat: s.latitude, lng: s.longitude },
+          title: s.name,
+          subtitle: `${s.status === 'full' ? t('shelter.full') : t('shelter.statusOpen')} · ${t('routes.occupancy')} ${s.occupancy || 0}/${s.capacity || 0}`,
+          color: '#10b981',
+          isShelter: true,
+          markerKind: 'shelter',
+          popupActions: [
+            {
+              label: t('routes.selectAsDest', 'Route to this Shelter'),
+              onClick: () => setDestinationId(s.id),
+            },
+          ],
+        })
+      })
+
+    return list
+  }, [origin, destination, destPoint, safeWaypoints, floodZones, shelters, destinationId, accuracy, t])
+
+  const routeCards = useMemo(
+    () => [
       {
-        id: 'safe',
+        id: 'safe' as const,
         label: t('routes.safeDetour'),
         points: safeRoute ?? [],
         color: '#10b981',
-        dashed: true,
-        // Never claim road-based avoidance when the safe-route fetch failed —
-        // that card is then a straight line, so say so.
+        dashed: false,
         hazard: safeFallback ? t('routes.directLineHazard') : t('routes.safeDetourDesc'),
         safe: true,
         fallback: safeFallback,
         distanceKm: osrmSafe?.distanceKm ?? haversineRouteLength(safeRoute),
         durationMin: osrmSafe?.durationMin ?? (haversineRouteLength(safeRoute) / WALK_SPEED_KMPH) * 60,
       },
+      {
+        id: 'fastest' as const,
+        label: t('routes.fastestRoute'),
+        points: fastestRoute ?? [],
+        color: '#f59e0b',
+        dashed: true,
+        hazard: fastestFallback ? t('routes.directLineHazard') : t('routes.followsRoads'),
+        safe: false,
+        fallback: fastestFallback,
+        distanceKm: osrmFastest?.distanceKm ?? haversineRouteLength(fastestRoute),
+        durationMin: osrmFastest?.durationMin ?? (haversineRouteLength(fastestRoute) / WALK_SPEED_KMPH) * 60,
+      },
     ],
-    [fastestRoute, safeRoute, osrmFastest, osrmSafe, fastestFallback, safeFallback, t],
+    [safeRoute, fastestRoute, osrmSafe, osrmFastest, safeFallback, fastestFallback, t],
   )
 
   if (!flood || !shelters) return <Loader />
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="flex items-center gap-2 mb-1">
-        <Compass className="h-6 w-6 text-zinc-800 dark:text-slate-300" />
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-800 dark:text-slate-300">
-          {t('routes.title')}
-        </h1>
+      <div className="flex items-center justify-between gap-3 mb-1">
+        <div className="flex items-center gap-2">
+          <Compass className="h-6 w-6 text-zinc-800 dark:text-slate-300" />
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-800 dark:text-slate-300">
+            {t('routes.title')}
+          </h1>
+        </div>
+
+        {/* Route Filter View Toggle */}
+        <div className="inline-flex rounded-xl border border-zinc-200 bg-[#f4f4f5] p-0.5 shadow-xs dark:border-white/[0.1] dark:bg-[#222222]">
+          <button
+            type="button"
+            onClick={() => setActiveRouteView('both')}
+            className={`rounded-lg px-2.5 py-1 text-xs font-bold transition cursor-pointer ${
+              activeRouteView === 'both'
+                ? 'bg-zinc-800 text-white dark:bg-slate-100 dark:text-zinc-800'
+                : 'text-zinc-600 hover:bg-zinc-100 dark:text-slate-300 dark:hover:bg-[#2a2a2a]'
+            }`}
+          >
+            {t('routes.allRoutes', 'All Routes')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveRouteView('safe')}
+            className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold transition cursor-pointer ${
+              activeRouteView === 'safe'
+                ? 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-slate-900'
+                : 'text-zinc-600 hover:bg-zinc-100 dark:text-slate-300 dark:hover:bg-[#2a2a2a]'
+            }`}
+          >
+            <ShieldCheck className="h-3 w-3" />
+            <span>{t('routes.safeOnly', 'Safe Detour')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveRouteView('fastest')}
+            className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold transition cursor-pointer ${
+              activeRouteView === 'fastest'
+                ? 'bg-amber-600 text-white dark:bg-amber-500 dark:text-slate-900'
+                : 'text-zinc-600 hover:bg-zinc-100 dark:text-slate-300 dark:hover:bg-[#2a2a2a]'
+            }`}
+          >
+            <AlertTriangle className="h-3 w-3" />
+            <span>{t('routes.directOnly', 'Direct Route')}</span>
+          </button>
+        </div>
       </div>
+
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
         {t('routes.subtitle')}
       </p>
@@ -366,9 +507,9 @@ export default function SafeRoutes() {
               onChange={(e) => setDestinationId(e.target.value)}
               className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-600 outline-none focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300"
             >
-              {shelterMarkers.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.title} — {m.subtitle}
+              {(shelters ?? []).map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} — {s.status === 'open' ? t('shelter.statusOpen') : t('shelter.full')} ({s.occupancy || 0}/{s.capacity || 0})
                 </option>
               ))}
             </select>
@@ -386,11 +527,17 @@ export default function SafeRoutes() {
             )}
           </div>
 
-          {routes.map((r) => (
+          {/* Route Option Cards */}
+          {routeCards.map((r) => (
             <div
               key={r.id}
-              className={`flex items-center justify-between gap-3 rounded-2xl border p-4 text-xs shadow-sm ${
-                r.safe ? 'border-emerald-300 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20' : 'border-amber-300 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/20'
+              onClick={() => setActiveRouteView(r.id)}
+              className={`flex items-center justify-between gap-3 rounded-2xl border p-4 text-xs shadow-sm transition cursor-pointer ${
+                activeRouteView === r.id || activeRouteView === 'both'
+                  ? r.safe
+                    ? 'border-emerald-400 bg-emerald-50/80 ring-2 ring-emerald-500/40 dark:border-emerald-800 dark:bg-emerald-950/30'
+                    : 'border-amber-400 bg-amber-50/80 ring-2 ring-amber-500/40 dark:border-amber-800 dark:bg-amber-950/30'
+                  : 'border-slate-200 bg-white opacity-70 hover:opacity-100 dark:border-white/[0.08] dark:bg-[#1a1a1a]'
               }`}
             >
               <div>
@@ -409,12 +556,16 @@ export default function SafeRoutes() {
             </div>
           ))}
 
+          {/* Active Flood Zones List */}
           <h2 className="pt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">{t('routes.hazardActive')}</h2>
           {flood.features.map((f, i) => (
             <div key={i} className="rounded-2xl border border-red-200 bg-red-50/70 p-3.5 text-xs dark:border-red-900/40 dark:bg-red-950/30">
-              <div className="font-bold text-red-700 dark:text-red-300">{f.properties.hazard_type}</div>
+              <div className="font-bold text-red-700 dark:text-red-300 flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 text-red-600 shrink-0" />
+                <span>{f.properties.hazard_type}</span>
+              </div>
               <div className="text-red-600 dark:text-red-400 mt-0.5">
-                {t('routes.severity')} {f.properties.severity} · ~{f.properties.water_depth_est_meters}m {t('routes.depthSuffix')}
+                {t('routes.severity')} {f.properties.severity} · ~{f.properties.water_depth_est_meters || 1.5}m {t('routes.depthSuffix')}
               </div>
               {f.properties.affected_villages && (
                 <div className="mt-1 text-zinc-500 dark:text-slate-400">{t('routes.villages')} {f.properties.affected_villages.join(', ')}</div>
@@ -422,6 +573,7 @@ export default function SafeRoutes() {
             </div>
           ))}
         </div>
+
         <div className="lg:col-span-2">
           <div className="rounded-2xl overflow-hidden shadow-sm border border-zinc-200/80 dark:border-white/[0.08]">
             <LeafletMap
@@ -429,26 +581,32 @@ export default function SafeRoutes() {
               zoom={13}
               markers={markers}
               polygons={polygons}
-              polylines={routes.map((r) => ({ id: r.id, points: r.points, color: r.color, dashed: r.dashed, label: r.label }))}
+              polylines={polylines}
               height="520px"
-              autoFit
+              autoFit={true}
+              selectedId={destination ? `dest-${destination.id}` : null}
             />
           </div>
+
+          {/* Map Point Feature Legend */}
           <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-0.5 w-5 bg-amber-500" /> {t('routes.directDistance')}
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-blue-600 ring-2 ring-blue-300" /> {t('routes.origin')}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-0 w-5 border-t-2 border-dashed border-emerald-500" /> {t('routes.safeDistance')}
+              <span className="inline-block h-2.5 w-2.5 rounded-sm bg-emerald-800" /> {t('routes.targetShelter', 'Target Safe Haven')} (🏁)
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" /> {t('routes.hazardActive')}
+              <span className="inline-block h-2.5 w-2.5 rounded-sm bg-emerald-600" /> {t('routes.safeWaypoint', 'Safe Detour Waypoints')} (🛡️)
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" /> {t('shelter.allShelters')}
+              <span className="inline-block h-2.5 w-2.5 rounded-sm bg-red-600" /> {t('routes.hazardActive')} (⚠️)
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-zinc-800 dark:bg-slate-100" /> {t('routes.origin')}
+              <span className="inline-block h-0 w-4 border-t-2 border-dashed border-amber-500" /> {t('routes.fastestRoute')}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-0.5 w-4 bg-emerald-500" /> {t('routes.safeDetour')}
             </span>
           </div>
         </div>

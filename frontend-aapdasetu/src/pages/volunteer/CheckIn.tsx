@@ -4,6 +4,8 @@ import { Field, Input } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/Toast'
 import { useGeoLocation } from '../../hooks/useLocation'
+import { useVolunteerAuth } from '../../hooks/useVolunteerAuth'
+import { emitRealtimeUpdate } from '../../lib/realtimeEventBus'
 import { useLanguage } from '../../lib/i18n'
 
 const CHECKIN_COOLDOWN_MS = 5 * 60 * 1000
@@ -13,6 +15,7 @@ type VolunteerProfile = Awaited<ReturnType<typeof volunteerMe>> & { status?: str
 export default function CheckIn() {
   const { t } = useLanguage()
   const { toast } = useToast()
+  const { user: authUser } = useVolunteerAuth()
   const { coords, status: geoStatus, isFallback } = useGeoLocation()
   const [volunteer, setVolunteer] = useState<VolunteerProfile | null>(null)
   const [notes, setNotes] = useState('')
@@ -44,14 +47,15 @@ export default function CheckIn() {
     setSending(true)
     try {
       const input: Parameters<typeof createSafetyCheckin>[0] = {
-        fullName: volunteer?.name || 'Volunteer Responder',
-        phone: volunteer?.phone,
+        fullName: volunteer?.name || authUser?.name || 'Volunteer Responder',
+        phone: volunteer?.phone || authUser?.phone,
         status: 'safe',
         notes,
         latitude: shareLocation ? coords?.latitude : undefined,
         longitude: shareLocation ? coords?.longitude : undefined,
       }
       await createSafetyCheckin(input)
+      emitRealtimeUpdate('checkin_created')
       try {
         if (volunteer?.status && volunteer.status !== 'available') {
           await setVolunteerStatus('available')

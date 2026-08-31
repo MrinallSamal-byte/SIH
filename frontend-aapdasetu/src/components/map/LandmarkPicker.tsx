@@ -64,6 +64,7 @@ export default function LandmarkPicker({
   const rootRef = useRef<HTMLDivElement>(null)
   // ponytail: monotonic search id — stale geocode responses are discarded instead of overwriting newer ones
   const searchIdRef = useRef(0)
+  const pickSeqRef = useRef(0)
   // Last point this picker itself emitted; lets us detect externally-driven
   // value changes and recenter the map for them.
   const lastEmittedRef = useRef<string | null>(null)
@@ -167,12 +168,15 @@ export default function LandmarkPicker({
   }
 
   const handleMapPick = async (p: GeoPoint) => {
+    const seq = ++pickSeqRef.current
+    emitChange(p)
     try {
       const addr = await reverseGeocode(p)
+      if (seq !== pickSeqRef.current) return
       emitChange(p, addr || undefined)
       if (addr) setQuery(addr)
     } catch {
-      emitChange(p)
+      if (seq === pickSeqRef.current) emitChange(p)
     }
   }
 
@@ -294,12 +298,15 @@ export default function LandmarkPicker({
                 dragend: async (e) => {
                   const ll = e.target.getLatLng() as L.LatLng
                   const p = { lat: ll.lat, lng: ll.lng }
+                  const seq = ++pickSeqRef.current
+                  emitChange(p)
                   try {
                     const addr = await reverseGeocode(p)
+                    if (seq !== pickSeqRef.current) return
                     emitChange(p, addr || undefined)
                     if (addr) setQuery(addr)
                   } catch {
-                    emitChange(p)
+                    if (seq === pickSeqRef.current) emitChange(p)
                   }
                 },
               }}

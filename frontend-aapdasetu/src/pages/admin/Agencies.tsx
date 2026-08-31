@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import {
   Building2,
   Search,
@@ -14,6 +14,7 @@ import {
 import { listAgencies } from '../../api/endpoints'
 import Badge from '../../components/common/Badge'
 import Loader from '../../components/common/Loader'
+import { useRealtime } from '../../hooks/useRealtime'
 import { useLanguage } from '../../lib/i18n'
 import type { Agency } from '../../types'
 
@@ -27,13 +28,10 @@ const TYPE_ICONS: Record<string, typeof Building2> = {
 
 export default function Agencies() {
   const { t } = useLanguage()
-  const [agencies, setAgencies] = useState<Agency[] | null>(null)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
-
-  useEffect(() => {
-    listAgencies().then(setAgencies)
-  }, [])
+  const fetchAgencies = useCallback(() => listAgencies(), [])
+  const agencies = useRealtime<Agency[]>(fetchAgencies, 10000)
 
   const filtered = useMemo(() => {
     if (!agencies) return []
@@ -44,7 +42,8 @@ export default function Agencies() {
         const matchName = (a.name || '').toLowerCase().includes(q)
         const matchJurisdiction = (a.jurisdiction || '').toLowerCase().includes(q)
         const matchPhone = (a.contactPhone || '').includes(q)
-        if (!matchName && !matchJurisdiction && !matchPhone) return false
+        const matchEmail = (a.contactEmail || '').toLowerCase().includes(q)
+        if (!matchName && !matchJurisdiction && !matchPhone && !matchEmail) return false
       }
       return true
     })

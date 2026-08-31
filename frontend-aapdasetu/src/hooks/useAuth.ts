@@ -34,7 +34,9 @@ function isTokenExpired(token: string | undefined): boolean {
     const payloadPart = token.split('.')[1]
     if (!payloadPart) return false // not a JWT — treat as opaque session value
     const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/')
-    const payload = JSON.parse(atob(base64)) as { exp?: number }
+    const pad = base64.length % 4
+    const padded = pad ? base64 + '='.repeat(4 - pad) : base64
+    const payload = JSON.parse(atob(padded)) as { exp?: number }
     if (typeof payload.exp !== 'number') return false
     return Date.now() / 1000 >= payload.exp
   } catch {

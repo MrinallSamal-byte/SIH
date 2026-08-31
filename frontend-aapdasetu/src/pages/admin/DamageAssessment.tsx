@@ -10,7 +10,7 @@ import {
 import { listDamageAssessments, flagDamageAssessment, type DamageRow } from '../../api/endpoints'
 import { useToast } from '../../components/common/Toast'
 import { useLanguage } from '../../lib/i18n'
-import { subscribeRealtimeUpdates } from '../../lib/realtimeEventBus'
+import { subscribeRealtimeUpdates, emitRealtimeUpdate } from '../../lib/realtimeEventBus'
 
 const CLASSIFICATIONS: DamageRow['classification'][] = [
   'MINOR_DAMAGE',
@@ -64,7 +64,9 @@ export default function DamageAssessment() {
         const q = searchQuery.toLowerCase().trim()
         const match =
           item.id.toLowerCase().includes(q) ||
-          (item.imageHash || '').toLowerCase().includes(q)
+          (item.imageHash || '').toLowerCase().includes(q) ||
+          (item.classification || '').toLowerCase().includes(q) ||
+          (item.status || '').toLowerCase().includes(q)
         if (!match) return false
       }
       return true
@@ -83,6 +85,7 @@ export default function DamageAssessment() {
       const updated = await flagDamageAssessment(row.id)
       setItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
       if (selectedReport?.id === row.id) setSelectedReport(updated)
+      emitRealtimeUpdate('damage_updated', updated.id)
       toast(`${t('dm.statusUpdated')}: ${updated.status}`)
     } catch {
       toast(t('dm.statusUpdateFailed'), 'error')

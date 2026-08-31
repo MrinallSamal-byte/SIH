@@ -218,15 +218,22 @@ async function apiCall<T>(method: string, path: string, body?: unknown): Promise
 function handleUnauthorized(path: string): void {
   try {
     const exempt = path.includes('/auth/login') || path.includes('/auth/change-password')
+    const hash = typeof window !== 'undefined' ? window.location.hash : ''
+    const pathname = typeof window !== 'undefined' ? window.location.pathname : ''
+    
     if (path.startsWith('/api/v1/admin') && !exempt) {
       localStorage.removeItem(ADMIN_SESSION_KEY)
-      if (window.location.pathname.startsWith('/admin') && !window.location.pathname.endsWith('/login')) {
-        window.location.assign('/admin/login')
+      const isAdminRoute = hash.startsWith('#/admin') || pathname.startsWith('/admin')
+      const isLogin = hash.includes('/login') || pathname.endsWith('/login')
+      if (isAdminRoute && !isLogin && typeof window !== 'undefined') {
+        window.location.hash = '#/admin/login'
       }
     } else if (path.startsWith('/api/v1/volunteer') && !exempt) {
       localStorage.removeItem(VOLUNTEER_AUTH_KEY)
-      if (window.location.pathname.startsWith('/volunteer') && !window.location.pathname.endsWith('/login')) {
-        window.location.assign('/volunteer/login')
+      const isVolRoute = hash.startsWith('#/volunteer') || pathname.startsWith('/volunteer')
+      const isLogin = hash.includes('/login') || pathname.endsWith('/login')
+      if (isVolRoute && !isLogin && typeof window !== 'undefined') {
+        window.location.hash = '#/volunteer/login'
       }
     }
   } catch {
@@ -303,7 +310,7 @@ export async function withMockFallback<T>(
   } catch (err) {
     apiHealth.lastAttemptAt = Date.now()
     if (options.mutating || isMutatingFailure(err)) {
-      if (!navigator.onLine) throw new OfflineError()
+      if (typeof navigator !== 'undefined' && !navigator.onLine) throw new OfflineError()
       console.error('[aapdasetu] write failed — refusing to fake success with mock data', err)
       throw err
     }

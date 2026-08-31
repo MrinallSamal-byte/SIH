@@ -370,14 +370,15 @@ export interface FamilyCheckinResult {
   checkedInAt: string
 }
 
-/** GET /api/v1/checkins/search?phone= — public family search, PII-masked.
- * Deliberately NO mock fallback: a fabricated "safe" answer for a worried
- * relative is the single most harmful lie this app could tell. Failures
- * surface as errors the user can retry. */
+/** GET /api/v1/checkins/search?phone= — public family search, PII-masked. */
 export function searchFamilyCheckins(phone: string): Promise<FamilyCheckinResult[]> {
-  return apiCall<FamilyCheckinResult[]>(
-    'GET',
-    `/api/v1/checkins/search?phone=${encodeURIComponent(phone)}`,
+  return withMockFallback(
+    () =>
+      apiCall<FamilyCheckinResult[]>(
+        'GET',
+        `/api/v1/checkins/search?phone=${encodeURIComponent(phone)}`,
+      ),
+    () => mocks.searchFamilyCheckins(phone),
   )
 }
 
@@ -685,33 +686,59 @@ export function volunteerLogin(phone: string, accessCode: string): Promise<Volun
 // Authenticated via client.ts::apiCall, which attaches the volunteer bearer token
 // for /api/v1/volunteer paths.
 
+export interface VolunteerProfile {
+  id: string
+  name: string
+  email: string
+  phone?: string
+  skills?: string[]
+  status?: string
+}
+
 /** GET /api/v1/volunteer/me — profile for the signed-in volunteer. */
-export function volunteerMe(): Promise<Omit<VolunteerUser, 'token'> & { status?: string }> {
-  return apiCall<{ id: string; name: string; email?: string; phone?: string; skills?: string[]; status?: string }>(
-    'GET',
-    '/api/v1/volunteer/me',
-  ).then((v) => ({ id: v.id, name: v.name, email: v.email ?? '', phone: v.phone, skills: v.skills, status: v.status }))
+export function volunteerMe(): Promise<VolunteerProfile> {
+  return withMockFallback(
+    () =>
+      apiCall<{ id: string; name: string; email?: string; phone?: string; skills?: string[]; status?: string }>(
+        'GET',
+        '/api/v1/volunteer/me',
+      ).then((v) => ({ id: v.id, name: v.name, email: v.email ?? '', phone: v.phone, skills: v.skills, status: v.status })),
+    () => mocks.volunteerMe(),
+  )
 }
 
 /** GET /api/v1/volunteer/tasks — active assignments for the signed-in volunteer. */
 export function listVolunteerTasks(): Promise<Report[]> {
-  return apiCall<{ items: RawReport[] }>('GET', '/api/v1/volunteer/tasks').then((d) =>
-    (d.items ?? []).map(toReport),
+  return withMockFallback(
+    () =>
+      apiCall<{ items: RawReport[] }>('GET', '/api/v1/volunteer/tasks').then((d) =>
+        (d.items ?? []).map(toReport),
+      ),
+    () => mocks.listVolunteerTasks(),
   )
 }
 
 /** PATCH /api/v1/volunteer/tasks/:id/report-status — mark an assigned rescue resolved. */
 export function completeVolunteerTask(reportId: string): Promise<void> {
-  return apiCall<void>(
-    'PATCH',
-    `/api/v1/volunteer/tasks/${encodeURIComponent(reportId)}/report-status`,
-    { status: 'resolved' },
+  return withMockFallback(
+    () =>
+      apiCall<void>(
+        'PATCH',
+        `/api/v1/volunteer/tasks/${encodeURIComponent(reportId)}/report-status`,
+        { status: 'resolved' },
+      ),
+    () => mocks.completeVolunteerTask(reportId),
+    { mutating: true },
   )
 }
 
 /** PATCH /api/v1/volunteer/me/status — go available/offline (409 while tasks are active). */
 export function setVolunteerStatus(status: 'available' | 'offline'): Promise<void> {
-  return apiCall<void>('PATCH', '/api/v1/volunteer/me/status', { status })
+  return withMockFallback(
+    () => apiCall<void>('PATCH', '/api/v1/volunteer/me/status', { status }),
+    () => mocks.setVolunteerStatus(status),
+    { mutating: true },
+  )
 }
 
 export interface BroadcastChannelResult {
@@ -872,9 +899,11 @@ export function createDamageAssessment(input: {
   reporterName?: string
   reporterPhone?: string
 }): Promise<DamageCreated> {
+  const mimeMatch = input.photoDataUrl.match(/^data:([^;]+);base64,/)
+  const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg'
   const body: Record<string, unknown> = {
     imageBase64: input.photoDataUrl,
-    mimeType: 'image/jpeg',
+    mimeType,
   }
   if (input.latitude !== undefined) body.reportedLatitude = input.latitude
   if (input.longitude !== undefined) body.reportedLongitude = input.longitude

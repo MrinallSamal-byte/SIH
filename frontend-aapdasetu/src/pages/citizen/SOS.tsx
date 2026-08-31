@@ -72,6 +72,8 @@ export default function SOS() {
   // Belt-and-braces against double-click double-submits: state `triggering`
   // only applies after re-render; the ref blocks synchronously.
   const busyRef = useRef(false)
+  const editAddressInitRef = useRef('')
+  const editPointChosenRef = useRef(false)
 
   useEffect(() => {
     const syncQueuedCount = () => setQueuedSosCount(getOutbox().filter((item) => item.kind === 'sos').length)
@@ -378,7 +380,10 @@ export default function SOS() {
               <button
                 type="button"
                 onClick={() => {
-                  setEditAddressText(address || '')
+                  const currentAddr = address || ''
+                  editAddressInitRef.current = currentAddr
+                  editPointChosenRef.current = false
+                  setEditAddressText(currentAddr)
                   setEditPoint(coords ? { lat: coords.latitude, lng: coords.longitude } : null)
                   setShowLocationModal(true)
                 }}
@@ -700,9 +705,9 @@ export default function SOS() {
                     : { lat: 20.2706, lng: 85.8334 })
                 }
                 onChange={(p, addr) => {
+                  editPointChosenRef.current = true
                   setEditPoint(p)
-                  // Only auto-fill if user has not entered a custom address
-                  if (addr && !editAddressText.trim()) {
+                  if (addr) {
                     setEditAddressText(addr)
                   }
                 }}
@@ -724,16 +729,17 @@ export default function SOS() {
               type="button"
               disabled={geocodingAddress}
               onClick={async () => {
-                if (editPoint) {
-                  setManualLocation(editPoint, editAddressText.trim() || undefined)
+                const query = editAddressText.trim()
+                const addressChanged = query !== editAddressInitRef.current.trim()
+
+                if (editPoint && (!addressChanged || editPointChosenRef.current)) {
+                  setManualLocation(editPoint, query || undefined)
                   setShowLocationModal(false)
                   toast(t('sos.savedToast'), 'success')
                   return
                 }
-                // Typed address only: resolve it to real coordinates — without
-                // this the save left source at ip/default and the SOS tap looped
-                // back to "pick a location" forever.
-                const query = editAddressText.trim()
+
+                // Typed address only: resolve it to real coordinates
                 if (!query) {
                   toast(t('sos.pickLocationToast'), 'error')
                   return
