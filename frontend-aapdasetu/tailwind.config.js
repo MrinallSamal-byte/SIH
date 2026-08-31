@@ -5,7 +5,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Google Sans', 'Open Sans', 'Noto Sans Devanagari', 'Noto Sans Oriya', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Bengali', 'Noto Sans Oriya', 'system-ui', 'sans-serif'],
+        mono: ['IBM Plex Mono', 'ui-monospace', 'Courier New', 'monospace'],
       },
       colors: {
         red: {

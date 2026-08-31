@@ -297,7 +297,7 @@ export default function SOS() {
   })
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:py-10">
+    <div className="mx-auto w-full max-w-3xl sm:py-4">
         <div className="flex flex-col items-center text-center">
           {/* Header */}
           <div>

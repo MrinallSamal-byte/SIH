@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Bot,
   Phone,
@@ -175,7 +176,7 @@ export default function ChatWidget() {
   return (
     <aside
       aria-label={t('chat.openAria')}
-      className="fixed bottom-20 right-4 sm:bottom-20 sm:right-6 md:bottom-6 md:right-6 z-50"
+      className="fixed bottom-6 right-6 z-50 hidden md:block"
     >
       {/* Circular Floating Toggle Button */}
       {!open && (
@@ -201,33 +202,42 @@ export default function ChatWidget() {
           <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-3 text-white">
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-600 text-white">
-                <Bot className="h-4.5 w-4.5" />
+                <Bot className="h-4 w-4" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-xs">AapdaMitra AI</span>
+                  <span className="font-bold text-xs">{t('hero.aiCompanion')}</span>
                   {aiConfigured ? (
-                    <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold text-emerald-300 flex items-center gap-1 mono">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-300 flex items-center gap-1 mono">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                       {t('chat.badgeLive')}
                     </span>
                   ) : (
-                    <span className="rounded bg-slate-500/20 px-1.5 py-0.5 text-[9px] font-bold text-slate-300 flex items-center gap-1 mono">
-                      {t('chat.badgeOffline', 'OFFLINE GUIDANCE')}
+                    <span className="rounded bg-slate-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-slate-300 flex items-center gap-1 mono">
+                      {t('chat.badgeOffline')}
                     </span>
                   )}
                 </div>
                 <p className="truncate text-[10px] text-slate-400">{t('chat.subtitle')}</p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="shrink-0 rounded-md p-1 text-slate-400 transition hover:bg-slate-800 hover:text-white cursor-pointer"
-              aria-label={t('common.close')}
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <Link
+                to="/pfa-chat"
+                onClick={() => setOpen(false)}
+                className="rounded-md px-2 py-1 text-[10px] font-semibold text-slate-300 hover:bg-slate-800 hover:text-white"
+              >
+                {t('chat.openFull')}
+              </Link>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="shrink-0 rounded-md p-1 text-slate-400 transition hover:bg-slate-800 hover:text-white"
+                aria-label={t('common.close')}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           {/* Messages List */}

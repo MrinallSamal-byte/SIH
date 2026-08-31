@@ -360,7 +360,7 @@ export default function SafeRoutes() {
         list.push({
           id: `hazard-point-${idx}`,
           position: fz.center,
-          title: `⚠️ ${fz.hazardType} (${fz.severity})`,
+          title: `${fz.hazardType} (${fz.severity})`,
           subtitle: `~${fz.depth}m water depth. Active flood zone avoided by Safe Detour Route.`,
           color: '#dc2626',
           isHazard: true,
@@ -594,13 +594,13 @@ export default function SafeRoutes() {
               <span className="inline-block h-2.5 w-2.5 rounded-full bg-blue-600 ring-2 ring-blue-300" /> {t('routes.origin')}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-sm bg-emerald-800" /> {t('routes.targetShelter', 'Target Safe Haven')} (🏁)
+              <span className="inline-block h-2.5 w-2.5 rounded-sm bg-emerald-800" /> {t('routes.targetShelter', 'Target shelter')}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-sm bg-emerald-600" /> {t('routes.safeWaypoint', 'Safe Detour Waypoints')} (🛡️)
+              <span className="inline-block h-2.5 w-2.5 rounded-sm bg-emerald-600" /> {t('routes.safeWaypoint', 'Safe detour')}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-sm bg-red-600" /> {t('routes.hazardActive')} (⚠️)
+              <span className="inline-block h-2.5 w-2.5 rounded-sm bg-red-600" /> {t('routes.hazardActive')}
             </span>
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-0 w-4 border-t-2 border-dashed border-amber-500" /> {t('routes.fastestRoute')}

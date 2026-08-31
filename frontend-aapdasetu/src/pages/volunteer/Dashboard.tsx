@@ -74,7 +74,7 @@ export default function Dashboard() {
     } catch (err) {
       // ponytail: 409 means an active task blocks going offline
       if (err instanceof Error && /409|conflict/i.test(err.message)) {
-        toast('Resolve your active task first', 'error')
+        toast(t('vd.activeTaskConflict'), 'error')
       } else {
         toast(err instanceof Error ? err.message : t('vd.statusUpdateFailed'), 'error')
       }
@@ -94,7 +94,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{t('vd.title')}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-slate-100">{t('vd.title')}</h1>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {t('vd.subtitle')}
           </p>
@@ -105,10 +105,10 @@ export default function Dashboard() {
       {volunteer && (
         <div className="grid gap-4 md:grid-cols-2">
           {/* Volunteer Profile Card */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
             <div className="flex items-start justify-between">
               <div>
-                <div className="text-xl font-bold text-slate-900 dark:text-slate-100">{volunteer.name}</div>
+                <div className="text-xl font-bold text-zinc-900 dark:text-slate-100">{volunteer.name}</div>
                 <div className="text-xs text-slate-500 dark:text-slate-400">{volunteer.phone ?? t('vd.contactOnFile')}</div>
               </div>
               <span
@@ -126,32 +126,32 @@ export default function Dashboard() {
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{t('vd.registeredSkills')}:</span>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {(volunteer.skills ?? []).map((s) => (
-                  <span key={s} className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-800 border border-slate-200 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 mono">
+                  <span key={s} className="rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-bold text-zinc-800 border border-zinc-200/80 dark:border-white/[0.08] dark:bg-[#222] dark:text-slate-200 mono">
                     {s.replace('_', ' ').toUpperCase()}
                   </span>
                 ))}
               </div>
             </div>
 
-            <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4 dark:border-slate-800">
-              <span className="text-xs text-slate-500">{t('vd.toggleReadiness')}:</span>
+            <div className="mt-6 flex items-center justify-between border-t border-zinc-100 pt-4 dark:border-white/[0.06]">
+              <span className="text-xs text-slate-500 dark:text-slate-400">{t('vd.toggleReadiness')}:</span>
               <Button
                 variant={volunteer.status === 'available' ? 'danger' : 'primary'}
                 size="sm"
                 onClick={toggleAvailability}
                 className="font-bold"
               >
-                {volunteer.status === 'available' ? 'Go Offline' : t('vd.markAvailable')}
+                {volunteer.status === 'available' ? t('vd.markOffline') : t('vd.markAvailable')}
               </Button>
             </div>
           </div>
 
           {/* Active Tasks Summary Card */}
-          <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex flex-col justify-between rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
             <div>
               <div className="flex items-center justify-between">
-                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">{t('vd.activeMissions')}</h2>
-                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-slate-900 text-xs font-bold text-white dark:bg-slate-100 dark:text-slate-900 mono">
+                <h2 className="text-base font-bold text-zinc-900 dark:text-slate-100">{t('vd.activeMissions')}</h2>
+                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-900 text-xs font-bold text-white dark:bg-slate-100 dark:text-zinc-900 mono">
                   {activeTasks.length}
                 </span>
               </div>
@@ -165,7 +165,7 @@ export default function Dashboard() {
             <div className="mt-6">
               <Link
                 to="/volunteer/tasks"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 text-xs font-bold text-white shadow-md transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 py-3 text-xs font-bold text-white shadow-xs transition hover:bg-zinc-800 dark:bg-slate-100 dark:text-zinc-900 dark:hover:bg-white cursor-pointer"
               >
                 <span className="font-bold">{t('vd.viewTaskQueue')}</span>
               </Link>

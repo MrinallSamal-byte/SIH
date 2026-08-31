@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   Siren,
@@ -18,7 +18,9 @@ import {
   Bell,
   ShieldCheck,
   Radio,
-  Smartphone
+  Smartphone,
+  Bot,
+  Phone
 } from 'lucide-react'
 import AapdaSetuLogo from '../components/common/AapdaSetuLogo'
 import ErrorBoundary from '../components/common/ErrorBoundary'
@@ -52,6 +54,7 @@ const featureNavItems: NavLinkItem[] = [
   { to: '/shelters', labelKey: 'nav.shelters' },
   { to: '/safe-routes', labelKey: 'nav.routes' },
   { to: '/missing-persons', labelKey: 'nav.missing' },
+  { to: '/pfa-chat', labelKey: 'nav.pfa' },
   { to: '/app', labelKey: 'appdl.navLabel' },
 ]
 
@@ -65,6 +68,7 @@ const featureIconMap: Record<string, typeof Siren> = {
   '/shelters': Building,
   '/safe-routes': Compass,
   '/missing-persons': Users,
+  '/pfa-chat': Bot,
   '/app': Smartphone,
 }
 
@@ -130,10 +134,6 @@ export default function MainLayout() {
   }, [location.pathname])
 
   useEffect(() => {
-    setFeaturesOpen(false)
-  }, [location.pathname])
-
-  useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (featuresRef.current && !featuresRef.current.contains(e.target as Node)) {
         setFeaturesOpen(false)
@@ -142,8 +142,19 @@ export default function MainLayout() {
         setNotifOpen(false)
       }
     }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setFeaturesOpen(false)
+        setNotifOpen(false)
+        setMobileMenuOpen(false)
+      }
+    }
     if (featuresOpen || notifOpen) document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKey)
+    }
   }, [featuresOpen, notifOpen])
 
   useEffect(() => {
@@ -195,10 +206,34 @@ export default function MainLayout() {
     }
   }, [])
 
-  const criticalBulletin = bulletins.find((a) => a.severity === 'critical')
+  const displayedBulletins = useMemo(() => {
+    const rank: Record<string, number> = { critical: 0, warning: 1, info: 2 }
+    return [...bulletins]
+      .sort((a, b) => {
+        const bySeverity = (rank[a.severity] ?? 3) - (rank[b.severity] ?? 3)
+        if (bySeverity !== 0) return bySeverity
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      })
+      .slice(0, 6)
+  }, [bulletins])
+
+  const criticalBulletin = useMemo(
+    () =>
+      [...bulletins]
+        .filter((a) => a.severity === 'critical')
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0],
+    [bulletins],
+  )
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f4f4f5] text-zinc-800 dark:bg-[#111111] dark:text-slate-200">
+      <button
+        type="button"
+        onClick={() => document.getElementById('main-content')?.focus()}
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-zinc-900 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+      >
+        {t('layout.skipToContent')}
+      </button>
       {/* Offline Ambient Banner */}
       {isOffline && (
         <div className="bg-amber-600 px-4 py-2 text-center text-xs font-bold text-white shadow-sm flex items-center justify-center gap-2">
@@ -249,6 +284,8 @@ export default function MainLayout() {
               <button
                 type="button"
                 onClick={() => setFeaturesOpen((o) => !o)}
+                aria-expanded={featuresOpen}
+                aria-haspopup="menu"
                 className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm font-medium transition ${
                   featuresOpen || featureNavItems.some((f) => location.pathname === f.to)
                     ? 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300 font-bold'
@@ -260,7 +297,7 @@ export default function MainLayout() {
               </button>
 
               {featuresOpen && (
-                <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-xl border border-zinc-200/80 bg-white p-1.5 shadow-lg dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+                <div className="absolute right-0 top-full z-50 mt-1 w-56 max-h-[70vh] overflow-y-auto rounded-xl border border-zinc-200/80 bg-white p-1.5 shadow-lg dark:border-white/[0.08] dark:bg-[#1a1a1a]">
                   {featureNavItems.map((item) => {
                     const Icon = featureIconMap[item.to]
                     return (
@@ -299,9 +336,9 @@ export default function MainLayout() {
                 onChange={(e) => setLang(e.target.value as Language)}
                 className="rounded-lg border border-zinc-200/80 bg-[#f4f4f5] px-2.5 py-1.5 text-xs font-bold text-zinc-700 outline-none transition hover:bg-zinc-100 focus:border-zinc-500 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-200 dark:hover:bg-[#252525] cursor-pointer"
               >
-                {LANGUAGES.map((l) => (
+                  {LANGUAGES.map((l) => (
                   <option key={l.code} value={l.code}>
-                    {l.label}
+                    {l.native}
                   </option>
                 ))}
               </select>
@@ -320,9 +357,7 @@ export default function MainLayout() {
               >
                 <Bell className="h-5 w-5" />
                 {bulletins.length > 0 && !notifRead && (
-                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[8px] font-bold text-white">
-                    {bulletins.length}
-                  </span>
+                  <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-600" />
                 )}
               </button>
 
@@ -342,14 +377,19 @@ export default function MainLayout() {
                     </Link>
                   </div>
 
-                  {bulletins.length === 0 ? (
+                  {displayedBulletins.length === 0 ? (
                     <div className="px-4 py-8 text-center text-xs text-slate-400 dark:text-slate-500">
                       {t('layout.noBulletins')}
                     </div>
                   ) : (
                     <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {bulletins.map((a) => (
-                        <div key={a.id} className="px-4 py-3 hover:bg-zinc-50 dark:hover:bg-[#252525]/50 transition-colors">
+                      {displayedBulletins.map((a) => (
+                        <Link
+                          key={a.id}
+                          to="/alerts"
+                          onClick={() => setNotifOpen(false)}
+                          className="block px-4 py-3 hover:bg-zinc-50 dark:hover:bg-[#252525]/50 transition-colors"
+                        >
                           <div className="flex items-start gap-2.5">
                             <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${
                               a.severity === 'critical' ? 'bg-red-500' : a.severity === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
@@ -362,7 +402,7 @@ export default function MainLayout() {
                               )}
                             </div>
                           </div>
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   )}
@@ -394,7 +434,7 @@ export default function MainLayout() {
 
         {/* Mobile Dropdown Menu Drawer */}
         {mobileMenuOpen && (
-          <nav className="border-t border-zinc-200/80 bg-white px-4 py-3 shadow-lg lg:hidden dark:border-white/[0.08] dark:bg-[#151515] animate-dropdown">
+          <nav className="border-t border-zinc-200/80 bg-white px-4 py-3 shadow-lg lg:hidden dark:border-white/[0.08] dark:bg-[#151515]">
             <div className="grid grid-cols-2 gap-1.5">
               {topNavItems.map((item) => (
                 <NavLink
@@ -468,20 +508,23 @@ export default function MainLayout() {
       {/* Critical Alert Ticker — only while an unresolved critical bulletin exists.
           Dismissal is keyed to the alert id so a NEW critical bulletin re-shows it. */}
       {criticalBulletin && criticalBulletin.id !== tickerDismissedId && (
-        <div className="bg-red-600 px-4 py-2 text-white shadow-sm" role="alert">
-          <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-2 text-xs">
+        <div className="bg-red-600 px-3 py-2 text-white shadow-sm sm:px-4" role="alert">
+          <div className="mx-auto flex max-w-screen-2xl items-center gap-2 sm:gap-3">
+            <Link
+              to="/alerts"
+              className="flex min-w-0 flex-1 items-center gap-2 text-xs text-white"
+            >
               <span className="relative flex h-2.5 w-2.5 shrink-0">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-white" />
               </span>
-              <span className="shrink-0 font-black uppercase tracking-wider">{t('ticker.criticalAlert')}</span>
-              <span className="truncate font-semibold opacity-90">{criticalBulletin.title}</span>
-            </div>
-            <div className="flex shrink-0 items-center gap-3">
+              <span className="hidden shrink-0 font-bold uppercase tracking-wider sm:inline">{t('ticker.criticalAlert')}</span>
+              <span className="truncate font-semibold">{criticalBulletin.title}</span>
+            </Link>
+            <div className="flex shrink-0 items-center gap-1 sm:gap-3">
               <Link
                 to="/alerts"
-                className="text-xs font-extrabold underline underline-offset-2 hover:text-red-100"
+                className="hidden text-xs font-semibold underline underline-offset-2 hover:text-red-100 sm:inline"
               >
                 {t('ticker.viewAlerts')}
               </Link>
@@ -499,7 +542,7 @@ export default function MainLayout() {
       )}
 
       {/* Main Container */}
-      <main className="mx-auto flex-1 w-full max-w-7xl px-4 py-6 pb-24 md:pb-8">
+      <main id="main-content" className="mx-auto flex-1 w-full max-w-7xl px-4 py-6 pb-24 md:pb-8" tabIndex={-1}>
         <div key={location.pathname} className="animate-page-enter">
           <ErrorBoundary>
             <Outlet />
@@ -538,7 +581,7 @@ export default function MainLayout() {
                 </div>
               ) : (
                 <>
-                  <Icon className="h-4.5 w-4.5 mb-1" />
+                  <Icon className="mb-1 h-[18px] w-[18px]" />
                   <span>{t(tab.labelKey)}</span>
                 </>
               )}
@@ -547,8 +590,21 @@ export default function MainLayout() {
         })}
       </nav>
 
-      {/* Hide the floating widget on the dedicated PFA chat page to avoid two chat UIs at once */}
-      {location.pathname !== '/pfa-chat' && <ChatWidget />}
+      <footer className="mt-auto hidden border-t border-zinc-200/60 bg-white px-6 py-4 md:block dark:border-white/[0.06] dark:bg-[#181818]">
+        <div className="mx-auto flex max-w-screen-2xl flex-wrap items-center justify-between gap-3 text-xs text-zinc-500 dark:text-slate-400">
+          <a href="tel:112" className="inline-flex items-center gap-1.5 font-semibold text-red-600 hover:text-red-700 dark:text-red-400">
+            <Phone className="h-3.5 w-3.5" />
+            112
+          </a>
+          <div className="flex items-center gap-4">
+            <Link to="/admin" className="hover:text-zinc-800 dark:hover:text-slate-200">{t('nav.admin')}</Link>
+            <Link to="/volunteer" className="hover:text-zinc-800 dark:hover:text-slate-200">{t('nav.volunteer')}</Link>
+          </div>
+        </div>
+      </footer>
+
+      {/* Hide the floating widget on SOS and the dedicated assistant page */}
+      {location.pathname !== '/pfa-chat' && location.pathname !== '/sos' && <ChatWidget />}
     </div>
   )
 }

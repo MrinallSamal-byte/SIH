@@ -270,7 +270,7 @@ export default function ShelterFinder() {
 
       const popupActions = [
         {
-          label: isSaved ? `★ ${t('sh.savedBadge', 'Saved')}` : `☆ ${t('sh.saveShelter', 'Save Shelter')}`,
+          label: isSaved ? t('sh.savedBadge', 'Saved') : t('sh.saveShelter', 'Save shelter'),
           onClick: () => toggleSaveShelter(s.id),
         },
         {
@@ -554,7 +554,7 @@ export default function ShelterFinder() {
           <span className="h-2.5 w-2.5 rounded-sm bg-emerald-600" /> {t('sh.statOpen')}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm bg-amber-500" /> {t('sh.savedTab', 'Saved Shelters')} (★)
+          <span className="h-2.5 w-2.5 rounded-sm bg-amber-500" /> {t('sh.savedTab', 'Saved')}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-sm bg-red-600" /> {t('shelter.filterMedical')}
@@ -647,7 +647,7 @@ export default function ShelterFinder() {
                       </span>
                       {isSaved && (
                         <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-                          ★ {t('sh.savedBadge', 'Saved')}
+                          {t('sh.savedBadge', 'Saved')}
                         </span>
                       )}
                       {isNearestOpen && !isSaved && (
@@ -666,8 +666,8 @@ export default function ShelterFinder() {
                     {/* Bookmark Toggle */}
                     <button
                       type="button"
-                      aria-label={isSaved ? 'Remove bookmark' : 'Bookmark shelter'}
-                      title={isSaved ? 'Remove bookmark' : 'Bookmark shelter'}
+                      aria-label={isSaved ? t('sh.savedBadge') : t('sh.saveShelter')}
+                      title={isSaved ? t('sh.savedBadge') : t('sh.saveShelter')}
                       onClick={(e) => {
                         e.stopPropagation()
                         toggleSaveShelter(s.id)

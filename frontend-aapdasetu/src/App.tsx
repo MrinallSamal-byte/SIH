@@ -4,7 +4,7 @@ import MainLayout from './layouts/MainLayout'
 import AdminLayout from './layouts/AdminLayout'
 import VolunteerLayout from './layouts/VolunteerLayout'
 
-// ⚡ Bolt Optimization: Route-based Code Splitting (React.lazy)
+// Route-based Code Splitting (React.lazy)
 // Reduces initial critical bundle size by ~70%, isolating heavy dependencies like Recharts (~405kB)
 // and Leaflet GIS bundles to on-demand route chunks for instant FCP on congested disaster networks.
 const Home = lazy(() => import('./pages/citizen/Home'))

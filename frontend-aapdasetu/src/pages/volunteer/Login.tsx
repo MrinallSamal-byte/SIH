@@ -60,28 +60,28 @@ export default function VolunteerLogin() {
             {t('volLogin.title')}
           </h1>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            Sign in with your registered phone number and shared access code.
+            {t('volLogin.subtitle')}
           </p>
 
           <div className="mt-6 space-y-4">
-            <Field label="Phone Number">
+            <Field label={t('volLogin.phoneLabel')}>
               <Input
                 type="tel"
                 inputMode="numeric"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="e.g. 9876543210"
+                placeholder={t('volLogin.phonePlaceholder')}
                 autoComplete="tel"
                 required
               />
             </Field>
 
-            <Field label="Access Code">
+            <Field label={t('volLogin.accessCodeLabel')}>
               <Input
                 type="password"
                 value={accessCode}
                 onChange={(e) => setAccessCode(e.target.value)}
-                placeholder="••••••••"
+                placeholder={t('volLogin.accessCodePlaceholder')}
                 autoComplete="current-password"
                 required
               />

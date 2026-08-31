@@ -28,10 +28,10 @@ const contacts: Contact[] = [
   { nameKey: 'contacts.police', num: '100', icon: Shield },
   { nameKey: 'contacts.fire', num: '101', icon: Flame },
   { nameKey: 'contacts.ndmaHelpline', num: '1078', icon: HeartPulse },
-  { name: 'MHA Control Room (Natural Calamities)', num: '1070', icon: Droplets },
+  { nameKey: 'contacts.mhaControl', num: '1070', icon: Droplets },
   { nameKey: 'contacts.ndrfControl', num: '011-24363260', icon: HardHat },
-  { name: 'Women Helpline', num: '1091', icon: HeartHandshake },
-  { name: 'Child Helpline', num: '1098', icon: Baby },
+  { nameKey: 'contacts.womenHelpline', num: '1091', icon: HeartHandshake },
+  { nameKey: 'contacts.childHelpline', num: '1098', icon: Baby },
 ]
 
 export default function Contacts() {

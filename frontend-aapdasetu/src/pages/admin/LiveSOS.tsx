@@ -24,7 +24,7 @@ import { useToast } from '../../components/common/Toast'
 import type { GeoPoint, Report } from '../../types'
 
 const SIREN_ENABLED_KEY = 'aapdasetu_siren_enabled'
-const FLASH_TAB_TITLE = '🔴 RED SOS — AapdaSetu'
+const FLASH_TAB_TITLE = '[CRITICAL] RED SOS — AapdaSetu'
 const MODULE_LOAD_TITLE = typeof document !== 'undefined' ? document.title : 'AapdaSetu'
 
 // Browser Notification() fires from module scope (outside React), so the stored
