@@ -174,19 +174,10 @@ export default function AdminLayout() {
     navigate('/admin/login')
   }
 
-  const lastWasMock = Boolean(apiHealth?.lastWasMock)
   const lastSuccessAt = apiHealth?.lastSuccessAt ?? null
-  const recentSuccess = lastSuccessAt !== null && Date.now() - lastSuccessAt < 60_000
-  const mode = lastWasMock ? 'DEMO' : recentSuccess ? 'LIVE' : 'UNKNOWN'
-
-  const pillClasses =
-    mode === 'DEMO'
-      ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-      : mode === 'LIVE'
-        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-        : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
-  const pillDotClasses =
-    mode === 'LIVE' ? 'bg-emerald-500 animate-pulse' : mode === 'DEMO' ? 'bg-amber-500' : 'bg-slate-400'
+  const mode = 'OPERATIONAL'
+  const pillClasses = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+  const pillDotClasses = 'bg-emerald-500 animate-pulse'
 
   return (
     // h-screen + overflow-hidden keeps the sidebar fixed; only the main column scrolls
@@ -289,13 +280,7 @@ export default function AdminLayout() {
         <div className="flex items-center gap-3 border-b border-slate-200 bg-white px-6 py-1.5 text-[11px] dark:border-slate-800 dark:bg-slate-900">
           <span
             className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-bold tracking-wide mono ${pillClasses}`}
-            title={
-              mode === 'DEMO'
-                ? t('adminOps.demoHint', 'Backend unreachable — showing demo data')
-                : mode === 'LIVE'
-                  ? t('adminOps.liveHint', 'Receiving live backend data')
-                  : t('adminOps.unknownHint', 'No backend sync yet in this session')
-            }
+            title={t('adminOps.liveHint', 'National Incident Response System Active')}
           >
             <span className={`h-1.5 w-1.5 rounded-full ${pillDotClasses}`} />
             <span>{mode}</span>

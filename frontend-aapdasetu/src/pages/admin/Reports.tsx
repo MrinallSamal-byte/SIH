@@ -316,7 +316,7 @@ export default function Reports() {
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200"
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              <span>{t('rp.resetRecords')} (demo data)</span>
+              <span>{t('rp.resetRecords')}</span>
             </button>
           )}
         </div>

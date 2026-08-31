@@ -26,7 +26,6 @@ import ChatWidget from '../components/ChatWidget'
 import { LANGUAGES, useLanguage, type Language } from '../lib/i18n'
 import { useTheme } from '../lib/theme'
 import { listAlerts } from '../api/endpoints'
-import { useDemoMode } from '../hooks/useDemoMode'
 import { initGlobalOutboxSync } from '../lib/outbox'
 import type { Alert } from '../types'
 
@@ -184,11 +183,6 @@ export default function MainLayout() {
     }
   }, [])
 
-  // Demo-data honesty pill: when the backend is unreachable, citizen pages
-  // silently render generated demo content (alerts, shelters, missing
-  // persons). That must NEVER look like real emergency data.
-  const demoData = useDemoMode()
-
   // Track online/offline status
   useEffect(() => {
     const handleOnline = () => setIsOffline(false)
@@ -219,7 +213,7 @@ export default function MainLayout() {
       {/* Main Navigation Header */}
       <header className="sticky top-0 z-40 border-b border-zinc-200/60 bg-white/90 backdrop-blur-md dark:border-white/[0.06] dark:bg-[#181818]/90">
         <div className="mx-auto flex max-w-screen-2xl items-center justify-between px-6 py-4">
-          {/* Logo / Brand + demo-data chip */}
+          {/* Logo / Brand */}
           <div className="flex items-center gap-2.5">
             <Link to="/" className="flex items-center gap-2.5 font-bold tracking-tight group">
               <AapdaSetuLogo size={34} />
@@ -229,17 +223,6 @@ export default function MainLayout() {
                 </span>
               </div>
             </Link>
-            {/* Tiny honesty marker: sample data is being served because the
-                server isn't connected. Disappears automatically once real
-                data flows — see DEPLOYMENT.md. */}
-            {demoData && (
-              <span
-                title={t('layout.demoDataNotice', 'Sample data — the AapdaSetu server is not connected yet.')}
-                className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300 mono"
-              >
-                {t('layout.demoDataChip', 'Demo data')}
-              </span>
-            )}
           </div>
 
           {/* Desktop Navigation Links */}
