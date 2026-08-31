@@ -109,7 +109,10 @@ export default function SafeRoutes() {
       return { lat: coords.latitude, lng: coords.longitude }
     }
     if (destPoint) {
-      return { lat: destPoint.lat - 0.024, lng: destPoint.lng - 0.02 }
+      return {
+        lat: destPoint.lat - 0.022,
+        lng: Math.max(88.362, destPoint.lng - 0.010),
+      }
     }
     return DEFAULT_CENTER
   }, [coords, isFarFromShelter, useLocalSimulation, destPoint])
@@ -177,7 +180,7 @@ export default function SafeRoutes() {
     list.push({
       id: 'origin-marker',
       position: effectiveOrigin,
-      title: coords && (!isFarFromShelter || !useLocalSimulation) ? t('common.youAreHere') : 'Starting Point (Local Corridor)',
+      title: coords && (!isFarFromShelter || !useLocalSimulation) ? t('common.youAreHere') : 'Starting Point (Central Corridor)',
       subtitle: coords && (!isFarFromShelter || !useLocalSimulation)
         ? (accuracy ? `${t('common.gpsAccuracy')}${Math.round(accuracy)}m` : t('routes.liveLocation'))
         : 'Evacuation Zone Starting Point (~2.5km to haven)',
@@ -254,7 +257,7 @@ export default function SafeRoutes() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="flex items-center justify-between gap-3 mb-1">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
         <div className="flex items-center gap-2">
           <Compass className="h-6 w-6 text-zinc-800 dark:text-zinc-200" />
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -264,7 +267,7 @@ export default function SafeRoutes() {
         </div>
 
         {/* Route Filter View Toggle */}
-        <div className="inline-flex rounded-xl border border-zinc-200 bg-zinc-100/80 p-0.5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="flex flex-wrap items-center rounded-xl border border-zinc-200 bg-zinc-100/80 p-0.5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
           <button
             type="button"
             onClick={() => setActiveRouteView('both')}

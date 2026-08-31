@@ -153,13 +153,33 @@ export function buildSafeWaypoints(from: GeoPoint, to: GeoPoint, polygons?: GeoP
     const dLat = to.lat - from.lat
     const dLng = to.lng - from.lng
     const dist = Math.sqrt(dLat * dLat + dLng * dLng) || 1
-    // Tangent offset for a realistic safe detour avenue (between 400m and 1.5km offset)
-    const offsetMagnitude = Math.min(0.012, Math.max(0.004, dist * 0.22))
-    const perpLat = (-dLng / dist) * offsetMagnitude
-    const perpLng = (dLat / dist) * offsetMagnitude
+    // Tangent offset for a realistic safe detour avenue (between 350m and 1km offset)
+    const offsetMagnitude = Math.min(0.009, Math.max(0.0035, dist * 0.18))
+    
+    let perpLat = (-dLng / dist) * offsetMagnitude
+    let perpLng = (dLat / dist) * offsetMagnitude
 
-    const wp1 = { lat: from.lat + dLat * 0.35 + perpLat, lng: from.lng + dLng * 0.35 + perpLng }
-    const wp2 = { lat: from.lat + dLat * 0.70 + perpLat, lng: from.lng + dLng * 0.70 + perpLng }
+    // In Kolkata / riverbank regions (river is on the west side lng < 88.355),
+    // guarantee waypoints detour Eastward towards dry inland elevated arterials:
+    if (from.lng > 88.30 && from.lng < 88.50) {
+      if (perpLng < 0) {
+        perpLat = -perpLat
+        perpLng = -perpLng
+      }
+    }
+
+    const wp1 = {
+      lat: from.lat + dLat * 0.35 + perpLat,
+      lng: from.lng > 88.30 && from.lng < 88.50
+        ? Math.max(88.362, from.lng + dLng * 0.35 + perpLng)
+        : from.lng + dLng * 0.35 + perpLng,
+    }
+    const wp2 = {
+      lat: from.lat + dLat * 0.70 + perpLat * 0.85,
+      lng: from.lng > 88.30 && from.lng < 88.50
+        ? Math.max(88.365, from.lng + dLng * 0.70 + perpLng * 0.85)
+        : from.lng + dLng * 0.70 + perpLng * 0.85,
+    }
     return [wp1, wp2]
   }
 
@@ -335,16 +355,7 @@ export async function calculateDualRoutes(
     safeDurationMin = safeOsrm.durationMin
   } else {
     // Construct guaranteed separated detour route through safe waypoints
-    const wps = safeWaypoints.length > 0 ? safeWaypoints : (() => {
-      const dLat = to.lat - from.lat
-      const dLng = to.lng - from.lng
-      const dist = Math.sqrt(dLat * dLat + dLng * dLng) || 1
-      const offset = Math.min(0.012, Math.max(0.004, dist * 0.22))
-      return [
-        { lat: from.lat + dLat * 0.35 - (dLng / dist) * offset, lng: from.lng + dLng * 0.35 + (dLat / dist) * offset },
-        { lat: from.lat + dLat * 0.70 - (dLng / dist) * offset, lng: from.lng + dLng * 0.70 + (dLat / dist) * offset },
-      ]
-    })()
+    const wps = safeWaypoints.length > 0 ? safeWaypoints : buildSafeWaypoints(from, to, hazardPolygons)
 
     const leg1 = interpolateRoadPoints(from, wps[0], 5)
     const leg2 = wps.length > 1 ? interpolateRoadPoints(wps[0], wps[1], 5) : []
