@@ -9,7 +9,10 @@ interface ErrorWithDetails extends Error {
 }
 
 export function notFoundHandler(req: Request, _res: Response, next: NextFunction): void {
-  const err = new Error(`Route not found: ${req.method} ${req.originalUrl}`) as ErrorWithDetails;
+  // Sanitize path to prevent CRLF log injection (CWE-117)
+  const safeUrl = req.originalUrl.replace(/[\r\n]/g, '');
+  const safeMethod = req.method.replace(/[\r\n]/g, '');
+  const err = new Error(`Route not found: ${safeMethod} ${safeUrl}`) as ErrorWithDetails;
   (err as Error & { status: number }).status = 404;
   next(err);
 }
