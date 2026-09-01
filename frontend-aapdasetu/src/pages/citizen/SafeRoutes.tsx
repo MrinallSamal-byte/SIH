@@ -19,7 +19,7 @@ import { getNavigationUrl } from '../../lib/helpers'
 import { calculateDualRoutes, haversineKm, type RouteOption } from '../../lib/routing'
 import type { FloodGeoJson, GeoPoint, Shelter } from '../../types'
 
-const DEFAULT_CENTER: GeoPoint = { lat: 22.5726, lng: 88.3639 }
+const DEFAULT_CENTER: GeoPoint = { lat: 26.1445, lng: 91.7362 }
 
 export default function SafeRoutes() {
   const { t } = useLanguage()
@@ -111,7 +111,7 @@ export default function SafeRoutes() {
     if (destPoint) {
       return {
         lat: destPoint.lat - 0.022,
-        lng: Math.max(88.362, destPoint.lng - 0.010),
+        lng: destPoint.lng - 0.010,
       }
     }
     return DEFAULT_CENTER

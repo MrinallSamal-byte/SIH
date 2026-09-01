@@ -38,14 +38,27 @@ const INFRASTRUCTURE_CATEGORIES: Array<{
 ]
 
 const DISTRICT_LIST = [
-  'North 24 Parganas',
-  'South 24 Parganas',
-  'East Midnapore',
-  'Howrah',
-  'Kolkata',
-  'Cuttack',
-  'Puri',
-  'Bhubaneswar',
+  'Kamrup Metropolitan',
+  'Kamrup Rural',
+  'Cachar',
+  'Dibrugarh',
+  'Jorhat',
+  'Sonitpur',
+  'Nagaon',
+  'Tinsukia',
+  'Sivasagar',
+  'Morigaon',
+  'Goalpara',
+  'Barpeta',
+  'Dhubri',
+  'Kokrajhar',
+  'Bongaigaon',
+  'Nalbari',
+  'Lakhimpur',
+  'Dhemaji',
+  'Majuli',
+  'Karimganj',
+  'Hailakandi',
 ]
 
 export default function ReportDamage() {
@@ -53,7 +66,7 @@ export default function ReportDamage() {
   const { toast } = useToast()
   const { coords: geoCoords, isFallback, source } = useGeoLocation() as ReturnType<typeof useGeoLocation> & { isFallback: boolean; source: string }
   const [infraType, setInfraType] = useState<DamageInfrastructureType>('broken_home')
-  const [district, setDistrict] = useState('North 24 Parganas')
+  const [district, setDistrict] = useState('Kamrup Metropolitan')
   const [photos, setPhotos] = useState<string[]>([])
   const [ownerName, setOwnerName] = useState('')
   const [ownerPhone, setOwnerPhone] = useState('')
@@ -148,8 +161,8 @@ export default function ReportDamage() {
 
       // Indicative AI grade for display only; failure degrades to a warning chip.
       try {
-        const targetLat = coords?.lat ?? 22.5726
-        const targetLng = coords?.lng ?? 88.3639
+        const targetLat = coords?.lat ?? 26.1445
+        const targetLng = coords?.lng ?? 91.7362
         const verdicts = await Promise.all(
           photos.map((p) =>
             aiDamageAssessment(p, targetLat, targetLng, description, infraType)

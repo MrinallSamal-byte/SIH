@@ -54,7 +54,7 @@ function saveLocal<T>(key: string, val: T): void {
   }
 }
 
-const STORAGE_VERSION = 'v6'
+const STORAGE_VERSION = 'v7'
 const STORAGE_KEY_VERSION = 'aapdasetu_data_version'
 const STORAGE_KEY_REPORTS = `aapdasetu_mock_reports_${STORAGE_VERSION}`
 const STORAGE_KEY_SHELTERS = `aapdasetu_mock_shelters_${STORAGE_VERSION}`
@@ -87,64 +87,64 @@ if (typeof window !== 'undefined') {
 }
 
 // -----------------------------------------------------------------------------
-// 1000s OF REALISTIC MULTI-SECTOR DATA GENERATORS
+// 1000s OF REALISTIC MULTI-SECTOR DATA GENERATORS (ASSAM COMPREHENSIVE)
 // -----------------------------------------------------------------------------
 
 const DISASTER_SECTORS = [
-  { city: 'Kolkata - Salt Lake Sector V', district: 'Kolkata', state: 'West Bengal', lat: 22.5726, lng: 88.3639 },
-  { city: 'Kolkata - New Town Action Area 1', district: 'Kolkata', state: 'West Bengal', lat: 22.579, lng: 88.378 },
-  { city: 'Kolkata - Bidhannagar Stadium', district: 'Kolkata', state: 'West Bengal', lat: 22.567, lng: 88.401 },
-  { city: 'Kolkata - Howrah Station & Shibpur', district: 'Howrah', state: 'West Bengal', lat: 22.5958, lng: 88.2636 },
-  { city: 'Kolkata - Dum Dum Cantonment', district: 'North 24 Parganas', state: 'West Bengal', lat: 22.642, lng: 88.396 },
-  { city: 'Kolkata - Alipore & Kalighat', district: 'Kolkata', state: 'West Bengal', lat: 22.528, lng: 88.334 },
-  { city: 'Kolkata - Behala & Taratala', district: 'Kolkata', state: 'West Bengal', lat: 22.498, lng: 88.315 },
-  { city: 'Kolkata - Jadavpur & Garia', district: 'Kolkata', state: 'West Bengal', lat: 22.492, lng: 88.371 },
-  { city: 'North 24 Parganas - Barasat High Road', district: 'North 24 Parganas', state: 'West Bengal', lat: 22.723, lng: 88.481 },
-  { city: 'North 24 Parganas - Basirhat Border', district: 'North 24 Parganas', state: 'West Bengal', lat: 22.658, lng: 88.892 },
-  { city: 'South 24 Parganas - Canning Sub-Division', district: 'South 24 Parganas', state: 'West Bengal', lat: 22.312, lng: 88.658 },
-  { city: 'South 24 Parganas - Diamond Harbour', district: 'South 24 Parganas', state: 'West Bengal', lat: 22.198, lng: 88.201 },
-  { city: 'Sundarbans - Gosaba Delta Coastal', district: 'Sundarbans Coastal', state: 'West Bengal', lat: 22.185, lng: 88.752 },
-  { city: 'Sundarbans - Sagar Island & Bakkhali', district: 'Sundarbans Coastal', state: 'West Bengal', lat: 21.642, lng: 88.082 },
-  { city: 'Hooghly - Chinsurah Riverfront', district: 'Hooghly', state: 'West Bengal', lat: 22.902, lng: 88.396 },
-  { city: 'Hooghly - Serampore Industrial', district: 'Hooghly', state: 'West Bengal', lat: 22.751, lng: 88.342 },
-  { city: 'Paschim Medinipur - Kharagpur Hub', district: 'Paschim Medinipur', state: 'West Bengal', lat: 22.341, lng: 87.321 },
-  { city: 'Purba Medinipur - Digha Cyclone Coast', district: 'Purba Medinipur', state: 'West Bengal', lat: 21.626, lng: 87.507 },
-  { city: 'Burdwan - Asansol Mining Belt', district: 'Paschim Bardhaman', state: 'West Bengal', lat: 23.688, lng: 86.966 },
-  { city: 'Burdwan - Durgapur Barrage Zone', district: 'Paschim Bardhaman', state: 'West Bengal', lat: 23.520, lng: 87.311 },
-  { city: 'Bhubaneswar - Central Secretariate', district: 'Khordha', state: 'Odisha', lat: 20.2961, lng: 85.8245 },
-  { city: 'Bhubaneswar - Kalinga Nagar Sector 4', district: 'Khordha', state: 'Odisha', lat: 20.2934, lng: 85.817 },
-  { city: 'Bhubaneswar - Patia Infocity', district: 'Khordha', state: 'Odisha', lat: 20.355, lng: 85.818 },
-  { city: 'Bhubaneswar - Rasulgarh Highway', district: 'Khordha', state: 'Odisha', lat: 20.301, lng: 85.865 },
-  { city: 'Bhubaneswar - Sundarpada Housing Board', district: 'Khordha', state: 'Odisha', lat: 20.2371, lng: 85.8114 },
-  { city: 'Bhubaneswar - Old Town Lingaraj', district: 'Khordha', state: 'Odisha', lat: 20.2365, lng: 85.8336 },
-  { city: 'Bhubaneswar - KIIT Patia Campus', district: 'Khordha', state: 'Odisha', lat: 20.3534, lng: 85.8225 },
-  { city: 'Bhubaneswar - Nayapalli Jaydev Vihar', district: 'Khordha', state: 'Odisha', lat: 20.2969, lng: 85.8123 },
-  { city: 'Bhubaneswar - Chandrasekharpur', district: 'Khordha', state: 'Odisha', lat: 20.3165, lng: 85.8182 },
-  { city: 'Bhubaneswar - Saheed Nagar', district: 'Khordha', state: 'Odisha', lat: 20.2706, lng: 85.8334 },
-  { city: 'Bhubaneswar - Khandagiri Udayagiri', district: 'Khordha', state: 'Odisha', lat: 20.261, lng: 85.78 },
-  { city: 'Bhubaneswar - Mancheswar Industrial', district: 'Khordha', state: 'Odisha', lat: 20.325, lng: 85.845 },
-  { city: 'Cuttack - Badambadi & Mahanadi', district: 'Cuttack', state: 'Odisha', lat: 20.4625, lng: 85.883 },
-  { city: 'Cuttack - CDA Sector 6', district: 'Cuttack', state: 'Odisha', lat: 20.485, lng: 85.845 },
-  { city: 'Puri - Coastal Relief & Grand Road', district: 'Puri', state: 'Odisha', lat: 19.8135, lng: 85.8312 },
-  { city: 'Balasore - Coastal Cyclone Belt', district: 'Balasore', state: 'Odisha', lat: 21.493, lng: 86.932 },
-  { city: 'Patna - Ganga River Belt', district: 'Patna', state: 'Bihar', lat: 25.5941, lng: 85.1376 },
-  { city: 'Guwahati - Brahmaputra Inundation', district: 'Kamrup Metropolitan', state: 'Assam', lat: 26.1445, lng: 91.7362 },
-  { city: 'Siliguri - Mahananda River Basin', district: 'Darjeeling', state: 'West Bengal', lat: 26.727, lng: 88.395 },
+  { city: 'Guwahati - Paltan Bazar & Panbazar', district: 'Kamrup Metropolitan', state: 'Assam', lat: 26.1820, lng: 91.7500 },
+  { city: 'Guwahati - Dispur Capital Complex', district: 'Kamrup Metropolitan', state: 'Assam', lat: 26.1420, lng: 91.7880 },
+  { city: 'Guwahati - Jalukbari & Gauhati Univ', district: 'Kamrup Metropolitan', state: 'Assam', lat: 26.1550, lng: 91.6620 },
+  { city: 'Guwahati - Khanapara & Six Mile', district: 'Kamrup Metropolitan', state: 'Assam', lat: 26.1250, lng: 91.8020 },
+  { city: 'Guwahati - Bharalumukh Riverfront', district: 'Kamrup Metropolitan', state: 'Assam', lat: 26.1730, lng: 91.7280 },
+  { city: 'Guwahati - Chandmari & Zoo Road', district: 'Kamrup Metropolitan', state: 'Assam', lat: 26.1850, lng: 91.7760 },
+  { city: 'Silchar - Sadar & Tarapur Ghat', district: 'Cachar', state: 'Assam', lat: 24.8333, lng: 92.7789 },
+  { city: 'Silchar - Rangirkhari & SMCH Link', district: 'Cachar', state: 'Assam', lat: 24.8150, lng: 92.7950 },
+  { city: 'Silchar - Meherpur & Malugram', district: 'Cachar', state: 'Assam', lat: 24.8420, lng: 92.7680 },
+  { city: 'Dibrugarh - AMC Hospital & Boiragimoth', district: 'Dibrugarh', state: 'Assam', lat: 27.4728, lng: 94.9120 },
+  { city: 'Dibrugarh - Chowkidinghee & Graham Bazar', district: 'Dibrugarh', state: 'Assam', lat: 27.4850, lng: 94.9250 },
+  { city: 'Jorhat - AT Road & Baruah Chariali', district: 'Jorhat', state: 'Assam', lat: 26.7509, lng: 94.2037 },
+  { city: 'Jorhat - JMCH Medical & Kenduguri', district: 'Jorhat', state: 'Assam', lat: 26.7450, lng: 94.2250 },
+  { city: 'Tezpur - Mission Chariali & Trimurty', district: 'Sonitpur', state: 'Assam', lat: 26.6338, lng: 92.8000 },
+  { city: 'Tezpur - Mahabhairab & Tribeni', district: 'Sonitpur', state: 'Assam', lat: 26.6450, lng: 92.7850 },
+  { city: 'Nagaon - Haibargaon & Dimow Chariali', district: 'Nagaon', state: 'Assam', lat: 26.3489, lng: 92.6800 },
+  { city: 'Nagaon - Samaguri & Kolong Riverfront', district: 'Nagaon', state: 'Assam', lat: 26.3650, lng: 92.7100 },
+  { city: 'Tinsukia - Thana Chariali & Hijuguri', district: 'Tinsukia', state: 'Assam', lat: 27.4895, lng: 95.3670 },
+  { city: 'Tinsukia - Makum Bypass & Borguri', district: 'Tinsukia', state: 'Assam', lat: 27.5020, lng: 95.3850 },
+  { city: 'Sivasagar - Central Borpukhuri & Joysagar', district: 'Sivasagar', state: 'Assam', lat: 26.9855, lng: 94.6373 },
+  { city: 'Morigaon - Bhuragaon & Mayong Riverbank', district: 'Morigaon', state: 'Assam', lat: 26.2546, lng: 92.3540 },
+  { city: 'Goalpara - Bapuji Nagar & Baladmari', district: 'Goalpara', state: 'Assam', lat: 26.1660, lng: 90.6232 },
+  { city: 'Barpeta - Satra Road & Bilortari Hati', district: 'Barpeta', state: 'Assam', lat: 26.3222, lng: 91.0061 },
+  { city: 'Barpeta - Howly & Sarbhog Junction', district: 'Barpeta', state: 'Assam', lat: 26.3850, lng: 90.9650 },
+  { city: 'Dhubri - River Port & Boro Bazar', district: 'Dhubri', state: 'Assam', lat: 26.0206, lng: 89.9701 },
+  { city: 'Dhubri - Bilasipara Embankment Point', district: 'Dhubri', state: 'Assam', lat: 26.0450, lng: 90.0150 },
+  { city: 'Kokrajhar - JD Road & Bodofa Nwgwr', district: 'Kokrajhar', state: 'Assam', lat: 26.3984, lng: 90.2680 },
+  { city: 'Bongaigaon - Dhaligaon Refinery & Mayapuri', district: 'Bongaigaon', state: 'Assam', lat: 26.4775, lng: 90.5583 },
+  { city: 'Nalbari - Hajo Road & Japarkuchi', district: 'Nalbari', state: 'Assam', lat: 26.4282, lng: 91.4365 },
+  { city: 'North Lakhimpur - Court Tiniali & Khelmati', district: 'Lakhimpur', state: 'Assam', lat: 27.2365, lng: 94.1054 },
+  { city: 'Dhemaji - Silapathar & Subansiri Belt', district: 'Dhemaji', state: 'Assam', lat: 27.4792, lng: 94.5832 },
+  { city: 'Majuli - Garamur Satra Island Zone', district: 'Majuli', state: 'Assam', lat: 27.0285, lng: 94.2055 },
+  { city: 'Majuli - Kamalabari Ghat Riverfront', district: 'Majuli', state: 'Assam', lat: 26.9650, lng: 94.1620 },
+  { city: 'Karimganj - Main Road & Longai Riverfront', district: 'Karimganj', state: 'Assam', lat: 24.8698, lng: 92.3638 },
+  { city: 'Hailakandi - Station Road & Algapur', district: 'Hailakandi', state: 'Assam', lat: 24.6849, lng: 92.5560 },
+  { city: 'Golaghat - Court Field & Furkating Link', district: 'Golaghat', state: 'Assam', lat: 26.5167, lng: 93.9667 },
+  { city: 'Diphu - Karbi Hills Central & Lumding Rd', district: 'Karbi Anglong', state: 'Assam', lat: 25.8450, lng: 93.4300 },
+  { city: 'Haflong - Dima Hasao Hill Station Council', district: 'Dima Hasao', state: 'Assam', lat: 25.1800, lng: 93.0200 },
+  { city: 'Mangaldai - LNJ Road & Darrang Stadium', district: 'Darrang', state: 'Assam', lat: 26.4350, lng: 92.0350 },
 ]
 
 const FIRST_NAMES = [
-  'Aarav', 'Priya', 'Rahul', 'Sneha', 'Ramesh', 'Sunita', 'Amit', 'Ananya', 'Mohammed', 'Fatima',
-  'Bikram', 'Rojalin', 'Subhash', 'Deepa', 'Manoj', 'Kavita', 'Sanjay', 'Pooja', 'Tanmay', 'Meenakshi',
-  'Arjun', 'Ipsita', 'Debabrata', 'Padmini', 'Alok', 'Rinki', 'Siddharth', 'Shreya', 'Vikram', 'Rupa',
-  'Kunal', 'Swati', 'Rajesh', 'Neelam', 'Sourav', 'Aparna', 'Manas', 'Suchitra', 'Tushar', 'Geeta',
-  'Devendra', 'Nandini', 'Prabhat', 'Kalyani', 'Naveen', 'Sharmila', 'Ashok', 'Kusum', 'Hemant', 'Radha'
+  'Aarav', 'Pranab', 'Rahul', 'Sneha', 'Bipul', 'Sunita', 'Amit', 'Ananya', 'Wasim', 'Farhan',
+  'Bikram', 'Dhruba', 'Subhash', 'Deepa', 'Manoj', 'Kavita', 'Sanjay', 'Pooja', 'Tanmay', 'Dipen',
+  'Arjun', 'Runjun', 'Debabrata', 'Padmini', 'Alok', 'Hemanta', 'Siddharth', 'Shreya', 'Vikram', 'Rupa',
+  'Kunal', 'Kalyani', 'Rajesh', 'Pinky', 'Sourav', 'Aparna', 'Manash', 'Suchitra', 'Tushar', 'Geeta',
+  'Devendra', 'Nandita', 'Prabhat', 'Surajit', 'Naveen', 'Sharmila', 'Ashok', 'Kusum', 'Hemant', 'Radha',
+  'Jiten', 'Karuna', 'Gautam', 'Lakhi', 'Hima', 'Jyoti', 'Esha', 'Mina', 'Chitra', 'Nayan'
 ]
 
 const LAST_NAMES = [
-  'Das', 'Mohanty', 'Sharma', 'Patel', 'Sen', 'Banerjee', 'Ghosh', 'Chatterjee', 'Sahoo', 'Behera',
-  'Patnaik', 'Nayak', 'Mishra', 'Rout', 'Bose', 'Gupta', 'Singh', 'Ali', 'Khan', 'Roy',
-  'Dutta', 'Panda', 'Swain', 'Jena', 'Mukherjee', 'Chakraborty', 'Samal', 'Majumdar', 'Barman', 'Kundu',
-  'Bhowmik', 'Ganguly', 'Choudhury', 'Pradhan', 'Tripathy', 'Bastia', 'Padhi', 'Bhattacharya', 'Sarkar', 'Hossain'
+  'Das', 'Baruah', 'Sharma', 'Saikia', 'Borah', 'Hazarika', 'Kalita', 'Choudhury', 'Gogoi', 'Phukan',
+  'Patel', 'Medhi', 'Deka', 'Bey', 'Rajkhowa', 'Kashyap', 'Nath', 'Ali', 'Khan', 'Roy',
+  'Dutta', 'Ahmed', 'Bhatt', 'Goswami', 'Chaliha', 'Daimary', 'Kakoti', 'Bezbaruah', 'Barman', 'Khatun'
 ]
 
 const EMERGENCY_TEMPLATES: Array<{
@@ -267,12 +267,12 @@ function generate1500Reports(): Report[] {
       status: 'pending',
       priorityScore: 95,
       priorityLabel: 'RED',
-      latitude: 22.5726,
-      longitude: 88.3639,
-      landmark: 'Salt Lake Sector V, Block EP',
-      description: 'Water rising rapidly, 5 family members including 80yo grandmother trapped on roof.',
-      reporterName: 'Sunita Mohanty',
-      reporterPhone: '+91-9876543210',
+      latitude: 26.1820,
+      longitude: 91.7500,
+      landmark: 'Paltan Bazar & Panbazar, Guwahati',
+      description: 'Brahmaputra overflowed banks, 5 family members including infant trapped on roof near station.',
+      reporterName: 'Sunita Saikia',
+      reporterPhone: '+91-9864012345',
       source: 'sos',
       createdAt: new Date(Date.now() - 1000 * 60 * 3).toISOString(),
     },
@@ -283,16 +283,16 @@ function generate1500Reports(): Report[] {
       status: 'in_progress',
       priorityScore: 92,
       priorityLabel: 'RED',
-      latitude: 22.579,
-      longitude: 88.378,
-      landmark: 'New Town Action Area 1, Near Axis Mall',
-      description: 'Pregnant woman in labor, surrounded by 4ft water. Rapid boat ambulance required.',
-      reporterName: 'Mohammed Ali',
-      reporterPhone: '+91-9123456780',
+      latitude: 24.8333,
+      longitude: 92.7789,
+      landmark: 'Rangirkhari Near SMCH Link, Silchar',
+      description: 'Pregnant woman in active labor, surrounded by 4ft Barak flood water. Rapid boat evacuation required.',
+      reporterName: 'Farhan Ahmed',
+      reporterPhone: '+91-9435012345',
       assignedVolunteerId: 'vol-001',
-      assignedVolunteerName: 'Rahul Sharma',
+      assignedVolunteerName: 'Rahul Baruah',
       assignedAgencyId: 'agency-001',
-      assignedAgencyName: 'NDRF 2nd Battalion Command',
+      assignedAgencyName: 'NDRF 1st Battalion Guwahati',
       source: 'sos',
       createdAt: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
     },
@@ -303,16 +303,16 @@ function generate1500Reports(): Report[] {
       status: 'in_progress',
       priorityScore: 89,
       priorityLabel: 'RED',
-      latitude: 20.2961,
-      longitude: 85.8245,
-      landmark: 'Janata Maidan Sector 3, Bhubaneswar',
-      description: 'Building wall collapsed on ground floor, 2 persons trapped under debris.',
-      reporterName: 'Bikram Das',
-      reporterPhone: '+91-9437123456',
+      latitude: 26.7509,
+      longitude: 94.2037,
+      landmark: 'AT Road & Baruah Chariali, Jorhat',
+      description: 'Building wall collapsed on ground floor, 2 persons trapped under concrete debris.',
+      reporterName: 'Bikram Gogoi',
+      reporterPhone: '+91-9706012345',
       assignedVolunteerId: 'vol-002',
-      assignedVolunteerName: 'Priya Singh',
+      assignedVolunteerName: 'Priya Hazarika',
       assignedAgencyId: 'agency-002',
-      assignedAgencyName: 'State Disaster Response Force (SDRF)',
+      assignedAgencyName: 'Assam State Disaster Response Force (SDRF)',
       source: 'sos',
       createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
     },
@@ -323,16 +323,16 @@ function generate1500Reports(): Report[] {
       status: 'resolved',
       priorityScore: 55,
       priorityLabel: 'YELLOW',
-      latitude: 22.567,
-      longitude: 88.401,
-      landmark: 'Bidhannagar Stadium Gate 2',
-      description: 'Elderly man separated during cyclone evacuation. Reunited at Shelter #02.',
-      reporterName: 'Suresh Bose',
-      reporterPhone: '+91-9988776655',
+      latitude: 27.4728,
+      longitude: 94.9120,
+      landmark: 'Chowkidinghee Relief Camp Gate, Dibrugarh',
+      description: 'Elderly person separated during flood evacuation. Safely reunited with family at Shelter #02.',
+      reporterName: 'Dipen Kalita',
+      reporterPhone: '+91-9854012345',
       assignedVolunteerId: 'vol-001',
-      assignedVolunteerName: 'Rahul Sharma',
+      assignedVolunteerName: 'Rahul Baruah',
       assignedAgencyId: 'agency-005',
-      assignedAgencyName: 'Red Cross Disaster Relief Mission',
+      assignedAgencyName: 'Indian Red Cross Society Assam State Branch',
       resolutionNotes: 'Citizen located and safely escorted back to family.',
       source: 'form',
       createdAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
@@ -430,25 +430,25 @@ function generate250Shelters(): Shelter[] {
       capacity: cap,
       occupancy: occ,
       facilities: facSet,
-      contactPhone: `+91-${sector.lat > 22 ? '33' : '674'}-${(23570000 + (i % 9999)).toString()}`,
+      contactPhone: `+91-361-${(2237000 + (i % 9999)).toString()}`,
       status,
     })
   }
-  const bhubaneswarSafes: Array<{ name: string; address: string; lat: number; lng: number; capacity: number; occupancy: number; facilities: string[]; phone: string }> = [
-    { name: 'Bhubaneswar - Sundarpada Safe Shelter — Community Relief Center', address: 'Housing Board Colony, Sundarpada, Bhubaneswar, Khordha, Odisha - 751002', lat: 20.2371, lng: 85.8114, capacity: 800, occupancy: 210, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-674-23570101' },
-    { name: 'Bhubaneswar - Patia KIIT Safe Shelter — College Campus Evacuation Wing', address: 'KIIT Campus, Patia, Bhubaneswar - 751024', lat: 20.3534, lng: 85.8225, capacity: 1200, occupancy: 340, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-674-23570102' },
-    { name: 'Bhubaneswar - Nayapalli Safe Shelter — Municipal Town Hall Disaster Hub', address: 'Jaydev Vihar, Nayapalli, Bhubaneswar - 751015', lat: 20.2969, lng: 85.8123, capacity: 650, occupancy: 180, facilities: ['food', 'water', 'medical_station'], phone: '+91-674-23570103' },
-    { name: 'Bhubaneswar - Old Town Lingaraj Safe Shelter — Multi-Purpose Cyclone Shelter', address: 'Lingaraj Temple Area, Old Town, Bhubaneswar - 751002', lat: 20.2365, lng: 85.8336, capacity: 500, occupancy: 95, facilities: ['food', 'water', 'medical_station'], phone: '+91-674-23570104' },
-    { name: 'Bhubaneswar - Chandrasekharpur Safe Shelter — Higher Secondary Model School', address: 'Chandrasekharpur, Near Infocity, Bhubaneswar - 751016', lat: 20.3165, lng: 85.8182, capacity: 900, occupancy: 260, facilities: ['food', 'water', 'power_generator'], phone: '+91-674-23570105' },
-    { name: 'Bhubaneswar - Saheed Nagar Safe Shelter — Indoor Sports Stadium Camp', address: 'Saheed Nagar, Bhubaneswar - 751007', lat: 20.2706, lng: 85.8334, capacity: 700, occupancy: 150, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-674-23570106' },
-    { name: 'Bhubaneswar - Khandagiri Safe Shelter — Youth Hostel & Sports Complex', address: 'Khandagiri Hill Road, Bhubaneswar - 751030', lat: 20.261, lng: 85.78, capacity: 550, occupancy: 120, facilities: ['food', 'water', 'medical_station'], phone: '+91-674-23570107' },
-    { name: 'Bhubaneswar - Mancheswar Safe Shelter — Sub-Divisional Hospital Relief Ward', address: 'Mancheswar Industrial Estate, Bhubaneswar - 751017', lat: 20.325, lng: 85.845, capacity: 600, occupancy: 200, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-674-23570108' },
-    { name: 'Bhubaneswar - Rasulgarh Safe Shelter — Community Relief Center', address: 'Rasulgarh Highway, Bhubaneswar - 751010', lat: 20.301, lng: 85.865, capacity: 750, occupancy: 310, facilities: ['food', 'water', 'medical_station'], phone: '+91-674-23570109' },
-    { name: 'Bhubaneswar - Kalinga Nagar Safe Shelter — Municipal Town Hall Disaster Hub', address: 'Kalinga Nagar, Sector 4, Bhubaneswar - 751003', lat: 20.2934, lng: 85.817, capacity: 850, occupancy: 275, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-674-23570110' },
+  const assamSafeShelters: Array<{ name: string; address: string; lat: number; lng: number; capacity: number; occupancy: number; facilities: string[]; phone: string }> = [
+    { name: 'Guwahati - Sarusajai Sports Complex Safe Shelter', address: 'Sarusajai Stadium, Nalapara, Guwahati, Kamrup Metro - 781040', lat: 26.1150, lng: 91.7580, capacity: 1500, occupancy: 420, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-361-2237010' },
+    { name: 'Guwahati - Jalukbari Gauhati Univ Indoor Shelter', address: 'Gauhati University Campus, Jalukbari, Guwahati - 781014', lat: 26.1550, lng: 91.6620, capacity: 1200, occupancy: 340, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-361-2237011' },
+    { name: 'Silchar - SMCH Medical Relief Shelter', address: 'Ghungoor, Silchar, Cachar - 788014', lat: 24.8150, lng: 92.7950, capacity: 900, occupancy: 280, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-3842-245102' },
+    { name: 'Silchar - Tarapur Railway High School Camp', address: 'Tarapur, Silchar, Cachar - 788003', lat: 24.8350, lng: 92.7750, capacity: 650, occupancy: 190, facilities: ['food', 'water', 'medical_station'], phone: '+91-3842-245103' },
+    { name: 'Dibrugarh - AMC Indoor Relief Hub', address: 'Barbari, AMC Campus, Dibrugarh - 786002', lat: 27.4600, lng: 94.9000, capacity: 1100, occupancy: 310, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-373-2300081' },
+    { name: 'Jorhat - JEC Campus Safe Shelter', address: 'Garmur, Jorhat Engineering College, Jorhat - 785007', lat: 26.7450, lng: 94.2250, capacity: 850, occupancy: 240, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-376-2370002' },
+    { name: 'Tezpur - Collegiate Higher Secondary Camp', address: 'Mission Chariali, Tezpur, Sonitpur - 784001', lat: 26.6350, lng: 92.8000, capacity: 700, occupancy: 180, facilities: ['food', 'water', 'medical_station'], phone: '+91-3712-241501' },
+    { name: 'Nagaon - Dawson Higher Secondary Relief Center', address: 'Haibargaon, Nagaon - 782002', lat: 26.3500, lng: 92.6850, capacity: 800, occupancy: 220, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-3672-233178' },
+    { name: 'Majuli - Garamur Satra Community Shelter', address: 'Garamur Chariali, Majuli Island - 785104', lat: 27.0285, lng: 94.2055, capacity: 950, occupancy: 380, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-3775-274102' },
+    { name: 'Barpeta - Model Town Hall Safe Shelter', address: 'Bilortari Hati, Barpeta - 781301', lat: 26.3200, lng: 91.0100, capacity: 750, occupancy: 260, facilities: ['food', 'water', 'medical_station'], phone: '+91-3665-252102' },
   ]
-  bhubaneswarSafes.forEach((s, idx) => {
+  assamSafeShelters.forEach((s, idx) => {
     list.push({
-      id: `shel-bbsr-${(idx + 1).toString().padStart(2, '0')}`,
+      id: `shel-asm-${(idx + 1).toString().padStart(2, '0')}`,
       name: s.name,
       address: s.address,
       latitude: s.lat,
@@ -540,7 +540,7 @@ function generate100Agencies(): Agency[] {
       id,
       name,
       type,
-      contactPhone: i % 2 === 0 ? `+91-33-2324${(1000 + i).toString()}` : `108`,
+      contactPhone: i % 2 === 0 ? `+91-361-2237${(1000 + i).toString()}` : `108`,
       contactEmail: `command.${id}@aapdasetu.gov.in`,
       jurisdiction,
       latitude: sector.lat,
@@ -865,8 +865,8 @@ export const mocks = {
       isOneTapSos: input.isOneTapSos,
     })
 
-    const lat = input.location?.lat ?? 22.5726
-    const lng = input.location?.lng ?? 88.3639
+    const lat = input.location?.lat ?? 26.1445
+    const lng = input.location?.lng ?? 91.7362
 
     const newRep: Report = {
       id: `rep-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -1557,9 +1557,9 @@ export const mocks = {
       claimantPhone: input.claimantPhone || '+91-9876543210',
       infrastructureType: input.infrastructureType || 'broken_home',
       propertyAddress: input.propertyAddress || 'Address on file',
-      district: input.district || 'North 24 Parganas',
-      latitude: input.latitude ?? 22.5726,
-      longitude: input.longitude ?? 88.3639,
+      district: input.district || 'Kamrup Metropolitan',
+      latitude: input.latitude ?? 26.1445,
+      longitude: input.longitude ?? 91.7362,
       photoUrl: input.photoUrl,
       damageGrade: input.damageGrade || 'MAJOR',
       damageScore: input.damageScore ?? 75.0,
@@ -1654,8 +1654,8 @@ export const mocks = {
   },
 
   aiSatelliteFloodMap(payload?: { district?: string; center?: { lat: number; lng: number }; radiusKm?: number }): FloodGeoJson {
-    const lat = payload?.center?.lat ?? 22.5726
-    const lng = payload?.center?.lng ?? 88.3639
+    const lat = payload?.center?.lat ?? 26.1445
+    const lng = payload?.center?.lng ?? 91.7362
 
     return {
       type: 'FeatureCollection',

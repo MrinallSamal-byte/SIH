@@ -10,7 +10,7 @@ const INDIA_BOUNDS: [[number, number], [number, number]] = [
   [6.0, 68.0],
   [37.5, 97.5],
 ]
-const DEFAULT_CENTER: GeoPoint = { lat: 22.5726, lng: 88.3639 }
+const DEFAULT_CENTER: GeoPoint = { lat: 26.1445, lng: 91.7362 }
 
 // Stable instance — react-leaflet diffs the icon prop by reference, so a fresh
 // L.divIcon per render would re-add the draggable marker on every render.

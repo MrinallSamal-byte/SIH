@@ -134,7 +134,7 @@ export default function ReportTracker() {
   const currentStepIdx = report ? (report.status === 'resolved' ? 2 : report.status === 'in_progress' ? 1 : 0) : -1
 
   const hasCoords = report?.latitude != null && report?.longitude != null
-  const incidentPoint: GeoPoint = hasCoords ? { lat: report!.latitude!, lng: report!.longitude! } : { lat: 22.5726, lng: 88.3639 }
+  const incidentPoint: GeoPoint = hasCoords ? { lat: report!.latitude!, lng: report!.longitude! } : { lat: 26.1445, lng: 91.7362 }
 
   // NOTE: No responder position or ETA is fabricated here — real responder
   // telemetry arrives only from backend assignment data. While a response is

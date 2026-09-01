@@ -62,7 +62,7 @@ export default function SafetyRegistry() {
 
   const mapCenter: GeoPoint = useMemo(() => {
     if (markers.length > 0) return markers[0].position
-    return { lat: 22.5726, lng: 88.3639 }
+    return { lat: 26.1445, lng: 91.7362 }
   }, [markers])
 
   if (!checkins) return <Loader />

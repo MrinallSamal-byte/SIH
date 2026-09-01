@@ -31,6 +31,12 @@ const emergencyServices: ServiceCard[] = [
     icon: ShieldCheck,
   },
   {
+    to: '/missing-persons',
+    titleKey: 'nav.missing',
+    descKey: 'service.missingDesc',
+    icon: Users,
+  },
+  {
     to: '/shelters',
     titleKey: 'nav.shelters',
     descKey: 'service.sheltersDesc',
@@ -41,12 +47,6 @@ const emergencyServices: ServiceCard[] = [
     titleKey: 'nav.routes',
     descKey: 'service.routesDesc',
     icon: Compass,
-  },
-  {
-    to: '/missing-persons',
-    titleKey: 'nav.missing',
-    descKey: 'service.missingDesc',
-    icon: Users,
   },
   {
     to: '/report-damage',

@@ -645,14 +645,14 @@ export default function SOS() {
             </label>
             <div className="flex flex-wrap gap-1.5">
               {[
-                { name: 'Bhubaneswar (Sundarpada)', lat: 20.2371, lng: 85.8114, addr: 'Sundarpada, Bhubaneswar, Odisha - 751002' },
-                { name: 'Bhubaneswar (Old Town)', lat: 20.2365, lng: 85.8336, addr: 'Lingaraj, Old Town, Bhubaneswar - 751002' },
-                { name: 'Bhubaneswar (Patia)', lat: 20.3534, lng: 85.8225, addr: 'Patia / KIIT, Bhubaneswar - 751024' },
-                { name: 'Cuttack', lat: 20.4625, lng: 85.8828, addr: 'Badambadi, Cuttack, Odisha - 753001' },
-                { name: 'Puri', lat: 19.8135, lng: 85.8312, addr: 'Puri Beach Road, Odisha - 752001' },
-                { name: 'Kolkata (Salt Lake)', lat: 22.5726, lng: 88.3639, addr: 'Sector V, Salt Lake, Kolkata - 700091' },
-                { name: 'Howrah', lat: 22.5958, lng: 88.2636, addr: 'Howrah Station Area, West Bengal - 711101' },
-                { name: 'Sundarbans Coastal', lat: 21.9497, lng: 88.8997, addr: 'Sundarbans Coastal Delta, West Bengal - 743370' },
+                { name: 'Guwahati (Paltan Bazar)', lat: 26.1820, lng: 91.7500, addr: 'Paltan Bazar, Guwahati, Kamrup Metro, Assam - 781008' },
+                { name: 'Guwahati (Dispur)', lat: 26.1420, lng: 91.7880, addr: 'Dispur Capital Complex, Guwahati, Assam - 781006' },
+                { name: 'Silchar (Cachar)', lat: 24.8333, lng: 92.7789, addr: 'Tarapur Ghat Road, Silchar, Cachar, Assam - 788003' },
+                { name: 'Dibrugarh (AMC)', lat: 27.4728, lng: 94.9120, addr: 'Boiragimoth / AMC Hospital, Dibrugarh, Assam - 786004' },
+                { name: 'Jorhat (AT Road)', lat: 26.7509, lng: 94.2037, addr: 'AT Road, Baruah Chariali, Jorhat, Assam - 785001' },
+                { name: 'Tezpur (Sonitpur)', lat: 26.6338, lng: 92.8000, addr: 'Mission Chariali, Tezpur, Sonitpur, Assam - 784001' },
+                { name: 'Nagaon (Haibargaon)', lat: 26.3489, lng: 92.6800, addr: 'Haibargaon, Nagaon, Assam - 782002' },
+                { name: 'Majuli (Garamur Satra)', lat: 27.0285, lng: 94.2055, addr: 'Garamur Satra Island Zone, Majuli, Assam - 785104' },
               ].map((preset) => (
                 <button
                   key={preset.name}

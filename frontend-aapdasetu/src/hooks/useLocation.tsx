@@ -36,8 +36,8 @@ const STORAGE_KEY_LOCATION = 'aapdasetu_last_coords'
 const STORAGE_KEY_ADDRESS = 'aapdasetu_last_address'
 
 const DEFAULT_FALLBACK_LOCATION: GeoLocationCoordinatesLike = {
-  latitude: 20.2706,
-  longitude: 85.8334,
+  latitude: 26.1445,
+  longitude: 91.7362,
   altitude: null,
   accuracy: 1000,
   altitudeAccuracy: null,
@@ -56,6 +56,12 @@ function getStoredLocation(): StoredLocation | null {
     if (raw) {
       const parsed = JSON.parse(raw)
       if (typeof parsed.latitude === 'number' && typeof parsed.longitude === 'number') {
+        // Discard stale cached coordinates outside Assam region (lat 24-29, lng 89-97)
+        if (parsed.latitude < 24 || parsed.latitude > 29 || parsed.longitude < 89 || parsed.longitude > 97) {
+          localStorage.removeItem(STORAGE_KEY_LOCATION)
+          localStorage.removeItem(STORAGE_KEY_ADDRESS)
+          return null
+        }
         return {
           coords: {
             latitude: parsed.latitude,
@@ -78,7 +84,12 @@ function getStoredLocation(): StoredLocation | null {
 
 function getStoredAddress(): string | null {
   try {
-    return localStorage.getItem(STORAGE_KEY_ADDRESS)
+    const storedAddr = localStorage.getItem(STORAGE_KEY_ADDRESS)
+    if (storedAddr && (storedAddr.includes('Bhubaneswar') || storedAddr.includes('Kolkata') || storedAddr.includes('Odisha') || storedAddr.includes('West Bengal'))) {
+      localStorage.removeItem(STORAGE_KEY_ADDRESS)
+      return null
+    }
+    return storedAddr
   } catch {
     return null
   }
@@ -88,7 +99,7 @@ const initialStored = getStoredLocation()
 
 const defaultLocationValue: LocationValue = {
   coords: initialStored?.coords || DEFAULT_FALLBACK_LOCATION,
-  address: getStoredAddress() || 'Bhubaneswar, Odisha',
+  address: getStoredAddress() || 'Guwahati, Assam',
   status: 'idle',
   accuracy: initialStored?.coords.accuracy ?? 100,
   source: initialStored ? 'cached' : 'default',
@@ -109,7 +120,7 @@ export function GeoLocationProvider({ children }: { children: ReactNode }) {
     initialCached?.coords || DEFAULT_FALLBACK_LOCATION
   )
   const [address, setAddressState] = useState<string | null>(
-    initialAddress || 'Bhubaneswar, Odisha'
+    initialAddress || 'Guwahati, Assam'
   )
   const [status, setStatus] = useState<LocationStatus>(initialCached ? 'fallback' : 'idle')
   const [accuracy, setAccuracy] = useState<number | null>(initialCached?.coords.accuracy ?? null)

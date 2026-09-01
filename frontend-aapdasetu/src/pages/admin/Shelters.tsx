@@ -58,8 +58,8 @@ export default function AdminShelters() {
   const [editingShelter, setEditingShelter] = useState<Shelter | null>(null)
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
-  const [latitude, setLatitude] = useState('22.5726')
-  const [longitude, setLongitude] = useState('88.3639')
+  const [latitude, setLatitude] = useState('26.1445')
+  const [longitude, setLongitude] = useState('91.7362')
   const [capacity, setCapacity] = useState('300')
   const [occupancy, setOccupancy] = useState('0')
   const [contactPhone, setContactPhone] = useState('+91-')
@@ -73,8 +73,8 @@ export default function AdminShelters() {
     setEditingShelter(null)
     setName('')
     setAddress('')
-    setLatitude('22.5726')
-    setLongitude('88.3639')
+    setLatitude('26.1445')
+    setLongitude('91.7362')
     setCapacity('500')
     setOccupancy('0')
     setContactPhone('+91-')
@@ -251,7 +251,7 @@ export default function AdminShelters() {
     if (filtered.length > 0) {
       return { lat: filtered[0].latitude, lng: filtered[0].longitude }
     }
-    return { lat: 22.5726, lng: 88.3639 }
+    return { lat: 26.1445, lng: 91.7362 }
   }, [filtered])
 
   if (!shelters) return <Loader />
@@ -595,7 +595,7 @@ export default function AdminShelters() {
                 {showLocationPicker && (
                   <div className="mt-2">
                     <LandmarkPicker
-                      value={{ lat: Number(latitude) || 22.5726, lng: Number(longitude) || 88.3639 }}
+                      value={{ lat: Number(latitude) || 26.1445, lng: Number(longitude) || 91.7362 }}
                       onChange={(pt, addr) => {
                         setLatitude(pt.lat.toFixed(4))
                         setLongitude(pt.lng.toFixed(4))

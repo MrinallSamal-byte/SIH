@@ -277,7 +277,7 @@ export default function ShelterFinder() {
     if (firstValid) {
       return { lat: firstValid.latitude as number, lng: firstValid.longitude as number }
     }
-    return { lat: 22.5726, lng: 88.3639 }
+    return { lat: 26.1445, lng: 91.7362 }
   }, [selectedShelter, userPos, filteredAndSorted])
 
   // Fetch contextual satellite flood & hazard polygons
@@ -430,7 +430,7 @@ export default function ShelterFinder() {
     const list: MapMarker[] = []
 
     // User Origin Marker
-    const effectiveOrigin = userPos || (selectedShelter ? { lat: selectedShelter.latitude - 0.022, lng: Math.max(88.362, selectedShelter.longitude - 0.010) } : null)
+    const effectiveOrigin = userPos || (selectedShelter ? { lat: selectedShelter.latitude - 0.022, lng: selectedShelter.longitude - 0.010 } : null)
     if (effectiveOrigin) {
       list.push({
         id: 'you',

@@ -170,15 +170,11 @@ export function buildSafeWaypoints(from: GeoPoint, to: GeoPoint, polygons?: GeoP
 
     const wp1 = {
       lat: from.lat + dLat * 0.35 + perpLat,
-      lng: from.lng > 88.30 && from.lng < 88.50
-        ? Math.max(88.362, from.lng + dLng * 0.35 + perpLng)
-        : from.lng + dLng * 0.35 + perpLng,
+      lng: from.lng + dLng * 0.35 + perpLng,
     }
     const wp2 = {
       lat: from.lat + dLat * 0.70 + perpLat * 0.85,
-      lng: from.lng > 88.30 && from.lng < 88.50
-        ? Math.max(88.365, from.lng + dLng * 0.70 + perpLng * 0.85)
-        : from.lng + dLng * 0.70 + perpLng * 0.85,
+      lng: from.lng + dLng * 0.70 + perpLng * 0.85,
     }
     return [wp1, wp2]
   }

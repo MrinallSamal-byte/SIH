@@ -49,10 +49,10 @@ const featureNavItems: NavLinkItem[] = [
   { to: '/report', labelKey: 'nav.report' },
   { to: '/track', labelKey: 'nav.track' },
   { to: '/checkin', labelKey: 'nav.checkin' },
+  { to: '/missing-persons', labelKey: 'nav.missing' },
   { to: '/report-damage', labelKey: 'nav.damage' },
   { to: '/shelters', labelKey: 'nav.shelters' },
   { to: '/safe-routes', labelKey: 'nav.routes' },
-  { to: '/missing-persons', labelKey: 'nav.missing' },
   { to: '/pfa-chat', labelKey: 'nav.pfa' },
   { to: '/app', labelKey: 'appdl.navLabel' },
 ]
@@ -62,10 +62,10 @@ const featureIconMap: Record<string, typeof Siren> = {
   '/report': FileText,
   '/track': Search,
   '/checkin': ShieldCheck,
+  '/missing-persons': Users,
   '/report-damage': FileWarning,
   '/shelters': Building,
   '/safe-routes': Compass,
-  '/missing-persons': Users,
   '/pfa-chat': Bot,
   '/app': Smartphone,
 }
