@@ -13,6 +13,7 @@ import type { IncomingMessage, Server } from 'http';
 import { env } from '../config/env.js';
 import { logger } from '../lib/logger.js';
 import { verifyAdminToken } from '../lib/jwt.js';
+import { prisma } from '../lib/prisma.js';
 
 export type RealtimeEventType =
   | 'system:connected'
@@ -53,7 +54,7 @@ export class RealtimeHub {
       const meta: ClientMeta = { channels: new Set(['public']), authHeader: req.headers.authorization };
       this.clients.set(socket, meta);
 
-      socket.on('message', (raw) => {
+      socket.on('message', async (raw) => {
         try {
           const msg = JSON.parse(raw.toString());
           if (msg && msg.action === 'subscribe' && Array.isArray(msg.channels)) {
@@ -62,7 +63,7 @@ export class RealtimeHub {
             );
             if (
               requested.some((c) => c.startsWith('admin')) &&
-              !this.hasAdminAuth(msg.authorization ?? meta.authHeader)
+              !(await this.hasAdminAuth(msg.authorization ?? meta.authHeader))
             ) {
               this.send(socket, {
                 type: 'error',
@@ -135,11 +136,16 @@ export class RealtimeHub {
     );
   }
 
-  private hasAdminAuth(header: unknown): boolean {
+  private async hasAdminAuth(header: unknown): Promise<boolean> {
     if (typeof header !== 'string' || !header.startsWith('Bearer ')) return false;
     try {
       const decoded = verifyAdminToken(header.slice('Bearer '.length).trim());
-      return decoded.role === 'admin';
+      if (decoded.role !== 'admin' || !decoded.sub) return false;
+      const admin = await prisma.adminUser.findUnique({
+        where: { id: decoded.sub },
+        select: { id: true, isActive: true },
+      });
+      return Boolean(admin && admin.isActive);
     } catch {
       return false;
     }
