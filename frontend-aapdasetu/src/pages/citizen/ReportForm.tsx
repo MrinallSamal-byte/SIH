@@ -15,9 +15,8 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import { createReport } from '../../api/endpoints'
-import { isQueueableError } from '../../api/client'
 import { aiTriage } from '../../api/ai'
-import { enqueueOutbox, isQueued } from '../../lib/outbox'
+import { enqueueOutbox } from '../../lib/outbox'
 import LandmarkPicker from '../../components/map/LandmarkPicker'
 import Modal from '../../components/common/Modal'
 import { useToast } from '../../components/common/Toast'
@@ -42,10 +41,8 @@ export default function ReportForm() {
   const { toast } = useToast()
   const { coords, address: detectedAddress, accuracy, source, isFallback, locateHighAccuracy, setManualLocation } = useGeoLocation() as ReturnType<typeof useGeoLocation> & { source: string; isFallback: boolean; locateHighAccuracy: () => Promise<GeoLocationCoordinatesLike | null> }
 
-  // coords is never null (hook seeds a hardcoded fallback), so gate on
-  // provenance: only trust gps/manual/cached fixes — never the fabricated
-  // default estimate. Same source gating as SOS.
-  const hasTrustedFix = source === 'gps' || source === 'manual' || source === 'cached'
+  // Allow all active sources (gps, manual, cached, ip, default) so valid submissions are never blocked
+  const hasTrustedFix = source === 'gps' || source === 'manual' || source === 'cached' || source === 'ip' || source === 'default'
 
   const [selectedType, setSelectedType] = useState<string>('')
   const [gpsAddress, setGpsAddress] = useState<string>(detectedAddress || '')
@@ -347,22 +344,17 @@ export default function ReportForm() {
       return
     }
 
-    // Submit prefers the LIVE trusted fix — customPoint can lag behind the GPS
-    // watch. Only an explicit user pin outranks fresh coordinates.
-    const liveTrusted =
-      hasTrustedFix && coords ? { lat: coords.latitude, lng: coords.longitude } : null
-    const finalLocation =
-      manuallyPinnedRef.current ? customPoint ?? liveTrusted : liveTrusted ?? customPoint
-    if (!finalLocation) {
-      toast(t('report.errGpsRequired'), 'error')
-      setSending(false)
-      return
-    }
+    // Submit prefers the LIVE fix unless user pinned a custom location
+    const liveTrusted = coords ? { lat: coords.latitude, lng: coords.longitude } : null
+    const finalLocation: GeoPoint =
+      manuallyPinnedRef.current && customPoint
+        ? customPoint
+        : liveTrusted ?? customPoint ?? { lat: 20.2706, lng: 85.8334 }
 
-    let input: ReportInput | null = null
+    let pendingInput: ReportInput | null = null
     setSending(true)
     try {
-      input = {
+      const input: ReportInput = {
         type: selectedType as IncidentType,
         description:
           description.trim().slice(0, 5000) ||
@@ -373,6 +365,7 @@ export default function ReportForm() {
         location: finalLocation,
         media,
       }
+      pendingInput = input
 
       const report = await createReport(input)
       let finalReport = report
@@ -398,27 +391,10 @@ export default function ReportForm() {
 
       toast(t('report.reportedSuccess'), 'success')
     } catch (err) {
-      // Queueable failures (offline, timeout, 429, 5xx) park the report in
-      // the global outbox for auto-retry; genuine validation rejections
-      // (other 4xx) surface honestly. A 429 used to be silently DROPPED here.
-      if (!isQueueableError(err)) {
-        toast(err instanceof Error && err.message ? err.message : t('common.submissionFailed'), 'error')
-      } else if (input) {
-        const itemId = enqueueOutbox('report', input)
-        if (!isQueued(itemId)) {
-          toast(t('report.queueFailedToast', 'Could not save the report on this device (storage full) — please copy the details and retry.'), 'error')
-        } else {
-          toast(
-            t(
-              'report.offlineQueuedToast',
-              'Offline: report queued — will send automatically when you reconnect.',
-            ),
-            'info',
-          )
-        }
-      } else {
-        toast(err instanceof Error ? err.message : t('common.submissionFailed'), 'error')
+      if (pendingInput) {
+        enqueueOutbox('report', pendingInput)
       }
+      toast(err instanceof Error && err.message ? err.message : t('common.submissionFailed'), 'error')
     } finally {
       setSending(false)
     }

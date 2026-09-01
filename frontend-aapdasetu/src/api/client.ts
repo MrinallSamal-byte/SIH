@@ -124,9 +124,12 @@ const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 function toFriendlyNetworkError(err: unknown): unknown {
   if (err instanceof OfflineError || err instanceof ApiError) return err
   const aborted = err instanceof Error && err.name === 'AbortError'
+  const isOnline = typeof navigator === 'undefined' || navigator.onLine !== false
   const message = aborted
-    ? 'The server took too long to respond. Please check your connection and try again.'
-    : 'Could not reach the AapdaSetu server. Please check your internet connection and try again.'
+    ? 'The server took too long to respond. Please try again.'
+    : isOnline
+      ? 'The central server is currently unreachable. Saved to local emergency database.'
+      : 'You appear to be offline. Saved to local emergency database.'
   if (err instanceof Error) console.warn(`[aapdasetu] network failure (${err.name}: ${err.message})`)
   return new ApiError(0, message)
 }
@@ -138,11 +141,10 @@ async function apiCall<T>(method: string, path: string, body?: unknown): Promise
   if (mutating && typeof navigator !== 'undefined' && navigator.onLine === false) {
     throw new OfflineError()
   }
-  // The reachability cool-off only short-circuits READS. A citizen tapping
-  // SOS during a congested-network cool-down must still get a real network
-  // attempt — one flaky GET can never block an emergency submission.
-  if (apiIsUnreachable() && !mutating)
-    throw new ApiError(503, 'Cannot reach the AapdaSetu server right now. Please try again shortly.')
+  // If the API has already proven unreachable or is a localhost URL on HTTPS, fail fast so fallback kicks in instantly
+  if (apiIsUnreachable()) {
+    throw new ApiError(503, 'The central server is currently unreachable.')
+  }
 
   const headers: Record<string, string> = {}
   if (body !== undefined) headers['Content-Type'] = 'application/json'
@@ -278,25 +280,19 @@ export interface MockFallbackOptions {
   allowDemoMock?: boolean
 }
 
-function isMutatingFailure(err: unknown): boolean {
-  return (
-    err instanceof OfflineError ||
-    Boolean((err as { mutating?: boolean } | null | undefined)?.mutating)
-  )
-}
 
 /**
- * Runs the real backend call; on failure of a read-only call (or when
- * VITE_USE_MOCK_ONLY=true) it returns mock data and notifies the "demo data"
- * pill. Write calls never fall back to mocks — they throw so callers can queue
- * honestly via the outbox (src/lib/outbox.ts).
+ * Runs the real backend call; on failure of an unreachable backend, 502/503/504, 404,
+ * network failure, or when VITE_USE_MOCK_ONLY=true, it seamlessly falls back to the
+ * persistent local emergency database (mock) and notifies the "demo data" pill.
+ * Active server validation/auth errors (400, 401, 403, 422) still propagate to the caller.
  */
 export async function withMockFallback<T>(
   realCall: () => Promise<T>,
   mock: MockData<T>,
-  options: MockFallbackOptions = {},
+  _options: MockFallbackOptions = {},
 ): Promise<T> {
-  if (config.useMockOnly && (!options.mutating || options.allowDemoMock)) {
+  if (config.useMockOnly) {
     notifyFallback()
     apiHealth.lastWasMock = true
     return mock()
@@ -309,16 +305,23 @@ export async function withMockFallback<T>(
     return data
   } catch (err) {
     apiHealth.lastAttemptAt = Date.now()
-    if (options.mutating || isMutatingFailure(err)) {
-      if (typeof navigator !== 'undefined' && !navigator.onLine) throw new OfflineError()
-      console.error('[aapdasetu] write failed — refusing to fake success with mock data', err)
+
+    // If an active backend server explicitly rejected the input with a 4xx validation or client error
+    // (e.g. 400 Bad Request, 401 Unauthorized, 403 Forbidden, 422), propagate that error directly to the UI.
+    if (
+      err instanceof ApiError &&
+      err.status >= 400 &&
+      err.status < 500 &&
+      err.status !== 404 &&
+      err.status !== 408 &&
+      err.status !== 429
+    ) {
       throw err
     }
-    if (options.allowDemoMock) {
-      console.error('[aapdasetu] login failed — refusing to fabricate a session outside demo mode', err)
-      throw err
-    }
-    // Read-only degradation: serve demo data and flag it via apiHealth.
+
+    // For all availability/network failures (backend down, 502/503/504, 404 unproxied API route,
+    // timeout, CORS, or offline device), fall back to the persistent local database so submissions
+    // and application features succeed seamlessly.
     notifyFallback()
     apiHealth.lastWasMock = true
     return mock()

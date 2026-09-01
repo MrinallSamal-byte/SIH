@@ -17,7 +17,6 @@ import {
   Users,
   Bell,
   ShieldCheck,
-  Radio,
   Smartphone,
   Bot,
   Phone
@@ -29,6 +28,7 @@ import { LANGUAGES, useLanguage, type Language } from '../lib/i18n'
 import { useTheme } from '../lib/theme'
 import { listAlerts } from '../api/endpoints'
 import { initGlobalOutboxSync } from '../lib/outbox'
+import { initSupabaseRealtime } from '../lib/supabase'
 import type { Alert } from '../types'
 
 interface NavLinkItem {
@@ -48,7 +48,6 @@ const featureNavItems: NavLinkItem[] = [
   { to: '/sos', labelKey: 'nav.sos', isSos: true },
   { to: '/report', labelKey: 'nav.report' },
   { to: '/track', labelKey: 'nav.track' },
-  { to: '/alerts', labelKey: 'nav.alerts' },
   { to: '/checkin', labelKey: 'nav.checkin' },
   { to: '/report-damage', labelKey: 'nav.damage' },
   { to: '/shelters', labelKey: 'nav.shelters' },
@@ -62,7 +61,6 @@ const featureIconMap: Record<string, typeof Siren> = {
   '/sos': Siren,
   '/report': FileText,
   '/track': Search,
-  '/alerts': Radio,
   '/checkin': ShieldCheck,
   '/report-damage': FileWarning,
   '/shelters': Building,
@@ -115,15 +113,16 @@ export default function MainLayout() {
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifRead, setNotifRead] = useState(true)
   const notifRef = useRef<HTMLDivElement>(null)
-  const [tickerDismissedId, setTickerDismissedId] = useState<string | null>(null)
 
   // Global offline outbox sync — flushes queued reports/SOS when connectivity
   // returns. Module is idempotent (StrictMode double-invoke safe); cleanup on
   // unmount stops its timers/listeners.
   useEffect(() => {
-    const cleanup = initGlobalOutboxSync()
+    const cleanupOutbox = initGlobalOutboxSync()
+    const cleanupSupabase = initSupabaseRealtime()
     return () => {
-      if (typeof cleanup === 'function') cleanup()
+      if (typeof cleanupOutbox === 'function') cleanupOutbox()
+      if (typeof cleanupSupabase === 'function') cleanupSupabase()
     }
   }, [])
 
@@ -214,16 +213,8 @@ export default function MainLayout() {
         if (bySeverity !== 0) return bySeverity
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       })
-      .slice(0, 6)
+      .slice(0, 10)
   }, [bulletins])
-
-  const criticalBulletin = useMemo(
-    () =>
-      [...bulletins]
-        .filter((a) => a.severity === 'critical')
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0],
-    [bulletins],
-  )
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f4f4f5] text-zinc-800 dark:bg-[#111111] dark:text-slate-200">
@@ -344,7 +335,7 @@ export default function MainLayout() {
               </select>
             </div>
 
-            {/* Notifications */}
+            {/* Notifications Center */}
             <div className="relative" ref={notifRef}>
               <button
                 type="button"
@@ -352,57 +343,99 @@ export default function MainLayout() {
                   setNotifOpen((o) => !o)
                   setNotifRead(true)
                 }}
-                className="relative rounded-lg border border-zinc-200/80 bg-white p-2.5 text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-400 dark:hover:bg-[#252525] dark:hover:text-slate-200"
+                className="relative rounded-lg border border-zinc-200/80 bg-white p-2.5 text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-400 dark:hover:bg-[#252525] dark:hover:text-slate-200 cursor-pointer"
                 aria-label={t('layout.notifications')}
               >
                 <Bell className="h-5 w-5" />
                 {bulletins.length > 0 && !notifRead && (
-                  <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-600" />
+                  <span className="absolute right-1.5 top-1.5 flex h-2.5 w-2.5">
+                    {bulletins.some((b) => b.severity === 'critical') && (
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                    )}
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-600" />
+                  </span>
                 )}
               </button>
 
               {notifOpen && (
-                <div className="absolute right-0 top-full z-50 mt-2 w-80 max-h-96 overflow-y-auto rounded-xl border border-zinc-200/80 bg-white shadow-lg dark:border-white/[0.08] dark:bg-[#1a1a1a]">
-                  <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-white/[0.08]">
+                <div className="absolute right-0 top-full z-50 mt-2 w-80 sm:w-96 max-h-[30rem] overflow-y-auto rounded-2xl border border-zinc-200/80 bg-white shadow-2xl dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+                  <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-white/[0.08]">
                     <div className="flex items-center gap-2">
-                      <Bell className="h-4 w-4 text-zinc-500 dark:text-slate-400" />
-                      <span className="text-sm font-bold text-zinc-800 dark:text-slate-300">{t('layout.bulletins')}</span>
+                      <Bell className="h-4 w-4 text-zinc-600 dark:text-slate-300" />
+                      <span className="text-sm font-bold text-zinc-800 dark:text-slate-200">
+                        {t('layout.notifications', 'Emergency Alerts')}
+                      </span>
+                      {bulletins.length > 0 && (
+                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-extrabold text-red-700 dark:bg-red-950/80 dark:text-red-300">
+                          {bulletins.length}
+                        </span>
+                      )}
                     </div>
-                    <Link
-                      to="/alerts"
-                      onClick={() => setNotifOpen(false)}
-                      className="text-[11px] font-bold text-red-600 hover:underline dark:text-red-400"
-                    >
-                      {t('layout.viewAll')}
-                    </Link>
+                    {bulletins.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNotifRead(true)
+                          setBulletins([])
+                        }}
+                        className="text-[11px] font-semibold text-zinc-400 hover:text-zinc-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
                   </div>
 
                   {displayedBulletins.length === 0 ? (
-                    <div className="px-4 py-8 text-center text-xs text-slate-400 dark:text-slate-500">
-                      {t('layout.noBulletins')}
+                    <div className="px-6 py-10 text-center">
+                      <ShieldCheck className="mx-auto mb-2.5 h-9 w-9 text-emerald-500" />
+                      <p className="text-xs font-bold text-zinc-700 dark:text-slate-200">No active alerts</p>
+                      <p className="text-[11px] mt-0.5 text-zinc-400 dark:text-slate-500">All emergency sectors are currently clear.</p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                    <div className="divide-y divide-zinc-100 dark:divide-white/[0.06]">
                       {displayedBulletins.map((a) => (
-                        <Link
+                        <div
                           key={a.id}
-                          to="/alerts"
-                          onClick={() => setNotifOpen(false)}
-                          className="block px-4 py-3 hover:bg-zinc-50 dark:hover:bg-[#252525]/50 transition-colors"
+                          className="px-4 py-3.5 hover:bg-zinc-50/80 dark:hover:bg-[#222222] transition-colors"
                         >
-                          <div className="flex items-start gap-2.5">
-                            <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${
-                              a.severity === 'critical' ? 'bg-red-500' : a.severity === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
-                            }`} />
+                          <div className="flex items-start gap-3">
+                            <span
+                              className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
+                                a.severity === 'critical'
+                                  ? 'bg-red-500 ring-4 ring-red-500/20'
+                                  : a.severity === 'warning'
+                                  ? 'bg-amber-500 ring-4 ring-amber-500/20'
+                                  : 'bg-blue-500 ring-4 ring-blue-500/20'
+                              }`}
+                            />
                             <div className="min-w-0 flex-1">
-                              <h4 className="text-xs font-bold text-zinc-800 dark:text-slate-300 line-clamp-1">{a.title}</h4>
-                              <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">{a.message}</p>
+                              <div className="flex items-center justify-between gap-2 mb-1">
+                                <span
+                                  className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider ${
+                                    a.severity === 'critical'
+                                      ? 'bg-red-100 text-red-700 dark:bg-red-950/80 dark:text-red-300'
+                                      : a.severity === 'warning'
+                                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
+                                      : 'bg-blue-100 text-blue-700 dark:bg-blue-950/80 dark:text-blue-300'
+                                  }`}
+                                >
+                                  {a.severity}
+                                </span>
+                                <span className="text-[10px] text-zinc-400 dark:text-slate-500">
+                                  {new Date(a.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <h4 className="text-xs font-bold text-zinc-800 dark:text-slate-200 leading-snug">{a.title}</h4>
+                              <p className="mt-1 text-xs text-zinc-600 dark:text-slate-400 leading-relaxed">{a.message}</p>
                               {a.targetArea && (
-                                <span className="mt-1 inline-block text-[10px] text-slate-400 dark:text-slate-500 mono">{a.targetArea}</span>
+                                <div className="mt-2 flex items-center gap-1 text-[10px] font-medium text-zinc-500 dark:text-slate-400">
+                                  <span className="font-semibold text-zinc-400 dark:text-slate-500">Sector:</span>
+                                  <span className="rounded bg-zinc-100 px-1.5 py-0.5 dark:bg-zinc-800 mono">{a.targetArea}</span>
+                                </div>
                               )}
                             </div>
                           </div>
-                        </Link>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -505,41 +538,6 @@ export default function MainLayout() {
         )}
       </header>
 
-      {/* Critical Alert Ticker — only while an unresolved critical bulletin exists.
-          Dismissal is keyed to the alert id so a NEW critical bulletin re-shows it. */}
-      {criticalBulletin && criticalBulletin.id !== tickerDismissedId && (
-        <div className="bg-red-600 px-3 py-2 text-white shadow-sm sm:px-4" role="alert">
-          <div className="mx-auto flex max-w-screen-2xl items-center gap-2 sm:gap-3">
-            <Link
-              to="/alerts"
-              className="flex min-w-0 flex-1 items-center gap-2 text-xs text-white"
-            >
-              <span className="relative flex h-2.5 w-2.5 shrink-0">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-white" />
-              </span>
-              <span className="hidden shrink-0 font-bold uppercase tracking-wider sm:inline">{t('ticker.criticalAlert')}</span>
-              <span className="truncate font-semibold">{criticalBulletin.title}</span>
-            </Link>
-            <div className="flex shrink-0 items-center gap-1 sm:gap-3">
-              <Link
-                to="/alerts"
-                className="hidden text-xs font-semibold underline underline-offset-2 hover:text-red-100 sm:inline"
-              >
-                {t('ticker.viewAlerts')}
-              </Link>
-              <button
-                type="button"
-                onClick={() => setTickerDismissedId(criticalBulletin.id)}
-                aria-label={t('ticker.dismiss')}
-                className="rounded-md p-1 transition hover:bg-red-500/70"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Main Container */}
       <main id="main-content" className="mx-auto flex-1 w-full max-w-7xl px-4 py-6 pb-24 md:pb-8" tabIndex={-1}>

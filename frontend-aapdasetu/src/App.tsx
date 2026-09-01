@@ -12,7 +12,6 @@ const SOS = lazy(() => import('./pages/citizen/SOS'))
 const ReportForm = lazy(() => import('./pages/citizen/ReportForm'))
 const ReportTracker = lazy(() => import('./pages/citizen/ReportTracker'))
 const ShelterFinder = lazy(() => import('./pages/citizen/ShelterFinder'))
-const Alerts = lazy(() => import('./pages/citizen/Alerts'))
 const ReportDamage = lazy(() => import('./pages/citizen/ReportDamage'))
 const MissingPersons = lazy(() => import('./pages/citizen/MissingPersons'))
 const SafeRoutes = lazy(() => import('./pages/citizen/SafeRoutes'))
@@ -63,7 +62,7 @@ export default function App() {
             <Route path="/report" element={<ReportForm />} />
             <Route path="/track" element={<ReportTracker />} />
             <Route path="/shelters" element={<ShelterFinder />} />
-            <Route path="/alerts" element={<Alerts />} />
+            <Route path="/alerts" element={<Navigate to="/" replace />} />
             <Route path="/checkin" element={<SafetyCheckin />} />
             <Route path="/report-damage" element={<ReportDamage />} />
             <Route path="/missing-persons" element={<MissingPersons />} />

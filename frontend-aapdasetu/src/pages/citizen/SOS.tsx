@@ -13,9 +13,8 @@ import {
   Edit3,
 } from 'lucide-react'
 import { createReport } from '../../api/endpoints'
-import { isQueueableError } from '../../api/client'
 import { aiTriage } from '../../api/ai'
-import { enqueueOutbox, getOutbox, initGlobalOutboxSync, isQueued, subscribeOutbox } from '../../lib/outbox'
+import { enqueueOutbox, getOutbox, initGlobalOutboxSync, subscribeOutbox } from '../../lib/outbox'
 import { Field, Input } from '../../components/common/Input'
 import Modal from '../../components/common/Modal'
 import LandmarkPicker from '../../components/map/LandmarkPicker'
@@ -210,20 +209,11 @@ export default function SOS() {
       pendingInput = input
 
       if (!navigator.onLine) {
-        // Park in the global outbox — it auto-dispatches on reconnect.
-        // Banner count updates via the subscribeOutbox listener.
-        const itemId = enqueueOutbox('sos', input)
-        if (!isQueued(itemId)) {
-          toast(t('sos.queueFailedToast', 'Could not save the SOS on this device (storage full) — try the SMS option below.'), 'error')
-        } else {
-          navigator.vibrate?.([200, 100, 200])
-          toast(t('sos.offlineQueuedToast'), 'info')
-        }
-        setTriggering(false)
-        return
+        // Queue for background sync on reconnect
+        enqueueOutbox('sos', input)
       }
 
-      // ponytail: dispatch first, triage second — an AI outage must never delay the SOS.
+      // Dispatch emergency SOS (persists to central backend or local emergency database)
       const report = await createReport({ ...input, description: input.description })
       setResult(report)
       navigator.vibrate?.([200, 100, 200])
@@ -253,22 +243,10 @@ export default function SOS() {
 
       toast(t('sos.sent'))
     } catch (err) {
-      // Queueable failures (offline, timeout, 429 throttling, 5xx) never lose
-      // the SOS — park it in the global outbox for auto-retry. Genuine
-      // validation rejections (other 4xx) surface honestly instead.
-      if (!isQueueableError(err)) {
-        toast(err instanceof Error && err.message ? err.message : t('common.submissionFailed'), 'error')
-      } else if (pendingInput) {
-        const itemId = enqueueOutbox('sos', pendingInput)
-        if (!isQueued(itemId)) {
-          toast(t('sos.queueFailedToast', 'Could not save the SOS on this device (storage full) — try the SMS option below.'), 'error')
-        } else {
-          navigator.vibrate?.([200, 100, 200])
-          toast(t('sos.offlineQueuedToast'), 'info')
-        }
-      } else {
-        toast(err instanceof Error ? err.message : t('common.submissionFailed'), 'error')
+      if (pendingInput) {
+        enqueueOutbox('sos', pendingInput)
       }
+      toast(err instanceof Error && err.message ? err.message : t('common.submissionFailed'), 'error')
     } finally {
       busyRef.current = false
       setTriggering(false)

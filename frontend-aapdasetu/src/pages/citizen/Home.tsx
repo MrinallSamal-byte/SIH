@@ -11,12 +11,10 @@ import {
   FileSpreadsheet,
   Bot,
   Search,
-  Radio,
   Smartphone
 } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
-import { listAlerts, listShelters } from '../../api/endpoints'
-import type { Alert } from '../../types'
+import { listShelters } from '../../api/endpoints'
 
 interface ServiceCard {
   to: string
@@ -31,12 +29,6 @@ const emergencyServices: ServiceCard[] = [
     titleKey: 'nav.checkin',
     descKey: 'checkin.subtitle',
     icon: ShieldCheck,
-  },
-  {
-    to: '/alerts',
-    titleKey: 'nav.alerts',
-    descKey: 'alerts.pageDesc',
-    icon: Radio,
   },
   {
     to: '/shelters',
@@ -78,23 +70,11 @@ const emergencyServices: ServiceCard[] = [
 
 export default function Home() {
   const { t } = useLanguage()
-  const [activeAlertCount, setActiveAlertCount] = useState<number | null>(null)
   const [openShelterCount, setOpenShelterCount] = useState<number | null>(null)
 
-  // Snapshot live status for the crisis-first strip. Degrades silently to
-  // nothing when either feed is unavailable.
+  // Snapshot live shelter count for the crisis status strip.
   useEffect(() => {
     let active = true
-    listAlerts()
-      .then((data: Alert[]) => {
-        if (!active) return
-        if (!Array.isArray(data)) {
-          setActiveAlertCount(null)
-          return
-        }
-        setActiveAlertCount(data.filter((a) => a.severity === 'critical' || a.severity === 'warning').length)
-      })
-      .catch(() => {})
     listShelters('open')
       .then((data) => { if (active) setOpenShelterCount(Array.isArray(data) ? data.length : null) })
       .catch(() => {})
@@ -112,30 +92,17 @@ export default function Home() {
           {t('hero.subtitle')}
         </p>
 
-        {/* Live Status Strip — hidden entirely when no data could be fetched */}
-        {(activeAlertCount !== null || openShelterCount !== null) && (
+        {/* Live Status Strip */}
+        {openShelterCount !== null && (
           <div className="mb-6 flex flex-wrap items-center justify-center gap-2 text-xs">
-            {activeAlertCount !== null && (
-              <Link
-                to="/alerts"
-                className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 font-bold text-red-700 transition hover:bg-red-100 active:scale-[0.98] dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-900/60 cursor-pointer"
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-red-600 animate-pulse" />
-                <span>{activeAlertCount}</span>
-                <span>{t('home.activeAlerts')}</span>
-              </Link>
-            )}
-            <span aria-hidden="true" className="hidden text-slate-300 sm:inline dark:text-zinc-600">·</span>
-            {openShelterCount !== null && (
-              <Link
-                to="/shelters"
-                className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 font-bold text-emerald-700 transition hover:bg-emerald-100 active:scale-[0.98] dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/60 cursor-pointer"
-              >
-                <Building className="h-3.5 w-3.5" />
-                <span>{openShelterCount}</span>
-                <span>{t('home.sheltersOpen')}</span>
-              </Link>
-            )}
+            <Link
+              to="/shelters"
+              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 font-bold text-emerald-700 transition hover:bg-emerald-100 active:scale-[0.98] dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/60 cursor-pointer"
+            >
+              <Building className="h-3.5 w-3.5" />
+              <span>{openShelterCount}</span>
+              <span>{t('home.sheltersOpen')}</span>
+            </Link>
           </div>
         )}
 
