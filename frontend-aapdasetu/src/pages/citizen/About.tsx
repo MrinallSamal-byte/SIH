@@ -358,7 +358,7 @@ export default function About() {
               <ul className="mt-4 space-y-2 border-t border-zinc-100 pt-3 text-xs text-zinc-600 dark:border-white/[0.05] dark:text-slate-300">
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 dark:bg-zinc-500" />
-                  <Link to="/routes" className="hover:underline">Dynamic Hazard Corridors</Link>
+                  <Link to="/safe-routes" className="hover:underline">Dynamic Hazard Corridors</Link>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 dark:bg-zinc-500" />
@@ -371,7 +371,7 @@ export default function About() {
               </ul>
             </div>
             <Link
-              to="/routes"
+              to="/safe-routes"
               className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-900 hover:underline dark:text-slate-200"
             >
               <span>View Safe Evacuation</span>

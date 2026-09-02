@@ -103,9 +103,9 @@ export default function Settings() {
       ) : (
         <>
           {/* Broadcast channels */}
-          <div className="space-y-1 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
-              <Smartphone className="h-4 w-4 text-blue-600" />
+          <div className="space-y-1 rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xs dark:border-zinc-800 dark:bg-[#181818]">
+            <div className="mb-2 flex items-center gap-2 text-sm font-bold text-zinc-900 dark:text-slate-100 border-b border-zinc-100 pb-3 dark:border-zinc-800/80">
+              <Smartphone className="h-4 w-4 text-zinc-600 dark:text-zinc-300" />
               <span>{t('st.broadcastChannels', 'Broadcast channels')}</span>
             </div>
             <StatusRow
@@ -127,9 +127,9 @@ export default function Settings() {
           </div>
 
           {/* AI engine */}
-          <div className="space-y-1 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
-              <Cpu className="h-4 w-4 text-purple-600" />
+          <div className="space-y-1 rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xs dark:border-zinc-800 dark:bg-[#181818]">
+            <div className="mb-2 flex items-center gap-2 text-sm font-bold text-zinc-900 dark:text-slate-100 border-b border-zinc-100 pb-3 dark:border-zinc-800/80">
+              <Cpu className="h-4 w-4 text-zinc-600 dark:text-zinc-300" />
               <span>{t('st.aiEndpoints')}</span>
             </div>
             <StatusRow

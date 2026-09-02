@@ -1,36 +1,90 @@
 import type { ReactNode } from 'react'
 
-const colors: Record<string, string> = {
-  info: 'bg-slate-100 text-slate-800 border border-slate-200 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200',
-  warning: 'bg-amber-50 text-amber-800 border border-amber-200 dark:border-amber-900/50 dark:bg-amber-950/60 dark:text-amber-300',
-  critical: 'bg-red-50 text-red-800 border border-red-200 dark:border-red-900/50 dark:bg-red-950/60 dark:text-red-300',
-  open: 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:border-emerald-900/50 dark:bg-emerald-950/60 dark:text-emerald-300',
-  full: 'bg-amber-50 text-amber-800 border border-amber-200 dark:border-amber-900/50 dark:bg-amber-950/60 dark:text-amber-300',
-  closed: 'bg-slate-100 text-slate-600 border border-slate-200 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400',
-  safe: 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:border-emerald-900/50 dark:bg-emerald-950/60 dark:text-emerald-300',
-  need_assistance: 'bg-red-50 text-red-800 border border-red-200 dark:border-red-900/50 dark:bg-red-950/60 dark:text-red-300',
-  matched: 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:border-emerald-900/50 dark:bg-emerald-950/60 dark:text-emerald-300',
-  resolved: 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:border-emerald-900/50 dark:bg-emerald-950/60 dark:text-emerald-300',
-  in_progress: 'bg-amber-50 text-amber-800 border border-amber-200 dark:border-amber-900/50 dark:bg-amber-950/60 dark:text-amber-300',
-  pending: 'bg-slate-100 text-slate-700 border border-slate-200 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300',
-  verified_valid: 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:border-emerald-900/50 dark:bg-emerald-950/60 dark:text-emerald-300',
-  flagged_fraud_risk: 'bg-red-50 text-red-800 border border-red-200 dark:border-red-900/50 dark:bg-red-950/60 dark:text-red-300',
-  flagged_fraud: 'bg-red-50 text-red-800 border border-red-200 dark:border-red-900/50 dark:bg-red-950/60 dark:text-red-300',
-  available: 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:border-emerald-900/50 dark:bg-emerald-950/60 dark:text-emerald-300',
-  on_duty: 'bg-amber-50 text-amber-800 border border-amber-200 dark:border-amber-900/50 dark:bg-amber-950/60 dark:text-amber-300',
-  offline: 'bg-slate-100 text-slate-600 border border-slate-200 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400',
+type DotColor = 'red' | 'amber' | 'emerald' | 'zinc'
+
+interface BadgeConfig {
+  pillClass: string
+  dotColor?: DotColor
+}
+
+const BADGE_MAP: Record<string, BadgeConfig> = {
+  critical: {
+    pillClass: 'bg-red-50/80 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900/50',
+    dotColor: 'red',
+  },
+  need_assistance: {
+    pillClass: 'bg-red-50/80 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900/50',
+    dotColor: 'red',
+  },
+  flagged_fraud: {
+    pillClass: 'bg-red-50/80 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900/50',
+    dotColor: 'red',
+  },
+  flagged_fraud_risk: {
+    pillClass: 'bg-red-50/80 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900/50',
+    dotColor: 'red',
+  },
+  warning: {
+    pillClass: 'bg-zinc-100/90 text-zinc-800 border-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-200 dark:border-zinc-700',
+    dotColor: 'amber',
+  },
+  in_progress: {
+    pillClass: 'bg-zinc-100/90 text-zinc-800 border-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-200 dark:border-zinc-700',
+    dotColor: 'amber',
+  },
+  on_duty: {
+    pillClass: 'bg-zinc-100/90 text-zinc-800 border-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-200 dark:border-zinc-700',
+    dotColor: 'amber',
+  },
+  full: {
+    pillClass: 'bg-zinc-100/90 text-zinc-800 border-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-200 dark:border-zinc-700',
+    dotColor: 'amber',
+  },
+  open: {
+    pillClass: 'bg-zinc-100/90 text-zinc-800 border-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-200 dark:border-zinc-700',
+    dotColor: 'emerald',
+  },
+  safe: {
+    pillClass: 'bg-zinc-100/90 text-zinc-800 border-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-200 dark:border-zinc-700',
+    dotColor: 'emerald',
+  },
+  matched: {
+    pillClass: 'bg-zinc-100/90 text-zinc-800 border-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-200 dark:border-zinc-700',
+    dotColor: 'emerald',
+  },
+  resolved: {
+    pillClass: 'bg-zinc-100/90 text-zinc-800 border-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-200 dark:border-zinc-700',
+    dotColor: 'emerald',
+  },
+  verified_valid: {
+    pillClass: 'bg-zinc-100/90 text-zinc-800 border-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-200 dark:border-zinc-700',
+    dotColor: 'emerald',
+  },
+  available: {
+    pillClass: 'bg-zinc-100/90 text-zinc-800 border-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-200 dark:border-zinc-700',
+    dotColor: 'emerald',
+  },
+}
+
+const DEFAULT_CONFIG: BadgeConfig = {
+  pillClass: 'bg-zinc-100/90 text-zinc-700 border-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-300 dark:border-zinc-700',
+  dotColor: 'zinc',
 }
 
 export default function Badge({ value, children, label }: { value?: string; children?: ReactNode; label?: ReactNode }) {
   const text = label ?? children ?? value
-  const key = String(value ?? children ?? text).toLowerCase()
+  const key = String(value ?? children ?? text).toLowerCase().trim()
+  const cfg = BADGE_MAP[key] ?? DEFAULT_CONFIG
+
   return (
     <span
-      className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold tracking-wide ${
-        colors[key] ?? 'bg-slate-100 text-slate-700 border border-slate-200 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300'
-      }`}
+      className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-0.5 text-[11px] font-semibold mono tracking-tight ${cfg.pillClass}`}
     >
-      {text}
+      {cfg.dotColor === 'red' && <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />}
+      {cfg.dotColor === 'amber' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
+      {cfg.dotColor === 'emerald' && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+      {cfg.dotColor === 'zinc' && <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 dark:bg-zinc-500" />}
+      <span>{text}</span>
     </span>
   )
 }

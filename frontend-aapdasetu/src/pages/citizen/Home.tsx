@@ -11,7 +11,8 @@ import {
   FileSpreadsheet,
   Bot,
   Search,
-  Smartphone
+  Smartphone,
+  Bell
 } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
 import { listShelters } from '../../api/endpoints'
@@ -61,6 +62,12 @@ const emergencyServices: ServiceCard[] = [
     icon: Bot,
   },
   {
+    to: '/alerts',
+    titleKey: 'nav.alerts',
+    descKey: 'alerts.pageDesc',
+    icon: Bell,
+  },
+  {
     to: '/app',
     titleKey: 'appdl.navLabel',
     descKey: 'appdl.cardDesc',
@@ -92,21 +99,22 @@ export default function Home() {
           {t('hero.subtitle')}
         </p>
 
-        {/* Live Status Strip */}
+        {/* Live Status Strip — Monochromatic Nothing OS tag */}
         {openShelterCount !== null && (
           <div className="mb-6 flex flex-wrap items-center justify-center gap-2 text-xs">
             <Link
               to="/shelters"
-              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 font-bold text-emerald-700 transition hover:bg-emerald-100 active:scale-[0.98] dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/60 cursor-pointer"
+              className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3.5 py-1 text-xs font-semibold text-zinc-700 shadow-2xs transition hover:border-zinc-300 hover:bg-zinc-50 active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-700 cursor-pointer mono"
             >
-              <Building className="h-3.5 w-3.5" />
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <Building className="h-3.5 w-3.5 text-zinc-400" />
               <span>{openShelterCount}</span>
               <span>{t('home.sheltersOpen')}</span>
             </Link>
           </div>
         )}
 
-        {/* Hero CTAs — SOS is the primary, largest action */}
+        {/* Hero CTAs — High contrast SOS primary, secondary actions visible on mobile */}
         <div className="mt-6 flex flex-col items-center justify-center gap-3 md:flex-row">
           <Link
             to="/sos"
@@ -115,20 +123,23 @@ export default function Home() {
             <Siren className="h-6 w-6" />
             <span>{t('hero.tapSos')}</span>
           </Link>
-          <Link
-            to="/track"
-            className="group hidden w-full items-center justify-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-6 py-3 text-sm font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 active:scale-[0.98] md:inline-flex md:w-auto sm:text-base dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-slate-200 dark:hover:bg-[#252525]"
-          >
-            <Search className="size-[18px]" />
-            <span>{t('nav.track')}</span>
-          </Link>
-          <Link
-            to="/report"
-            className="group hidden w-full items-center justify-center gap-2.5 rounded-xl bg-zinc-800 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-700 active:scale-[0.98] md:inline-flex md:w-auto sm:text-base dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
-          >
-            <span>{t('hero.submitReport')}</span>
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </Link>
+
+          <div className="flex w-full items-center gap-2.5 md:w-auto">
+            <Link
+              to="/track"
+              className="group flex-1 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 active:scale-[0.98] inline-flex md:w-auto sm:text-base dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-slate-200 dark:hover:bg-[#252525]"
+            >
+              <Search className="size-[18px]" />
+              <span>{t('nav.track')}</span>
+            </Link>
+            <Link
+              to="/report"
+              className="group flex-1 items-center justify-center gap-2 rounded-xl bg-zinc-800 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-700 active:scale-[0.98] inline-flex md:w-auto sm:text-base dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
+            >
+              <span>{t('hero.submitReport')}</span>
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </div>
         </div>
       </section>
 

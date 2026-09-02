@@ -168,6 +168,22 @@ export function initSupabaseRealtime(): () => void {
         emitRealtimeUpdate('report_updated', (payload.new as { id?: string })?.id, payload.new)
       }
     )
+    // AuditLog
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'AuditLog' },
+      (payload) => {
+        emitRealtimeUpdate('data_reset', (payload.new as { id?: string })?.id, payload.new)
+      }
+    )
+    // MissingPersonMatch
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'MissingPersonMatch' },
+      (payload) => {
+        emitRealtimeUpdate('missing_updated', (payload.new as { id?: string })?.id, payload.new)
+      }
+    )
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         console.log('[aapdasetu] Connected to Supabase Realtime WebSocket successfully')

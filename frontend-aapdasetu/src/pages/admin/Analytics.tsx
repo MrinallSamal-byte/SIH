@@ -26,8 +26,8 @@ import { useRealtime } from '../../hooks/useRealtime'
 import { useLanguage } from '../../lib/i18n'
 import type { AnalyticsData } from '../../types'
 
-const PRIORITY_COLORS: Record<string, string> = { RED: '#dc2626', YELLOW: '#f59e0b', GREEN: '#10b981' }
-const TYPE_COLORS: string[] = ['#3b82f6', '#06b6d4', '#8b5cf6', '#ec4899', '#f97316', '#10b981']
+const PRIORITY_COLORS: Record<string, string> = { RED: '#dc2626', YELLOW: '#71717a', GREEN: '#27272a' }
+const TYPE_COLORS: string[] = ['#18181b', '#3f3f46', '#52525b', '#71717a', '#a1a1aa', '#d4d4d8']
 
 function toChartData(record: Record<string, number>) {
   return Object.entries(record).map(([name, value]) => ({ name, value }))
@@ -57,8 +57,8 @@ export default function Analytics() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <TrendingUp className="h-6 w-6 text-blue-600" />
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            <TrendingUp className="h-6 w-6 text-zinc-900 dark:text-zinc-100" />
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-slate-100">
               {t('an.title')}
             </h1>
           </div>
@@ -67,24 +67,24 @@ export default function Analytics() {
           </p>
         </div>
 
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300 mono">
+        <span className="rounded-lg border border-zinc-200 bg-white px-3 py-1 text-xs font-bold text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 mono shadow-2xs">
           {totalIncidents.toLocaleString()} {t('an.incidentPointsAnalyzed')}
         </span>
       </div>
 
-      {/* KPI Cards Row */}
+      {/* KPI Cards Row — Monochromatic high-contrast */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-[#181818]">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">{t('an.incidentLoad')}</div>
-          <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-slate-100">
+          <div className="mt-1 text-2xl font-bold font-mono text-zinc-900 dark:text-zinc-100">
             {totalIncidents.toLocaleString()}
           </div>
           <div className="text-[11px] text-slate-400">{t('an.aggregatedSubmissions')}</div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-[#181818]">
           <div className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 mono flex items-center gap-1">
-            <AlertTriangle className="h-3.5 w-3.5" />
+            <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
             <span>{t('an.redPriorityRatio')}</span>
           </div>
           <div className="mt-1 text-2xl font-bold font-mono text-red-600 dark:text-red-400">
@@ -93,24 +93,24 @@ export default function Analytics() {
           <div className="text-[11px] text-slate-400">{redCount} {t('an.criticalDistressCalls')}</div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mono flex items-center gap-1">
-            <CheckCircle2 className="h-3.5 w-3.5" />
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-[#181818]">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mono flex items-center gap-1">
+            <CheckCircle2 className="h-3.5 w-3.5 text-zinc-500" />
             <span>{t('an.resolutionRate')}</span>
           </div>
-          <div className="mt-1 text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
+          <div className="mt-1 text-2xl font-bold font-mono text-zinc-900 dark:text-zinc-100">
             {resolvedPct}%
           </div>
           <div className="text-[11px] text-slate-400">{resolvedCount} {t('an.casesClosed')}</div>
         </div>
 
         {typeof avgResponseMinutes === 'number' && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 mono flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-2xs dark:border-zinc-800 dark:bg-[#181818]">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mono flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5 text-zinc-500" />
               <span>{t('an.meanResponseDelta')}</span>
             </div>
-            <div className="mt-1 text-2xl font-bold font-mono text-blue-600 dark:text-blue-400">
+            <div className="mt-1 text-2xl font-bold font-mono text-zinc-900 dark:text-zinc-100">
               {Math.round(avgResponseMinutes)} min
             </div>
             <div className="text-[11px] text-slate-400">{t('an.avgResponseCaption', 'avg response')}</div>
@@ -200,18 +200,18 @@ export default function Analytics() {
                       key={entry.name}
                       fill={
                         entry.name === 'pending'
-                          ? '#f59e0b'
+                          ? '#71717a'
                           : entry.name === 'in_progress'
-                          ? '#3b82f6'
-                          : '#10b981'
+                          ? '#3f3f46'
+                          : '#18181b'
                       }
                     />
                   ))}
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#0f172a',
-                    border: 'none',
+                    backgroundColor: '#18181b',
+                    border: '1px solid #27272a',
                     borderRadius: '0.75rem',
                     color: '#fff',
                     fontSize: '12px',
@@ -230,8 +230,8 @@ export default function Analytics() {
               <AreaChart data={data.byTime} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="countGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.0} />
+                    <stop offset="0%" stopColor="#52525b" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#52525b" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
@@ -239,15 +239,15 @@ export default function Analytics() {
                 <YAxis allowDecimals={false} fontSize={11} tickLine={false} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#0f172a',
-                    border: 'none',
+                    backgroundColor: '#18181b',
+                    border: '1px solid #27272a',
                     borderRadius: '0.75rem',
                     color: '#fff',
                     fontSize: '12px',
                     fontWeight: 600,
                   }}
                 />
-                <Area type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2.5} fill="url(#countGrad)" />
+                <Area type="monotone" dataKey="count" stroke="#27272a" strokeWidth={2.5} fill="url(#countGrad)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>

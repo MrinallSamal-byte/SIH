@@ -23,7 +23,7 @@ Framework preset: **Other**. Build command: none needed (Vercel compiles
 
 | Variable | Value | Notes |
 |---|---|---|
-| `DATABASE_URL` | `postgresql://…?sslmode=require` | Managed Postgres (Neon/Supabase pooler) |
+| `DATABASE_URL` | `postgresql://…?sslmode=require` | Managed Postgres (Supabase transaction pooler) |
 | `JWT_SECRET` | 32+ random chars | Signs admin/volunteer JWTs |
 | `ADMIN_PASSWORD` | strong password | Boot-critical; also seeds the admin |
 | `ADMIN_EMAIL` | e.g. `admin@aapdasetu.org` | |

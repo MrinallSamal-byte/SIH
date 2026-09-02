@@ -50,16 +50,17 @@ export default function Overview() {
       label: t('ov.cardRedAlerts'),
       value: kpis.activeRedAlerts,
       color: 'text-red-600 dark:text-red-400',
-      bg: 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900/50',
+      bg: 'bg-white dark:bg-[#181818] border-zinc-200 dark:border-zinc-800 shadow-2xs hover:border-red-300 dark:hover:border-red-900/60',
       icon: Siren,
       to: '/admin/live-sos',
       desc: t('ov.cardRedAlertsDesc'),
+      isCritical: true,
     },
     {
       label: t('ov.cardTotalReports'),
       value: kpis.totalReports.toLocaleString(),
-      color: 'text-slate-900 dark:text-slate-100',
-      bg: 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800',
+      color: 'text-zinc-900 dark:text-zinc-100',
+      bg: 'bg-white dark:bg-[#181818] border-zinc-200 dark:border-zinc-800 shadow-2xs hover:border-zinc-400 dark:hover:border-zinc-700',
       icon: FileText,
       to: '/admin/reports',
       desc: t('ov.cardTotalReportsDesc'),
@@ -67,8 +68,8 @@ export default function Overview() {
     {
       label: t('ov.cardOpenShelters'),
       value: kpis.openShelters,
-      color: 'text-emerald-600 dark:text-emerald-400',
-      bg: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900/50',
+      color: 'text-zinc-900 dark:text-zinc-100',
+      bg: 'bg-white dark:bg-[#181818] border-zinc-200 dark:border-zinc-800 shadow-2xs hover:border-zinc-400 dark:hover:border-zinc-700',
       icon: Building,
       to: '/admin/shelters',
       desc: t('ov.cardOpenSheltersDesc'),
@@ -76,8 +77,8 @@ export default function Overview() {
     {
       label: t('ov.cardVolunteersReady'),
       value: kpis.availableVolunteers,
-      color: 'text-blue-600 dark:text-blue-400',
-      bg: 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-900/50',
+      color: 'text-zinc-900 dark:text-zinc-100',
+      bg: 'bg-white dark:bg-[#181818] border-zinc-200 dark:border-zinc-800 shadow-2xs hover:border-zinc-400 dark:hover:border-zinc-700',
       icon: Users,
       to: '/admin/volunteers',
       desc: t('ov.cardVolunteersReadyDesc'),
@@ -85,8 +86,8 @@ export default function Overview() {
     {
       label: t('ov.cardAvgResponse'),
       value: `${kpis.avgResponseTimeMins}m`,
-      color: 'text-amber-600 dark:text-amber-400',
-      bg: 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/50',
+      color: 'text-zinc-900 dark:text-zinc-100',
+      bg: 'bg-white dark:bg-[#181818] border-zinc-200 dark:border-zinc-800 shadow-2xs hover:border-zinc-400 dark:hover:border-zinc-700',
       icon: Clock,
       to: '/admin/analytics',
       desc: t('ov.cardAvgResponseDesc'),
@@ -94,8 +95,8 @@ export default function Overview() {
     {
       label: t('ov.cardPendingResolution'),
       value: kpis.openCases,
-      color: 'text-purple-600 dark:text-purple-400',
-      bg: 'bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-900/50',
+      color: 'text-zinc-900 dark:text-zinc-100',
+      bg: 'bg-white dark:bg-[#181818] border-zinc-200 dark:border-zinc-800 shadow-2xs hover:border-zinc-400 dark:hover:border-zinc-700',
       icon: AlertTriangle,
       to: '/admin/reports',
       desc: t('ov.cardPendingResolutionDesc'),
@@ -109,28 +110,28 @@ export default function Overview() {
       to: '/admin/live-sos',
       icon: Siren,
       badge: `${kpis.activeRedAlerts} ${t('ov.active')}`,
-      accent: 'border-red-300 hover:border-red-500 bg-red-50/50 dark:bg-red-950/20 text-red-700 dark:text-red-300',
+      accent: 'border-red-200 hover:border-red-400 bg-red-50/50 dark:bg-red-950/20 text-red-700 dark:text-red-300 dark:border-red-900/50',
     },
     {
       title: t('ov.qaTriage'),
       desc: t('ov.qaTriageDesc'),
       to: '/admin/reports',
       icon: FileText,
-      accent: 'border-blue-300 hover:border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-300',
+      accent: 'border-zinc-200 hover:border-zinc-400 bg-white dark:bg-[#181818] text-zinc-900 dark:text-zinc-100 dark:border-zinc-800 dark:hover:border-zinc-700',
     },
     {
       title: t('ov.qaDamageClaims'),
       desc: t('ov.qaDamageClaimsDesc'),
       to: '/admin/damage',
       icon: ShieldCheck,
-      accent: 'border-emerald-300 hover:border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300',
+      accent: 'border-zinc-200 hover:border-zinc-400 bg-white dark:bg-[#181818] text-zinc-900 dark:text-zinc-100 dark:border-zinc-800 dark:hover:border-zinc-700',
     },
     {
       title: t('ov.qaBroadcaster'),
       desc: t('ov.qaBroadcasterDesc'),
       to: '/admin/alerts',
       icon: Megaphone,
-      accent: 'border-amber-300 hover:border-amber-500 bg-amber-50/50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-300',
+      accent: 'border-zinc-200 hover:border-zinc-400 bg-white dark:bg-[#181818] text-zinc-900 dark:text-zinc-100 dark:border-zinc-800 dark:hover:border-zinc-700',
     },
   ]
 
@@ -191,16 +192,15 @@ export default function Overview() {
       {/* Operational Dial & Response Pulse Section */}
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Crisis Dial Card */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-[#181818] flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mono">
+              <h2 className="text-sm font-bold text-zinc-900 dark:text-slate-100 uppercase tracking-wider mono">
                 {t('ov.crisisGauge')}
               </h2>
-              <span className={`text-xs font-bold font-mono px-2 py-0.5 rounded-full ${
-                kpis.crisisScore >= 80 ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300' :
-                kpis.crisisScore >= 50 ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' :
-                'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+              <span className={`text-xs font-bold font-mono px-2.5 py-0.5 rounded-lg border ${
+                kpis.crisisScore >= 80 ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/50 dark:text-red-300 dark:border-red-900/50' :
+                'bg-zinc-100 text-zinc-800 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:border-zinc-700'
               }`}>
                 {kpis.crisisScore >= 80 ? t('ov.criticalLevel') : kpis.crisisScore >= 50 ? t('ov.elevatedRisk') : t('ov.stableRisk')}
               </span>
@@ -211,17 +211,17 @@ export default function Overview() {
           </div>
 
           <div className="my-4 flex items-center justify-center gap-6">
-            <div className="relative flex h-36 w-36 items-center justify-center rounded-full border-4 border-slate-100 dark:border-slate-800 shadow-inner">
+            <div className="relative flex h-36 w-36 items-center justify-center rounded-full border-4 border-zinc-100 dark:border-zinc-800 shadow-inner">
               <div
                 className="absolute inset-0 rounded-full transition-all duration-1000"
                 style={{
                   background: `conic-gradient(${
-                    kpis.crisisScore >= 80 ? '#dc2626' : kpis.crisisScore >= 50 ? '#f59e0b' : '#10b981'
+                    kpis.crisisScore >= 80 ? '#dc2626' : '#52525b'
                   } ${kpis.crisisScore * 3.6}deg, transparent 0deg)`,
                 }}
               />
-              <div className="flex flex-col items-center justify-center rounded-full bg-white h-28 w-28 text-center dark:bg-slate-900 shadow-md">
-                <span className="text-3xl font-black font-mono text-slate-900 dark:text-slate-100">
+              <div className="flex flex-col items-center justify-center rounded-full bg-white h-28 w-28 text-center dark:bg-[#151515] shadow-sm">
+                <span className="text-3xl font-black font-mono text-zinc-900 dark:text-slate-100">
                   {kpis.crisisScore}
                 </span>
                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mono">{t('ov.outOf100')}</span>
@@ -230,29 +230,29 @@ export default function Overview() {
 
             <div className="space-y-2 text-xs">
               <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-red-600" />
-                <span className="font-medium text-slate-700 dark:text-slate-300">{t('ov.legendRed')}</span>
+                <span className="h-2 w-2 rounded-full bg-red-600" />
+                <span className="font-medium text-zinc-700 dark:text-slate-300">{t('ov.legendRed')}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
-                <span className="font-medium text-slate-700 dark:text-slate-300">{t('ov.legendYellow')}</span>
+                <span className="h-2 w-2 rounded-full bg-zinc-500" />
+                <span className="font-medium text-zinc-700 dark:text-slate-300">{t('ov.legendYellow')}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                <span className="font-medium text-slate-700 dark:text-slate-300">{t('ov.legendGreen')}</span>
+                <span className="h-2 w-2 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+                <span className="font-medium text-zinc-700 dark:text-slate-300">{t('ov.legendGreen')}</span>
               </div>
             </div>
           </div>
 
-          <div className="border-t border-slate-100 pt-3 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400">
+          <div className="border-t border-zinc-100 pt-3 dark:border-zinc-800/80 text-[11px] text-slate-500 dark:text-slate-400">
             {t('ov.updatedLiveNote')}
           </div>
         </div>
 
         {/* Live Response Pulse */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-[#181818] flex flex-col justify-between">
           <div>
-            <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mono">
+            <h2 className="text-sm font-bold text-zinc-900 dark:text-slate-100 uppercase tracking-wider mono">
               {t('ov.readinessPulse')}
             </h2>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -265,13 +265,13 @@ export default function Overview() {
               label={t('ov.barHandled')}
               value={Math.max(0, kpis.totalReports - kpis.openCases)}
               max={Math.max(kpis.totalReports, 1)}
-              color="bg-emerald-600"
+              color="bg-zinc-800 dark:bg-zinc-200"
             />
             <Bar
               label={t('ov.barOpenTriage')}
               value={kpis.openCases}
               max={Math.max(kpis.totalReports, 1)}
-              color="bg-blue-600"
+              color="bg-zinc-400 dark:bg-zinc-500"
             />
             <Bar
               label={t('ov.barCriticalRed')}
@@ -279,7 +279,6 @@ export default function Overview() {
               max={Math.max(kpis.totalReports, 1)}
               color="bg-red-600"
             />
-            {/* ponytail: needs shelter aggregation endpoint — fabricated per-shelter bed math removed */}
           </div>
 
           <div className="flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800 text-[11px]">
@@ -292,9 +291,9 @@ export default function Overview() {
         </div>
 
         {/* Quick Dispatch Hub */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-[#181818] flex flex-col justify-between">
           <div>
-            <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mono">
+            <h2 className="text-sm font-bold text-zinc-900 dark:text-slate-100 uppercase tracking-wider mono">
               {t('ov.quickLaunch')}
             </h2>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">

@@ -130,16 +130,16 @@ export default function Agencies() {
           return (
             <div
               key={a.id}
-              className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
+              className="flex flex-col justify-between rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xs transition hover:border-zinc-300 dark:border-zinc-800 dark:bg-[#181818] dark:hover:border-zinc-700"
             >
               <div>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">
                       <Icon className="h-5 w-5" />
                     </div>
                     <div>
-                      <h2 className="font-bold text-sm text-slate-900 dark:text-slate-100 leading-tight">{a.name}</h2>
+                      <h2 className="font-bold text-sm text-zinc-900 dark:text-slate-100 leading-tight">{a.name}</h2>
                       <div className="text-[10px] uppercase font-bold text-slate-400 mono mt-0.5">{a.type} {t('ag.wing')}</div>
                     </div>
                   </div>
@@ -147,34 +147,40 @@ export default function Agencies() {
                   <Badge value={a.type} />
                 </div>
 
-                <div className="mt-4 space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
+                <div className="mt-4 space-y-1.5 text-xs text-zinc-600 dark:text-slate-300">
                   <div className="flex items-start gap-1.5">
                     <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400 mt-0.5" />
-                    <span>{t('ag.jurisdiction')}: <strong className="text-slate-800 dark:text-slate-200">{a.jurisdiction || t('ag.statewideCommand')}</strong></span>
+                    <span>{t('ag.jurisdiction')}: <strong className="text-zinc-800 dark:text-slate-200">{a.jurisdiction || t('ag.statewideCommand')}</strong></span>
                   </div>
 
                   {a.contactPhone && (
                     <div className="flex items-center gap-1.5">
-                      <Phone className="h-3.5 w-3.5 text-emerald-600" />
-                      <span>{t('ag.hotline')}: <strong className="font-mono">{a.contactPhone}</strong></span>
+                      <Phone className="h-3.5 w-3.5 text-zinc-500" />
+                      <span>{t('ag.hotline')}:{' '}
+                        <a href={`tel:${a.contactPhone}`} className="font-mono font-bold text-zinc-900 dark:text-zinc-100 hover:underline">
+                          {a.contactPhone}
+                        </a>
+                      </span>
                     </div>
                   )}
 
                   {a.contactEmail && (
                     <div className="flex items-center gap-1.5 truncate">
                       <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                      <span className="truncate">{a.contactEmail}</span>
+                      <a href={`mailto:${a.contactEmail}`} className="truncate hover:underline text-zinc-600 dark:text-zinc-400">
+                        {a.contactEmail}
+                      </a>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="mt-5 flex items-center gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+              <div className="mt-5 flex items-center gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-800/80">
                 {a.contactPhone && (
                   <a
                     href={`tel:${a.contactPhone}`}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 py-2 text-xs font-bold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-zinc-900 py-2 text-xs font-bold text-white hover:bg-zinc-800 dark:bg-slate-100 dark:text-zinc-900 dark:hover:bg-white transition shadow-2xs"
                   >
                     <Phone className="h-3.5 w-3.5" />
                     <span>{t('ag.callUnit')}</span>
@@ -183,7 +189,7 @@ export default function Agencies() {
                 {a.contactEmail && (
                   <a
                     href={`mailto:${a.contactEmail}`}
-                    className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 transition"
+                    className="inline-flex items-center justify-center gap-1 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-bold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 transition shadow-2xs"
                   >
                     <Mail className="h-3.5 w-3.5" />
                     <span>{t('ag.email')}</span>

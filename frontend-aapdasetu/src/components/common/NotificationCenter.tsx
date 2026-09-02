@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import {
   Bell,
   ShieldAlert,
-  AlertTriangle,
   Info,
   CheckCircle2,
   CheckCheck,
@@ -167,23 +166,22 @@ export default function NotificationCenter({ role = 'citizen', align = 'right' }
   }
 
   const getCategoryIcon = (category: NotificationItem['category'], severity: NotificationItem['severity']) => {
+    if (severity === 'critical' || category === 'evacuation') {
+      return category === 'evacuation' ? <Flame className="h-4 w-4 text-red-600 animate-pulse" /> : <ShieldAlert className="h-4 w-4 text-red-600 animate-pulse" />
+    }
     switch (category) {
-      case 'evacuation':
-        return <Flame className="h-4 w-4 text-red-500" />
       case 'dispatch':
-        return <Ambulance className="h-4 w-4 text-amber-500" />
+        return <Ambulance className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
       case 'shelter':
-        return <Tent className="h-4 w-4 text-blue-500" />
+        return <Tent className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
       case 'reunion':
-        return <HeartHandshake className="h-4 w-4 text-emerald-500" />
+        return <HeartHandshake className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
       case 'medical':
-        return <Ambulance className="h-4 w-4 text-rose-500" />
+        return <Ambulance className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
       case 'infrastructure':
-        return <Navigation className="h-4 w-4 text-indigo-500" />
+        return <Navigation className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
       default:
-        if (severity === 'critical') return <ShieldAlert className="h-4 w-4 text-red-500" />
-        if (severity === 'warning') return <AlertTriangle className="h-4 w-4 text-amber-500" />
-        return <Info className="h-4 w-4 text-blue-500" />
+        return <Info className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
     }
   }
 
@@ -323,8 +321,6 @@ export default function NotificationCenter({ role = 'citizen', align = 'right' }
             ) : (
               filtered.map((item) => {
                 const isCritical = item.severity === 'critical'
-                const isWarning = item.severity === 'warning'
-                const isSuccess = item.severity === 'success'
 
                 return (
                   <div
@@ -342,11 +338,7 @@ export default function NotificationCenter({ role = 'citizen', align = 'right' }
                         className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${
                           isCritical
                             ? 'border-red-200 bg-red-100/70 text-red-600 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-400'
-                            : isWarning
-                            ? 'border-amber-200 bg-amber-100/70 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-400'
-                            : isSuccess
-                            ? 'border-emerald-200 bg-emerald-100/70 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-400'
-                            : 'border-blue-200 bg-blue-100/70 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-400'
+                            : 'border-zinc-200 bg-zinc-100 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-300'
                         }`}
                       >
                         {getCategoryIcon(item.category, item.severity)}
@@ -357,14 +349,10 @@ export default function NotificationCenter({ role = 'citizen', align = 'right' }
                         <div className="flex items-center justify-between gap-1 mb-1">
                           <div className="flex items-center gap-1.5">
                             <span
-                              className={`rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider ${
+                              className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider mono ${
                                 isCritical
                                   ? 'bg-red-600 text-white'
-                                  : isWarning
-                                  ? 'bg-amber-500 text-white'
-                                  : isSuccess
-                                  ? 'bg-emerald-600 text-white'
-                                  : 'bg-blue-600 text-white'
+                                  : 'bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300'
                               }`}
                             >
                               {item.severity}

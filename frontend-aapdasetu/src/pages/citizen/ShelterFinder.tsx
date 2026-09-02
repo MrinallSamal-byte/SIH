@@ -755,7 +755,7 @@ export default function ShelterFinder() {
                       Safe Evacuation Corridor
                     </span>
                   </div>
-                  <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
+                  <span className="rounded-md border border-zinc-200 bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold mono text-zinc-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
                     98% Confidence
                   </span>
                 </div>
@@ -1374,7 +1374,7 @@ export default function ShelterFinder() {
                         e.stopPropagation()
                         handleSelect(s.id)
                       }}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-emerald-700 cursor-pointer"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-bold text-white shadow-2xs transition hover:bg-zinc-800 dark:bg-slate-100 dark:text-zinc-900 dark:hover:bg-white cursor-pointer"
                     >
                       <Navigation className="h-3 w-3" />
                       <span>{isSelected ? 'Route Selected' : 'Route Here'}</span>

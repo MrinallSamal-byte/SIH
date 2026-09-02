@@ -293,18 +293,10 @@ export default function SOS() {
           </div>
 
           {/* Location Card */}
-          <div className="mt-6 w-full max-w-3xl rounded-2xl border border-zinc-200/80 bg-white p-4 text-left shadow-sm transition-all dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+          <div className="mt-6 w-full max-w-3xl rounded-2xl border border-zinc-200 bg-white p-4 text-left shadow-2xs transition-all dark:border-zinc-800 dark:bg-[#181818]">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3 min-w-0 flex-1">
-                <div
-                  className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-                    source === 'gps'
-                      ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400'
-                      : source === 'manual'
-                      ? 'bg-blue-100 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400'
-                      : 'bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400'
-                  }`}
-                >
+                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                   <MapPin className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -312,15 +304,8 @@ export default function SOS() {
                     <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
                       {t('sos.dispatchLocationLabel')}
                     </span>
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                        source === 'gps'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                          : source === 'manual'
-                          ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800'
-                          : 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
-                      }`}
-                    >
+                    <span className="inline-flex items-center gap-1.5 rounded-md border border-zinc-200 bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold mono text-zinc-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                      <span className={`h-1.5 w-1.5 rounded-full ${source === 'gps' ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-400'}`} />
                       {source === 'gps'
                         ? t('sos.gpsLive')
                         : source === 'manual'
@@ -346,7 +331,7 @@ export default function SOS() {
                       type="button"
                       onClick={handleRescanGps}
                       disabled={rescanning}
-                      className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200 cursor-pointer transition font-sans font-semibold"
+                      className="inline-flex items-center gap-1 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200 cursor-pointer transition font-sans font-semibold"
                     >
                       <RefreshCw className={`h-3 w-3 ${rescanning ? 'animate-spin' : ''}`} />
                       <span>{rescanning ? t('sos.acquiring') : t('sos.rescan')}</span>
@@ -365,7 +350,7 @@ export default function SOS() {
                   setEditPoint(coords ? { lat: coords.latitude, lng: coords.longitude } : null)
                   setShowLocationModal(true)
                 }}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100 hover:border-red-300 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-900/70 cursor-pointer shadow-2xs transition shrink-0"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-bold text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 cursor-pointer shadow-2xs transition shrink-0"
               >
                 <Edit3 className="h-3.5 w-3.5" />
                 <span>{t('sos.correctArea')}</span>
