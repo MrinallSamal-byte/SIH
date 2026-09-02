@@ -11,9 +11,6 @@ import {
   MapPin
 } from 'lucide-react'
 import { listReports, updateReport } from '../../api/endpoints'
-import PriorityBadge from '../../components/common/PriorityBadge'
-import Badge from '../../components/common/Badge'
-import Button from '../../components/common/Button'
 import Loader from '../../components/common/Loader'
 import LeafletMap, { type MapMarker, type MapPopupAction } from '../../components/map/LeafletMap'
 import { useRealtime } from '../../hooks/useRealtime'
@@ -390,10 +387,14 @@ export default function LiveSOS() {
 
         <div className="flex flex-wrap items-center gap-2">
           {!sirenArmed ? (
-            <Button variant="outline" size="sm" onClick={armSiren} className="font-bold flex items-center gap-1.5">
-              <Volume2 className="h-4 w-4 text-slate-700 dark:text-slate-300" />
+            <button
+              type="button"
+              onClick={armSiren}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-800 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 cursor-pointer transition-colors shadow-2xs"
+            >
+              <Volume2 className="h-4 w-4 text-zinc-500" />
               <span>{t('ls.enableAudioSiren')}</span>
-            </Button>
+            </button>
           ) : (
             <>
               {hasGesture ? (
@@ -401,9 +402,9 @@ export default function LiveSOS() {
                   type="button"
                   onClick={disarmSiren}
                   title={t('ls.disableSirenHint', 'Click to disable siren')}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 shadow-sm cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-zinc-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 shadow-2xs cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-700/80 transition-colors"
                 >
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   <span>{t('ls.sirenActive')}</span>
                 </button>
               ) : (
@@ -414,30 +415,39 @@ export default function LiveSOS() {
                     'ls.armedMutedHint',
                     'Armed — audio stays muted until you interact with the page',
                   )}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300 shadow-sm cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-zinc-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 shadow-2xs cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-700/80 transition-colors"
                 >
-                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                   <span>{t('ls.armedMutedUntilInteraction', 'Armed — muted until interaction')}</span>
                 </button>
               )}
 
-              <Button variant="outline" size="sm" onClick={testSiren} title={t('ls.testSirenHint', 'Play one siren cycle')} className="font-bold flex items-center gap-1.5">
-                <Play className="h-3.5 w-3.5 text-slate-700 dark:text-slate-300" />
+              <button
+                type="button"
+                onClick={testSiren}
+                title={t('ls.testSirenHint', 'Play one siren cycle')}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 cursor-pointer transition-colors"
+              >
+                <Play className="h-3 w-3 text-zinc-500" />
                 <span>{t('ls.testSiren', 'Test')}</span>
-              </Button>
+              </button>
 
               {muted && !loopActive && (
-                <span className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                  <VolumeX className="h-3.5 w-3.5" />
+                <span className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs font-medium text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-400 mono">
+                  <VolumeX className="h-3 w-3" />
                   <span>{t('ls.mutedUntilNextRed', 'Muted until next RED')}</span>
                 </span>
               )}
 
               {loopActive && (
-                <Button variant="danger" size="sm" onClick={muteSiren} className="font-bold flex items-center gap-1.5 animate-pulse">
-                  <VolumeX className="h-3.5 w-3.5" />
+                <button
+                  type="button"
+                  onClick={muteSiren}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-red-700 cursor-pointer animate-pulse transition-colors"
+                >
+                  <VolumeX className="h-3 w-3" />
                   <span>{t('ls.muteSiren', 'Silence')}</span>
-                </Button>
+                </button>
               )}
             </>
           )}
@@ -446,11 +456,11 @@ export default function LiveSOS() {
 
       {/* Realistic Tactical Satellite Map */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
+        <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mono">
           <span>{t('ls.activeDistressMap')} ({markers.length} {t('ls.geolocatedIncidents')})</span>
-          <span className="text-[11px] text-slate-400">{t('ls.layerSwitcherHint')}</span>
+          <span className="text-[10px] text-zinc-400">{t('ls.layerSwitcherHint')}</span>
         </div>
-        <div className="h-72 sm:h-96 lg:h-[420px] rounded-2xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800">
+        <div className="h-72 sm:h-96 lg:h-[400px] rounded-xl overflow-hidden shadow-2xs border border-zinc-200 dark:border-zinc-800">
           <LeafletMap
             center={mapCenter}
             markers={markers}
@@ -461,91 +471,156 @@ export default function LiveSOS() {
         </div>
       </div>
 
-      {/* Pending SOS Incident Stream */}
-      <div className="space-y-3">
-        {reports.map((r) => (
-          <div
-            key={r.id}
-            onMouseEnter={() => setSelectedId(r.id)}
-            onClick={() => setSelectedId(r.id)}
-            className={`rounded-2xl border bg-white p-5 shadow-sm transition cursor-pointer dark:bg-slate-900 ${
-              selectedId === r.id ? 'ring-2 ring-red-500/60' : ''
-            } ${
-              r.priorityLabel === 'RED'
-                ? 'border-l-4 border-l-red-600 border-slate-200 dark:border-slate-800'
-                : 'border-l-4 border-l-amber-500 border-slate-200 dark:border-slate-800'
-            }`}
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <PriorityBadge label={r.priorityLabel} />
-              <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100">{r.trackingId}</span>
-              <span className="text-xs font-bold capitalize text-slate-800 dark:text-slate-200">{r.type} {t('ls.emergency')}</span>
-              <Badge value={r.status} label={statusLabel(r.status)} />
-              <span className="ml-auto text-xs text-slate-400 mono">{timeAgo(r.createdAt)}</span>
-            </div>
-
-            <p className="mt-2 text-sm text-slate-800 dark:text-slate-200 font-medium leading-relaxed">{r.description}</p>
-
-            <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-              {r.landmark && (
-                <div className="flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                  <span>{t('ls.location')}: <strong className="text-slate-700 dark:text-slate-300">{r.landmark}</strong></span>
-                </div>
-              )}
-              {r.reporterPhone && (
-                <div className="flex items-center gap-1">
-                  <Phone className="h-3.5 w-3.5 text-slate-400" />
-                  <span>{t('ls.contact')}: <a href={`tel:${r.reporterPhone}`} className="text-slate-900 dark:text-slate-100 underline font-mono font-bold hover:text-emerald-600">{r.reporterPhone}</a></span>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
-              <div className="flex gap-2">
-                {r.latitude && r.longitude && (
-                  <a
-                    href={getNavigationUrl(r.latitude, r.longitude)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
-                  >
-                    <Navigation className="h-3.5 w-3.5" />
-                    <span>{t('ls.mapDirections')}</span>
-                  </a>
-                )}
-                {r.reporterPhone && (
-                  <a
-                    href={`tel:${r.reporterPhone}`}
-                    className="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/50 dark:text-emerald-300 cursor-pointer"
-                  >
-                    <Phone className="h-3.5 w-3.5" />
-                    <span>{t('ls.callVictim')}</span>
-                  </a>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button variant="secondary" size="sm" onClick={() => acknowledge(r.id)} className="font-bold">
-                  {t('ls.acknowledgeTriage')}
-                </Button>
-                <Link
-                  to="/admin/reports"
-                  className="inline-flex items-center gap-1 rounded-xl bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white cursor-pointer"
-                >
-                  <span>{t('ls.dispatchUnit')}</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-            </div>
+      {/* Monochromatic Live SOS Distress Queue */}
+      <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-2xs dark:border-zinc-800 dark:bg-[#151515]">
+        <div className="flex items-center justify-between border-b border-zinc-200 bg-zinc-50/70 px-4 py-2.5 dark:border-zinc-800 dark:bg-[#1a1a1a]/80">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse" />
+            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mono">
+              {t('ls.activeDistressQueue', 'Live Distress Queue')}
+            </span>
+            <span className="rounded bg-zinc-200/70 px-1.5 py-0.2 text-[10px] font-bold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 mono">
+              {reports.length}
+            </span>
           </div>
-        ))}
+          <span className="text-[10px] text-zinc-400 dark:text-zinc-500 mono">
+            Click incident row to focus on map
+          </span>
+        </div>
 
-        {reports.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-slate-300 p-12 text-center text-sm text-slate-400 dark:border-slate-800">
-            {t('ls.emptyQueue')}
-          </div>
-        )}
+        <div className="divide-y divide-zinc-200/70 dark:divide-zinc-800/80">
+          {reports.map((r) => {
+            const isSelected = selectedId === r.id
+            const isRed = r.priorityLabel === 'RED'
+
+            return (
+              <div
+                key={r.id}
+                onMouseEnter={() => setSelectedId(r.id)}
+                onClick={() => setSelectedId(r.id)}
+                className={`relative p-4 transition-colors cursor-pointer ${
+                  isSelected
+                    ? 'bg-zinc-50/90 dark:bg-zinc-900/80'
+                    : 'hover:bg-zinc-50/50 dark:hover:bg-zinc-900/40'
+                }`}
+              >
+                {isSelected && (
+                  <span className="absolute left-0 top-0 bottom-0 w-1 bg-zinc-900 dark:bg-white" />
+                )}
+
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider mono ${
+                        isRed
+                          ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
+                          : 'bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200'
+                      }`}
+                    >
+                      <span className={`h-1.5 w-1.5 rounded-full ${isRed ? 'bg-red-500 animate-pulse' : 'bg-amber-500'}`} />
+                      <span>{r.priorityLabel}</span>
+                    </span>
+
+                    <span className="font-mono text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                      {r.trackingId}
+                    </span>
+
+                    <span className="text-xs font-semibold capitalize text-zinc-700 dark:text-zinc-300">
+                      {r.type} {t('ls.emergency', 'Emergency')}
+                    </span>
+
+                    <span className="rounded border border-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-600 dark:border-zinc-800 dark:text-zinc-400 mono">
+                      {statusLabel(r.status)}
+                    </span>
+                  </div>
+
+                  <span className="text-[11px] text-zinc-400 dark:text-zinc-500 mono">
+                    {timeAgo(r.createdAt)}
+                  </span>
+                </div>
+
+                <p className="mt-2 text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed font-normal">
+                  {r.description}
+                </p>
+
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 pt-2.5 border-t border-zinc-100 dark:border-zinc-800/60">
+                  <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-500 dark:text-zinc-400">
+                    {r.landmark && (
+                      <span className="flex items-center gap-1 text-[11px]">
+                        <MapPin className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
+                        <span className="font-medium text-zinc-700 dark:text-zinc-300">{r.landmark}</span>
+                      </span>
+                    )}
+                    {r.reporterPhone && (
+                      <span className="flex items-center gap-1 text-[11px]">
+                        <Phone className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
+                        <a
+                          href={`tel:${r.reporterPhone}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="font-mono font-semibold text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white underline underline-offset-2"
+                        >
+                          {r.reporterPhone}
+                        </a>
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 ml-auto">
+                    {r.latitude && r.longitude && (
+                      <a
+                        href={getNavigationUrl(r.latitude, r.longitude)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 rounded border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 cursor-pointer transition-colors"
+                      >
+                        <Navigation className="h-3 w-3 text-zinc-400" />
+                        <span>{t('ls.mapDirections', 'Directions')}</span>
+                      </a>
+                    )}
+
+                    {r.reporterPhone && (
+                      <a
+                        href={`tel:${r.reporterPhone}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 rounded border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 cursor-pointer transition-colors"
+                      >
+                        <Phone className="h-3 w-3 text-zinc-400" />
+                        <span>{t('ls.callVictim', 'Call')}</span>
+                      </a>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        acknowledge(r.id)
+                      }}
+                      className="rounded border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 cursor-pointer transition-colors"
+                    >
+                      {t('ls.acknowledgeTriage', 'Acknowledge')}
+                    </button>
+
+                    <Link
+                      to="/admin/reports"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1 rounded bg-zinc-900 px-3 py-1 text-[11px] font-bold text-white shadow-2xs hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 cursor-pointer transition-colors"
+                    >
+                      <span>{t('ls.dispatchUnit', 'Dispatch')}</span>
+                      <ArrowRight className="h-3 w-3" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+
+          {reports.length === 0 && (
+            <div className="p-12 text-center text-xs text-zinc-400 dark:text-zinc-500">
+              {t('ls.emptyQueue', 'No active SOS distress signals in the queue.')}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

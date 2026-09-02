@@ -1,6 +1,7 @@
 import { Link, NavLink, Navigate, Outlet, useNavigate } from 'react-router-dom'
 import { User, LogOut, ArrowRight } from 'lucide-react'
 import AapdaSetuLogo from '../components/common/AapdaSetuLogo'
+import NotificationCenter from '../components/common/NotificationCenter'
 import { useIsVolunteerAuthed, useVolunteerAuth } from '../hooks/useVolunteerAuth'
 import { useLanguage } from '../lib/i18n'
 
@@ -65,6 +66,8 @@ export default function VolunteerLayout() {
                 {user.name}
               </span>
             )}
+
+            <NotificationCenter role="citizen" align="right" />
 
             <Link
               to="/"

@@ -24,6 +24,7 @@ import {
   Menu
 } from 'lucide-react'
 import AapdaSetuLogo from '../components/common/AapdaSetuLogo'
+import NotificationCenter from '../components/common/NotificationCenter'
 import { apiHealth } from '../api/client'
 import { useAuth, useIsAdminAuthed } from '../hooks/useAuth'
 import { useLanguage } from '../lib/i18n'
@@ -386,6 +387,7 @@ export default function AdminLayout() {
           </span>
 
           <div className="ml-auto flex items-center gap-1.5">
+            <NotificationCenter role="admin" align="right" />
             <button
               type="button"
               onClick={() => setShowShortcuts(true)}

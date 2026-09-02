@@ -24,6 +24,7 @@ import type {
 import { computeTriage } from '../lib/triage'
 import { generateTrackingId } from '../lib/helpers'
 import { emitRealtimeUpdate } from '../lib/realtimeEventBus'
+import { getInitialCitizenNotifications } from '../data/mockNotifications'
 
 // -----------------------------------------------------------------------------
 // Persistent mock store with 1000+ realistic records & realtime event emissions.
@@ -54,7 +55,7 @@ function saveLocal<T>(key: string, val: T): void {
   }
 }
 
-const STORAGE_VERSION = 'v7'
+const STORAGE_VERSION = 'v8'
 const STORAGE_KEY_VERSION = 'aapdasetu_data_version'
 const STORAGE_KEY_REPORTS = `aapdasetu_mock_reports_${STORAGE_VERSION}`
 const STORAGE_KEY_SHELTERS = `aapdasetu_mock_shelters_${STORAGE_VERSION}`
@@ -688,6 +689,19 @@ function generate600DamageAssessments(): DamageAssessmentReport[] {
 // 8. GENERATE 150+ EMERGENCY ALERTS
 function generate150Alerts(): Alert[] {
   const list: Alert[] = []
+
+  // Seed with curated, high-fidelity realistic emergency alerts
+  const curated = getInitialCitizenNotifications().map((item) => ({
+    id: item.id,
+    title: item.title,
+    message: item.message,
+    severity: (item.severity === 'success' ? 'info' : item.severity) as Alert['severity'],
+    channel: 'all',
+    targetArea: item.targetArea,
+    createdAt: item.createdAt,
+  }))
+  list.push(...curated)
+
   const ALERT_TYPES = [
     { title: 'Critical Flash Flood & Inundation Siren', severity: 'critical' as const, template: 'River water level breached danger mark by 1.8m. Immediate multi-story evacuation active.' },
     { title: 'Severe Cyclonic Storm Bulletin & Wind Hazard', severity: 'warning' as const, template: 'Wind gusts exceeding 90 km/h predicted. Stay away from loose structures, tin sheds, and power lines.' },
