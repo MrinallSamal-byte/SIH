@@ -10,10 +10,9 @@ export default function AdminLogin() {
   const { login, loading, error } = useAuth()
   const isAuthed = useIsAdminAuthed()
   const navigate = useNavigate()
-  // Credentials are never prefilled — production passwords come from the
-  // backend ADMIN_PASSWORD env (seeded at bootstrap, see src/index.ts).
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  // Prefilled demo credentials for instant 1-click evaluation & field testing
+  const [email, setEmail] = useState('adminapp@gmail.com')
+  const [password, setPassword] = useState('12345')
 
   useEffect(() => {
     if (isAuthed) {
@@ -32,32 +31,37 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4 dark:bg-slate-950">
+    <div className="flex min-h-screen items-center justify-center bg-zinc-50 p-4 dark:bg-[#121212]">
       <div className="w-full max-w-sm">
         <form
           onSubmit={onSubmit}
-          className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+          className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-2xs dark:border-zinc-800 dark:bg-[#181818]"
         >
           <div className="flex items-center gap-2.5 mb-4">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-600 font-bold text-white text-xs font-mono">
               ICS
             </div>
             <div>
-              <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              <span className="text-sm font-bold tracking-tight text-zinc-900 dark:text-slate-100">
                 {t('adminNav.title')}
               </span>
-              <span className="ml-1.5 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-white/[0.1]">
+              <span className="ml-1.5 rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 mono">
                 {t('adminLogin.badgeOfficial')}
               </span>
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-slate-100">
             {t('adminLogin.title')}
           </h1>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
             {t('adminLogin.subtitle')}
           </p>
+
+          <div className="mt-3 rounded-xl border border-zinc-200/80 bg-zinc-50 p-2.5 text-[11px] font-mono text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400 flex items-center justify-between">
+            <span>Demo: <strong className="text-zinc-900 dark:text-zinc-200">adminapp@gmail.com</strong></span>
+            <span>Pass: <strong className="text-zinc-900 dark:text-zinc-200">12345</strong></span>
+          </div>
 
           <div className="mt-6 space-y-4">
             <Field label={t('adminLogin.emailLabel')}>
