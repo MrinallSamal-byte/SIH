@@ -19,6 +19,8 @@ import {
   Download,
   Zap,
   CheckCircle2,
+  HeartHandshake,
+  LifeBuoy,
 } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
 import { listShelters } from '../../api/endpoints'
@@ -149,6 +151,38 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Crisis Reality Banner: Explicit acknowledgement that web features need internet, and we built a custom solution */}
+      <section className="rounded-2xl border border-amber-300/80 bg-amber-50/70 p-4 sm:p-5 text-left dark:border-amber-900/50 dark:bg-amber-950/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-3.5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-200/80 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 mt-0.5">
+            <WifiOff className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 mono">
+                {t('home.blackoutAwarenessBadge')}
+              </span>
+              <span className="inline-flex items-center rounded-full bg-amber-200/60 px-2 py-0.5 text-[10px] font-bold text-amber-900 dark:bg-amber-900/80 dark:text-amber-200 mono">
+                {t('home.blackoutZeroInternet')}
+              </span>
+            </div>
+            <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-slate-100 mt-1">
+              {t('home.blackoutHeading')}
+            </h3>
+            <p className="text-xs sm:text-sm text-zinc-600 dark:text-slate-400 mt-1 leading-relaxed max-w-3xl">
+              {t('home.blackoutDesc')}
+            </p>
+          </div>
+        </div>
+        <Link
+          to="/app"
+          className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-zinc-800 dark:bg-slate-100 dark:text-zinc-900 dark:hover:bg-white cursor-pointer"
+        >
+          <span>{t('home.blackoutCta')}</span>
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      </section>
+
       <section>
         <div className="mb-4 px-1">
           <h2 className="text-[11px] font-semibold tracking-widest text-slate-500 dark:text-slate-400 uppercase mono">
@@ -205,7 +239,7 @@ export default function Home() {
 
         {/* Interactive Device & Mesh Visualizer */}
         <div className="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          {/* Left Column: Terminal / Live Mesh Radar Card */}
+          {/* Left Column: Terminal / Live Device Mockup & Mesh Radar Card */}
           <div className="lg:col-span-5 flex flex-col justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 p-5 sm:p-6 dark:border-white/[0.08] dark:bg-[#151515]">
             <div>
               <div className="flex items-center justify-between border-b border-zinc-200/80 pb-3.5 dark:border-zinc-800">
@@ -214,13 +248,68 @@ export default function Home() {
                   <span className="text-xs font-bold text-zinc-800 dark:text-slate-200 mono">SOA MESH NODE</span>
                 </div>
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 mono">
-                  <span className="h-1 w-1 rounded-full bg-emerald-500" />
+                  <span className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
                   OFFLINE ACTIVE
                 </span>
               </div>
 
+              {/* Realistic Android App Mockup */}
+              <div className="my-5 mx-auto w-full max-w-[240px]">
+                <div className="overflow-hidden rounded-[2rem] border-4 border-zinc-800 bg-zinc-950 shadow-xl dark:border-zinc-700 dark:bg-black p-3 space-y-3">
+                  {/* Notch & Status */}
+                  <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+                    <span className="font-mono text-[9px] font-bold text-zinc-400">SOA MESH v2.4</span>
+                    <span className="flex items-center gap-1 text-[9px] font-semibold text-emerald-400">
+                      <span className="h-1 w-1 rounded-full bg-emerald-400" />
+                      BLE 5.2
+                    </span>
+                  </div>
+
+                  {/* App Signal Status Strip */}
+                  <div className="flex items-center justify-between rounded-lg bg-zinc-900 px-2 py-1 text-[9px] text-zinc-400 font-mono">
+                    <span>CELL: 0 BARS</span>
+                    <span className="text-amber-400 font-bold">AIRPLANE MODE</span>
+                  </div>
+
+                  {/* Active SOS Beacon Badge in App */}
+                  <div className="rounded-xl border border-red-600/40 bg-red-950/60 p-2.5 text-left text-white space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-1 font-mono text-[10px] font-bold text-red-400">
+                        <Radio className="h-3 w-3 animate-pulse text-red-500" />
+                        SOS ACTIVE
+                      </span>
+                      <span className="text-[9px] text-zinc-400 mono">HOP #1</span>
+                    </div>
+                    <div className="text-[11px] font-bold text-zinc-100">Flash Flood Triage</div>
+                    <div className="text-[9px] text-zinc-300 font-mono">3 Persons · Medical / Boat</div>
+                  </div>
+
+                  {/* Nearby Radar Indicator */}
+                  <div className="rounded-xl bg-zinc-900/90 p-2 text-left border border-zinc-800">
+                    <div className="text-[9px] text-zinc-400 uppercase tracking-wider mono font-semibold">Nearby Mesh Radar</div>
+                    <div className="text-[10px] text-emerald-400 font-semibold mt-0.5">3 Peer Nodes within 150m</div>
+                    <div className="mt-1.5 flex items-center justify-between px-1">
+                      <span className="relative flex h-2.5 w-2.5 items-center justify-center">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40" />
+                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                      </span>
+                      <span className="h-px w-8 border-t border-dashed border-zinc-700" />
+                      <span className="relative flex h-2.5 w-2.5 items-center justify-center">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-50" />
+                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-blue-400" />
+                      </span>
+                      <span className="h-px w-8 border-t border-dashed border-zinc-700" />
+                      <span className="relative flex h-2.5 w-2.5 items-center justify-center">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40" />
+                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Hop relay simulation visual */}
-              <div className="my-5 space-y-3">
+              <div className="my-4 space-y-2.5">
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
                   Simulated Emergency Relay Path
                 </div>
@@ -284,6 +373,7 @@ export default function Home() {
 
           {/* Right Column: Key Features Showcase & How it helps */}
           <div className="lg:col-span-7 flex flex-col justify-between space-y-4">
+            {/* 4 Key Features */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/50 p-4 sm:p-5 dark:border-white/[0.08] dark:bg-[#1a1a1a] transition hover:border-zinc-400 dark:hover:border-slate-600">
                 <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-red-600 text-white shadow-xs">
@@ -331,6 +421,42 @@ export default function Home() {
                 <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                   {t('home.offlineFeat4Desc')}
                 </p>
+              </div>
+            </div>
+
+            {/* How It Helps You (Persona Breakdown) */}
+            <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/50 p-4 sm:p-5 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono mb-3">
+                {t('home.offlineHowItHelpsTitle')}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="space-y-1 rounded-xl bg-white p-3 border border-zinc-200/60 dark:bg-zinc-900/60 dark:border-zinc-800/60">
+                  <div className="flex items-center gap-1.5 font-bold text-zinc-900 dark:text-slate-200">
+                    <LifeBuoy className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                    <span>{t('home.offlineHelpCitizenTitle')}</span>
+                  </div>
+                  <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
+                    {t('home.offlineHelpCitizenDesc')}
+                  </p>
+                </div>
+                <div className="space-y-1 rounded-xl bg-white p-3 border border-zinc-200/60 dark:bg-zinc-900/60 dark:border-zinc-800/60">
+                  <div className="flex items-center gap-1.5 font-bold text-zinc-900 dark:text-slate-200">
+                    <HeartHandshake className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                    <span>{t('home.offlineHelpVolunteerTitle')}</span>
+                  </div>
+                  <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
+                    {t('home.offlineHelpVolunteerDesc')}
+                  </p>
+                </div>
+                <div className="space-y-1 rounded-xl bg-white p-3 border border-zinc-200/60 dark:bg-zinc-900/60 dark:border-zinc-800/60">
+                  <div className="flex items-center gap-1.5 font-bold text-zinc-900 dark:text-slate-200">
+                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>{t('home.offlineHelpResponderTitle')}</span>
+                  </div>
+                  <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
+                    {t('home.offlineHelpResponderDesc')}
+                  </p>
+                </div>
               </div>
             </div>
 
