@@ -12,7 +12,13 @@ import {
   Bot,
   Search,
   Smartphone,
-  Bell
+  Bell,
+  WifiOff,
+  Radio,
+  Bluetooth,
+  Download,
+  Zap,
+  CheckCircle2,
 } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
 import { listShelters } from '../../api/endpoints'
@@ -171,6 +177,202 @@ export default function Home() {
               </Link>
             )
           })}
+        </div>
+      </section>
+
+      {/* Offline Custom Solution & App Showcase */}
+      <section className="rounded-2xl border border-zinc-200/80 bg-white p-6 sm:p-8 md:p-10 dark:border-white/[0.08] dark:bg-[#181818] shadow-xs relative overflow-hidden">
+        {/* Top Badges & Problem Context */}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-red-200/90 bg-red-50/80 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400 mono">
+            <WifiOff className="h-3 w-3" />
+            <span>{t('home.offlineKicker')}</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[11px] font-semibold text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 mono">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span>BLE P2P MESH ENGINE</span>
+          </span>
+        </div>
+
+        <div className="max-w-3xl">
+          <h2 className="text-xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-slate-100 mb-3">
+            {t('home.offlineTitle')}
+          </h2>
+          <p className="text-sm sm:text-base text-zinc-600 dark:text-slate-400 leading-relaxed">
+            {t('home.offlineSubtitle')}
+          </p>
+        </div>
+
+        {/* Interactive Device & Mesh Visualizer */}
+        <div className="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          {/* Left Column: Terminal / Live Mesh Radar Card */}
+          <div className="lg:col-span-5 flex flex-col justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 p-5 sm:p-6 dark:border-white/[0.08] dark:bg-[#151515]">
+            <div>
+              <div className="flex items-center justify-between border-b border-zinc-200/80 pb-3.5 dark:border-zinc-800">
+                <div className="flex items-center gap-2">
+                  <Smartphone className="h-4 w-4 text-zinc-700 dark:text-zinc-300" />
+                  <span className="text-xs font-bold text-zinc-800 dark:text-slate-200 mono">SOA MESH NODE</span>
+                </div>
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 mono">
+                  <span className="h-1 w-1 rounded-full bg-emerald-500" />
+                  OFFLINE ACTIVE
+                </span>
+              </div>
+
+              {/* Hop relay simulation visual */}
+              <div className="my-5 space-y-3">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
+                  Simulated Emergency Relay Path
+                </div>
+
+                <div className="space-y-2 text-xs mono">
+                  <div className="flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50/80 p-2.5 text-red-900 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
+                    <Radio className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0 animate-pulse" />
+                    <div>
+                      <div className="font-bold">Citizen Device (Stranded)</div>
+                      <div className="text-[10px] text-red-700/80 dark:text-red-400/80">0 Bars · No Internet · SOS Beacon Fired</div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center py-0.5">
+                    <span className="text-[10px] text-zinc-400 dark:text-zinc-500">↓ Bluetooth Low Energy (~80m direct hop)</span>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 rounded-xl border border-zinc-200 bg-white p-2.5 text-zinc-800 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200">
+                    <Bluetooth className="h-4 w-4 text-blue-500 shrink-0" />
+                    <div>
+                      <div className="font-semibold">Passing Volunteer / Civilian Phone</div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400">Hop 1 of 7 · Automated Silent Packet Forward</div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center py-0.5">
+                    <span className="text-[10px] text-zinc-400 dark:text-zinc-500">↓ Multi-hop daisy-chain relay (~6+ km radius)</span>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50/80 p-2.5 text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <div>
+                      <div className="font-bold">Rescue Boat / Base Camp Gateway</div>
+                      <div className="text-[10px] text-emerald-700/80 dark:text-emerald-400/80">Received & Dispatched to NDRF / SDRF Map</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Metrics Bar */}
+            <div className="grid grid-cols-2 gap-2 pt-3 border-t border-zinc-200/80 dark:border-zinc-800 text-center mono">
+              <div className="rounded-lg bg-white dark:bg-zinc-900/70 p-2 border border-zinc-200/60 dark:border-zinc-800/60">
+                <div className="text-sm font-bold text-zinc-900 dark:text-slate-100">97.8%</div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400">{t('home.offlineStatAccuracy')}</div>
+              </div>
+              <div className="rounded-lg bg-white dark:bg-zinc-900/70 p-2 border border-zinc-200/60 dark:border-zinc-800/60">
+                <div className="text-sm font-bold text-zinc-900 dark:text-slate-100">&lt; 1.2s</div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400">{t('home.offlineStatLatency')}</div>
+              </div>
+              <div className="rounded-lg bg-white dark:bg-zinc-900/70 p-2 border border-zinc-200/60 dark:border-zinc-800/60">
+                <div className="text-sm font-bold text-zinc-900 dark:text-slate-100">7 Hops</div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400">{t('home.offlineStatHops')}</div>
+              </div>
+              <div className="rounded-lg bg-white dark:bg-zinc-900/70 p-2 border border-zinc-200/60 dark:border-zinc-800/60">
+                <div className="text-sm font-bold text-zinc-900 dark:text-slate-100">0 kB</div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400">{t('home.offlineStatData')}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Key Features Showcase & How it helps */}
+          <div className="lg:col-span-7 flex flex-col justify-between space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/50 p-4 sm:p-5 dark:border-white/[0.08] dark:bg-[#1a1a1a] transition hover:border-zinc-400 dark:hover:border-slate-600">
+                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-red-600 text-white shadow-xs">
+                  <Radio className="h-4 w-4" />
+                </div>
+                <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-slate-200">
+                  {t('home.offlineFeat1Title')}
+                </h3>
+                <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  {t('home.offlineFeat1Desc')}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/50 p-4 sm:p-5 dark:border-white/[0.08] dark:bg-[#1a1a1a] transition hover:border-zinc-400 dark:hover:border-slate-600">
+                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-800 text-white dark:bg-slate-100 dark:text-zinc-800 shadow-xs">
+                  <Bluetooth className="h-4 w-4" />
+                </div>
+                <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-slate-200">
+                  {t('home.offlineFeat2Title')}
+                </h3>
+                <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  {t('home.offlineFeat2Desc')}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/50 p-4 sm:p-5 dark:border-white/[0.08] dark:bg-[#1a1a1a] transition hover:border-zinc-400 dark:hover:border-slate-600">
+                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-800 text-white dark:bg-slate-100 dark:text-zinc-800 shadow-xs">
+                  <ShieldCheck className="h-4 w-4" />
+                </div>
+                <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-slate-200">
+                  {t('home.offlineFeat3Title')}
+                </h3>
+                <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  {t('home.offlineFeat3Desc')}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/50 p-4 sm:p-5 dark:border-white/[0.08] dark:bg-[#1a1a1a] transition hover:border-zinc-400 dark:hover:border-slate-600">
+                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-800 text-white dark:bg-slate-100 dark:text-zinc-800 shadow-xs">
+                  <Zap className="h-4 w-4" />
+                </div>
+                <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-slate-200">
+                  {t('home.offlineFeat4Title')}
+                </h3>
+                <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  {t('home.offlineFeat4Desc')}
+                </p>
+              </div>
+            </div>
+
+            {/* 3 Steps in blackout */}
+            <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 sm:p-5 dark:border-white/[0.08] dark:bg-[#151515]">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono mb-3">
+                How It Works During a Blackout
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="space-y-1">
+                  <span className="font-bold text-zinc-800 dark:text-slate-200">{t('home.offlineStep1Title')}</span>
+                  <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">{t('home.offlineStep1Desc')}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="font-bold text-zinc-800 dark:text-slate-200">{t('home.offlineStep2Title')}</span>
+                  <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">{t('home.offlineStep2Desc')}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="font-bold text-zinc-800 dark:text-slate-200">{t('home.offlineStep3Title')}</span>
+                  <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">{t('home.offlineStep3Desc')}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+              <Link
+                to="/app"
+                className="inline-flex items-center justify-center gap-2.5 rounded-xl bg-zinc-900 px-6 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-zinc-800 active:scale-[0.98] dark:bg-slate-100 dark:text-zinc-900 dark:hover:bg-white"
+              >
+                <Download className="h-4 w-4" />
+                <span>{t('home.offlineDownloadBtn')}</span>
+              </Link>
+              <Link
+                to="/app"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-3.5 text-sm font-semibold text-zinc-700 shadow-2xs transition hover:bg-zinc-50 active:scale-[0.98] dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-slate-200 dark:hover:bg-[#252525]"
+              >
+                <span>{t('home.offlineExploreBtn')}</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
