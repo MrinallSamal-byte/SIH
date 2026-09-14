@@ -378,6 +378,15 @@ export default function NotificationCenter({ role = 'citizen', align = 'right' }
                 <span>Live Bulletins Page</span>
                 <ExternalLink className="h-3 w-3" />
               </Link>
+            ) : role === 'volunteer' ? (
+              <Link
+                to="/volunteer/tasks"
+                onClick={() => setOpen(false)}
+                className="inline-flex items-center gap-1 text-xs font-bold text-zinc-700 hover:text-zinc-900 dark:text-slate-300 dark:hover:text-white"
+              >
+                <span>Assigned Tasks Queue</span>
+                <ExternalLink className="h-3 w-3" />
+              </Link>
             ) : (
               <Link
                 to="/admin/live-sos"

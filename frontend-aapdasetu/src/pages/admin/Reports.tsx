@@ -280,7 +280,7 @@ export default function Reports() {
       const exportPageSize = 100
       let exportPage = 1
       let total = Infinity
-      for (let guard = 0; guard < 50 && all.length < total; guard++) {
+      while (all.length < total && exportPage <= 1000) {
         const res = await listReports({
           status: statusFilter || undefined,
           priority: priorityFilter || undefined,
@@ -290,6 +290,7 @@ export default function Reports() {
           pageSize: exportPageSize,
         })
         total = res.total
+        if (!res.items.length) break
         all.push(...res.items)
         if (res.items.length < exportPageSize) break
         exportPage++
@@ -313,7 +314,11 @@ export default function Reports() {
       assignedUnits: [r.assignedVolunteerName, r.assignedAgencyName].filter(Boolean).join('; '),
       description: truncateForCsv(r.description, 120),
       })))
-      toast(t('rp.csvExported', `CSV exported (${all.length})`), 'success')
+      if (all.length < total) {
+        toast(t('rp.csvExportPartial', `Exported ${all.length} of ${total} records (safety ceiling reached)`), 'warning')
+      } else {
+        toast(t('rp.csvExported', `CSV exported (${all.length})`), 'success')
+      }
     } catch {
       toast(t('rp.csvExportFailed', 'CSV export failed'), 'error')
     } finally {

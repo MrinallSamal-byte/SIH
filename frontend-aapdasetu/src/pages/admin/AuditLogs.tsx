@@ -14,10 +14,12 @@ import { downloadCsv } from '../../lib/csv'
 import { formatDateTime } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
 import { useRealtime } from '../../hooks/useRealtime'
+import { useToast } from '../../components/common/Toast'
 import type { AuditLog } from '../../types'
 
 export default function AuditLogs() {
   const { t } = useLanguage()
+  const { toast } = useToast()
   const fetchLogs = useCallback(() => listAuditLogs(), [])
   const page = useRealtime<{ items: AuditLog[]; total: number }>(fetchLogs, 8000)
   const [search, setSearch] = useState('')
@@ -57,9 +59,10 @@ export default function AuditLogs() {
       const exportPageSize = 200
       let exportPage = 1
       let total = Infinity
-      for (let guard = 0; guard < 25 && all.length < total; guard++) {
+      while (all.length < total && exportPage <= 1000) {
         const res = await listAuditLogs({ page: exportPage, pageSize: exportPageSize })
         total = res.total
+        if (!res.items.length) break
         all.push(...res.items)
         if (res.items.length < exportPageSize) break
         exportPage++
@@ -90,6 +93,13 @@ export default function AuditLogs() {
         target: l.entityType ? `${l.entityType}${l.entityId ? ` (${l.entityId})` : ''}` : '',
         detail: l.details ? JSON.stringify(l.details) : '',
       })))
+      if (all.length < total) {
+        toast(t('au.csvExportPartial', `Exported ${all.length} of ${total} logs (safety ceiling reached)`), 'warning')
+      } else {
+        toast(t('au.csvExported', `CSV exported (${rows.length})`), 'success')
+      }
+    } catch {
+      toast(t('au.csvExportFailed', 'CSV export failed'), 'error')
     } finally {
       setExporting(false)
     }
