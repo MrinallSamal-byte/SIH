@@ -6,7 +6,9 @@ import react from '@vitejs/plugin-react'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const apiUrl = env.VITE_API_URL || 'http://localhost:4000'
-  const aiUrl = env.VITE_AI_URL || 'http://localhost:8080'
+  // Canonical AI port 8001 — matches backend fastapi-service Dockerfile
+  // (EXPOSE 8001) and DAMAGE_ML_BASE_URL default. Override via .env.local.
+  const aiUrl = env.VITE_AI_URL || 'http://localhost:8001'
 
   return {
     plugins: [react()],

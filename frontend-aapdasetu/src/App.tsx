@@ -102,11 +102,8 @@ export default function App() {
             <Route path="check-in" element={<VolunteerCheckIn />} />
           </Route>
 
-          {/* Aliases for direct URL typing & common variations */}
+          {/* Alias for direct URL typing */}
           <Route path="/volunteers" element={<Navigate to="/volunteer" replace />} />
-          <Route path="/volienter" element={<Navigate to="/volunteer" replace />} />
-          <Route path="/volunter" element={<Navigate to="/volunteer" replace />} />
-          <Route path="/vorianters" element={<Navigate to="/volunteer" replace />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Siren } from 'lucide-react'
 import { listVolunteerTasks, completeVolunteerTask } from '../../api/endpoints'
 import PriorityBadge from '../../components/common/PriorityBadge'
 import Badge from '../../components/common/Badge'
@@ -10,7 +11,7 @@ import { useToast } from '../../components/common/Toast'
 import { timeAgo, getNavigationUrl } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
 import { useIsVolunteerAuthed } from '../../hooks/useVolunteerAuth'
-import { emitRealtimeUpdate } from '../../lib/realtimeEventBus'
+import { emitRealtimeUpdate, subscribeRealtimeUpdates } from '../../lib/realtimeEventBus'
 import type { Report } from '../../types'
 
 export default function AssignedTasks() {
@@ -57,7 +58,15 @@ export default function AssignedTasks() {
       if (!document.hidden && navigator.onLine) void loadTasks()
     }
     const id = window.setInterval(tick, 12_000)
-    return () => window.clearInterval(id)
+    // Instant refresh on local/broadcast dispatch events (same-browser admin
+    // assignment, cross-tab updates, Supabase realtime) — polling stays as fallback.
+    const unsubscribe = subscribeRealtimeUpdates(() => {
+      if (!document.hidden && navigator.onLine) void loadTasks()
+    })
+    return () => {
+      window.clearInterval(id)
+      unsubscribe()
+    }
   }, [loadTasks])
 
   const completeTask = async (reportId: string) => {
@@ -103,6 +112,9 @@ export default function AssignedTasks() {
               className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
             >
               <div className="flex flex-wrap items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-600 text-white shadow-xs">
+                  <Siren className="h-4 w-4" />
+                </span>
                 <PriorityBadge label={task.priorityLabel} />
                 <span className="font-mono text-xs font-bold text-slate-400 dark:text-slate-500">{task.trackingId}</span>
                 <span className="text-sm font-bold capitalize">{task.type} {t('vt.emergency')}</span>

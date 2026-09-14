@@ -7,9 +7,11 @@ const styles: Record<PriorityLabel, string> = {
 }
 
 export default function PriorityBadge({ label }: { label: PriorityLabel }) {
+  const style = (label && styles[label]) || 'bg-zinc-500 text-white'
+  const text = label || 'UNKNOWN'
   return (
-    <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-bold tracking-wider uppercase ${styles[label]}`}>
-      {label}
+    <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-bold tracking-wider uppercase ${style}`}>
+      {text}
     </span>
   )
 }

@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   RotateCcw,
+  MapPin,
 } from 'lucide-react'
 import { aiDamageAssessment, type DamageVerdict } from '../../api/ai'
 import { createDamageAssessment } from '../../api/endpoints'
@@ -21,7 +22,8 @@ import { useToast } from '../../components/common/Toast'
 import { compressImage } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
 import { useGeoLocation } from '../../hooks/useLocation'
-import type { DamageInfrastructureType } from '../../types'
+import LandmarkPicker from '../../components/map/LandmarkPicker'
+import type { DamageInfrastructureType, GeoPoint } from '../../types'
 
 const INFRASTRUCTURE_CATEGORIES: Array<{
   id: DamageInfrastructureType
@@ -79,8 +81,11 @@ export default function ReportDamage() {
   const [compensation, setCompensation] = useState<number | null>(null)
   const [analysisUnavailable, setAnalysisUnavailable] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [manualCoords, setManualCoords] = useState<GeoPoint | null>(null)
+  const [showMap, setShowMap] = useState(false)
   const hasGps = Boolean(geoCoords && !isFallback && source === 'gps')
-  const coords = geoCoords ? { lat: geoCoords.latitude, lng: geoCoords.longitude } : null
+  const coords: GeoPoint | null = geoCoords ? { lat: geoCoords.latitude, lng: geoCoords.longitude } : null
+  const effectiveCoords: GeoPoint | null = manualCoords ?? (hasGps && coords ? coords : null)
 
   const onFiles = async (files: FileList | null) => {
     if (!files) return
@@ -133,17 +138,27 @@ export default function ReportDamage() {
       toast(t('damage.errDescription'), 'error')
       return
     }
+    if (!effectiveCoords) {
+      toast(t('damage.errLocationRequired', 'A verified GPS or map location is required to submit a damage claim.'), 'error')
+      return
+    }
 
     setBusy(true)
     try {
       // ponytail: claim persists FIRST — analysis is indicative only and must
       // never block or lose the save.
+      // Must use verified GPS or citizen-pinned map location — never fake/default coordinates.
       const saved = await createDamageAssessment({
         photoDataUrl: photos[0],
-        latitude: coords?.lat,
-        longitude: coords?.lng,
+        latitude: effectiveCoords.lat,
+        longitude: effectiveCoords.lng,
         reporterName: ownerName.trim() || undefined,
         reporterPhone: cleanPhone,
+        district,
+        propertyAddress: address.trim(),
+        description: description.trim(),
+        infraType,
+        additionalPhotos: photos.slice(1),
       })
       setClaimRef(saved.id)
       // Compensation is shown only when the backend actually returned one.
@@ -161,8 +176,8 @@ export default function ReportDamage() {
 
       // Indicative AI grade for display only; failure degrades to a warning chip.
       try {
-        const targetLat = coords?.lat ?? 26.1445
-        const targetLng = coords?.lng ?? 91.7362
+        const targetLat = effectiveCoords.lat
+        const targetLng = effectiveCoords.lng
         const verdicts = await Promise.all(
           photos.map((p) =>
             aiDamageAssessment(p, targetLat, targetLng, description, infraType)
@@ -187,6 +202,8 @@ export default function ReportDamage() {
     setOwnerPhone('')
     setAddress('')
     setDescription('')
+    setManualCoords(null)
+    setShowMap(false)
     setPerImageVerdicts([])
     setClaimRef(null)
     setCompensation(null)
@@ -306,11 +323,53 @@ export default function ReportDamage() {
           </Field>
         </div>
 
-        {!hasGps && (
-          <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30">
-            <span className="font-bold">{t('damage.gpsWarn1')} </span>{t('damage.gpsWarn2')}
+        {/* Location Status & Landmark Picker */}
+        <div className="space-y-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 text-xs">
+              <MapPin className="h-4 w-4 shrink-0 text-zinc-500 dark:text-slate-400" />
+              {effectiveCoords ? (
+                <span className="font-mono text-emerald-700 dark:text-emerald-400 font-medium">
+                  {manualCoords
+                    ? `Pinned: ${effectiveCoords.lat.toFixed(5)}°N, ${effectiveCoords.lng.toFixed(5)}°E (Manual)`
+                    : `GPS Geotag: ${effectiveCoords.lat.toFixed(5)}°N, ${effectiveCoords.lng.toFixed(5)}°E (Verified)`}
+                </span>
+              ) : (
+                <span className="text-amber-700 dark:text-amber-400 font-medium">
+                  Location unverified — please pin location on map
+                </span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowMap((prev) => !prev)}
+              className="text-xs font-bold text-zinc-700 underline hover:text-zinc-900 dark:text-slate-300 dark:hover:text-white cursor-pointer"
+            >
+              {showMap ? t('report.hideMap', 'Hide map') : t('report.adjustMap', 'Adjust / Pin on map')}
+            </button>
           </div>
-        )}
+
+          {!hasGps && !manualCoords && (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30">
+              <span className="font-bold">{t('damage.gpsWarn1')} </span>{t('damage.gpsWarn2')}
+            </div>
+          )}
+
+          {(showMap || (!hasGps && !manualCoords)) && (
+            <div className="pt-1">
+              <LandmarkPicker
+                value={effectiveCoords}
+                onChange={(p, addr) => {
+                  setManualCoords(p)
+                  if (addr && !address.trim()) {
+                    setAddress(addr)
+                  }
+                }}
+              />
+            </div>
+          )}
+        </div>
         {/* Step 4: Claimant Details */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label={t('damage.ownerName')}>
@@ -349,7 +408,7 @@ export default function ReportDamage() {
         {/* Action Button — disabled once a claim is saved (duplicate guard) */}
         <Button
           onClick={assess}
-          disabled={photos.length === 0 || busy || !ownerPhone.trim() || claimRef !== null}
+          disabled={photos.length === 0 || busy || !ownerPhone.trim() || claimRef !== null || !effectiveCoords}
           className="w-full py-3 text-sm font-bold shadow-md cursor-pointer"
         >
           {busy ? (

@@ -292,6 +292,7 @@ export async function withMockFallback<T>(
   mock: MockData<T>,
   _options: MockFallbackOptions = {},
 ): Promise<T> {
+  void _options
   if (config.useMockOnly) {
     notifyFallback()
     apiHealth.lastWasMock = true

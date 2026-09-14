@@ -14,7 +14,8 @@ import {
 } from 'lucide-react'
 import { createReport } from '../../api/endpoints'
 import { aiTriage } from '../../api/ai'
-import { enqueueOutbox, getOutbox, initGlobalOutboxSync, subscribeOutbox } from '../../lib/outbox'
+import { apiHealth } from '../../api/client'
+import { enqueueOutbox, getOutbox, hasQueuedClientRequest, initGlobalOutboxSync, subscribeOutbox } from '../../lib/outbox'
 import { Field, Input } from '../../components/common/Input'
 import Modal from '../../components/common/Modal'
 import LandmarkPicker from '../../components/map/LandmarkPicker'
@@ -210,11 +211,16 @@ export default function SOS() {
 
       if (!navigator.onLine) {
         // Queue for background sync on reconnect
-        enqueueOutbox('sos', input)
+        if (!hasQueuedClientRequest(clientRequestId)) enqueueOutbox('sos', input)
       }
 
       // Dispatch emergency SOS (persists to central backend or local emergency database)
       const report = await createReport({ ...input, description: input.description })
+      // Backend-down while online: createReport mock-succeeds, so ensure the
+      // submission is still queued for server sync (offline case already queued).
+      if (apiHealth.lastWasMock && navigator.onLine && !hasQueuedClientRequest(clientRequestId)) {
+        enqueueOutbox('sos', input)
+      }
       setResult(report)
       navigator.vibrate?.([200, 100, 200])
 
@@ -243,7 +249,7 @@ export default function SOS() {
 
       toast(t('sos.sent'))
     } catch (err) {
-      if (pendingInput) {
+      if (pendingInput?.clientRequestId && !hasQueuedClientRequest(pendingInput.clientRequestId)) {
         enqueueOutbox('sos', pendingInput)
       }
       toast(err instanceof Error && err.message ? err.message : t('common.submissionFailed'), 'error')

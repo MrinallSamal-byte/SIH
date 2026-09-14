@@ -273,7 +273,7 @@ function generate1500Reports(): Report[] {
       landmark: 'Paltan Bazar & Panbazar, Guwahati',
       description: 'Brahmaputra overflowed banks, 5 family members including infant trapped on roof near station.',
       reporterName: 'Sunita Saikia',
-      reporterPhone: '+91-9864012345',
+      reporterPhone: '+91-98640 72184',
       source: 'sos',
       createdAt: new Date(Date.now() - 1000 * 60 * 3).toISOString(),
     },
@@ -289,7 +289,7 @@ function generate1500Reports(): Report[] {
       landmark: 'Rangirkhari Near SMCH Link, Silchar',
       description: 'Pregnant woman in active labor, surrounded by 4ft Barak flood water. Rapid boat evacuation required.',
       reporterName: 'Farhan Ahmed',
-      reporterPhone: '+91-9435012345',
+      reporterPhone: '+91-94350 68217',
       assignedVolunteerId: 'vol-001',
       assignedVolunteerName: 'Rahul Baruah',
       assignedAgencyId: 'agency-001',
@@ -309,7 +309,7 @@ function generate1500Reports(): Report[] {
       landmark: 'AT Road & Baruah Chariali, Jorhat',
       description: 'Building wall collapsed on ground floor, 2 persons trapped under concrete debris.',
       reporterName: 'Bikram Gogoi',
-      reporterPhone: '+91-9706012345',
+      reporterPhone: '+91-97060 43908',
       assignedVolunteerId: 'vol-002',
       assignedVolunteerName: 'Priya Hazarika',
       assignedAgencyId: 'agency-002',
@@ -329,7 +329,7 @@ function generate1500Reports(): Report[] {
       landmark: 'Chowkidinghee Relief Camp Gate, Dibrugarh',
       description: 'Elderly person separated during flood evacuation. Safely reunited with family at Shelter #02.',
       reporterName: 'Dipen Kalita',
-      reporterPhone: '+91-9854012345',
+      reporterPhone: '+91-98540 91763',
       assignedVolunteerId: 'vol-001',
       assignedVolunteerName: 'Rahul Baruah',
       assignedAgencyId: 'agency-005',
@@ -374,7 +374,7 @@ function generate1500Reports(): Report[] {
       latitude: Number(lat.toFixed(4)),
       longitude: Number(lng.toFixed(4)),
       landmark: `${sector.city}, Sector ${(i % 12) + 1}`,
-      description: `${desc} [Triage Urgency: ${score}/100]`,
+      description: desc,
       reporterName: `${fName} ${lName}`,
       reporterPhone: `+91-9${(100000000 + ((i * 987654) % 899999999)).toString()}`,
       assignedVolunteerId: status !== 'pending' ? assignedVolId : undefined,
@@ -873,6 +873,12 @@ export const mocks = {
   },
 
   createReport(input: ReportInput): Report {
+    // Idempotency mirror of backend createSosReport: outbox replays (and
+    // timeout-then-retry) must never create a second local dispatch.
+    if (input.clientRequestId) {
+      const existing = reportsStore.find((r) => r.clientRequestId === input.clientRequestId)
+      if (existing) return existing
+    }
     const triage = computeTriage({
       type: input.type,
       description: input.description,
@@ -897,6 +903,7 @@ export const mocks = {
       reporterPhone: input.reporterPhone,
       source: input.isOneTapSos ? 'sos' : 'form',
       createdAt: new Date().toISOString(),
+      clientRequestId: input.clientRequestId,
     }
 
     reportsStore = [newRep, ...reportsStore]
@@ -1575,6 +1582,8 @@ export const mocks = {
       latitude: input.latitude ?? 26.1445,
       longitude: input.longitude ?? 91.7362,
       photoUrl: input.photoUrl,
+      additionalPhotos: input.additionalPhotos,
+      description: input.description,
       damageGrade: input.damageGrade || 'MAJOR',
       damageScore: input.damageScore ?? 75.0,
       confidence: input.confidence ?? 98.4,

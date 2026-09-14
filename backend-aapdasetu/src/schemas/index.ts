@@ -120,6 +120,11 @@ export const damageAssessmentSchema = z.object({
   reportId: z.string().uuid().optional(),
   reporterName: z.string().max(200).optional(),
   reporterPhone: z.string().max(30).optional(),
+  propertyAddress: z.string().max(500).optional(),
+  district: z.string().max(100).optional(),
+  description: z.string().max(2000).optional(),
+  infrastructureType: z.string().max(100).optional(),
+  additionalPhotoCount: z.number().int().nonnegative().optional(),
 });
 
 export const missingMatchSchema = z.object({

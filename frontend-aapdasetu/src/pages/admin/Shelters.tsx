@@ -11,6 +11,7 @@ import {
   RotateCcw
 } from 'lucide-react'
 import { listShelters, createShelter, updateShelter, resetMockDatabase } from '../../api/endpoints'
+import { config } from '../../config'
 import Badge from '../../components/common/Badge'
 import Loader from '../../components/common/Loader'
 import LeafletMap, { type MapMarker } from '../../components/map/LeafletMap'
@@ -273,6 +274,7 @@ export default function AdminShelters() {
         </div>
 
         <div className="flex items-center gap-2">
+          {config.useMockOnly && (
           <button
             type="button"
             onClick={handleResetData}
@@ -282,6 +284,7 @@ export default function AdminShelters() {
             <RotateCcw className="h-3.5 w-3.5" />
             <span>{t('sh.resetDemoDb')}</span>
           </button>
+          )}
 
           <button
             type="button"

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import {
   Bell,
   ShieldAlert,
@@ -9,7 +9,6 @@ import {
   X,
   MapPin,
   Clock,
-  Sparkles,
   ExternalLink,
   ChevronRight,
   Flame,
@@ -22,14 +21,11 @@ import {
   type NotificationItem,
   loadNotifications,
   saveNotifications,
-  SIMULATED_INCOMING_EVENTS,
 } from '../../data/mockNotifications'
 import { timeAgo } from '../../lib/helpers'
-import { useToast } from './Toast'
-import { emitRealtimeUpdate } from '../../lib/realtimeEventBus'
 
 interface NotificationCenterProps {
-  role?: 'citizen' | 'admin'
+  role?: 'citizen' | 'admin' | 'volunteer'
   align?: 'left' | 'right'
 }
 
@@ -41,14 +37,6 @@ export default function NotificationCenter({ role = 'citizen', align = 'right' }
   const [activeTab, setActiveTab] = useState<TabKey>('all')
   const [, setTick] = useState(0)
   const popoverRef = useRef<HTMLDivElement>(null)
-  const navigate = useNavigate()
-
-  let toastApi: ReturnType<typeof useToast> | null = null
-  try {
-    toastApi = useToast()
-  } catch {
-    // optional outside ToastProvider
-  }
 
   // Update timestamps every 20 seconds
   useEffect(() => {
@@ -80,21 +68,6 @@ export default function NotificationCenter({ role = 'citizen', align = 'right' }
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [open])
-
-  // Automatic realistic incoming simulation for citizen mode after 8 seconds of visiting
-  useEffect(() => {
-    if (role !== 'citizen') return
-    const hasSimulatedKey = 'aapdasetu_has_simulated_v8'
-    const alreadyFired = sessionStorage.getItem(hasSimulatedKey)
-
-    if (!alreadyFired) {
-      const delay = window.setTimeout(() => {
-        simulateIncoming()
-        sessionStorage.setItem(hasSimulatedKey, 'true')
-      }, 7500)
-      return () => window.clearTimeout(delay)
-    }
-  }, [role])
 
   const unreadCount = useMemo(
     () => notifications.filter((n) => !n.read).length,
@@ -133,36 +106,6 @@ export default function NotificationCenter({ role = 'citizen', align = 'right' }
   const dismiss = (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
     setNotifications((prev) => prev.filter((n) => n.id !== id))
-  }
-
-  const simulateIncoming = () => {
-    const pool = SIMULATED_INCOMING_EVENTS
-    const event = pool[Math.floor(Math.random() * pool.length)]
-    const newNotif: NotificationItem = {
-      ...event,
-      id: `notif-sim-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      read: false,
-    }
-
-    setNotifications((prev) => [newNotif, ...prev])
-    emitRealtimeUpdate('alert_created', newNotif.id, newNotif)
-
-    if (toastApi) {
-      toastApi.toast(
-        `🚨 ${newNotif.title}`,
-        newNotif.severity === 'critical' ? 'error' : newNotif.severity === 'warning' ? 'warning' : 'info',
-        {
-          action: {
-            label: 'View',
-            onClick: () => {
-              setOpen(true)
-              if (newNotif.actionUrl) navigate(newNotif.actionUrl)
-            },
-          },
-        }
-      )
-    }
   }
 
   const getCategoryIcon = (category: NotificationItem['category'], severity: NotificationItem['severity']) => {
@@ -435,6 +378,15 @@ export default function NotificationCenter({ role = 'citizen', align = 'right' }
                 <span>Live Bulletins Page</span>
                 <ExternalLink className="h-3 w-3" />
               </Link>
+            ) : role === 'volunteer' ? (
+              <Link
+                to="/volunteer/tasks"
+                onClick={() => setOpen(false)}
+                className="inline-flex items-center gap-1 text-xs font-bold text-zinc-700 hover:text-zinc-900 dark:text-slate-300 dark:hover:text-white"
+              >
+                <span>Assigned Tasks Queue</span>
+                <ExternalLink className="h-3 w-3" />
+              </Link>
             ) : (
               <Link
                 to="/admin/live-sos"
@@ -445,17 +397,6 @@ export default function NotificationCenter({ role = 'citizen', align = 'right' }
                 <ExternalLink className="h-3 w-3" />
               </Link>
             )}
-
-            {/* Quick Demo Test Simulation Button */}
-            <button
-              type="button"
-              onClick={simulateIncoming}
-              className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-2 py-1 text-[10px] font-bold text-zinc-600 shadow-2xs hover:bg-zinc-100 dark:border-white/[0.1] dark:bg-[#2a2a2a] dark:text-slate-300 dark:hover:bg-[#353535] cursor-pointer"
-              title="Simulate incoming real-time emergency broadcast"
-            >
-              <Sparkles className="h-3 w-3 text-amber-500 animate-spin-slow" />
-              <span>Simulate Alert</span>
-            </button>
           </div>
         </div>
       )}

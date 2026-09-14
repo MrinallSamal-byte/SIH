@@ -35,6 +35,11 @@ export interface DamageAssessmentInput {
   reportId?: string;
   reporterName?: string;
   reporterPhone?: string;
+  propertyAddress?: string;
+  district?: string;
+  description?: string;
+  infrastructureType?: string;
+  additionalPhotoCount?: number;
 }
 
 export interface DamageAssessmentResult {
@@ -47,6 +52,13 @@ export interface DamageAssessmentResult {
   duplicate: boolean;
   imageHash: string | null;
   status: string;
+  dossier?: {
+    propertyAddress?: string;
+    district?: string;
+    description?: string;
+    infrastructureType?: string;
+    additionalPhotoCount?: number;
+  };
 }
 
 export async function assessDamage(input: DamageAssessmentInput): Promise<DamageAssessmentResult> {
@@ -135,7 +147,21 @@ export async function assessDamage(input: DamageAssessmentInput): Promise<Damage
       classification: prediction.classification,
       confidence: prediction.confidence,
       compensation,
-      rawModelResponse: { classification: prediction.classification, confidence: prediction.confidence, sha256 },
+      propertyAddress: input.propertyAddress,
+      district: input.district,
+      description: input.description,
+      infrastructureType: input.infrastructureType,
+      additionalPhotoCount: input.additionalPhotoCount ?? 0,
+      rawModelResponse: {
+        classification: prediction.classification,
+        confidence: prediction.confidence,
+        sha256,
+        propertyAddress: input.propertyAddress,
+        district: input.district,
+        description: input.description,
+        infrastructureType: input.infrastructureType,
+        additionalPhotoCount: input.additionalPhotoCount,
+      },
       // ponytail: missing GPS EXIF means unverifiable origin -> needs_review; flagged_fraud is reserved for hash-duplicate mismatch
       status: locationVerified ? 'approved' : 'needs_review',
     },
@@ -151,6 +177,13 @@ export async function assessDamage(input: DamageAssessmentInput): Promise<Damage
     duplicate: false,
     imageHash: assessment.imageHash,
     status: assessment.status,
+    dossier: {
+      propertyAddress: input.propertyAddress,
+      district: input.district,
+      description: input.description,
+      infrastructureType: input.infrastructureType,
+      additionalPhotoCount: input.additionalPhotoCount,
+    },
   };
 }
 

@@ -10,9 +10,10 @@ export default function AdminLogin() {
   const { login, loading, error } = useAuth()
   const isAuthed = useIsAdminAuthed()
   const navigate = useNavigate()
-  // Prefilled demo credentials for instant 1-click evaluation & field testing
-  const [email, setEmail] = useState('adminapp@gmail.com')
-  const [password, setPassword] = useState('12345')
+  // Field test account is filled on demand (never printed) so the sign-in
+  // form looks like a real operations console while evaluation stays 1-click.
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
 
   useEffect(() => {
     if (isAuthed) {
@@ -58,9 +59,18 @@ export default function AdminLogin() {
             {t('adminLogin.subtitle')}
           </p>
 
-          <div className="mt-3 rounded-xl border border-zinc-200/80 bg-zinc-50 p-2.5 text-[11px] font-mono text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400 flex items-center justify-between">
-            <span>Demo: <strong className="text-zinc-900 dark:text-zinc-200">adminapp@gmail.com</strong></span>
-            <span>Pass: <strong className="text-zinc-900 dark:text-zinc-200">12345</strong></span>
+          <div className="mt-3 rounded-xl border border-zinc-200/80 bg-zinc-50 p-2.5 text-[11px] text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400 flex items-center justify-between gap-2">
+            <span>{t('adminLogin.testAccountHint', 'Restricted to authorised control-room personnel.')}</span>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('adminapp@gmail.com')
+                setPassword('12345')
+              }}
+              className="shrink-0 rounded-lg border border-zinc-300 bg-white px-2.5 py-1 font-mono font-bold text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+            >
+              {t('adminLogin.useTestAccount', 'Use field test account')}
+            </button>
           </div>
 
           <div className="mt-6 space-y-4">

@@ -404,7 +404,7 @@ export default function About() {
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 dark:bg-zinc-500" />
-                  <Link to="/missing" className="hover:underline">Missing Persons Registry</Link>
+                  <Link to="/missing-persons" className="hover:underline">Missing Persons Registry</Link>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-zinc-400 dark:bg-zinc-500" />

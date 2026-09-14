@@ -84,6 +84,7 @@ export default function AdminLayout() {
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [, setStatusTick] = useState(0)
   const [online, setOnline] = useState<boolean>(() => (typeof navigator !== 'undefined' ? navigator.onLine : true))
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
 
   useEffect(() => {
     const id = window.setInterval(() => setStatusTick((n) => n + 1), 10_000)
@@ -176,7 +177,6 @@ export default function AdminLayout() {
     navigate('/admin/login')
   }
 
-  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
   const lastSuccessAt = apiHealth?.lastSuccessAt ?? null
   const mode = 'OPERATIONAL'
   const pillClasses = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'

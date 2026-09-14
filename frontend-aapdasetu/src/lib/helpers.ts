@@ -89,6 +89,25 @@ export function formatDateTime(iso: string): string {
   })
 }
 
+/** IST absolute timestamp for citizen-facing cards (Asia/Kolkata, en-IN).
+ * Disaster operations run on IST regardless of the viewer's device timezone,
+ * so "Registered 12 Aug, 2:30 pm IST · 5 min ago" reads the same everywhere. */
+export function formatDateTimeIST(iso: string): string {
+  try {
+    const s = new Date(iso).toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: 'numeric',
+      month: 'short',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })
+    return `${s} IST`
+  } catch {
+    return formatDateTime(iso)
+  }
+}
+
 /** Read a File into a base64 data URL for media uploads. */
 export function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {

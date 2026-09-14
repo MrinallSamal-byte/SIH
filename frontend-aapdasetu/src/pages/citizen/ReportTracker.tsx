@@ -16,7 +16,7 @@ import { Field } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import PriorityBadge from '../../components/common/PriorityBadge'
 import LeafletMap, { type MapMarker } from '../../components/map/LeafletMap'
-import { formatDateTime, getNavigationUrl } from '../../lib/helpers'
+import { formatDateTimeIST, timeAgo, getNavigationUrl } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
 import type { Report } from '../../types'
 import type { GeoPoint } from '../../types'
@@ -276,7 +276,7 @@ export default function ReportTracker() {
               </div>
               <div className="mt-1 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                 <Clock className="h-3 w-3" />
-                <span>{formatDateTime(report.createdAt)}</span>
+                <span title={formatDateTimeIST(report.createdAt)}>{timeAgo(report.createdAt)} · {formatDateTimeIST(report.createdAt)}</span>
               </div>
             </div>
 

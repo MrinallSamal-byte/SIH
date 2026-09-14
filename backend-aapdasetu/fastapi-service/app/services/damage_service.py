@@ -101,28 +101,27 @@ class DamageAssessmentService:
             "huggingFaceModel": HF_MODEL_ID,
         }
 
+    # ponytail: (substr, classification, base, scale) — add row, not branch.
+    _CLASSIFICATION_TABLE = (
+        ("DESTROY", "FULLY_DESTROYED", 90.0, 10.0),
+        ("MAJOR", "MAJOR_STRUCTURAL_DAMAGE", 65.0, 20.0),
+    )
+
     def _map_classification(self, label: str, confidence: float) -> dict:
-        if "DESTROY" in label:
-            return {
-                "classification": "FULLY_DESTROYED",
-                "confidence": round(confidence, 4),
-                "damageScore": round(90.0 + (confidence * 10), 1),
-                "huggingFaceModel": HF_MODEL_ID,
-            }
-        elif "MAJOR" in label:
-            return {
-                "classification": "MAJOR_STRUCTURAL_DAMAGE",
-                "confidence": round(confidence, 4),
-                "damageScore": round(65.0 + (confidence * 20), 1),
-                "huggingFaceModel": HF_MODEL_ID,
-            }
-        else:
-            return {
-                "classification": "MINOR_DAMAGE",
-                "confidence": round(confidence, 4),
-                "damageScore": round(25.0 + (confidence * 15), 1),
-                "huggingFaceModel": HF_MODEL_ID,
-            }
+        for substr, classification, base, scale in self._CLASSIFICATION_TABLE:
+            if substr in label:
+                return {
+                    "classification": classification,
+                    "confidence": round(confidence, 4),
+                    "damageScore": round(base + (confidence * scale), 1),
+                    "huggingFaceModel": HF_MODEL_ID,
+                }
+        return {
+            "classification": "MINOR_DAMAGE",
+            "confidence": round(confidence, 4),
+            "damageScore": round(25.0 + (confidence * 15), 1),
+            "huggingFaceModel": HF_MODEL_ID,
+        }
 
     @staticmethod
     def _decode_image(base64_str: str) -> bytes | None:

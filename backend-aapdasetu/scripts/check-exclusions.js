@@ -17,7 +17,7 @@ const EXCLUDED = [
 ];
 
 const IGNORED_DIRS = new Set(['node_modules', 'dist', '.git', 'coverage', '__pycache__', '.venv']);
-const ALLOWED_FILES = new Set(['tech.md', 'flow.md', 'PRD.md', 'backend_prompt.md', 'check-exclusions.js']);
+const ALLOWED_FILES = new Set(['tech.md', 'flow.md', 'PRD.md', 'backend_prompt.md', 'check-exclusions.js', 'Frontend_Help.md']);
 
 function walk(dir) {
   const out = [];

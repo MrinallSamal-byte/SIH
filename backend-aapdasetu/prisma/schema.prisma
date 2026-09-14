@@ -392,6 +392,11 @@ model DamageAssessment {
   confidence        Float?
   duplicate         Boolean             @default(false)
   compensation      Float               @default(0)
+  propertyAddress   String?
+  district          String?
+  description       String?
+  infrastructureType String?
+  additionalPhotoCount Int?               @default(0)
   rawModelResponse  Json?
   status            String              @default("approved") // approved | flagged_duplicate
   createdAt         DateTime            @default(now())

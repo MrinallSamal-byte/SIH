@@ -15,7 +15,7 @@ import Badge from '../../components/common/Badge'
 import { useRealtime } from '../../hooks/useRealtime'
 import { useGeoLocation } from '../../hooks/useLocation'
 import { useLanguage } from '../../lib/i18n'
-import { reverseGeocode, timeAgo } from '../../lib/helpers'
+import { reverseGeocode, timeAgo, formatDateTimeIST } from '../../lib/helpers'
 import type { Alert } from '../../types'
 
 const severityRank: Record<string, number> = { critical: 0, warning: 1, info: 2 }
@@ -147,9 +147,9 @@ export default function Alerts() {
                   <Badge value={a.severity} label={a.severity === 'critical' ? t('alerts.sevCritical') : a.severity === 'warning' ? t('alerts.sevWarning') : t('alerts.sevInfo')} />
                   <h3 className="text-sm font-bold text-zinc-800 dark:text-slate-300">{a.title}</h3>
                 </div>
-                <div className="flex items-center gap-1 text-xs text-slate-400 mono">
+                <div className="flex items-center gap-1 text-xs text-slate-400 mono" title={formatDateTimeIST(a.createdAt)}>
                   <Clock className="h-3.5 w-3.5" />
-                  <span>{timeAgo(a.createdAt)}</span>
+                  <span>{timeAgo(a.createdAt)} · {formatDateTimeIST(a.createdAt)}</span>
                 </div>
               </div>
 

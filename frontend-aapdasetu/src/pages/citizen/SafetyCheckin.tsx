@@ -13,7 +13,7 @@ import Badge from '../../components/common/Badge'
 import Loader from '../../components/common/Loader'
 import { useToast } from '../../components/common/Toast'
 import { useLanguage } from '../../lib/i18n'
-import { formatDateTime } from '../../lib/helpers'
+import { formatDateTimeIST, timeAgo } from '../../lib/helpers'
 import { useGeoLocation } from '../../hooks/useLocation'
 import type { CheckinStatus, SafetyCheckin } from '../../types'
 
@@ -333,8 +333,8 @@ export default function SafetyCheckinPage() {
                     </div>
                   )}
 
-                  <div className="mt-2 text-[11px] text-slate-400 mono">
-                    {t('checkin.checkedInAt')} {formatDateTime(item.checkedInAt)}
+                  <div className="mt-2 text-[11px] text-slate-400 mono" title={formatDateTimeIST(item.checkedInAt)}>
+                    {t('checkin.checkedInAt')} {timeAgo(item.checkedInAt)} · {formatDateTimeIST(item.checkedInAt)}
                   </div>
                 </div>
               ))}

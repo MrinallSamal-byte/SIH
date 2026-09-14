@@ -949,7 +949,7 @@ export default function ShelterFinder() {
                 }`}
               >
                 {isSimulating ? <Square className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-                <span>{isSimulating ? 'Stop Live GPS Sim' : 'Simulate GPS Navigation'}</span>
+                <span>{isSimulating ? 'Stop route preview' : 'Preview route progress'}</span>
               </button>
             </div>
 
@@ -1233,6 +1233,44 @@ export default function ShelterFinder() {
                   aria-hidden="true"
                 />
               )}
+              {(() => {
+                const grads = [
+                  'from-emerald-900 via-teal-800 to-emerald-900',
+                  'from-sky-900 via-cyan-800 to-sky-900',
+                  'from-amber-900 via-orange-800 to-amber-900',
+                  'from-slate-800 via-slate-700 to-slate-900',
+                ]
+                let h = 0
+                for (const c of s.id) h = (h * 31 + c.charCodeAt(0)) | 0
+                const grad = grads[Math.abs(h) % grads.length]
+                const medical = facilitiesList.includes('medical_station')
+                const spots = Math.max(0, cap - occ)
+                return (
+                  <div className={`relative h-20 overflow-hidden bg-gradient-to-r ${grad}`} aria-hidden="true">
+                    {medical ? (
+                      <ShieldCheck className="absolute -right-2 -top-3 h-24 w-24 text-white/15" />
+                    ) : (
+                      <Building className="absolute -right-2 -top-3 h-24 w-24 text-white/15" />
+                    )}
+                    <div className="absolute left-3 top-2.5 inline-flex items-center gap-1 rounded-md bg-black/35 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-[2px]">
+                      <ShieldCheck className="h-3 w-3" />
+                      <span>Verified shelter</span>
+                    </div>
+                    <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between gap-2 text-[10px] font-bold text-white">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-black/35 px-2 py-0.5 backdrop-blur-[2px]">
+                        <Users className="h-3 w-3" />
+                        <span>{spots} spots · {pct}% full</span>
+                      </span>
+                      {distance != null && (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-black/35 px-2 py-0.5 backdrop-blur-[2px]">
+                          <MapPin className="h-3 w-3" />
+                          <span>{distance.toFixed(1)} km</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()}
               <Card className={`flex flex-col rounded-2xl border bg-white p-5 sm:p-6 shadow-xs dark:bg-zinc-900 ${
                 isRecommended
                   ? 'border-zinc-300 dark:border-zinc-700'

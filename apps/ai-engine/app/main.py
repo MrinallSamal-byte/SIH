@@ -4,7 +4,7 @@ Runs the triage / damage-assessment / PFA-chatbot / flood-map helpers as a
 local CLI smoke test (python apps/ai-engine/app/main.py). There is no ASGI
 app in this directory; the served implementation lives in
 backend-aapdasetu/fastapi-service — run it with:
-    cd backend-aapdasetu && uvicorn app.main:app --app-dir fastapi-service --port 8000
+    cd backend-aapdasetu && uvicorn app.main:app --app-dir fastapi-service --port 8001
 """
 import sys
 import json
