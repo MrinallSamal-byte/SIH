@@ -1,6 +1,15 @@
 import { aiCall, withMockFallback } from './client'
 import { mocks } from './mocks'
 import type { FloodGeoJson, ReportInput, TriageResult, PfaChatResponse, DamageInfrastructureType } from '../types'
+import {
+  AAPDAMITRA_SYSTEM_PROMPT,
+  OFF_TOPIC_REPLIES,
+  isDisasterOrPlatformRelated,
+  isOffTopicQuery,
+  containsCodeOrDisallowedContent,
+} from '../lib/guardrails'
+
+export { AAPDAMITRA_SYSTEM_PROMPT, isDisasterOrPlatformRelated, isOffTopicQuery }
 
 // =============================================================================
 // FASTAPI AI ENGINE — BUILD CONTRACT
@@ -98,19 +107,6 @@ function languageDirective(lang: AiLang = 'en'): string {
   return `\n\nLANGUAGE RULE (STRICT): Respond ONLY in ${AI_LANG_NAMES[lang]}. Mirror the user's language even if they mix scripts.`
 }
 
-const AAPDAMITRA_SYSTEM_PROMPT = `You are AapdaMitra AI (आपदामित्र), the official AI disaster survival assistant and crisis first-aid expert for AapdaSetu, India's national disaster response platform.
-
-HOW TO ANSWER:
-1. First, directly acknowledge the user's situation in one short empathetic sentence.
-2. Then give 2 to 4 numbered, concrete life-saving action steps — be specific (exact positions, exact actions, what NOT to do). No vague advice.
-3. If there is injury, bleeding, drowning, fire, entrapment or any life threat: give immediate first-aid steps FIRST, then tell them to call 112 (national emergency) / 108 (ambulance) and use the SOS button in the app.
-4. For questions about the AapdaSetu app itself (SOS, report damage, shelters, safe routes, track report, missing persons), briefly explain which feature to use and how.
-5. Respond in the EXACT language and script the user used (English, Hindi, Bengali, Odia, Hinglish, etc.). Keep it simple enough for a panicked person to follow.
-
-STRICT RULES:
-- Output ONLY your final answer. Never output internal monologue, thinking tags, rule echoes, or preambles like "The user is asking...".
-- Never refuse a genuine emergency question; always give the safest practical guidance.
-- Keep answers under 120 words unless the user asks for more detail.`
 
 interface ChatHistoryItem {
   role: 'user' | 'bot' | 'assistant' | 'system'
@@ -260,7 +256,7 @@ const DEGRADED_REPLIES: Record<AiLang, { greeting: string; breathing: string; gr
     grounding: 'Anchor yourself in the present with the 5-4-3-2-1 grounding technique:\n1. Name 5 things you can SEE around you.\n2. Touch and name 4 things near you.\n3. Listen for 3 sounds you can HEAR.\n4. Notice 2 things you can SMELL or feel.\n5. Take 1 slow, deep breath out.\nRepeat once more if the fear returns.',
     crisis: 'THIS IS A LIFE-THREATENING EMERGENCY. Act NOW:\n1. Tap the red SOS button in the app or call 112 immediately (ambulance: 108).\n2. Move to the safest spot you can reach and stay visible to rescuers.\n3. Do not attempt risky rescues alone.\nRescue teams have been alerted — help is on the way.',
     selfHarm: 'I hear you, and what you are feeling matters. You do not have to carry this alone — please talk to a trained counselor right now:\n• Tele-MANAS (Govt. of India, free, 24/7, all languages): 14416 or 1-800-891-4416\n• KIRAN helpline: 1800-599-0019\n• If you are in immediate danger, call 112.\nPlease stay with someone you trust until you can reach them. You matter.',
-    offTopic: 'I can only help with disaster, emergency, and AapdaSetu website topics (SOS, Report, Shelter, Track, Medical guidance). Please ask about flood, injury, shelter, or tracking. Example: "water entering house" or "severe bleeding".'
+    offTopic: OFF_TOPIC_REPLIES.en,
   },
   hi: {
     greeting: 'नमस्ते! मैं आपदामित्र AI हूँ। अभी मैं ऑफ़लाइन मोड में चल रहा हूँ, इसलिए उत्तर सीमित हैं। अपनी आपात स्थिति बताएं (बाढ़, खून बहना, फंसना, आग, घबराहट) और मैं तुरंत जीवन रक्षक कदम बताऊँगा। जानलेवा खतरे में SOS बटन दबाएं या तुरंत 112 पर कॉल करें।',
@@ -268,7 +264,7 @@ const DEGRADED_REPLIES: Record<AiLang, { greeting: string; breathing: string; gr
     grounding: '5-4-3-2-1 ग्राउंडिंग तकनीक से खुद को वर्तमान में वापस लाएं:\n1. चारों ओर दिखने वाली 5 चीज़ें गिनें।\n2. पास की 4 चीज़ें छूकर नाम लें।\n3. सुनाई देने वाली 3 आवाज़ें सुनें।\n4. 2 चीज़ों की गंध या स्पर्श महसूस करें।\n5. एक धीमी, गहरी सांस बाहर छोड़ें।\nडर लौटे तो एक बार और दोहराएँ।',
     crisis: 'यह जानलेवा आपात स्थिति है। तुरंत करें:\n1. ऐप का लाल SOS बटन दबाएं या 112 पर कॉल करें (एम्बुलेंस: 108)।\n2. जिस सबसे सुरक्षित जगह तक पहुँच सकते हैं वहाँ जाएं और बचावकर्ताओं को दिखते रहें।\n3. अकेले जोखिम भरा बचाव करने की कोशिश न करें।\nबचाव टीमों को सूचना दे दी गई है — मदद रास्ते में है।',
     selfHarm: 'मैं आपकी बात सुन रहा हूँ, और आप जो महसूस कर रहे हैं वह मायने रखता है। आपको यह अकेले नहीं झेलना होगा — कृपया अभी प्रशिक्षित काउंसलर से बात करें:\n• टेली-मनस (भारत सरकार, निःशुल्क, 24/7, सभी भाषाएँ): 14416 या 1-800-891-4416\n• किरण हेल्पलाइन: 1800-599-0019\n• तत्काल खतरा हो तो 112 पर कॉल करें।\nकृपया किसी भरोसेमंद व्यक्ति के पास रहें। आप महत्वपूर्ण हैं।',
-    offTopic: 'मैं केवल आपदा, आपातकाल और AapdaSetu वेबसाइट से जुड़े विषयों में मदद कर सकता हूँ (SOS, रिपोर्ट, आश्रय, ट्रैकिंग, चिकित्सा मार्गदर्शन)। कृपया बाढ़, चोट, आश्रय या ट्रैकिंग के बारे में पूछें। उदाहरण: "घर में पानी भर रहा है" या "तेज़ खून बह रहा है"।'
+    offTopic: OFF_TOPIC_REPLIES.hi,
   },
   bn: {
     greeting: 'নমস্কার! আমি আপদামিত্র AI। এই মুহূর্তে আমি অফলাইন মোডে চলছি, তাই উত্তর সীমিত। আপনার জরুরি অবস্থা বলুন (বন্যা, রক্তক্ষরণ, আটকে পড়া, আগুন, আতঙ্ক) এবং আমি সঙ্গে সঙ্গে প্রাণরক্ষার পদক্ষেপ জানাব। প্রাণঘাতী বিপদে SOS বোতাম চাপুন বা এখনই ১১২ নম্বরে কল করুন।',
@@ -276,7 +272,7 @@ const DEGRADED_REPLIES: Record<AiLang, { greeting: string; breathing: string; gr
     grounding: '৫-৪-৩-২-১ গ্রাউন্ডিং কৌশলে নিজেকে বর্তমান মুহূর্তে ফিরিয়ে আনুন:\n১. চারপাশে দেখা যাচ্ছে এমন ৫টি জিনিস গুনুন।\n২. কাছের ৪টি জিনিস ছুঁয়ে চিনুন।\n৩. শোনা যাচ্ছে এমন ৩টি শব্দ শুনুন।\n৪. ২টি জিনিসের গন্ধ বা স্পর্শ টের পান।\n৫. একটা ধীর, গভীর শ্বাস ছাড়ুন।\nভয় ফিরলে আবার একবার করুন।',
     crisis: 'এটি একটি প্রাণঘাতী জরুরি অবস্থা। এখনই করুন:\n১. অ্যাপের লাল SOS বোতাম চাপুন বা ১১২ নম্বরে কল করুন (অ্যাম্বুলেন্স: ১০৮)।\n২. যেখানে পৌঁছাতে পারেন সবচেয়ে নিরাপদ সেখানে যান এবং উদ্ধারকারীদের কাছে দৃশ্যমান থাকুন।\n৩. একা ঝুঁকিপূর্ণ উদ্ধারের চেষ্টা করবেন না।\nউদ্ধারকারী দলকে খবর দেওয়া হয়েছে — সাহায্য পথে আছে।',
     selfHarm: 'আমি আপনার কথা শুনছি, এবং আপনি যা অনুভব করছেন তা গুরুত্বপূর্ণ। আপনাকে একা এটি বহন করতে হবে না — অনুগ্রহ করে এখনই প্রশিক্ষিত কাউন্সেলরের সঙ্গে কথা বলুন:\n• টেলি-মানস (ভারত সরকার, বিনামূল্যে, ২৪/৭): ১৪৪১৬ বা ১-৮০০-৮৯১-৪৪১৬\n• কিরণ হেল্পলাইন: ১৮০০-৫৯৯-০০১৯\n• তাৎক্ষণিক বিপদে ১১২ নম্বরে কল করুন।\nঅনুগ্রহ করে আপনার বিশ্বাসযোগ্য কারও কাছে থাকুন। আপনি গুরুত্বপূর্ণ।',
-    offTopic: 'আমি শুধু দুর্যোগ, জরুরি অবস্থা এবং AapdaSetu ওয়েবসাইট সম্পর্কিত বিষয়ে সাহায্য করতে পারি (SOS, রিপোর্ট, আশ্রয়, ট্র্যাকিং, চিকিৎসা পরামর্শ)। বন্যা, আঘাত, আশ্রয় বা ট্র্যাকিং সম্পর্কে জিজ্ঞাসা করুন। উদাহরণ: "বাড়িতে জল ঢুকছে" বা "প্রচণ্ড রক্তক্ষরণ"।'
+    offTopic: OFF_TOPIC_REPLIES.bn,
   },
   or: {
     greeting: 'ନମସ୍କାର! ମୁଁ ଆପଦାମିତ୍ର AI। ଏହି ସମୟରେ ମୁଁ ଅଫଲାଇନ୍ ମୋଡରେ ଚାଲୁଛି, ତେଣୁ ଉତ୍ତର ସୀମିତ। ଆପଣଙ୍କ ଜରୁରୀକାଳୀନ ପରିସ୍ଥିତି କୁହନ୍ତୁ (ବନ୍ୟା, ରକ୍ତସ୍ରାବ, ଫସିଯିବା, ନିଆଁ, ଆତଙ୍କ) ଏବଂ ମୁଁ ତୁରନ୍ତ ଜୀବନରକ୍ଷା ପଦକ୍ଷେପ କହିବି। ଜୀବନଘାତକ ବିପଦରେ SOS ବଟନ୍ ଦବାନ୍ତୁ ବା ଏବେ ହୁଅନ୍ତେ ୧୧୨କୁ କଲ୍ କରନ୍ତୁ।',
@@ -284,8 +280,8 @@ const DEGRADED_REPLIES: Record<AiLang, { greeting: string; breathing: string; gr
     grounding: '୫-୪-୩-୨-୧ ଗ୍ରାଉଣ୍ଡିଂ କୌଶଳ ଦ୍ୱାରା ନିଜକୁ ବର୍ତ୍ତମାନ ମୁହୂର୍ତ୍ତକୁ ଫେରାନ୍ତୁ:\n୧. ଚାରିପାଖରେ ଦେଖାଯାଉଥିବା ୫ଟି ଜିନିଷ ଗଣନ୍ତୁ।\n୨. ପାଖରେ ଥିବା ୪ଟି ଜିନିଷ ଛୁଇଁ ଚିହ୍ନନ୍ତୁ।\n୩. ଶୁଣାଯାଉଥିବା ୩ଟି ଶବ୍ଦ ଶୁଣନ୍ତୁ।\n୪. ୨ଟି ଜିନିଷର ଗନ୍ଧ ବା ସ୍ପର୍ଶ ଅନୁଭବ କରନ୍ତୁ।\n୫. ଗୋଟିଏ ଧୀର, ଗଭୀର ଶ୍ୱାସ ବାହାରକୁ ଛାଡ଼ନ୍ତୁ।\nଭୟ ଫେରିଲେ ପୁଣି ଥରେ କରନ୍ତୁ।',
     crisis: 'ଏହା ଏକ ଜୀବନଘାତକ ଜରୁରୀକାଳୀନ ପରିସ୍ଥିତି। ଏବେ ତୁରନ୍ତ କରନ୍ତୁ:\n୧. ଆପର ଲାଲ SOS ବଟନ୍ ଦବାନ୍ତୁ କିମ୍ବା ୧୧୨କୁ କଲ୍ କରନ୍ତୁ (ଆମ୍ବୁଲାନ୍ସ: ୧୦୮)।\n୨. ପହଞ୍ଚିପାରିବା ସବୁଠାରୁ ସୁରକ୍ଷିତ ସ୍ଥାନକୁ ଯାଆନ୍ତୁ ଏବଂ ଉଦ୍ଧାରକାରୀଙ୍କୁ ଦେଖାଯାଉଥିବା ରୁହନ୍ତୁ।\n୩. ଏକୁଟିଆ ବିପଜ୍ଜନକ ଉଦ୍ଧାର ଚେଷ୍ଟା କରନ୍ତୁ ନାହିଁ।\nଉଦ୍ଧାରକାରୀ ଦଳକୁ ଖବର ଦିଆଯାଇଛି — ସାହାଯ୍ୟ ବାଟରେ ଅଛି।',
     selfHarm: 'ମୁଁ ଆପଣଙ୍କ କଥା ଶୁଣୁଛି, ଏବଂ ଆପଣ ଯାହା ଅନୁଭବ କରୁଛନ୍ତି ତାହା ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ। ଆପଣଙ୍କୁ ଏହା ଏକୁଟିଆ ସହିବାକୁ ହେବ ନାହିଁ — ଦୟାକରି ଏବେ ପ୍ରଶିକ୍ଷିତ କାଉନସେଲରଙ୍କ ସହ କଥା ହୁଅନ୍ତୁ:\n• ଟେଲି-ମାନସ (ଭାରତ ସରକାର, ମାଗଣା, ୨୪/୭): ୧୪୪୧୬ କିମ୍ବା ୧-୮୦୦-୮୯୧-୪୪୧୬\n• କିରଣ ହେଲ୍ପଲାଇନ: ୧୮୦୦-୫୯୯-୦୦୧୯\n• ତୁରନ୍ତ ବିପଦରେ ୧୧୨କୁ କଲ୍ କରନ୍ତୁ।\nଦୟାକରି ବିଶ୍ୱସ୍ତ କାହା ପାଖରେ ରୁହନ୍ତୁ। ଆପଣ ମହତ୍ୱପୂର୍ଣ୍ଣ।',
-    offTopic: 'ମୁଁ କେବଳ ବିପର୍ଯ୍ୟୟ, ଜରୁରୀକାଳୀନ ଏବଂ AapdaSetu ୱେବସାଇଟ୍ ସମ୍ବନ୍ଧୀୟ ବିଷୟରେ ସହାୟତା କରିପାରିବି (SOS, ରିପୋର୍ଟ, ଆଶ୍ରୟ, ଟ୍ରାକିଂ, ଡାକ୍ତରୀ ପରାମର୍ଶ)। ବନ୍ୟା, ଆଘାତ, ଆଶ୍ରୟ କିମ୍ବା ଟ୍ରାକିଂ ବିଷୟରେ ପଚାରନ୍ତୁ। ଉଦାହରଣ: "ଘରକୁ ପାଣି ଭରିବା" କିମ୍ବା "ପ୍ରବଳ ରକ୍ତସ୍ରାବ"।'
-  }
+    offTopic: OFF_TOPIC_REPLIES.or,
+  },
 }
 
 /** True when reply text is written in the script of the requested UI language. */
@@ -464,16 +460,14 @@ export async function aiPfaChat(
   victimName = 'Friend',
   lang: AiLang = 'en'
 ): Promise<PfaChatResponse> {
-  const lowerScope = message.toLowerCase()
-  const scopePattern = /\b(flood|bleed|cut|drown|sinking|cardiac|heart|snake|burn|fracture|chok|help|rescue|shelter|track|sos|report|aapdasetu|emergency|danger|pain|hurt|wound|panic|water|food|medicine|hospital|ambulance|fire|earthquake|collapse|trapped|missing|damage|helpline|112|108)\b/i
-  const unrelatedPattern = /\b(reverse|py\s*code|python|java\s*code|javascript|programming|algorithm|leetcode|homework|essay|poem|joke|song|movie|game|translate|write\s*code|give\s*code|code\s*snippet|reverse\s*string)\b/i
+  const degraded = DEGRADED_REPLIES[lang] ?? DEGRADED_REPLIES.en
 
-  // Self-harm short-circuits everything — never an off-topic rejection, never
+  // 1. Self-harm short-circuits everything — never an off-topic rejection, never
   // a generic greeting. Route straight to the crisis-counselor reply.
   const selfHarm = detectSelfHarm(message)
   if (selfHarm) {
     return {
-      reply: DEGRADED_REPLIES[lang]?.selfHarm ?? DEGRADED_REPLIES.en.selfHarm,
+      reply: degraded.selfHarm,
       exerciseType: '4-4-4_BOX_BREATHING',
       isCritical: true,
       dangerLevel: 'CRITICAL',
@@ -482,9 +476,11 @@ export async function aiPfaChat(
     }
   }
 
-  if (unrelatedPattern.test(lowerScope) && !scopePattern.test(lowerScope)) {
+  // 2. Strict Pre-filter Guardrail: Reject off-topic queries (coding, palindrome,
+  // algorithms, math homework, entertainment, general trivia) when not an emergency.
+  if (isOffTopicQuery(message) && !isDisasterOrPlatformRelated(message)) {
     return {
-      reply: DEGRADED_REPLIES[lang]?.offTopic ?? DEGRADED_REPLIES.en.offTopic,
+      reply: degraded.offTopic,
       exerciseType: undefined,
       isCritical: false,
       dangerLevel: 'LOW',
@@ -492,11 +488,27 @@ export async function aiPfaChat(
       safetyChecklist: ['National Emergency: 112 | Ambulance: 108'],
     }
   }
+
   try {
     // Hard wall-clock deadline: the previous worst case (2 providers x 7
     // models x 20 s) could spin "thinking..." for minutes to a person in
     // crisis. One deadline for the whole provider chain, then degrade.
-    const aiReply = await withDeadline(callOpenRouter(message, history, lang), 20_000)
+    const rawAiReply = await withDeadline(callOpenRouter(message, history, lang), 20_000)
+
+    // 3. Post-generation guardrail: If the model returned code blocks or coding syntax
+    // for a non-emergency query, block it and return the off-topic response.
+    if (containsCodeOrDisallowedContent(rawAiReply) && !isDisasterOrPlatformRelated(message)) {
+      return {
+        reply: degraded.offTopic,
+        exerciseType: undefined,
+        isCritical: false,
+        dangerLevel: 'LOW',
+        helpline: undefined,
+        safetyChecklist: ['National Emergency: 112 | Ambulance: 108'],
+      }
+    }
+
+    const aiReply = cleanAiOutput(rawAiReply)
     // ponytail: detectDangerLevel never returns falsy — rank both texts instead
     const levels = [detectDangerLevel(message), detectDangerLevel(aiReply)]
     const dangerLevel: DangerLevel = levels.includes('CRITICAL')
@@ -508,7 +520,7 @@ export async function aiPfaChat(
     const exerciseType = detectBreathingExercise(message) || detectBreathingExercise(aiReply)
 
     return {
-      reply: cleanAiOutput(aiReply),
+      reply: aiReply,
       exerciseType,
       isCritical,
       dangerLevel,
@@ -523,7 +535,6 @@ export async function aiPfaChat(
     console.warn('[AapdaMitra AI] Falling back to local crisis intelligence engine:', err)
     const dangerLevel = detectDangerLevel(message)
     const exerciseType = detectBreathingExercise(message)
-    const degraded = DEGRADED_REPLIES[lang] ?? DEGRADED_REPLIES.en
 
     let fallbackReply = ''
     try {
@@ -538,6 +549,8 @@ export async function aiPfaChat(
       // The mock keyword engine has no self-harm handling — never let its
       // generic greeting replace the crisis-counselor reply.
       fallbackReply = degraded.selfHarm
+    } else if (isOffTopicQuery(message) && !isDisasterOrPlatformRelated(message)) {
+      fallbackReply = degraded.offTopic
     } else if (!replyMatchesScript(fallbackReply, lang)) {
       fallbackReply =
         dangerLevel === 'CRITICAL'

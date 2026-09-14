@@ -42,7 +42,7 @@ During cyclones, flash floods, earthquakes, and industrial explosions, public he
 
 **AapdaSetu** solves the last-mile gap with:
 1. **Zero-Auth Citizen Portal:** 1-Tap Emergency SOS (`SOS.tsx` + `useGeoLocation` high-accuracy watch), evidence-rich reporting (`ReportForm.tsx` with `LandmarkPicker` + `compressImage` + voice/video), live shelter/safe-route GIS, missing registry, SDRF damage claims (1–5 images averaged), safety check-ins, and alerts.
-2. **AapdaMitra AI Lifeline:** `PfaChat.tsx` + global `ChatWidget.tsx` — 24/7 PFA with 4-4-4 Box Breathing, trauma grounding, scope-limited to disaster/website topics (blocks `reverse string`/`py code`), OpenRouter 7-model fallback → `mocks.aiPfaChat` with trapped/collapse priority.
+2. **AapdaMitra AI Lifeline with Multi-Layer Guardrails:** `PfaChat.tsx` + global `ChatWidget.tsx` + `lib/guardrails.ts` — 24/7 Psychological First Aid & disaster survival assistant. Strictly bound to disaster emergencies, first aid, trauma grounding (4-4-4 Box Breathing, 5-4-3-2-1 Grounding), and AapdaSetu platform features via a 4-tier defense-in-depth safety firewall (pre-query regex filtering, disaster allowlisting, hardened persona prompt, post-generation code/disallowed interceptor; blocks coding tasks like palindromes, algorithms, homework, trivia, recipes) with 7-model OpenRouter pool and offline mock parity.
 3. **Command Center:** 11 views under `AdminLayout` (`/admin`) — Live SOS siren (`LiveSOS.tsx` 880/440Hz), incident queue (`Reports.tsx`), GIS map, shelters, damage approvals, volunteers, agencies, broadcast (`Communications.tsx`), analytics (`Analytics.tsx`), audit logs, settings.
 4. **Volunteer Portal:** `VolunteerLayout` (`/volunteer`) — Dashboard, AssignedTasks (strict `assignedVolunteerId` filter, no auto-impersonation), CheckIn with GPS.
 5. **AI Engine:** `src/api/ai.ts` + `apps/ai-engine/app/*.py` — triage scoring, flood GeoJSON, automated damage grading.
@@ -81,7 +81,7 @@ flowchart TD
         C --> C6["🛡️ Safety Check-in<br/>SafetyCheckin.tsx<br/>fullName* phone* locationName*<br/>maskPhone, slice 100/200/500"]:::citizen
         C --> C7["🏚️ Damage Claim (/report-damage)<br/>1-5 images, per-image aiDamageAssessment<br/>avgScore/avgComp/avgGrade<br/>createDamageAssessment → realtime"]:::citizen
         C --> C8["🔍 Track (/track)<br/>ReportTracker.tsx<br/>getReport(trackingId)<br/>useRealtime poll 5s, abortRef<br/>OSRM driving route responder→incident<br/>no Math.random, hasCoords !=null"]:::citizen
-        C --> C9["🤖 PFA Chat (/pfa-chat + ChatWidget)<br/>aiPfaChat → callOpenRouter 7 models<br/>(Nemotron/Gemma/GPT-OSS) 10s abort<br/>scopeLimit blocks reverse/py code<br/>mocks.aiPfaChat trapped/collapse priority<br/>cleanAiOutput, breathing coach"]:::pfa
+        C --> C9["🤖 AapdaMitra AI (/pfa-chat + ChatWidget)<br/>aiPfaChat + lib/guardrails.ts<br/>4-tier firewall (pre-filter + post-code strip)<br/>7 models 10s abort → mocks fallback<br/>4-4-4 breathing coach, trauma grounding"]:::pfa
         C --> C0["📢 Alerts / Contacts / About<br/>Alerts.tsx useRealtime 8s<br/>About story 3AM call"]:::citizen
     end
 
@@ -89,7 +89,7 @@ flowchart TD
         C1 & C2 --> T1["computeTriage / aiTriage<br/>POST /ai/triage<br/>W_type (Earthquake +25 etc)<br/>W_nlp multi-lang trapped/drown/bleed<br/>W_demo child/senior/pregnant<br/>→ score 1-100 → RED/YELLOW/GREEN"]:::triage
         C7 --> T2["aiDamageAssessment per image<br/>POST /ai/damage-assessment<br/>Grade DESTROYED/MAJOR/MINOR<br/>Score, confidence, compensation<br/>→ avg across 5 images"]:::triage
         C4 --> T3["aiSatelliteFloodMap<br/>POST /ai/satelliteflood-map<br/>center+radius vs district<br/>GeoJSON Polygon/MultiPolygon"]:::triage
-        C9 --> T4["callOpenRouter<br/>system: AAPDAMITRA_PROMPT<br/>history -6 cleanAiOutput<br/>for model in 7 with 10s abort<br/>isReasoningContaminated check<br/>→ fallback mocks.aiPfaChat"]:::pfa
+        C9 --> T4["AapdaMitra AI Guardrails<br/>1. self-harm / crisis priority<br/>2. isOffTopic regex pre-filter<br/>3. AAPDAMITRA_SYSTEM_PROMPT<br/>4. containsCode post-interceptor<br/>5. fallback mocks.aiPfaChat"]:::pfa
     end
 
     subgraph Store ["💾 Client Store & Transport"]
@@ -133,7 +133,7 @@ flowchart TD
 | `/safe-routes` | `SafeRoutes.tsx` | public | `aiSatelliteFloodMap({center,radiusKm:30})` vs district, `polygonPaths` MultiPolygon flatMap, `fetchOsrmRoute` foot/driving, `LeafletMap` India `minZoom5 maxBounds` |
 | `/missing-persons` | `MissingPersons.tsx` | public | `listMissingPersons` cancelled flag, `photo* age*` required, `startsWith https/data:image` check, `compressImage` |
 | `/report-damage` | `ReportDamage.tsx` | public | 1–5 images `onFiles` + `removePhoto`, `perImageVerdicts` avg, `createDamageAssessment` realtime |
-| `/pfa-chat` + widget | `PfaChat.tsx` `ChatWidget.tsx` | public | `aiPfaChat` scope `unrelatedPattern` vs `scopePattern` block, 7 models 10s abort, `cleanAiOutput` strip `* # emoji <think>` |
+| `/pfa-chat` + widget | `PfaChat.tsx` `ChatWidget.tsx` | public | `aiPfaChat` + `lib/guardrails.ts`: multi-layer domain guardrail (pre-query regex refusal, allowlist, hardened persona prompt, post-generation code/disallowed interceptor), 7-model OpenRouter pool (10s abort), `cleanAiOutput`, localized refusals (EN/HI/BN/OR) |
 | `/admin/*` | `pages/admin/*` | `useIsAdminAuthed` `localStorage` + `storage` event | 11 views, `listReports` pagination, `haversineKm` falsy fix, `XAxis dataKey="date"` |
 | `/volunteer/*` | `pages/volunteer/*` | `useIsVolunteerAuthed` | No `vols[0]` auto-login, empty if no session, `useRealtime` missing (known) |
 | `*` | `App.tsx` `HashRouter` | — | Lazy `Suspense RouteFallback` + `ErrorBoundary` only MainLayout, `vercel.json` rewrite `/(.*)→/index.html` |
@@ -245,7 +245,7 @@ The citizen portal is completely **zero-authentication**—no sign-up, email, or
 | **Community Safety Check-in**<br>`#/check-in` | "I Am Safe" registry allowing citizens in disaster zones to mark themselves and family safe, reducing search team overhead. | Full name, phone number, district/sector, status (`Safe` / `Need Assistance`), personal message. | Public searchable safety board for relatives and relief agencies. |
 | **SDRF Property Damage Claim**<br>`#/report-damage` | Crowdsourced structural damage assessment portal. Citizens upload photos of destroyed property to receive automated AI damage grading and SDRF compensation estimates. | Property owner name, contact number, address, infrastructure category, damaged property photo. | Perceptual hash deduplication check, AI damage severity grade (FULLY_DESTROYED ₹95,100 / MAJOR ₹47,550 / MINOR ₹9,800), claim ID. |
 | **Public Warning Alerts**<br>`#/alerts` | Bulletin feed of alerts published by the operators of this deployment (district control room / command center). | Category filters (`Critical`, `Warning`, `Advisories`). | Real-time warning banners, affected region badges, timestamped safety directives. |
-| **AapdaMitra AI Crisis Lifeline**<br>`#/pfa-chat` & `ChatWidget` | 24/7 Psychological First Aid and survival assistant with 4-4-4 Box Breathing, 5-4-3-2-1 Sensory Grounding, and 1-tap callback dispatch. Available as a dedicated page and a glowing circular floating button. | Text or voice queries, quick disaster prompts. | Clean multi-lingual guidance without reasoning tokens, emergency callback trigger, hotline fast dial. |
+| **AapdaMitra AI Crisis Lifeline**<br>`#/pfa-chat` & `ChatWidget` | 24/7 Psychological First Aid and survival assistant protected by multi-layer domain safety guardrails (`guardrails.ts`). Strictly confined to disaster triage, emergency first aid, 4-4-4 Box Breathing, 5-4-3-2-1 Grounding, and platform navigation while actively refusing out-of-scope requests (e.g., coding, palindrome solvers, math homework, recipes, pop trivia). | Text or voice queries, quick disaster prompts, breathing coach. | Pre-screened safe emergency guidance in 4 languages without code or reasoning token contamination, emergency callback trigger, hotline fast dial. |
 
 ---
 
@@ -319,6 +319,61 @@ $$D_H(H_1, H_2) = \sum_{i=1}^{64} (H_{1,i} \oplus H_{2,i}) < 5$$
 ### 4. Flood Mapping Engine (`satellite_flood_mapping.py`) — algorithmic simulation
 - Designed for Sentinel-1 SAR input; in this repo it runs as an Otsu-thresholding simulation on demo imagery (no live satellite feed is wired up).
 - Applies Otsu adaptive thresholding to detect water-covered surfaces and converts binary raster masks into GeoJSON MultiPolygon layers for Leaflet map pathfinding avoidance.
+
+### 5. Multi-Layer AapdaMitra AI Safety & Domain Guardrail Architecture (`guardrails.ts`)
+
+During natural and human-induced catastrophes, an emergency AI assistant must never be hijacked into answering coding tasks, solving academic homework, generating creative fiction, or discussing entertainment. Doing so consumes critical API quotas, introduces hallucination risks, and distracts victims and emergency workers from life-saving actions.
+
+AapdaMitra AI implements a **6-Layer Defense-in-Depth Domain Firewall** enforcing deterministic refusal on all out-of-scope interactions while maintaining compassionate, high-priority emergency triage:
+
+```mermaid
+flowchart TD
+    UserQuery["💬 User Query Received"] --> L1{"Layer 1: Imminent Danger<br/>or Self-Harm Check?"}
+    L1 -- Yes --> R1["🚨 Immediate National Crisis Escalation<br/>Tele-MANAS (14416) / Kiran (1800-599-0019)<br/>+ 4-4-4 Box Breathing Grounding"]
+    L1 -- No --> L2{"Layer 2: Off-Topic Regex<br/>or Disallowed Category?"}
+    
+    L2 -- "Matches (code/math/trivia)" --> L2Check{"Allowed Disaster /<br/>Platform Context?"}
+    L2Check -- "No (e.g. palindrome, python, homework)" --> R2["🛡️ Instant Native Refusal (0-Token Cost)<br/>Localized message (EN/HI/BN/OR)<br/>Redirect to emergency services"]
+    L2Check -- "Yes (e.g. flood rescue, triage)" --> L3["Layer 3: Hardened Persona System Prompt<br/>AAPDAMITRA_SYSTEM_PROMPT<br/>Strict domain lock, 3-sentence brevity"]
+    L2 -- "Safe Query" --> L3
+
+    L3 --> LLM["🤖 OpenRouter 7-Model Ensemble<br/>10s per-model timeout + streaming"]
+    LLM --> L4{"Layer 4: Post-Generation<br/>Code / Disallowed Interceptor?"}
+    
+    L4 -- "Contains ``` or def/function/code" --> R4["⚠️ Disallowed Output Intercepted<br/>Substituted with localized domain refusal"]
+    L4 -- Clean Output --> L5["Layer 5: Output Sanitization<br/>Strip thinking tags, emojis, markdown headers"]
+    
+    L5 --> Client["📱 Delivered to User (PfaChat / ChatWidget)"]
+    
+    subgraph OfflineMode ["Layer 6: Offline PWA & Zero-Grid Parity"]
+        MockLLM["mocks.aiPfaChat Engine"] -.->|"Enforces same isOffTopicQuery & allowlist"| Client
+    end
+```
+
+#### Guardrail Defense Layers:
+
+| Layer | Component | Mechanism & Enforcement | Outcome |
+| :--- | :--- | :--- | :--- |
+| **Layer 1: Self-Harm & Crisis Escalation** | `aiPfaChat` Priority Check | Evaluates prompt against suicidal ideation and acute psychological distress indicators before any AI dispatch. | Immediately returns official helpline guidance (Tele-MANAS `14416`, Kiran `1800-599-0019`) with trauma grounding. |
+| **Layer 2: Pre-Inference Regex Domain Firewall** | `isOffTopicQuery()` & `isDisasterOrPlatformRelated()` in `src/lib/guardrails.ts` | High-performance regex analyzer that matches 8 disallowed categories: coding & algorithms (e.g. *palindrome, reverse string, leetcode, python, java, c++*), math/homework (e.g. *quadratic equations, calculus, algebra*), entertainment & gaming, sports, recipes, creative writing, and pop trivia. Validates against a 4-language emergency allowlist. | Instantly returns localized refusal (`OFF_TOPIC_REPLIES`) with **zero token cost** and zero LLM latency. |
+| **Layer 3: Hardened Persona System Prompt** | `AAPDAMITRA_SYSTEM_PROMPT` | Rigorous system instructions binding the model strictly as AapdaMitra, an emergency disaster and first aid assistant. Explicitly commands refusal of off-topic requests and constrains responses to 2–3 actionable, calming steps. | Prevents model hallucination and locks conversation within life-safety parameters. |
+| **Layer 4: Post-Generation Output Interceptor** | `containsCodeOrDisallowedContent()` | Inspects generated LLM text for markdown code fences (` ``` `, ` ```python `), programming function keywords (`def `, `function `, `const `, `public class`), and code solution structures. | Intercepts adversarial jailbreaks or model non-compliance, substituting with safe refusal text before rendering in UI. |
+| **Layer 5: Multi-Lingual Localized Refusals** | `OFF_TOPIC_REPLIES` (EN, HI, BN, OR) | Culturally adapted refusal templates explaining the AI's emergency role and guiding the user to disaster topics (first aid, shelters, evacuation routes, SOS reporting). | Dignified, helpful redirection in the citizen's primary regional language. |
+| **Layer 6: Zero-Grid Offline PWA Parity** | `mocks.aiPfaChat` in `src/api/mocks.ts` | Full client-side guardrail enforcement inside the offline fallback mock adapter when cellular networks are disconnected. | Complete behavioral parity between connected AI mode and offline PWA mode. |
+
+#### Domain Filter Matrix & Behavioral Verification:
+
+| User Query | Category | Detection Mechanism | System Action & Response |
+| :--- | :--- | :--- | :--- |
+| `"how to chaeck a palindrome"` | Coding / Algorithm | `isOffTopicQuery` (palindrome regex) | **Blocked at Layer 2**: Returns localized refusal; guides user to emergency features. |
+| `"write a python script to reverse a string"` | Programming | `isOffTopicQuery` (python + reverse string) | **Blocked at Layer 2**: Zero LLM call; instant refusal. |
+| `"solve 2x + 5 = 15"` | Math / Homework | `isOffTopicQuery` (equation regex) | **Blocked at Layer 2**: Refusal explaining scope is limited to disaster/first aid. |
+| `"chocolate cake recipe with eggs"` | Recipe / Food | `isOffTopicQuery` (recipe regex) | **Blocked at Layer 2**: Refusal redirecting to emergency assistance. |
+| `"who won the 2024 cricket world cup?"` | Sports / Trivia | `isOffTopicQuery` (cricket regex) | **Blocked at Layer 2**: Refusal redirecting to emergency assistance. |
+| *(Adversarial jailbreak outputting code block)* | Prompt Injection | `containsCodeOrDisallowedContent` | **Blocked at Layer 4**: Code fences detected and suppressed; replaced with refusal. |
+| `"I am trapped on roof, flood water is rising"` | Emergency / Rescue | `isDisasterOrPlatformRelated` (trapped + flood) | **Allowed**: High-urgency triage, safety instructions, triggers SOS link. |
+| `"Leg is bleeding heavily after building collapse"` | First Aid / Trauma | `isDisasterOrPlatformRelated` (bleed + collapse) | **Allowed**: Direct pressure, tourniquet advice, 108/112 ambulance call. |
+| `"Where is the nearest cyclone shelter in BBSR?"` | Platform Navigation | `isDisasterOrPlatformRelated` (shelter + cyclone) | **Allowed**: Directs to `/shelters` and Haversine locator. |
 
 ---
 
@@ -501,7 +556,7 @@ SIH-DM/
 │   │   ├── api/                        # API clients, OpenRouter AI adapters, and mock data
 │   │   ├── components/                 # Reusable UI components (AapdaSetuLogo, ChatWidget, Modal, Map)
 │   │   ├── layouts/                    # MainLayout, AdminLayout, VolunteerLayout
-│   │   ├── lib/                        # Helpers, i18n dictionary (EN/HI/BN/OR), triage engine, event bus
+│   │   ├── lib/                        # Helpers, i18n dictionary (EN/HI/BN/OR), triage engine, event bus, AI guardrails
 │   │   ├── pages/
 │   │   │   ├── admin/                  # 11 Command Center views (LiveSOS, Shelters, Reports, etc.)
 │   │   │   ├── citizen/                # Citizen views (SOS, Home, Report, SafeRoutes, PfaChat, etc.)

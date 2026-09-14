@@ -23,11 +23,24 @@ class PFAChatbotEngine:
     """
     @staticmethod
     def get_pfa_response(user_message, victim_name="Friend"):
+        # Strict Guardrail: Check for off-topic non-emergency queries (coding, palindrome, math, etc.)
+        unrelated_pattern = r"\b(palindrom[a-z]*|reverse\s*(a\s*)?(string|word|number|array|list)|write\s*code|give\s*code|py\s*code|python|java\s*code|javascript|c\+\+|cpp|csharp|golang|rust|programming|algorithm|leetcode|hackerrank|homework|assignment|solve\s*equation|essay|poem|poetry|joke|song|movie|game|recipe|how\s*to\s*cook)\b"
+        disaster_pattern = r"\b(flood|water|bleed|blood|cut|drown|sinking|cardiac|heart|snake|burn|fracture|chok|help|rescue|shelter|track|sos|report|aapdasetu|emergency|danger|pain|hurt|wound|panic|fire|earthquake|collapse|trapped|missing|damage|helpline|112|108|डर|घबराहट|बाढ़|खून|सांप|आग)\b"
+        if re.search(unrelated_pattern, user_message, re.I) and not re.search(disaster_pattern, user_message, re.I):
+            return {
+                "chatbot_reply": "I am AapdaMitra AI, dedicated exclusively to disaster emergencies, medical first aid, crisis safety, and AapdaSetu platform assistance. I cannot answer programming, academic, or unrelated general questions. Please let me know what emergency or safety assistance you need.",
+                "exercise_type": "DISASTER_TRIAGE_AND_SURVIVAL",
+                "safety_checklist": ["Prioritize life safety", "Keep battery saved", "National Emergency: 112 | Ambulance: 108"]
+            }
+
         # Try OpenRouter LLM first if API key is configured; fallback to local rules if unset or unavailable
         if OPENROUTER_API_KEY:
             prompt_system = (
                 "You are AapdaMitra AI (आपदामित्र), an elite, compassionate, and highly intelligent 24/7 Disaster Survival, "
                 "Emergency Medical Triage, and Psychological First Aid AI Companion for the AapdaSetu platform. "
+                "STRICT GUARDRAILS: You must ONLY answer questions related to active disasters, extreme weather, physical safety, "
+                "medical first aid, psychological crisis grounding, and AapdaSetu platform relief. NEVER answer coding, programming, "
+                "palindrome, homework, math, or general trivia questions. If asked an off-topic question, politely decline. "
                 "Prioritize life safety with 3-4 bold, concise steps first. Provide medical triage (bleeding, CPR, burns, choking, snakebites) "
                 "and psychological grounding (4-4-4 box breathing). Highlight emergency numbers 112 and 108. Respond in user's language."
             )

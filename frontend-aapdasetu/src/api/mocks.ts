@@ -25,6 +25,7 @@ import { computeTriage } from '../lib/triage'
 import { generateTrackingId } from '../lib/helpers'
 import { emitRealtimeUpdate } from '../lib/realtimeEventBus'
 import { getInitialCitizenNotifications } from '../data/mockNotifications'
+import { isOffTopicQuery, isDisasterOrPlatformRelated, OFF_TOPIC_REPLIES } from '../lib/guardrails'
 
 // -----------------------------------------------------------------------------
 // Persistent mock store with 1000+ realistic records & realtime event emissions.
@@ -1280,13 +1281,9 @@ export const mocks = {
     let dangerLevel: 'CRITICAL' | 'MODERATE' | 'LOW' = 'LOW'
     let exerciseType: string | undefined = undefined
 
-    const scopePattern = /\b(flood|bleed|cut|drown|sinking|cardiac|heart|snake|burn|fracture|chok|help|rescue|shelter|track|sos|report|aapdasetu|emergency|danger|pain|hurt|wound|panic|water|food|medicine|hospital|ambulance|fire|earthquake|collapse|trapped|missing|damage|helpline|112|108)\b/i
-    const unrelatedPattern = /\b(reverse|py\s*code|python|java\s*code|javascript|programming|algorithm|leetcode|homework|essay|poem|joke|song|movie|game|translate|write\s*code|give\s*code|code\s*snippet|reverse\s*string)\b/i
-    if (unrelatedPattern.test(lower) && !scopePattern.test(lower)) {
-      if (isHindi) reply = 'मैं केवल आपदा, आपातकाल और AapdaSetu वेबसाइट से संबंधित सहायता दे सकता हूँ। कृपया बाढ़, चोट, आश्रय या ट्रैकिंग के बारे में पूछें।'
-      else if (isBengali) reply = 'আমি কেবল দুর্যোগ, জরুরি এবং AapdaSetu সম্পর্কিত সহায়তা দিতে পারি। বন্যা, আহত, আশ্রয় বা ট্র্যাকিং সম্পর্কে জিজ্ঞাসা করুন।'
-      else if (isOdia) reply = 'ମୁଁ କେବଳ ବିପର୍ଯ୍ୟୟ ଏବଂ AapdaSetu ସମ୍ବନ୍ଧୀୟ ସହାୟତା ଦେଇପାରେ। ବନ୍ୟା, ଆହତ, ଆଶ୍ରୟ ବିଷୟରେ ପଚାରନ୍ତୁ।'
-      else reply = 'I can only help with disaster, emergency, and AapdaSetu website topics (SOS, Report, Shelter, Track, Medical guidance). Please ask about flood, injury, shelter, or tracking. Example: "water entering house" or "severe bleeding".'
+    if (isOffTopicQuery(raw) && !isDisasterOrPlatformRelated(raw)) {
+      const langKey = isHindi ? 'hi' : isBengali ? 'bn' : isOdia ? 'or' : 'en'
+      reply = OFF_TOPIC_REPLIES[langKey]
       return { reply, exerciseType, isCritical: false, dangerLevel: 'LOW', helpline: undefined, safetyChecklist: ['National Emergency: 112 | Ambulance: 108'] }
     }
 
