@@ -139,6 +139,16 @@ export function isQueued(id: string): boolean {
   return readOutbox().some((item) => item.id === id)
 }
 
+/** True if a payload with this clientRequestId is already queued — prevents
+ * double-enqueue of the same logical SOS (offline pre-enqueue + catch, or
+ * repeated taps during a timeout). */
+export function hasQueuedClientRequest(clientRequestId: string): boolean {
+  return readOutbox().some((item) => {
+    const p = item.payload as { clientRequestId?: unknown } | null
+    return !!p && typeof p === 'object' && p.clientRequestId === clientRequestId
+  })
+}
+
 function registerBackgroundSync(): void {
   try {
     const sw = 'serviceWorker' in navigator ? navigator.serviceWorker : undefined

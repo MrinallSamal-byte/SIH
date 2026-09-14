@@ -86,6 +86,8 @@ interface RawMissingMatch {
   matchedPersonName?: string | null
   missingPerson?: { name?: string | null } | null
   matchedPerson?: { name?: string | null } | null
+  reportA?: { missingPersonName?: string | null; trackingId?: string | null } | null
+  reportB?: { missingPersonName?: string | null; trackingId?: string | null } | null
 }
 
 interface RawKpis {
@@ -542,9 +544,9 @@ export function listMissingMatches(): Promise<MissingMatch[]> {
         (rows ?? []).map((m) => ({
           id: m.id,
           missingPersonName:
-            m.missingPersonName ?? m.missingPerson?.name ?? null,
+            m.missingPersonName ?? m.missingPerson?.name ?? m.reportA?.missingPersonName ?? null,
           matchedPersonName:
-            m.matchedPersonName ?? m.matchedPerson?.name ?? null,
+            m.matchedPersonName ?? m.matchedPerson?.name ?? m.reportB?.missingPersonName ?? null,
           score: m.score === null || m.score === undefined ? null : Number(m.score),
           createdAt: m.createdAt,
         })),
@@ -568,7 +570,7 @@ export function runMissingPersonMatching(reportId: string): Promise<unknown> {
 export function reviewMissingMatch(id: string, decision: 'confirmed' | 'rejected'): Promise<void> {
   return withMockFallback(
     () =>
-      apiCall<unknown>('POST', `/api/v1/admin/missing/matches/${encodeURIComponent(id)}/review`, { decision }).then(
+      apiCall<unknown>('POST', `/api/v1/admin/missing/matches/${encodeURIComponent(id)}/review`, { status: decision }).then(
         () => undefined,
       ),
     async () => undefined,
@@ -619,12 +621,16 @@ export function updateMissingPerson(id: string, patch: Partial<MissingPerson>): 
 // ---- audit logs ------------------------------------------------------------------
 
 /** GET /api/v1/admin/audit-logs — read-only compliance log. */
-export function listAuditLogs(): Promise<{ items: AuditLog[]; total: number }> {
+export function listAuditLogs(params: { page?: number; pageSize?: number } = {}): Promise<{ items: AuditLog[]; total: number }> {
+  const qs = new URLSearchParams()
+  if (params.page) qs.set('page', String(params.page))
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize))
+  const suffix = qs.toString() ? `?${qs.toString()}` : '?pageSize=200'
   return withMockFallback(
     // ponytail: server-side filter params pending UI — single large page fetch,
     // filtering/sorting stay client-side for now.
     () =>
-      apiCall<{ items: AuditLog[]; total: number }>('GET', '/api/v1/admin/audit-logs?pageSize=200').then((d) => ({
+      apiCall<{ items: AuditLog[]; total: number }>('GET', `/api/v1/admin/audit-logs${suffix}`).then((d) => ({
         items: d.items ?? [],
         total: Number(d.total) || (d.items?.length ?? 0),
       })),
@@ -898,6 +904,11 @@ export function createDamageAssessment(input: {
   longitude?: number
   reporterName?: string
   reporterPhone?: string
+  district?: string
+  propertyAddress?: string
+  description?: string
+  infraType?: string
+  additionalPhotos?: string[]
 }): Promise<DamageCreated> {
   const mimeMatch = input.photoDataUrl.match(/^data:([^;]+);base64,/)
   const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg'
@@ -909,6 +920,13 @@ export function createDamageAssessment(input: {
   if (input.longitude !== undefined) body.reportedLongitude = input.longitude
   if (input.reporterName) body.reporterName = input.reporterName
   if (input.reporterPhone) body.reporterPhone = input.reporterPhone
+  // Full dossier: backend zod strips unknown keys (no .strict()), so these are
+  // safe to send today and ready for a future migration that persists them.
+  if (input.district) body.district = input.district
+  if (input.propertyAddress) body.propertyAddress = input.propertyAddress
+  if (input.description) body.description = input.description
+  if (input.infraType) body.infrastructureType = input.infraType
+  if (input.additionalPhotos?.length) body.additionalPhotoCount = input.additionalPhotos.length
 
   const mapCreated = (r: RawDamageRow & { locationVerified?: boolean | null }): DamageCreated => ({
     id: r.id,
@@ -929,6 +947,11 @@ export function createDamageAssessment(input: {
         latitude: input.latitude,
         longitude: input.longitude,
         photoUrl: input.photoDataUrl,
+        district: input.district,
+        propertyAddress: input.propertyAddress,
+        infrastructureType: (input.infraType as DamageAssessmentReport['infrastructureType']) || 'broken_home',
+        description: input.description,
+        additionalPhotos: input.additionalPhotos,
         damageGrade: 'MAJOR',
         damageScore: 75.0,
         confidence: 98.36,

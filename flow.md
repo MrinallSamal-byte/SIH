@@ -241,9 +241,9 @@ flowchart TD
     DuplicateCheck -- "No (Unique Proof)" --> VisionML["Execute Computer Vision Damage Classifier"]
 
     VisionML --> GradeModel{"Model Classification Output"}
-    GradeModel -->|Total Structural Destruction (Score > 0.85)| G1["Grade 1: Total Collapse\nEligible Grant: ₹1,20,000"]
-    GradeModel -->|Severe Wall/Roof Cracking (Score 0.50 - 0.85)| G2["Grade 2: Severe Structural Damage\nEligible Grant: ₹65,000"]
-    GradeModel -->|Minor Inundation / Superficial (Score < 0.50)| G3["Grade 3: Partial / Minor Damage\nEligible Grant: ₹25,000"]
+    GradeModel -->|Total Structural Destruction (Score > 0.85)| G1["FULLY_DESTROYED: Total Collapse\nEligible Grant: ₹95,100"]
+    GradeModel -->|Severe Wall/Roof Cracking (Score 0.50 - 0.85)| G2["MAJOR_STRUCTURAL_DAMAGE: Severe Damage\nEligible Grant: ₹47,550"]
+    GradeModel -->|Minor Inundation / Superficial (Score < 0.50)| G3["MINOR_DAMAGE: Partial / Minor Damage\nEligible Grant: ₹9,800"]
 
     G1 & G2 & G3 --> ClaimReport["Generate SDRF Disaster Relief Claim Dossier\n- Unique Claim ID (e.g. SDRF-2026-8891)\n- Direct Bank Transfer (DBT) verification form"]
 

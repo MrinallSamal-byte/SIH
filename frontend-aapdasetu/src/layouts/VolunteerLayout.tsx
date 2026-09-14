@@ -67,7 +67,7 @@ export default function VolunteerLayout() {
               </span>
             )}
 
-            <NotificationCenter role="citizen" align="right" />
+            <NotificationCenter role="volunteer" align="right" />
 
             <Link
               to="/"

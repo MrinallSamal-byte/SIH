@@ -19,8 +19,8 @@ export function initSupabaseRealtime(): () => void {
       (payload) => {
         emitRealtimeUpdate(
           payload.eventType === 'INSERT' ? 'report_created' : 'report_updated',
-          (payload.new as { id?: string })?.id,
-          payload.new
+          ((payload.new ?? payload.old) as { id?: string } | null)?.id,
+          (payload.new ?? payload.old)
         )
       }
     )
@@ -30,8 +30,8 @@ export function initSupabaseRealtime(): () => void {
       (payload) => {
         emitRealtimeUpdate(
           payload.eventType === 'INSERT' ? 'report_created' : 'report_updated',
-          (payload.new as { id?: string })?.id,
-          payload.new
+          ((payload.new ?? payload.old) as { id?: string } | null)?.id,
+          (payload.new ?? payload.old)
         )
       }
     )
@@ -40,14 +40,14 @@ export function initSupabaseRealtime(): () => void {
       'postgres_changes',
       { event: '*', schema: 'public', table: 'Alert' },
       (payload) => {
-        emitRealtimeUpdate('alert_created', (payload.new as { id?: string })?.id, payload.new)
+        emitRealtimeUpdate('alert_created', ((payload.new ?? payload.old) as { id?: string } | null)?.id, (payload.new ?? payload.old))
       }
     )
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'alerts' },
       (payload) => {
-        emitRealtimeUpdate('alert_created', (payload.new as { id?: string })?.id, payload.new)
+        emitRealtimeUpdate('alert_created', ((payload.new ?? payload.old) as { id?: string } | null)?.id, (payload.new ?? payload.old))
       }
     )
     // Shelter / shelters
@@ -61,7 +61,7 @@ export function initSupabaseRealtime(): () => void {
             : payload.eventType === 'DELETE'
             ? 'shelter_deleted'
             : 'shelter_updated'
-        emitRealtimeUpdate(type, (payload.new as { id?: string })?.id, payload.new)
+        emitRealtimeUpdate(type, ((payload.new ?? payload.old) as { id?: string } | null)?.id, (payload.new ?? payload.old))
       }
     )
     .on(
@@ -74,7 +74,7 @@ export function initSupabaseRealtime(): () => void {
             : payload.eventType === 'DELETE'
             ? 'shelter_deleted'
             : 'shelter_updated'
-        emitRealtimeUpdate(type, (payload.new as { id?: string })?.id, payload.new)
+        emitRealtimeUpdate(type, ((payload.new ?? payload.old) as { id?: string } | null)?.id, (payload.new ?? payload.old))
       }
     )
     // SafetyCheckin / safety_checkins
@@ -82,14 +82,14 @@ export function initSupabaseRealtime(): () => void {
       'postgres_changes',
       { event: '*', schema: 'public', table: 'SafetyCheckin' },
       (payload) => {
-        emitRealtimeUpdate('checkin_created', (payload.new as { id?: string })?.id, payload.new)
+        emitRealtimeUpdate('checkin_created', ((payload.new ?? payload.old) as { id?: string } | null)?.id, (payload.new ?? payload.old))
       }
     )
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'safety_checkins' },
       (payload) => {
-        emitRealtimeUpdate('checkin_created', (payload.new as { id?: string })?.id, payload.new)
+        emitRealtimeUpdate('checkin_created', ((payload.new ?? payload.old) as { id?: string } | null)?.id, (payload.new ?? payload.old))
       }
     )
     // MissingPerson / missing_persons
@@ -99,8 +99,8 @@ export function initSupabaseRealtime(): () => void {
       (payload) => {
         emitRealtimeUpdate(
           payload.eventType === 'INSERT' ? 'missing_created' : 'missing_updated',
-          (payload.new as { id?: string })?.id,
-          payload.new
+          ((payload.new ?? payload.old) as { id?: string } | null)?.id,
+          (payload.new ?? payload.old)
         )
       }
     )
@@ -110,8 +110,8 @@ export function initSupabaseRealtime(): () => void {
       (payload) => {
         emitRealtimeUpdate(
           payload.eventType === 'INSERT' ? 'missing_created' : 'missing_updated',
-          (payload.new as { id?: string })?.id,
-          payload.new
+          ((payload.new ?? payload.old) as { id?: string } | null)?.id,
+          (payload.new ?? payload.old)
         )
       }
     )
@@ -122,8 +122,8 @@ export function initSupabaseRealtime(): () => void {
       (payload) => {
         emitRealtimeUpdate(
           payload.eventType === 'INSERT' ? 'damage_assessed' : 'damage_updated',
-          (payload.new as { id?: string })?.id,
-          payload.new
+          ((payload.new ?? payload.old) as { id?: string } | null)?.id,
+          (payload.new ?? payload.old)
         )
       }
     )
@@ -133,8 +133,8 @@ export function initSupabaseRealtime(): () => void {
       (payload) => {
         emitRealtimeUpdate(
           payload.eventType === 'INSERT' ? 'damage_assessed' : 'damage_updated',
-          (payload.new as { id?: string })?.id,
-          payload.new
+          ((payload.new ?? payload.old) as { id?: string } | null)?.id,
+          (payload.new ?? payload.old)
         )
       }
     )
@@ -143,14 +143,14 @@ export function initSupabaseRealtime(): () => void {
       'postgres_changes',
       { event: '*', schema: 'public', table: 'Volunteer' },
       (payload) => {
-        emitRealtimeUpdate('volunteer_updated', (payload.new as { id?: string })?.id, payload.new)
+        emitRealtimeUpdate('volunteer_updated', ((payload.new ?? payload.old) as { id?: string } | null)?.id, (payload.new ?? payload.old))
       }
     )
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'volunteers' },
       (payload) => {
-        emitRealtimeUpdate('volunteer_updated', (payload.new as { id?: string })?.id, payload.new)
+        emitRealtimeUpdate('volunteer_updated', ((payload.new ?? payload.old) as { id?: string } | null)?.id, (payload.new ?? payload.old))
       }
     )
     // Resource / Dispatch
@@ -158,14 +158,14 @@ export function initSupabaseRealtime(): () => void {
       'postgres_changes',
       { event: '*', schema: 'public', table: 'Resource' },
       (payload) => {
-        emitRealtimeUpdate('data_reset', (payload.new as { id?: string })?.id, payload.new)
+        emitRealtimeUpdate('data_reset', ((payload.new ?? payload.old) as { id?: string } | null)?.id, (payload.new ?? payload.old))
       }
     )
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'Dispatch' },
       (payload) => {
-        emitRealtimeUpdate('report_updated', (payload.new as { id?: string })?.id, payload.new)
+        emitRealtimeUpdate('report_updated', ((payload.new ?? payload.old) as { id?: string } | null)?.id, (payload.new ?? payload.old))
       }
     )
     // AuditLog
@@ -173,7 +173,7 @@ export function initSupabaseRealtime(): () => void {
       'postgres_changes',
       { event: '*', schema: 'public', table: 'AuditLog' },
       (payload) => {
-        emitRealtimeUpdate('data_reset', (payload.new as { id?: string })?.id, payload.new)
+        emitRealtimeUpdate('data_reset', ((payload.new ?? payload.old) as { id?: string } | null)?.id, (payload.new ?? payload.old))
       }
     )
     // MissingPersonMatch
@@ -181,7 +181,7 @@ export function initSupabaseRealtime(): () => void {
       'postgres_changes',
       { event: '*', schema: 'public', table: 'MissingPersonMatch' },
       (payload) => {
-        emitRealtimeUpdate('missing_updated', (payload.new as { id?: string })?.id, payload.new)
+        emitRealtimeUpdate('missing_updated', ((payload.new ?? payload.old) as { id?: string } | null)?.id, (payload.new ?? payload.old))
       }
     )
     .subscribe((status) => {

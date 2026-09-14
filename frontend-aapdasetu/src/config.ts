@@ -14,7 +14,7 @@ function resolveApiUrl(raw: string | undefined): string {
 
 export const config = {
   apiUrl: resolveApiUrl(import.meta.env.VITE_API_URL),
-  aiUrl: (import.meta.env.VITE_AI_URL || 'http://localhost:8080').replace(/\/$/, ''),
+  aiUrl: (import.meta.env.VITE_AI_URL || 'http://localhost:8001').replace(/\/$/, ''),
   /** Optional Supabase realtime swap-in — see src/hooks/useRealtime.ts */
   supabaseUrl: import.meta.env.VITE_SUPABASE_URL || '',
   supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',

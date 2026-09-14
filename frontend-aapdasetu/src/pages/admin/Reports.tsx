@@ -67,6 +67,7 @@ export default function Reports() {
   const pageSize = 20
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkRunning, setBulkRunning] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const selectAllRef = useRef<HTMLInputElement | null>(null)
 
   const [draft, setDraft] = useState<DispatchDraft>({
@@ -116,13 +117,30 @@ export default function Reports() {
   }, [selected])
 
   // Ranked volunteers by proximity and skill matching
+  // Volunteer skills (medical/search_rescue/driving/logistics) never equal
+  // incident types (fire/flood/...) except 'medical', so map each incident
+  // type to the relevant responder skills. 'other' matches none (distance only).
   const rankedVolunteers = useMemo(() => {
     if (!selected) return volunteers
+    const requiredSkills: readonly string[] =
+      selected.type === 'fire'
+        ? ['search_rescue', 'medical', 'driving']
+        : selected.type === 'flood'
+          ? ['search_rescue', 'driving', 'logistics']
+          : selected.type === 'medical'
+            ? ['medical']
+            : selected.type === 'missing_person'
+              ? ['search_rescue', 'driving']
+              : selected.type === 'earthquake'
+                ? ['search_rescue', 'medical', 'logistics']
+                : selected.type === 'accident'
+                  ? ['medical', 'driving', 'search_rescue']
+                  : []
     return [...volunteers].sort((a, b) => {
       const aSkills = Array.isArray(a.skills) ? a.skills : []
       const bSkills = Array.isArray(b.skills) ? b.skills : []
-      const aSkill = aSkills.includes(selected.type) ? 1 : 0
-      const bSkill = bSkills.includes(selected.type) ? 1 : 0
+      const aSkill = requiredSkills.length > 0 && aSkills.some((s) => requiredSkills.includes(s)) ? 1 : 0
+      const bSkill = requiredSkills.length > 0 && bSkills.some((s) => requiredSkills.includes(s)) ? 1 : 0
       if (aSkill !== bSkill) return bSkill - aSkill
 
       if (selected.latitude && selected.longitude && a.latitude && a.longitude && b.latitude && b.longitude) {
@@ -252,10 +270,33 @@ export default function Reports() {
     }
   }
 
-  const exportFilteredCsv = () => {
-    if (!reports || reports.length === 0) return
-    const stamp = new Date().toISOString().slice(0, 10)
-    downloadCsv(`aapdasetu-reports-${stamp}.csv`, reports.map((r) => ({
+  const exportFilteredCsv = async () => {
+    if (exporting) return
+    setExporting(true)
+    try {
+      // Fetch ALL filtered results across server pages (not just the visible
+      // 20-row page) so compliance exports are complete.
+      const all: Report[] = []
+      const exportPageSize = 100
+      let exportPage = 1
+      let total = Infinity
+      for (let guard = 0; guard < 50 && all.length < total; guard++) {
+        const res = await listReports({
+          status: statusFilter || undefined,
+          priority: priorityFilter || undefined,
+          type: typeFilter || undefined,
+          q: query || undefined,
+          page: exportPage,
+          pageSize: exportPageSize,
+        })
+        total = res.total
+        all.push(...res.items)
+        if (res.items.length < exportPageSize) break
+        exportPage++
+      }
+      if (all.length === 0) return
+      const stamp = new Date().toISOString().slice(0, 10)
+      downloadCsv(`aapdasetu-reports-${stamp}.csv`, all.map((r) => ({
       trackingId: r.trackingId,
       createdAt: formatDateTime(r.createdAt),
       type: r.type,
@@ -271,8 +312,13 @@ export default function Reports() {
           : ''),
       assignedUnits: [r.assignedVolunteerName, r.assignedAgencyName].filter(Boolean).join('; '),
       description: truncateForCsv(r.description, 120),
-    })))
-    toast(t('rp.csvExported', 'CSV exported'), 'success')
+      })))
+      toast(t('rp.csvExported', `CSV exported (${all.length})`), 'success')
+    } catch {
+      toast(t('rp.csvExportFailed', 'CSV export failed'), 'error')
+    } finally {
+      setExporting(false)
+    }
   }
 
   if (!reportsPage) return <Loader />
@@ -299,10 +345,11 @@ export default function Reports() {
           <button
             type="button"
             onClick={exportFilteredCsv}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
+            disabled={exporting}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
           >
             <Download className="h-3.5 w-3.5" />
-            <span>{t('rp.exportCsv', 'Export CSV')}</span>
+            <span>{exporting ? t('rp.exportingCsv', 'Exporting…') : t('rp.exportCsv', 'Export CSV')}</span>
           </button>
           {config.useMockOnly && (
             <button

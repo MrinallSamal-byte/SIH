@@ -138,12 +138,19 @@ export default function ReportDamage() {
     try {
       // ponytail: claim persists FIRST — analysis is indicative only and must
       // never block or lose the save.
+      // Backend requires reportedLatitude/Longitude, so fall back to Guwahati
+      // (same fallback used for AI display below) when GPS is unavailable.
       const saved = await createDamageAssessment({
         photoDataUrl: photos[0],
-        latitude: coords?.lat,
-        longitude: coords?.lng,
+        latitude: coords?.lat ?? 26.1445,
+        longitude: coords?.lng ?? 91.7362,
         reporterName: ownerName.trim() || undefined,
         reporterPhone: cleanPhone,
+        district,
+        propertyAddress: address.trim(),
+        description: description.trim(),
+        infraType,
+        additionalPhotos: photos.slice(1),
       })
       setClaimRef(saved.id)
       // Compensation is shown only when the backend actually returned one.

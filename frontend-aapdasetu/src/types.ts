@@ -93,6 +93,8 @@ export interface Report {
   source?: 'sos' | 'form' | 'sms' | 'call' | string
   createdAt: string
   updatedAt?: string
+  /** Echo of the client idempotency key — used for offline dedupe. */
+  clientRequestId?: string
 }
 
 export interface Volunteer {
@@ -299,5 +301,8 @@ export interface DamageAssessmentReport {
   factors: string[]
   huggingFaceModel?: string
   createdAt: string
+  /** Full dossier (new): extra evidence + reporter context. Optional so legacy seeds still typecheck. */
+  additionalPhotos?: string[]
+  description?: string
 }
 

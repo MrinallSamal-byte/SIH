@@ -10,9 +10,10 @@ export default function VolunteerLogin() {
   const { login, loading, error } = useVolunteerAuth()
   const isAuthed = useIsVolunteerAuthed()
   const navigate = useNavigate()
-  // Prefilled demo credentials for instant 1-click evaluation & field testing
-  const [phone, setPhone] = useState('9876543210')
-  const [accessCode, setAccessCode] = useState('aapdasetu-dev-volunteer-code')
+  // Field test identity is filled on demand (never printed) so the sign-in
+  // form reads like a real responder console while evaluation stays 1-click.
+  const [phone, setPhone] = useState('')
+  const [accessCode, setAccessCode] = useState('')
   // ponytail: backend auth is phone + shared access code; require 10-15 digits
   const phoneDigits = phone.replace(/\D/g, '')
   const canSubmit = phoneDigits.length >= 10 && phoneDigits.length <= 15 && accessCode.trim().length > 0
@@ -62,14 +63,20 @@ export default function VolunteerLogin() {
             {t('volLogin.subtitle')}
           </p>
 
-          <div className="mt-3 rounded-xl border border-zinc-200/80 bg-zinc-50 p-2.5 text-[11px] font-mono text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400 space-y-1">
-            <div className="flex items-center justify-between">
-              <span>Phone: <strong className="text-zinc-900 dark:text-zinc-200">9876543210</strong></span>
-              <span className="text-[10px] text-zinc-400">(Amit Rescue)</span>
+          <div className="mt-3 rounded-xl border border-zinc-200/80 bg-zinc-50 p-2.5 text-[11px] text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400 space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <span>{t('volLogin.testAccountHint', 'Authorised responders only. Credentials are issued by your district control room.')}</span>
             </div>
-            <div className="flex items-center justify-between border-t border-zinc-200/50 pt-1 dark:border-zinc-800/50">
-              <span>Code: <strong className="text-zinc-900 dark:text-zinc-200 truncate max-w-[170px]">aapdasetu-dev-volunteer-code</strong></span>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setPhone('9876543210')
+                setAccessCode('aapdasetu-dev-volunteer-code')
+              }}
+              className="w-full rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 font-mono text-[11px] font-bold text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+            >
+              {t('volLogin.useTestAccount', 'Use field test identity')}
+            </button>
           </div>
 
           <div className="mt-6 space-y-4">

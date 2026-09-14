@@ -14,6 +14,7 @@ export interface NotificationItem {
 
 const STORAGE_KEY_CITIZEN_NOTIFS = 'aapdasetu_citizen_notifications_v8'
 const STORAGE_KEY_ADMIN_NOTIFS = 'aapdasetu_admin_notifications_v8'
+const STORAGE_KEY_VOLUNTEER_NOTIFS = 'aapdasetu_volunteer_notifications_v8'
 
 /**
  * Curated, high-fidelity dummy notifications representing genuine emergency operations
@@ -205,15 +206,70 @@ export function getInitialAdminNotifications(): NotificationItem[] {
   ]
 }
 
+export function getInitialVolunteerNotifications(): NotificationItem[] {
+  const now = Date.now()
+
+  return [
+    {
+      id: 'notif-vol-001',
+      title: 'New Rescue Assignment: Flood Evacuation — Sector 7',
+      message: 'Command center assigned you a flood evacuation task (2 stranded residents, priority YELLOW). Open your task queue for victim contact, GPS and navigation.',
+      severity: 'critical',
+      category: 'dispatch',
+      targetArea: 'Sector 7, North Embankment',
+      createdAt: new Date(now - 4 * 60 * 1000).toISOString(),
+      read: false,
+      actionUrl: '/volunteer/tasks',
+      actionLabel: 'Open Task Queue',
+      role: 'volunteer',
+    },
+    {
+      id: 'notif-vol-002',
+      title: 'Check-In Reminder: Confirm On-Scene Arrival',
+      message: 'If you have reached the incident site, use Field Check-In with GPS so the control room can verify responder safety and update the rescue timeline.',
+      severity: 'warning',
+      category: 'ops',
+      targetArea: 'Active assignment zone',
+      createdAt: new Date(now - 28 * 60 * 1000).toISOString(),
+      read: false,
+      actionUrl: '/volunteer/check-in',
+      actionLabel: 'Check In Now',
+      role: 'volunteer',
+    },
+    {
+      id: 'notif-vol-003',
+      title: 'Muster Update: 18 SDRF Divers On Duty at Base Alpha',
+      message: 'Boat operators and divers logged on duty at Base Camp Alpha. Coordinate on Channel 4 before entering water operations in Sector 4 and Sector 7.',
+      severity: 'info',
+      category: 'dispatch',
+      targetArea: 'Base Alpha Staging Area',
+      createdAt: new Date(now - 52 * 60 * 1000).toISOString(),
+      read: true,
+      actionUrl: '/volunteer',
+      actionLabel: 'View Dashboard',
+      role: 'volunteer',
+    },
+  ]
+}
+
 /**
  * Local storage persistence helper for notifications
  */
-export function loadNotifications(role: 'citizen' | 'admin'): NotificationItem[] {
+export function loadNotifications(role: 'citizen' | 'admin' | 'volunteer'): NotificationItem[] {
   if (typeof window === 'undefined') {
-    return role === 'citizen' ? getInitialCitizenNotifications() : getInitialAdminNotifications()
+    return role === 'citizen'
+      ? getInitialCitizenNotifications()
+      : role === 'volunteer'
+        ? getInitialVolunteerNotifications()
+        : getInitialAdminNotifications()
   }
 
-  const key = role === 'citizen' ? STORAGE_KEY_CITIZEN_NOTIFS : STORAGE_KEY_ADMIN_NOTIFS
+  const key =
+    role === 'citizen'
+      ? STORAGE_KEY_CITIZEN_NOTIFS
+      : role === 'volunteer'
+        ? STORAGE_KEY_VOLUNTEER_NOTIFS
+        : STORAGE_KEY_ADMIN_NOTIFS
   try {
     const raw = localStorage.getItem(key)
     if (raw) {
@@ -226,7 +282,12 @@ export function loadNotifications(role: 'citizen' | 'admin'): NotificationItem[]
     // ignore json parse error
   }
 
-  const initial = role === 'citizen' ? getInitialCitizenNotifications() : getInitialAdminNotifications()
+  const initial =
+    role === 'citizen'
+      ? getInitialCitizenNotifications()
+      : role === 'volunteer'
+        ? getInitialVolunteerNotifications()
+        : getInitialAdminNotifications()
   try {
     localStorage.setItem(key, JSON.stringify(initial))
   } catch {
@@ -235,9 +296,14 @@ export function loadNotifications(role: 'citizen' | 'admin'): NotificationItem[]
   return initial
 }
 
-export function saveNotifications(role: 'citizen' | 'admin', list: NotificationItem[]) {
+export function saveNotifications(role: 'citizen' | 'admin' | 'volunteer', list: NotificationItem[]) {
   if (typeof window === 'undefined') return
-  const key = role === 'citizen' ? STORAGE_KEY_CITIZEN_NOTIFS : STORAGE_KEY_ADMIN_NOTIFS
+  const key =
+    role === 'citizen'
+      ? STORAGE_KEY_CITIZEN_NOTIFS
+      : role === 'volunteer'
+        ? STORAGE_KEY_VOLUNTEER_NOTIFS
+        : STORAGE_KEY_ADMIN_NOTIFS
   try {
     localStorage.setItem(key, JSON.stringify(list))
   } catch {
@@ -245,58 +311,3 @@ export function saveNotifications(role: 'citizen' | 'admin', list: NotificationI
   }
 }
 
-/**
- * Realistic pool of incoming simulated live events for dynamic demonstration
- */
-export const SIMULATED_INCOMING_EVENTS: Omit<NotificationItem, 'id' | 'createdAt' | 'read'>[] = [
-  {
-    title: 'NDRF Rescue Skiff Squad #6 En Route to Lowland Ward 14',
-    message: 'Rescue boat squadron dispatched with survival life-rafts and high-calorie energy bars for 18 trapped residents.',
-    severity: 'critical',
-    category: 'dispatch',
-    targetArea: 'Ward 14, Riverside Colony',
-    actionUrl: '/track',
-    actionLabel: 'Track Dispatch',
-    role: 'citizen',
-  },
-  {
-    title: 'New Emergency Drinking Water Station Opened',
-    message: 'Public Health Engineering Dept installed 3 mobile RO filtration units providing 10,000L clean water daily at Gandhi Square.',
-    severity: 'info',
-    category: 'supplies',
-    targetArea: 'Gandhi Memorial Square, Sector 2',
-    actionUrl: '/contacts',
-    actionLabel: 'Relief Contacts',
-    role: 'citizen',
-  },
-  {
-    title: 'Bridge Structural Advisory — NH-48 Bypass Closed',
-    message: 'Panchvati Old Bridge closed to vehicular traffic as precautionary measure due to surging river currents. Follow diversion route.',
-    severity: 'warning',
-    category: 'infrastructure',
-    targetArea: 'Panchvati Bypass, NH-48',
-    actionUrl: '/safe-routes',
-    actionLabel: 'View Safe Routes',
-    role: 'citizen',
-  },
-  {
-    title: 'Safety Check-in Milestone: 140 Citizens Marked Safe',
-    message: '140 residents in Sector 6 marked themselves safe within the last 30 minutes via Aadhaar & Mobile OTP verification.',
-    severity: 'success',
-    category: 'reunion',
-    targetArea: 'Sector 6 Relief Ward',
-    actionUrl: '/checkin',
-    actionLabel: 'Family Check-in',
-    role: 'citizen',
-  },
-  {
-    title: 'Urgent Medical Triage: Snakebite Antivenom Transferred',
-    message: 'Civil Hospital received 120 vials of polyvalent antivenom from State Medical Depots; mobile medical ambulances equipped.',
-    severity: 'info',
-    category: 'medical',
-    targetArea: 'Civil District Hospital',
-    actionUrl: '/pfa-chat',
-    actionLabel: 'First-Aid Guidance',
-    role: 'citizen',
-  },
-]

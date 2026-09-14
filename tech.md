@@ -193,10 +193,11 @@ model Incident {
 
 ### 6.2 `damage_service.py` (FastAPI `/ai/damage-assessment`)
 - Processes base64 or multipart images through a PyTorch / OpenCV structural defect classifier.
-- Extracts EXIF metadata, computes pHash, and outputs SDRF compensation tiers:
-  - **Grade 1 (Total Collapse):** ₹1,20,000
-  - **Grade 2 (Severe Damage):** ₹65,000
-  - **Grade 3 (Minor Damage):** ₹25,000
+- Extracts EXIF metadata, computes pHash, and outputs SDRF compensation tiers
+  (single source of truth: `backend-aapdasetu/src/services/damage.service.ts SDRF_COMPENSATION`):
+  - **FULLY_DESTROYED (Total Collapse):** ₹95,100
+  - **MAJOR_STRUCTURAL_DAMAGE (Severe Damage):** ₹47,550
+  - **MINOR_DAMAGE (Minor Damage):** ₹9,800
 
 ### 6.3 `satellite_flood_mapping.py` (FastAPI `/ai/satellite-flood-map`)
 - Ingests Sentinel-1 SAR radar backscatter data ($VV / VH$ polarization).

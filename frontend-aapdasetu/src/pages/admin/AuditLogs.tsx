@@ -23,6 +23,7 @@ export default function AuditLogs() {
   const [search, setSearch] = useState('')
   const [actionFilter, setActionFilter] = useState<string>('all')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [exporting, setExporting] = useState(false)
 
   const logs = page?.items ?? []
 
@@ -46,16 +47,52 @@ export default function AuditLogs() {
     })
   }, [logs, actionFilter, search, sortDir])
 
-  const exportCsv = () => {
-    if (filtered.length === 0) return
-    const stamp = new Date().toISOString().slice(0, 10)
-    downloadCsv(`aapdasetu-audit-logs-${stamp}.csv`, filtered.map((l) => ({
-      timestamp: formatDateTime(l.createdAt),
-      actor: l.adminEmail,
-      action: l.action,
-      target: l.entityType ? `${l.entityType}${l.entityId ? ` (${l.entityId})` : ''}` : '',
-      detail: l.details ? JSON.stringify(l.details) : '',
-    })))
+  const exportCsv = async () => {
+    if (exporting) return
+    setExporting(true)
+    try {
+      // Fetch ALL log pages (display shows the first 200) so the export is
+      // complete, then apply the same client filter/sort as the table.
+      const all: AuditLog[] = []
+      const exportPageSize = 200
+      let exportPage = 1
+      let total = Infinity
+      for (let guard = 0; guard < 25 && all.length < total; guard++) {
+        const res = await listAuditLogs({ page: exportPage, pageSize: exportPageSize })
+        total = res.total
+        all.push(...res.items)
+        if (res.items.length < exportPageSize) break
+        exportPage++
+      }
+      const rows = all
+        .filter((l) => {
+          if (actionFilter !== 'all' && l.action.toLowerCase() !== actionFilter.toLowerCase()) return false
+          if (search.trim()) {
+            const q = search.toLowerCase().trim()
+            const matchAdmin = (l.adminEmail || '').toLowerCase().includes(q)
+            const matchAction = (l.action || '').toLowerCase().includes(q)
+            const matchEntity = (l.entityType || '').toLowerCase().includes(q)
+            const matchId = (l.entityId || '').toLowerCase().includes(q)
+            if (!matchAdmin && !matchAction && !matchEntity && !matchId) return false
+          }
+          return true
+        })
+        .sort((a, b) => {
+          const diff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          return sortDir === 'asc' ? diff : -diff
+        })
+      if (rows.length === 0) return
+      const stamp = new Date().toISOString().slice(0, 10)
+      downloadCsv(`aapdasetu-audit-logs-${stamp}.csv`, rows.map((l) => ({
+        timestamp: formatDateTime(l.createdAt),
+        actor: l.adminEmail,
+        action: l.action,
+        target: l.entityType ? `${l.entityType}${l.entityId ? ` (${l.entityId})` : ''}` : '',
+        detail: l.details ? JSON.stringify(l.details) : '',
+      })))
+    } finally {
+      setExporting(false)
+    }
   }
 
   if (!page) return <Loader />
@@ -86,10 +123,11 @@ export default function AuditLogs() {
           <button
             type="button"
             onClick={exportCsv}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
+            disabled={exporting}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
           >
             <Download className="h-3.5 w-3.5" />
-            <span>{t('au.exportCsv', 'Export CSV')}</span>
+            <span>{exporting ? t('au.exportingCsv', 'Exporting…') : t('au.exportCsv', 'Export CSV')}</span>
           </button>
           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300 mono">
             {totalCount} {t('au.loggedEvents')}

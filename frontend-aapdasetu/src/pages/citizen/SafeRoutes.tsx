@@ -324,7 +324,7 @@ export default function SafeRoutes() {
                   className="inline-flex items-center gap-1 rounded-md border border-zinc-300 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 cursor-pointer"
                 >
                   <Radio className="h-3 w-3 text-blue-500" />
-                  <span>{useLocalSimulation ? 'Local Demo' : 'Real GPS'}</span>
+                  <span>{useLocalSimulation ? 'Simulated origin' : 'Live GPS'}</span>
                 </button>
               )}
             </div>
@@ -337,7 +337,7 @@ export default function SafeRoutes() {
 
             {coords && isFarFromShelter && useLocalSimulation && (
               <div className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                Live GPS is located in another region. Simulating evacuation origin ~2.5km from destination shelter.
+                Live GPS is outside the current operations area. Showing an evacuation origin ~2.5km from the destination shelter.
               </div>
             )}
 
