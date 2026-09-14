@@ -114,7 +114,7 @@ enum MatchStatus {
 
 model Report {
   id                  String         @id @default(uuid()) @db.Uuid
-  trackingId          String         @unique @default(cuid())
+  trackingId          String         @unique
   type                IncidentType
   status              IncidentStatus @default(pending)
   priorityScore       Int            @default(30) @db.SmallInt

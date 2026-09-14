@@ -6,6 +6,25 @@ import { NotFoundError, ConflictError } from '../lib/errors.js';
 import { writeAuditLog } from './audit.service.js';
 import { realtimeHub } from '../realtime/hub.js';
 
+
+function generateFinalIncidentID(phoneNumber?: string) {
+    const safePhone = phoneNumber || '0000'; 
+    
+    // Extract the LAST 4 digits, which are much more unique to the user
+    const cleaned = safePhone.replace(/\D/g, '');
+    const lastFour = cleaned.slice(-4).padStart(4, '0');
+    
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0'); 
+    
+    // Generate a 3-character random alphanumeric string (e.g., "A7X")
+    const randomStr = Math.random().toString(36).substring(2, 5).toUpperCase();
+    
+    // Output format: 1210-1409-A7X
+    return `${lastFour}-${day}${month}-${randomStr}`;
+}
+
 export interface CreateSosInput {
   type: IncidentType;
   latitude: number;
@@ -64,6 +83,7 @@ export async function createSosReport(input: CreateSosInput) {
   try {
     report = await prisma.report.create({
       data: {
+        trackingId: generateFinalIncidentID(input.reporterPhone),
         type: input.type,
         latitude: input.latitude,
         longitude: input.longitude,
@@ -154,6 +174,7 @@ export async function createIncidentReport(input: CreateReportInput) {
   try {
     report = await prisma.report.create({
       data: {
+        trackingId: generateFinalIncidentID(input.reporterPhone),
         type: input.type,
         latitude: input.latitude,
         longitude: input.longitude,
