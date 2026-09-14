@@ -109,6 +109,11 @@ android {
         abortOnError = false
         checkReleaseBuilds = false
     }
+    testOptions {
+        unitTests.all {
+            it.maxHeapSize = "2048m"
+        }
+    }
 }
 
 composeCompiler {

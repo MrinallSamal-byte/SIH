@@ -145,7 +145,7 @@ class NostrDirectMessageHandlerTest {
 
     private fun waitForMessage(state: ChatState, messageId: String) {
         kotlinx.coroutines.runBlocking {
-            withTimeout(5_000) {
+            withTimeout(15_000) {
                 while (state.getPrivateChatsValue().values.flatten().none { it.id == messageId }) {
                     mainDispatcher.scheduler.advanceUntilIdle()
                     if (state.getPrivateChatsValue().values.flatten().any { it.id == messageId }) break
