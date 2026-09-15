@@ -125,7 +125,7 @@ export function isOffTopicQuery(text: string): boolean {
 
   // Math, academic, homework
   const academicPatterns = [
-    /\b(homework|assignment|solve|calculate|evaluate)\s+.*[\=\+\-\*\/\^]/i,
+    /\b(homework|assignment|solve|calculate|evaluate)\s+.*[-=+*/^]/i,
     /\b(homework|assignment|solve\s*(this\s*)?(equation|problem|integral|derivative|algebra|calculus|math))\b/i,
     /\b(quadratic|pythagor|differentiation|integration|trigonometry|integral|derivative|algebra|calculus)\b/i,
     /\b(write\s*(an?\s*)?(essay|thesis|speech|article|summary\s*of))\b/i,
