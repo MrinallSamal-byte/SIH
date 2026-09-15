@@ -8,7 +8,8 @@ import {
   Phone,
   Navigation,
   ArrowRight,
-  MapPin
+  MapPin,
+  Monitor,
 } from 'lucide-react'
 import { listReports, updateReport } from '../../api/endpoints'
 import Loader from '../../components/common/Loader'
@@ -200,7 +201,7 @@ export default function LiveSOS() {
   // true total — those incidents could never be acknowledged from here.
   const fetchReports = useCallback(() => listReports({ status: 'pending', pageSize: 200 }), [])
   const reportsPage = useRealtime<{ items: Report[]; total: number }>(fetchReports, 3000)
-  const reports = reportsPage?.items ?? []
+  const reports = useMemo(() => reportsPage?.items ?? [], [reportsPage?.items])
 
   const statusLabel = useCallback(
     (status: string) =>
@@ -217,6 +218,8 @@ export default function LiveSOS() {
   const [muted, setMuted] = useState(false)
   const [loopActive, setLoopActive] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [wakeLockActive, setWakeLockActive] = useState(false)
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null)
   const knownRedIdsRef = useRef<Set<string>>(new Set())
   const isFirstLoadRef = useRef(true)
 
@@ -226,6 +229,48 @@ export default function LiveSOS() {
   const markInteraction = useCallback(() => {
     setHasGesture(true)
     sirenEngine.prime()
+  }, [])
+
+  const toggleWakeLock = useCallback(async () => {
+    markInteraction()
+    if (wakeLockActive) {
+      if (wakeLockRef.current) {
+        try {
+          await wakeLockRef.current.release()
+        } catch {
+          // ignore
+        }
+        wakeLockRef.current = null
+      }
+      setWakeLockActive(false)
+      toast(t('ls.screenLockDisabled', 'Screen sleep lock released'), 'info')
+    } else {
+      if ('wakeLock' in navigator) {
+        try {
+          const sentinel = await navigator.wakeLock.request('screen')
+          wakeLockRef.current = sentinel
+          setWakeLockActive(true)
+          sentinel.addEventListener('release', () => {
+            wakeLockRef.current = null
+            setWakeLockActive(false)
+          })
+          toast(t('ls.screenLockEnabled', 'Command center screen lock active — display will stay awake'), 'success')
+        } catch {
+          toast(t('ls.screenLockError', 'Could not acquire screen wake lock'), 'info')
+        }
+      } else {
+        toast(t('ls.screenLockUnsupported', 'Screen Wake Lock API not supported on this browser'), 'info')
+      }
+    }
+  }, [markInteraction, wakeLockActive, toast, t])
+
+  useEffect(() => {
+    return () => {
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().catch(() => {})
+        wakeLockRef.current = null
+      }
+    }
   }, [])
 
   useEffect(() => {
@@ -451,6 +496,20 @@ export default function LiveSOS() {
               )}
             </>
           )}
+
+          <button
+            type="button"
+            onClick={toggleWakeLock}
+            title={wakeLockActive ? t('ls.screenLockActiveHint', 'Display stays awake (click to release)') : t('ls.screenLockInactiveHint', 'Keep command display awake')}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold shadow-2xs cursor-pointer transition-colors ${
+              wakeLockActive
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+                : 'border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'
+            }`}
+          >
+            <Monitor className={`h-3.5 w-3.5 ${wakeLockActive ? 'text-emerald-600 dark:text-emerald-400 animate-pulse' : 'text-zinc-500'}`} />
+            <span>{wakeLockActive ? t('ls.displayAwake', 'Screen Awake') : t('ls.stayAwake', 'Stay Awake')}</span>
+          </button>
         </div>
       </div>
 

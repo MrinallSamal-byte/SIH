@@ -77,8 +77,8 @@ export default function ReportForm() {
   const audioInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (detectedAddress && !gpsAddress) {
-      setGpsAddress(detectedAddress)
+    if (detectedAddress) {
+      setGpsAddress((prev) => prev || detectedAddress)
     }
   }, [detectedAddress])
 
@@ -89,16 +89,19 @@ export default function ReportForm() {
     const point: GeoPoint = { lat: coords.latitude, lng: coords.longitude }
     setCustomPoint(point)
     setGpsError(null)
-    if (!gpsAddress) {
-      reverseGeocode(point)
-        .then((addr) => {
-          if (addr) setGpsAddress(addr)
-          else setGpsAddress(`${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
-        })
-        .catch(() => {
-          setGpsAddress(`${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
-        })
-    }
+    setGpsAddress((prev) => {
+      if (!prev) {
+        reverseGeocode(point)
+          .then((addr) => {
+            if (addr) setGpsAddress(addr)
+            else setGpsAddress(`${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
+          })
+          .catch(() => {
+            setGpsAddress(`${point.lat.toFixed(4)}°N, ${point.lng.toFixed(4)}°E`)
+          })
+      }
+      return prev
+    })
   }, [coords, hasTrustedFix])
 
   const handleRetryGps = async () => {

@@ -136,7 +136,7 @@ export default function SafeRoutes() {
     return () => {
       cancelled = true
     }
-  }, [effectiveOrigin.lat, effectiveOrigin.lng, destPoint?.lat, destPoint?.lng, hazardPolys, destination?.name])
+  }, [effectiveOrigin, destPoint, hazardPolys, destination?.name])
 
   // Distinct Route Polylines
   const polylines: MapPolyline[] = useMemo(() => {

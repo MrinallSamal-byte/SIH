@@ -27,7 +27,7 @@ export default function AuditLogs() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [exporting, setExporting] = useState(false)
 
-  const logs = page?.items ?? []
+  const logs = useMemo(() => page?.items ?? [], [page?.items])
 
   const filtered = useMemo(() => {
     if (!logs) return []

@@ -286,7 +286,7 @@ export default function ShelterFinder() {
     aiSatelliteFloodMap({ center: originPoint, radiusKm: 20 })
       .then((res) => setFlood(res || { type: 'FeatureCollection', features: [] }))
       .catch(() => setFlood({ type: 'FeatureCollection', features: [] }))
-  }, [userPos?.lat, userPos?.lng, center.lat, center.lng])
+  }, [userPos, center])
 
   // Hazard polygon structures
   const floodZones = useMemo(() => {
@@ -425,6 +425,16 @@ export default function ShelterFinder() {
     return list
   }, [dualRoutes, activeRouteView])
 
+  const handleSelect = useCallback((id: string | null) => {
+    setSelectedId(id)
+    setIsSimulating(false)
+    setSimIndex(0)
+    if (!id) return
+    requestAnimationFrame(() => {
+      cardRefs.current.get(id)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    })
+  }, [])
+
   // Distinct Map Markers
   const markers = useMemo(() => {
     const list: MapMarker[] = []
@@ -458,15 +468,16 @@ export default function ShelterFinder() {
       })
     }
 
-    // Shelter Markers
+    // Shelter Markers with Distinct Icons
     for (let i = 0; i < filteredAndSorted.length; i++) {
       const s = filteredAndSorted[i]
       if (!s || typeof s.latitude !== 'number' || typeof s.longitude !== 'number') continue
-      const statusLabel = s.status === 'full' ? t('shelter.full', 'Full') : t('shelter.statusOpen', 'Open')
-      const occ = s.occupancy ?? 0
-      const cap = s.capacity ?? 100
-      const isSaved = savedIds.has(s.id)
+
       const isSelected = selectedId === s.id
+      const isSaved = savedIds.has(s.id)
+      const cap = s.capacity ?? 0
+      const occ = s.occupancy ?? 0
+      const statusLabel = s.status === 'open' ? t('sh.statusOpen', 'Open') : s.status === 'full' ? t('sh.statusFull', 'Full') : t('sh.statusClosed', 'Closed')
       const isRecommended = recommendedShelter?.id === s.id
       const hasMedical = Array.isArray(s.facilities) && s.facilities.includes('medical_station')
 
@@ -519,17 +530,7 @@ export default function ShelterFinder() {
     }
 
     return list
-  }, [filteredAndSorted, userPos, simulatedPosition, selectedShelter, selectedId, accuracy, savedIds, toggleSaveShelter, dualRoutes, activeRouteView, t])
-
-  const handleSelect = useCallback((id: string | null) => {
-    setSelectedId(id)
-    setIsSimulating(false)
-    setSimIndex(0)
-    if (!id) return
-    requestAnimationFrame(() => {
-      cardRefs.current.get(id)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-    })
-  }, [])
+  }, [filteredAndSorted, userPos, simulatedPosition, selectedShelter, selectedId, accuracy, savedIds, toggleSaveShelter, dualRoutes, activeRouteView, t, handleSelect, recommendedShelter?.id])
 
   const resetFilters = useCallback(() => {
     setSearchQuery('')

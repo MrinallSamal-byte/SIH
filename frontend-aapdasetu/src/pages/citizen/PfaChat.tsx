@@ -7,13 +7,16 @@ import {
   CheckCircle2,
   ArrowRight,
   Activity,
-  HeartPulse
+  HeartPulse,
+  Mic,
+  MicOff,
 } from 'lucide-react'
 import { aiPfaChat, cleanAiOutput, isAiProviderConfigured } from '../../api/ai'
 import { createReport } from '../../api/endpoints'
 import { useToast } from '../../components/common/Toast'
 import { useLanguage } from '../../lib/i18n'
 import { useGeoLocation } from '../../hooks/useLocation'
+import { useSpeechRecognition } from '../../hooks/useSpeechRecognition'
 import type { PfaChatMessage } from '../../types'
 
 const promptShortcuts = [
@@ -41,6 +44,29 @@ export default function PfaChatPage() {
   const bottomRef = useRef<HTMLDivElement>(null)
   // ponytail: badge reflects real provider availability, not a hardcoded claim
   const aiConfigured = isAiProviderConfigured()
+  const {
+    isSupported: speechSupported,
+    isListening,
+    startListening,
+    stopListening,
+    error: speechError,
+  } = useSpeechRecognition()
+
+  useEffect(() => {
+    if (speechError) {
+      toast(speechError, 'info')
+    }
+  }, [speechError, toast])
+
+  const toggleVoiceInput = () => {
+    if (isListening) {
+      stopListening()
+    } else {
+      startListening((transcript) => {
+        setInput(transcript)
+      })
+    }
+  }
 
   useEffect(() => {
     setMessages((prev) => {
@@ -388,6 +414,20 @@ export default function PfaChatPage() {
           placeholder={t('chat.placeholder')}
           className="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-800 outline-none focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 dark:focus:border-slate-500"
         />
+        {speechSupported && (
+          <button
+            type="button"
+            onClick={toggleVoiceInput}
+            title={isListening ? t('chat.stopVoice', 'Stop voice input') : t('chat.startVoice', 'Speak in your language')}
+            className={`shrink-0 inline-flex items-center justify-center rounded-xl p-2.5 transition cursor-pointer ${
+              isListening
+                ? 'bg-rose-600 text-white animate-pulse shadow-md shadow-rose-500/30'
+                : 'border border-zinc-200 bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 dark:hover:bg-[#2a2a2a]'
+            }`}
+          >
+            {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => send()}

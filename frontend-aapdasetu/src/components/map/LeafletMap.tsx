@@ -76,14 +76,13 @@ export interface MapPolyline {
   label?: string
 }
 
-export const INDIA_BOUNDS: [[number, number], [number, number]] = [
+const INDIA_BOUNDS: [[number, number], [number, number]] = [
   [6.0, 68.0],
   [37.5, 97.5],
 ]
-export const INDIA_CENTER: GeoPoint = { lat: 22.0, lng: 79.0 }
 
 /** Above this many markers, switch from DOM divIcons to canvas CircleMarkers */
-export const CANVAS_MARKER_THRESHOLD = 80
+const CANVAS_MARKER_THRESHOLD = 80
 
 export type MapLayerMode = 'streets' | 'satellite' | 'terrain' | 'dark' | 'traffic' | 'osm'
 
@@ -490,7 +489,7 @@ function MapController({
         // fitBounds error
       }
     }
-  }, [map, points.length, fitTrigger, autoFit])
+  }, [map, points, fitTrigger, autoFit])
 
   // 2. Focused marker / selectedId change: Center on selected marker without resetting user zoom
   useEffect(() => {
@@ -511,7 +510,7 @@ function MapController({
         }
       }
     }
-  }, [map, selectedId])
+  }, [map, selectedId, markers])
 
   // 3. Center prop change (e.g. user clicked locate or explicit recenter)
   useEffect(() => {

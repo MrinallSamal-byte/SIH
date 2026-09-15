@@ -202,7 +202,7 @@ export default function Reports() {
       status: 'on_duty',
     }
     return [current, ...rankedVolunteers]
-  }, [rankedVolunteers, selected, t])
+  }, [rankedVolunteers, selected, t, volunteers])
 
   const agencyOptions = useMemo(() => {
     if (!selected?.assignedAgencyId || agencies.some((a) => a.id === selected.assignedAgencyId)) {
