@@ -113,3 +113,47 @@ export async function updateVolunteer(input: {
   });
   return volunteer;
 }
+
+/**
+ * Trust-tier review: verify a vetted volunteer, or suspend one under review.
+ * Suspending while the volunteer owns unresolved rescues is refused — reassign
+ * first so no victim loses their responder mid-rescue.
+ */
+export async function setVolunteerVerification(input: {
+  id: string;
+  adminEmail: string;
+  verificationStatus: 'pending' | 'verified' | 'suspended';
+  trainingCompleted?: boolean;
+  idDocumentRef?: string;
+}) {
+  const existing = await prisma.volunteer.findUnique({ where: { id: input.id } });
+  if (!existing) throw new NotFoundError('Volunteer not found');
+
+  if (input.verificationStatus === 'suspended') {
+    const activeAssignments = await prisma.report.count({
+      where: { assignedVolunteerId: input.id, status: { not: 'resolved' } },
+    });
+    if (activeAssignments > 0) {
+      throw new ConflictError('Volunteer has active assignments; resolve or unassign first');
+    }
+  }
+
+  const data: Record<string, unknown> = { verificationStatus: input.verificationStatus };
+  if (input.trainingCompleted !== undefined) data.trainingCompleted = input.trainingCompleted;
+  if (input.idDocumentRef !== undefined) data.idDocumentRef = input.idDocumentRef.slice(0, 300);
+
+  const volunteer = await prisma.volunteer.update({ where: { id: input.id }, data });
+  await writeAuditLog({
+    adminEmail: input.adminEmail,
+    action: 'VERIFY_VOLUNTEER',
+    entityType: 'volunteer',
+    entityId: input.id,
+    details: { verificationStatus: input.verificationStatus, trainingCompleted: input.trainingCompleted },
+  });
+  realtimeHub.broadcast({
+    type: 'volunteer:status',
+    payload: { id: volunteer.id, name: volunteer.name, status: volunteer.status },
+    timestamp: new Date().toISOString(),
+  });
+  return volunteer;
+}

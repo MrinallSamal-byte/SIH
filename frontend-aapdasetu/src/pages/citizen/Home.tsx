@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Siren,
   ArrowRight,
   ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
   ShieldCheck,
   Building,
   Compass,
@@ -13,6 +15,7 @@ import {
   Search,
   Smartphone,
   Bell,
+  HeartHandshake,
   WifiOff,
 } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
@@ -69,6 +72,12 @@ const emergencyServices: ServiceCard[] = [
     icon: Bell,
   },
   {
+    to: '/donate',
+    titleKey: 'nav.donate',
+    descKey: 'service.donateDesc',
+    icon: HeartHandshake,
+  },
+  {
     to: '/app',
     titleKey: 'appdl.navLabel',
     descKey: 'appdl.cardDesc',
@@ -79,6 +88,32 @@ const emergencyServices: ServiceCard[] = [
 export default function Home() {
   const { t } = useLanguage()
   const [openShelterCount, setOpenShelterCount] = useState<number | null>(null)
+
+  // Horizontal services rail: edge-aware prev/next controls.
+  const railRef = useRef<HTMLDivElement | null>(null)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+
+  const updateRailEdges = () => {
+    const el = railRef.current
+    if (!el) return
+    const maxLeft = el.scrollWidth - el.clientWidth
+    setCanScrollLeft(el.scrollLeft > 4)
+    setCanScrollRight(el.scrollLeft < maxLeft - 4)
+  }
+
+  useEffect(() => {
+    updateRailEdges()
+    window.addEventListener('resize', updateRailEdges)
+    return () => window.removeEventListener('resize', updateRailEdges)
+  }, [])
+
+  const scrollRail = (dir: 1 | -1) => {
+    const el = railRef.current
+    if (!el) return
+    // Advance by roughly one card so position stays card-aligned with snapping.
+    el.scrollBy({ left: dir * Math.min(320, el.clientWidth * 0.8), behavior: 'smooth' })
+  }
 
   // Snapshot live shelter count for the crisis status strip.
   useEffect(() => {
@@ -116,7 +151,7 @@ export default function Home() {
         )}
 
         {/* Hero CTAs — High contrast SOS primary, secondary actions visible on mobile */}
-        <div className="mt-6 flex flex-col items-center justify-center gap-3 md:flex-row">
+        <div className="mt-6 flex flex-col items-center justify-center gap-3 md:flex-row md:items-stretch">
           <Link
             to="/sos"
             className="group inline-flex w-full items-center justify-center gap-2.5 rounded-xl bg-red-600 px-8 py-4 text-base font-extrabold uppercase tracking-tight text-white shadow-md shadow-red-600/20 ring-2 ring-red-600/30 transition hover:bg-red-700 active:scale-[0.98] md:w-auto sm:text-lg"
@@ -125,17 +160,17 @@ export default function Home() {
             <span>{t('hero.tapSos')}</span>
           </Link>
 
-          <div className="flex w-full items-center gap-2.5 md:w-auto">
+          <div className="flex w-full items-stretch gap-2.5 md:w-auto">
             <Link
               to="/track"
-              className="group flex-1 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 active:scale-[0.98] inline-flex md:w-auto sm:text-base dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-slate-200 dark:hover:bg-[#252525]"
+              className="group flex-1 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-4 text-sm font-semibold whitespace-nowrap text-zinc-700 shadow-sm transition hover:bg-zinc-50 active:scale-[0.98] inline-flex md:w-auto sm:text-base dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-slate-200 dark:hover:bg-[#252525]"
             >
               <Search className="size-[18px]" />
               <span>{t('nav.track')}</span>
             </Link>
             <Link
               to="/report"
-              className="group flex-1 items-center justify-center gap-2 rounded-xl bg-zinc-800 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-700 active:scale-[0.98] inline-flex md:w-auto sm:text-base dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
+              className="group flex-1 items-center justify-center gap-2 rounded-xl bg-zinc-800 px-5 py-4 text-sm font-semibold whitespace-nowrap text-white shadow-sm transition hover:bg-zinc-700 active:scale-[0.98] inline-flex md:w-auto sm:text-base dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
             >
               <span>{t('hero.submitReport')}</span>
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -177,33 +212,62 @@ export default function Home() {
       </section>
 
       <section>
-        <div className="mb-4 px-1">
+        <div className="mb-4 flex items-end justify-between gap-3 px-1">
           <h2 className="text-[11px] font-semibold tracking-widest text-slate-500 dark:text-slate-400 uppercase mono">
             {t('hero.quickAccess')}
           </h2>
+          <div className="hidden items-center gap-1.5 sm:flex">
+            <button
+              type="button"
+              onClick={() => scrollRail(-1)}
+              disabled={!canScrollLeft}
+              aria-label={t('common.scrollLeft', 'Scroll left')}
+              className="rounded-lg border border-zinc-200/80 bg-white p-1.5 text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800 disabled:opacity-30 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-400 dark:hover:bg-[#252525] cursor-pointer"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollRail(1)}
+              disabled={!canScrollRight}
+              aria-label={t('common.scrollRight', 'Scroll right')}
+              className="rounded-lg border border-zinc-200/80 bg-white p-1.5 text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800 disabled:opacity-30 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-400 dark:hover:bg-[#252525] cursor-pointer"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {emergencyServices.map((item) => {
-            const Icon = item.icon
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className="group relative flex flex-col rounded-2xl border border-zinc-200/80 bg-white p-4 sm:p-5 text-left transition hover:border-zinc-400 active:scale-[0.99] dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:hover:border-slate-600/80"
-              >
-                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800 text-white dark:bg-slate-100 dark:text-zinc-800">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <h3 className="text-sm font-bold tracking-tight text-zinc-800 sm:text-base dark:text-slate-300">
-                  {t(item.titleKey)}
-                </h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
-                  {t(item.descKey)}
-                </p>
-              </Link>
-            )
-          })}
+        <div className="relative">
+          <div
+            ref={railRef}
+            onScroll={updateRailEdges}
+            className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 pt-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {emergencyServices.map((item) => {
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className="group relative flex w-[240px] shrink-0 snap-start flex-col rounded-2xl border border-zinc-200/80 bg-white p-4 sm:w-[280px] sm:p-5 text-left transition hover:border-zinc-400 hover:shadow-sm active:scale-[0.99] dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:hover:border-slate-600/80"
+                >
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800 text-white dark:bg-slate-100 dark:text-zinc-800">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <ArrowUpRight className="h-4 w-4 text-slate-300 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-zinc-600 dark:text-zinc-600 dark:group-hover:text-slate-300" />
+                  </div>
+                  <h3 className="text-sm font-bold tracking-tight text-zinc-800 sm:text-base dark:text-slate-300">
+                    {t(item.titleKey)}
+                  </h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    {t(item.descKey)}
+                  </p>
+                </Link>
+              )
+            })}
+          </div>
         </div>
       </section>
 

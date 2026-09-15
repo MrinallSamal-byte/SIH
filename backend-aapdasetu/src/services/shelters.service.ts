@@ -1,10 +1,21 @@
 /** Shelter finder & management service. */
 // ponytail: list endpoints keep returning bare arrays for FE compat; envelope upgrade path is {items,total,page,pageSize}
+import { randomBytes } from 'node:crypto';
 import { prisma } from '../lib/prisma.js';
 import { haversineDistanceKm } from '../lib/haversine.js';
-import { NotFoundError, UnprocessableEntityError } from '../lib/errors.js';
+import { NotFoundError, UnprocessableEntityError, UnauthorizedError } from '../lib/errors.js';
 import { writeAuditLog } from './audit.service.js';
+import { safeEqualHex } from './otp.service.js';
 import { realtimeHub } from '../realtime/hub.js';
+
+/** 6-char public check-in code (no ambiguous 0/O/1/I). Not a secret — it is printed on shelter posters. */
+export function makeCheckinCode(): string {
+  const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  const bytes = randomBytes(6);
+  let code = '';
+  for (let i = 0; i < 6; i++) code += alphabet[bytes[i] % alphabet.length];
+  return code;
+}
 
 export async function findNearbyShelters(params: {
   latitude: number;
@@ -73,6 +84,7 @@ export async function createShelter(input: {
       facilities: input.facilities as never,
       contactPhone: input.contactPhone,
       status: (input.status as never) ?? 'open',
+      checkinCode: makeCheckinCode(),
     },
   });
   await writeAuditLog({
@@ -108,6 +120,8 @@ export async function updateShelter(input: {
   }
 
   const data: Record<string, unknown> = {};
+  // Backfill the public check-in code for rows created before it existed.
+  if (!existing.checkinCode) data.checkinCode = makeCheckinCode();
   if (input.name !== undefined) data.name = input.name;
   if (input.address !== undefined) data.address = input.address;
   if (input.latitude !== undefined) data.latitude = input.latitude;
@@ -145,4 +159,68 @@ export async function updateShelter(input: {
 
 function serializeShelter(s: Record<string, unknown>) {
   return { ...s, capacityAvailable: Math.max(0, Number(s.capacity) - Number(s.occupancy ?? 0)) };
+}
+
+/**
+ * Citizen self check-in/out at a shelter gate (poster code or QR payload).
+ * Occupancy is capped at capacity — a full shelter refuses check-in with 422
+ * instead of silently overbooking. Status auto-derives from the math.
+ */
+export async function shelterCheckin(input: { id: string; code: string }) {
+  const shelter = await prisma.shelter.findUnique({ where: { id: input.id } });
+  if (!shelter) throw new NotFoundError('Shelter not found');
+  if (shelter.status === 'closed') {
+    throw new UnprocessableEntityError('Shelter is closed');
+  }
+  assertCheckinCode(shelter.checkinCode, input.code);
+  if ((shelter.occupancy ?? 0) >= shelter.capacity) {
+    throw new UnprocessableEntityError('Shelter is full');
+  }
+  const updated = await prisma.shelter.update({
+    where: { id: input.id },
+    data: {
+      occupancy: { increment: 1 },
+      status: (shelter.occupancy ?? 0) + 1 >= shelter.capacity ? ('full' as never) : shelter.status,
+    },
+    include: { resources: true },
+  });
+  realtimeHub.broadcast(
+    { type: 'shelter:capacity', payload: serializeShelter(updated), timestamp: new Date().toISOString() },
+    'public',
+  );
+  return serializeShelter(updated);
+}
+
+export async function shelterCheckout(input: { id: string; code: string }) {
+  const shelter = await prisma.shelter.findUnique({ where: { id: input.id } });
+  if (!shelter) throw new NotFoundError('Shelter not found');
+  assertCheckinCode(shelter.checkinCode, input.code);
+  if ((shelter.occupancy ?? 0) <= 0) {
+    throw new UnprocessableEntityError('Shelter occupancy is already zero');
+  }
+  const updated = await prisma.shelter.update({
+    where: { id: input.id },
+    data: {
+      occupancy: { decrement: 1 },
+      status:
+        shelter.status === 'full' && (shelter.occupancy ?? 1) - 1 < shelter.capacity
+          ? ('open' as never)
+          : shelter.status,
+    },
+    include: { resources: true },
+  });
+  realtimeHub.broadcast(
+    { type: 'shelter:capacity', payload: serializeShelter(updated), timestamp: new Date().toISOString() },
+    'public',
+  );
+  return serializeShelter(updated);
+}
+
+function assertCheckinCode(stored: string | null, supplied: string): void {
+  const clean = (supplied ?? '').trim().toUpperCase();
+  if (!stored || !/^[A-Z2-9]{6}$/.test(clean) || !safeEqualHex(stored.toUpperCase(), clean)) {
+    // 401, not 404: the shelter exists, the code is wrong. Generic message so
+    // codes cannot be probed character-by-character (timing-safe compare).
+    throw new UnauthorizedError('Invalid check-in code');
+  }
 }

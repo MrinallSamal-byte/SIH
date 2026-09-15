@@ -12,7 +12,7 @@ import {
   MessageSquare,
   Edit3,
 } from 'lucide-react'
-import { createReport } from '../../api/endpoints'
+import { createReport, requestOtp, verifyOtp } from '../../api/endpoints'
 import { aiTriage } from '../../api/ai'
 import { apiHealth } from '../../api/client'
 import { enqueueOutbox, getOutbox, hasQueuedClientRequest, initGlobalOutboxSync, subscribeOutbox } from '../../lib/outbox'
@@ -54,6 +54,15 @@ export default function SOS() {
   // Category selector removed — SOS always dispatches as General Emergency.
   const selectedType: IncidentType = 'other'
   const [phoneError, setPhoneError] = useState<string | null>(null)
+  // Optional OTP challenge for the callback number. Never blocks SOS:
+  // an unverified SOS is still dispatched, just marked unverified.
+  const [otpToken, setOtpToken] = useState<string | null>(null)
+  const [otpVerifiedPhone, setOtpVerifiedPhone] = useState<string | null>(null)
+  const [otpRequestId, setOtpRequestId] = useState<string | null>(null)
+  const [otpDemoCode, setOtpDemoCode] = useState<string | null>(null)
+  const [otpCode, setOtpCode] = useState('')
+  const [otpStatus, setOtpStatus] = useState<'idle' | 'sending' | 'sent' | 'verifying' | 'verified'>('idle')
+  const [otpError, setOtpError] = useState<string | null>(null)
   const [triggering, setTriggering] = useState(false)
   const [rescanning, setRescanning] = useState(false)
   const [result, setResult] = useState<Report | null>(null)
@@ -206,6 +215,10 @@ export default function SOS() {
         landmark: fullLandmark,
         clientRequestId,
         clientCreatedAt: new Date().toISOString(),
+        // Attach only when the number shown was the verified one — a token
+        // minted for a different number must never ride along.
+        phoneOtpToken:
+          otpToken && otpVerifiedPhone === phone.replace(/\D/g, '').slice(-10) ? otpToken : undefined,
       }
       pendingInput = input
 
@@ -223,6 +236,12 @@ export default function SOS() {
       }
       setResult(report)
       navigator.vibrate?.([200, 100, 200])
+
+      // Near-duplicate clustering: the backend merged this tap into an
+      // identical SOS from the last minutes instead of double-dispatching.
+      if ((report as unknown as { duplicate?: boolean }).duplicate) {
+        toast(t('sos.duplicateMerged', 'This SOS matches one you already sent — rescue is already on it.'), 'info')
+      }
 
       void aiTriage(input)
         .then((triage) => {
@@ -257,6 +276,61 @@ export default function SOS() {
       busyRef.current = false
       setTriggering(false)
     }
+  }
+
+  const handleRequestOtp = async () => {
+    if (!validatePhone(phone.trim())) {
+      setPhoneError(t('sos.errPhoneFormat'))
+      phoneInputRef.current?.focus()
+      return
+    }
+    setOtpError(null)
+    setOtpStatus('sending')
+    try {
+      const res = await requestOtp(phone.trim())
+      setOtpRequestId(res.requestId)
+      setOtpDemoCode(res.demoCode ?? null)
+      setOtpCode('')
+      setOtpStatus('sent')
+      toast(
+        res.demoCode
+          ? t('sos.otpDemoSent', 'Demo code generated — enter it below. No SMS was sent.')
+          : t('sos.otpSent', 'Verification code sent by SMS.'),
+        'info',
+      )
+    } catch (err) {
+      setOtpStatus('idle')
+      setOtpError(err instanceof Error ? err.message : t('sos.otpFailed', 'Could not send the code. SOS still works without it.'))
+    }
+  }
+
+  const handleVerifyOtp = async () => {
+    if (!otpRequestId || otpCode.replace(/\D/g, '').length !== 6) {
+      setOtpError(t('sos.otpEnter6', 'Enter the 6-digit code.'))
+      return
+    }
+    setOtpError(null)
+    setOtpStatus('verifying')
+    try {
+      const res = await verifyOtp(otpRequestId, phone.trim(), otpCode)
+      setOtpToken(res.verificationToken)
+      setOtpVerifiedPhone(res.phone)
+      setOtpStatus('verified')
+      toast(t('sos.otpVerified', 'Number verified — dispatchers can trust this callback number.'), 'success')
+    } catch {
+      setOtpStatus('sent')
+      setOtpError(t('sos.otpInvalid', 'Wrong code. Check and try again — or send SOS anyway.'))
+    }
+  }
+
+  const resetOtp = () => {
+    setOtpStatus('idle')
+    setOtpToken(null)
+    setOtpVerifiedPhone(null)
+    setOtpRequestId(null)
+    setOtpDemoCode(null)
+    setOtpCode('')
+    setOtpError(null)
   }
 
   const copyTrackingId = (id: string) => {
@@ -405,8 +479,15 @@ export default function SOS() {
                           ref={phoneInputRef}
                           value={phone}
                           onChange={(e) => {
-                            setPhone(e.target.value)
+                            const v = e.target.value
+                            setPhone(v)
                             if (phoneError) setPhoneError(null)
+                            // A code belongs to the number it was sent to —
+                            // any edit restarts verification for the new number.
+                            if (otpStatus === 'sent' || otpStatus === 'verified') {
+                              const digits = v.replace(/\D/g, '').slice(-10)
+                              if (otpStatus === 'sent' || digits !== otpVerifiedPhone) resetOtp()
+                            }
                           }}
                           placeholder={t('sos.phonePlaceholder')}
                           type="tel"
@@ -425,6 +506,60 @@ export default function SOS() {
                           <span>{phoneError}</span>
                         </p>
                       )}
+
+                      {/* Optional number verification — never blocks SOS. */}
+                      <div className="mt-2.5 rounded-xl border border-zinc-200 bg-[#f4f4f5] p-3 dark:border-white/[0.08] dark:bg-[#151515]">
+                        {otpStatus === 'verified' ? (
+                          <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                            <CheckCircle2 className="h-4 w-4 shrink-0" />
+                            <span>{t('sos.otpVerifiedBadge', 'Number verified — dispatchers can call you back with confidence.')}</span>
+                          </div>
+                        ) : otpStatus === 'sent' || otpStatus === 'verifying' ? (
+                          <div className="space-y-2">
+                            <p className="text-xs text-zinc-600 dark:text-slate-300">
+                              {t('sos.otpEnterPrompt', 'Enter the 6-digit code sent to your number:')}
+                              {otpDemoCode && (
+                                <span className="mono ml-1 font-bold text-zinc-900 dark:text-slate-100">
+                                  {t('sos.otpDemoCode', 'Demo code:')} {otpDemoCode}
+                                </span>
+                              )}
+                            </p>
+                            <div className="flex gap-2">
+                              <input
+                                value={otpCode}
+                                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                placeholder="••••••"
+                                inputMode="numeric"
+                                className="mono w-full rounded-xl border border-zinc-200 px-3.5 py-2 text-center text-sm font-bold tracking-[0.3em] outline-none focus:border-emerald-600 dark:border-white/[0.1] dark:bg-[#222] dark:text-slate-100"
+                              />
+                              <button
+                                type="button"
+                                onClick={handleVerifyOtp}
+                                disabled={otpStatus === 'verifying'}
+                                className="shrink-0 rounded-xl bg-emerald-700 px-4 py-2 text-xs font-bold text-white transition hover:bg-emerald-800 disabled:opacity-60"
+                              >
+                                {otpStatus === 'verifying' ? t('sos.otpChecking', 'Checking…') : t('sos.otpConfirm', 'Confirm')}
+                              </button>
+                            </div>
+                            {otpError && <p className="text-xs font-semibold text-red-600 dark:text-red-400">{otpError}</p>}
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-xs text-zinc-600 dark:text-slate-300">
+                              {t('sos.otpPitch', 'Verify this number so rescue teams trust callbacks (optional, 30 sec).')}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={handleRequestOtp}
+                              disabled={otpStatus === 'sending'}
+                              className="rounded-xl border border-zinc-300 bg-white px-3 py-1.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-60 dark:border-white/[0.1] dark:bg-[#222] dark:text-slate-200"
+                            >
+                              {otpStatus === 'sending' ? t('sos.otpSending', 'Sending…') : t('sos.otpGetCode', 'Get code')}
+                            </button>
+                            {otpError && <p className="w-full text-xs font-semibold text-red-600 dark:text-red-400">{otpError}</p>}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -570,6 +705,7 @@ export default function SOS() {
                     setPhone('')
                     setName('')
                     setLandmark('')
+                    resetOtp()
                   }}
                   className="w-full rounded-xl border border-zinc-200/80 bg-white py-2 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 cursor-pointer"
                 >

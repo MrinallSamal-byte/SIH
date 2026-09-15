@@ -37,6 +37,13 @@ adminRouter.get('/volunteers', validateQuery(schemas.listVolunteersQuerySchema),
 adminRouter.post('/volunteers', validateBody(schemas.createVolunteerSchema), asyncHandler(res.adminCreateVolunteerHandler));
 adminRouter.patch('/volunteers/:id', validateParams(schemas.idParamsSchema), validateBody(schemas.updateVolunteerSchema), asyncHandler(res.adminUpdateVolunteerHandler));
 adminRouter.patch('/volunteers/:id/status', validateParams(schemas.idParamsSchema), validateBody(schemas.updateVolunteerStatusSchema), asyncHandler(res.adminUpdateVolunteerStatusHandler));
+// Trust-tier review (verify / suspend + training + ID reference).
+adminRouter.patch('/volunteers/:id/verification', validateParams(schemas.idParamsSchema), validateBody(schemas.setVolunteerVerificationSchema), asyncHandler(res.adminVerifyVolunteerHandler));
+// Per-volunteer personal access code (plaintext returned once).
+adminRouter.post('/volunteers/:id/invite-code', validateParams(schemas.idParamsSchema), asyncHandler(res.adminInviteVolunteerCodeHandler));
+
+// ---- RED escalation SLA sweep ----
+adminRouter.post('/escalations/sweep', validateBody(schemas.escalationSweepSchema), asyncHandler(sys.adminEscalationSweepHandler));
 
 // ---- Shelters ----
 adminRouter.get('/shelters', validateQuery(schemas.listSheltersQuerySchema), asyncHandler(res.adminListSheltersHandler));

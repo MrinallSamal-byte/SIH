@@ -21,6 +21,7 @@ const About = lazy(() => import('./pages/citizen/About'))
 const Contacts = lazy(() => import('./pages/citizen/Contacts'))
 const AppDownload = lazy(() => import('./pages/citizen/AppDownload'))
 const Alerts = lazy(() => import('./pages/citizen/Alerts'))
+const Donate = lazy(() => import('./pages/citizen/Donate'))
 
 const AdminLogin = lazy(() => import('./pages/admin/Login'))
 const Overview = lazy(() => import('./pages/admin/Overview'))
@@ -72,6 +73,7 @@ export default function App() {
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/pfa-chat" element={<PfaChat />} />
             <Route path="/app" element={<AppDownload />} />
+            <Route path="/donate" element={<Donate />} />
           </Route>
 
           {/* Admin Portal (Protected) */}

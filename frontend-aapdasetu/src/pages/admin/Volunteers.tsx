@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
-import { Search, Phone, Users } from 'lucide-react'
-import { listVolunteers, updateVolunteer } from '../../api/endpoints'
+import { Search, Phone, Users, ShieldCheck, ShieldAlert, KeyRound, Copy } from 'lucide-react'
+import { listVolunteers, updateVolunteer, setVolunteerVerification, inviteVolunteerCode } from '../../api/endpoints'
 import { Select } from '../../components/common/Input'
 import Badge from '../../components/common/Badge'
 import Loader from '../../components/common/Loader'
@@ -23,6 +23,11 @@ export default function Volunteers() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [skillFilter, setSkillFilter] = useState<string>('all')
+  const [verifyFilter, setVerifyFilter] = useState<string>('all')
+  // Personal invite codes are shown exactly once after issuance.
+  const [inviteCodes, setInviteCodes] = useState<Record<string, string>>({})
+  const [copiedCode, setCopiedCode] = useState<string | null>(null)
+  const [actingId, setActingId] = useState<string | null>(null)
 
   const update = async (id: string, patch: Partial<Volunteer>) => {
     try {
@@ -34,10 +39,49 @@ export default function Volunteers() {
     }
   }
 
+  const review = async (id: string, verificationStatus: 'pending' | 'verified' | 'suspended') => {
+    setActingId(id)
+    try {
+      await setVolunteerVerification(id, { verificationStatus })
+      emitRealtimeUpdate('volunteer_updated', id)
+      toast(t('vl.verificationUpdated', 'Verification status updated'), 'success')
+    } catch (err) {
+      toast(err instanceof Error ? err.message : t('vl.volunteerUpdateFailed', 'Failed to update volunteer'), 'error')
+    } finally {
+      setActingId(null)
+    }
+  }
+
+  const invite = async (id: string) => {
+    setActingId(id)
+    try {
+      const res = await inviteVolunteerCode(id)
+      setInviteCodes((prev) => ({ ...prev, [id]: res.accessCode }))
+      toast(t('vl.inviteIssued', 'Personal code issued — share it with the volunteer once, now.'), 'success')
+    } catch (err) {
+      toast(err instanceof Error ? err.message : t('vl.volunteerUpdateFailed', 'Failed to update volunteer'), 'error')
+    } finally {
+      setActingId(null)
+    }
+  }
+
+  const copyCode = (code: string) => {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(code).then(
+        () => {
+          setCopiedCode(code)
+          window.setTimeout(() => setCopiedCode((c) => (c === code ? null : c)), 2500)
+        },
+        () => {},
+      )
+    }
+  }
+
   const filtered = useMemo(() => {
     if (!volunteers) return []
     return volunteers.filter((v) => {
       if (statusFilter !== 'all' && v.status !== statusFilter) return false
+      if (verifyFilter !== 'all' && (v.verificationStatus ?? 'pending') !== verifyFilter) return false
       if (skillFilter !== 'all' && !(v.skills ?? []).includes(skillFilter as typeof ALL_SKILLS[number])) return false
       if (search.trim()) {
         const q = search.toLowerCase().trim()
@@ -47,13 +91,14 @@ export default function Volunteers() {
       }
       return true
     })
-  }, [volunteers, statusFilter, skillFilter, search])
+  }, [volunteers, statusFilter, verifyFilter, skillFilter, search])
 
   if (!volunteers) return <Loader />
 
   const totalCount = volunteers.length
   const availableCount = volunteers.filter((v) => v.status === 'available').length
   const onDutyCount = volunteers.filter((v) => v.status === 'on_duty').length
+  const pendingReviewCount = volunteers.filter((v) => (v.verificationStatus ?? 'pending') === 'pending').length
 
   return (
     <div className="space-y-6">
@@ -79,6 +124,11 @@ export default function Volunteers() {
             <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
             <span>{onDutyCount} {t('vl.statusOnDuty', 'On Duty')}</span>
           </span>
+          {pendingReviewCount > 0 && (
+            <span className="rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300 mono shadow-2xs">
+              {pendingReviewCount} {t('vl.pendingReview', 'awaiting review')}
+            </span>
+          )}
         </div>
       </div>
 
@@ -115,6 +165,29 @@ export default function Volunteers() {
                 }`}
               >
                 {st.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-bold text-slate-400 mono mr-1 uppercase">{t('vl.verifyFilter', 'Review')}:</span>
+            {[
+              { id: 'all', label: t('common.all', 'All') },
+              { id: 'pending', label: t('vl.verifyPending', 'Pending') },
+              { id: 'verified', label: t('vl.verifyVerified', 'Verified') },
+              { id: 'suspended', label: t('vl.verifySuspended', 'Suspended') },
+            ].map((vf) => (
+              <button
+                key={vf.id}
+                type="button"
+                onClick={() => setVerifyFilter(vf.id)}
+                className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition cursor-pointer ${
+                  verifyFilter === vf.id
+                    ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-2xs'
+                    : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300'
+                }`}
+              >
+                {vf.label}
               </button>
             ))}
           </div>
@@ -176,6 +249,31 @@ export default function Volunteers() {
                 <Badge value={v.status} />
               </div>
 
+              {/* Trust tier — only verified volunteers are dispatch-eligible. */}
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {(v.verificationStatus ?? 'pending') === 'verified' ? (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                    <ShieldCheck className="h-3 w-3" />
+                    {t('vl.verifyVerified', 'Verified')}
+                  </span>
+                ) : (v.verificationStatus ?? 'pending') === 'suspended' ? (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-red-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-800 dark:bg-red-950/60 dark:text-red-300">
+                    <ShieldAlert className="h-3 w-3" />
+                    {t('vl.verifySuspended', 'Suspended')}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                    <ShieldAlert className="h-3 w-3" />
+                    {t('vl.verifyPending', 'Pending')}
+                  </span>
+                )}
+                {v.trainingCompleted && (
+                  <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                    {t('vl.trained', 'Trained')}
+                  </span>
+                )}
+              </div>
+
               <div className="mt-3 flex flex-wrap gap-1">
                 {(v.skills ?? []).map((s) => (
                   <span
@@ -191,7 +289,66 @@ export default function Volunteers() {
               </div>
             </div>
 
-            <div className="mt-4 border-t border-zinc-100 pt-3 dark:border-zinc-800/80 flex items-center justify-between gap-2">
+            <div className="mt-4 border-t border-zinc-100 pt-3 dark:border-zinc-800/80 space-y-2">
+              {/* Trust review actions */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                {(v.verificationStatus ?? 'pending') !== 'verified' && (
+                  <button
+                    type="button"
+                    disabled={actingId === v.id}
+                    onClick={() => review(v.id, 'verified')}
+                    className="rounded-lg bg-emerald-700 px-2.5 py-1 text-[11px] font-bold text-white transition hover:bg-emerald-800 disabled:opacity-60 cursor-pointer"
+                  >
+                    {t('vl.btnVerify', 'Verify')}
+                  </button>
+                )}
+                {(v.verificationStatus ?? 'pending') !== 'suspended' && (
+                  <button
+                    type="button"
+                    disabled={actingId === v.id}
+                    onClick={() => review(v.id, 'suspended')}
+                    className="rounded-lg border border-red-200 bg-white px-2.5 py-1 text-[11px] font-bold text-red-700 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-900/50 dark:bg-transparent dark:text-red-300 cursor-pointer"
+                  >
+                    {t('vl.btnSuspend', 'Suspend')}
+                  </button>
+                )}
+                {(v.verificationStatus ?? 'pending') === 'suspended' && (
+                  <button
+                    type="button"
+                    disabled={actingId === v.id}
+                    onClick={() => review(v.id, 'pending')}
+                    className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:bg-transparent dark:text-zinc-300 cursor-pointer"
+                  >
+                    {t('vl.btnReopen', 'Reopen review')}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  disabled={actingId === v.id}
+                  onClick={() => invite(v.id)}
+                  title={t('vl.inviteHint', 'Issue a personal login code for this volunteer')}
+                  className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:bg-transparent dark:text-zinc-300 cursor-pointer"
+                >
+                  <KeyRound className="h-3 w-3" />
+                  <span>{t('vl.btnInviteCode', 'Invite code')}</span>
+                </button>
+              </div>
+              {inviteCodes[v.id] && (
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 dark:border-amber-900/50 dark:bg-amber-950/40">
+                  <span className="mono text-sm font-black tracking-[0.2em] text-amber-900 dark:text-amber-200">
+                    {inviteCodes[v.id]}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => copyCode(inviteCodes[v.id])}
+                    className="inline-flex items-center gap-1 rounded-md bg-zinc-900 px-2 py-1 text-[10px] font-bold text-white dark:bg-zinc-100 dark:text-zinc-900 cursor-pointer"
+                  >
+                    <Copy className="h-3 w-3" />
+                    <span>{copiedCode === inviteCodes[v.id] ? t('common.copied', 'Copied!') : t('common.copy', 'Copy')}</span>
+                  </button>
+                </div>
+              )}
+              <div className="flex items-center justify-between gap-2">
               <Select
                 value={v.status}
                 onChange={(e) => update(v.id, { status: e.target.value as Volunteer['status'] })}
@@ -206,6 +363,7 @@ export default function Volunteers() {
                   {t('vl.task')}: <strong className="text-zinc-800 dark:text-zinc-200">{v.assignedTrackingId}</strong>
                 </div>
               )}
+              </div>
             </div>
           </div>
         ))}

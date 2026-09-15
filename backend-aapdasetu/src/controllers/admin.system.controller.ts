@@ -9,6 +9,9 @@ import { listDamageAssessments, flagDuplicateAssessment } from '../services/dama
 import { listHazards, createHazard, updateHazardActive } from '../services/routes.service.js';
 import { updateMissingPerson } from '../services/missing-persons.service.js';
 import { broadcastAlert } from '../services/communications.service.js';
+import { sweepEscalations } from '../services/escalation.service.js';
+import { smsProviderStatus } from '../services/sms.service.js';
+import { countPushSubscriptions, pushSenderStatus } from '../services/push.service.js';
 import { env } from '../config/env.js';
 
 /**
@@ -17,12 +20,26 @@ import { env } from '../config/env.js';
  * credential fields that silently do nothing.
  */
 export async function adminSystemStatusHandler(_req: Request, res: Response): Promise<void> {
+  const sms = smsProviderStatus();
+  const push = pushSenderStatus();
   res.json({
     success: true,
     data: {
       sms: {
-        provider: 'twilio',
-        configured: Boolean(env.twilioAccountSid && env.twilioAuthToken),
+        provider: sms.configured ? sms.provider : 'twilio',
+        configured: sms.configured,
+      },
+      push: {
+        provider: push.provider,
+        configured: push.configured,
+        subscriptions: await countPushSubscriptions().catch(() => 0),
+      },
+      otp: {
+        demoMode: env.otpDemoMode,
+        smsConfigured: sms.configured,
+      },
+      escalation: {
+        thresholdMinutes: env.escalationThresholdMinutes,
       },
       whatsapp: {
         provider: 'meta_cloud_api',
@@ -132,4 +149,9 @@ export async function adminUpdateMissingPersonHandler(req: Request, res: Respons
 export async function adminBroadcastHandler(req: Request, res: Response): Promise<void> {
   const result = await broadcastAlert({ ...req.body, adminEmail: req.admin!.email });
   res.status(201).json({ success: true, data: result });
+}
+
+export async function adminEscalationSweepHandler(req: Request, res: Response): Promise<void> {
+  const result = await sweepEscalations({ ...req.body, adminEmail: req.admin!.email });
+  res.json({ success: true, data: result });
 }

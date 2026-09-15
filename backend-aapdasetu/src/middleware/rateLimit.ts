@@ -60,3 +60,17 @@ export const uploadRateLimiter = rateLimit({
     error: { code: 'RATE_LIMITED', message: 'Too many uploads. Try again later.' },
   },
 });
+
+// OTP issuance is the most abuse-sensitive public endpoint (SMS budget +
+// account-takeover probing): tight per-IP bucket on top of the per-phone
+// throttle enforced in otp.service.ts.
+export const otpRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: { code: 'RATE_LIMITED', message: 'Too many verification requests. Try again later.' },
+  },
+});

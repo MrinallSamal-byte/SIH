@@ -47,6 +47,9 @@ interface RawReport {
   registerNumber?: string
   reporterName?: string | null
   reporterPhone?: string | null
+  reporterPhoneVerified?: boolean
+  escalatedAt?: string | null
+  escalationLevel?: number
   triageFactors?: unknown
   assignedVolunteerId?: string | null
   assignedAgencyId?: string | null
@@ -65,6 +68,8 @@ interface RawVolunteer {
   latitude?: number | null
   longitude?: number | null
   status: Volunteer['status']
+  verificationStatus?: Volunteer['verificationStatus']
+  trainingCompleted?: boolean
   assignments?: { id: string; trackingId?: string }[]
 }
 
@@ -138,6 +143,9 @@ function toReport(r: RawReport): Report {
     registerNumber: r.registerNumber,
     reporterName: r.reporterName ?? undefined,
     reporterPhone: r.reporterPhone ?? undefined,
+    reporterPhoneVerified: r.reporterPhoneVerified,
+    escalatedAt: r.escalatedAt ?? undefined,
+    escalationLevel: r.escalationLevel,
     triageFactors: normalizeTriageFactors(r.triageFactors),
     assignedVolunteerId: r.assignedVolunteerId ?? undefined,
     assignedVolunteerName: r.assignedVolunteer?.name,
@@ -158,6 +166,8 @@ function toVolunteer(r: RawVolunteer): Volunteer & { assignedTrackingId?: string
     latitude: r.latitude ?? undefined,
     longitude: r.longitude ?? undefined,
     status: r.status,
+    verificationStatus: r.verificationStatus,
+    trainingCompleted: r.trainingCompleted,
     assignedReportId: r.assignments?.[0]?.id ?? undefined,
     assignedTrackingId: r.assignments?.[0]?.trackingId,
   }
@@ -194,6 +204,9 @@ function reportBody(input: ReportInput): Record<string, unknown> {
     // replayed outbox item is deduped server-side instead of double-dispatching.
     clientRequestId: input.clientRequestId,
     clientCreatedAt: input.clientCreatedAt,
+    // OTP verification token for the reporter phone (optional; SOS without it
+    // is still dispatched, marked unverified).
+    phoneOtpToken: input.phoneOtpToken ?? null,
   }
 
   if (input.victim) {
@@ -660,7 +673,7 @@ export function adminLogin(email: string, password: string): Promise<{ token: st
 export function volunteerLogin(phone: string, accessCode: string): Promise<VolunteerUser> {
   return withMockFallback(
     () =>
-      apiCall<{ token: string; volunteer: { id: string; name: string; email?: string; phone?: string; skills?: string[] } }>(
+      apiCall<{ token: string; volunteer: { id: string; name: string; email?: string; phone?: string; skills?: string[]; verificationStatus?: VolunteerUser['verificationStatus'] } }>(
         'POST',
         '/api/v1/volunteer/auth/login',
         { phone, accessCode },
@@ -671,6 +684,7 @@ export function volunteerLogin(phone: string, accessCode: string): Promise<Volun
         name: d.volunteer.name,
         phone: d.volunteer.phone ?? phone,
         skills: d.volunteer.skills,
+        verificationStatus: d.volunteer.verificationStatus,
       })),
     () => {
       const vols = mocks.listVolunteers()
@@ -968,6 +982,9 @@ export function createDamageAssessment(input: {
 export interface SystemStatus {
   sms: { provider: string; configured: boolean }
   whatsapp: { provider: string; configured: boolean }
+  push?: { provider: string; configured: boolean; subscriptions?: number }
+  otp?: { demoMode: boolean; smsConfigured: boolean }
+  escalation?: { thresholdMinutes: number }
   ai: { pfaLlmConfigured: boolean; damageMlConfigured: boolean; damageMlBaseUrl?: string }
   realtimePath: string
   rateLimits: { publicPerMinute: number; adminPer15Min: number; uploadsPerHour: number }
@@ -976,4 +993,164 @@ export interface SystemStatus {
 /** GET /api/v1/admin/system/status — what is actually configured on the server. */
 export function getSystemStatus(): Promise<SystemStatus> {
   return apiCall<SystemStatus>('GET', '/api/v1/admin/system/status')
+}
+
+// ---- OTP caller verification --------------------------------------------------
+
+export interface OtpRequestResult {
+  requestId: string
+  phone: string
+  expiresAt: string
+  demoCode?: string
+  smsSent: boolean
+}
+
+export interface OtpVerifyResult {
+  verificationToken: string
+  phone: string
+  expiresAt: string
+}
+
+/** POST /api/v1/otp/request — challenge the reporter's number (demo code in mock builds). */
+export function requestOtp(phone: string): Promise<OtpRequestResult> {
+  return withMockFallback(
+    () => apiCall<OtpRequestResult>('POST', '/api/v1/otp/request', { phone }),
+    () => ({
+      requestId: `mock-${Date.now()}`,
+      phone: phone.replace(/\D/g, '').slice(-10),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+      demoCode: '123456',
+      smsSent: false,
+    }),
+    { mutating: true },
+  )
+}
+
+/** POST /api/v1/otp/verify — exchange the 6-digit code for a single-use token. */
+export function verifyOtp(requestId: string, phone: string, code: string): Promise<OtpVerifyResult> {
+  return withMockFallback(
+    () => apiCall<OtpVerifyResult>('POST', '/api/v1/otp/verify', { requestId, phone, code }),
+    () => {
+      if (requestId.startsWith('mock-') && code.trim() === '123456') {
+        return {
+          verificationToken: `mock.${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`,
+          phone: phone.replace(/\D/g, '').slice(-10),
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        }
+      }
+      throw new Error('Invalid code')
+    },
+    { mutating: true },
+  )
+}
+
+// ---- Web Push subscriptions ----------------------------------------------------
+
+/** POST /api/v1/push/subscriptions — opt a device into critical-bulletin push. */
+export function subscribePush(input: { endpoint: string; p256dh?: string; auth?: string }): Promise<void> {
+  return withMockFallback(
+    () =>
+      apiCall<unknown>('POST', '/api/v1/push/subscriptions', {
+        ...input,
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 300) : undefined,
+      }).then(() => undefined),
+    async () => undefined,
+    { mutating: true },
+  )
+}
+
+/** DELETE /api/v1/push/subscriptions — opt out again. */
+export function unsubscribePush(endpoint: string): Promise<void> {
+  return withMockFallback(
+    () => apiCall<unknown>('DELETE', '/api/v1/push/subscriptions', { endpoint }).then(() => undefined),
+    async () => undefined,
+    { mutating: true },
+  )
+}
+
+// ---- shelter gate self check-in --------------------------------------------------
+
+/** POST /api/v1/shelters/:id/checkin — citizen self check-in with the gate code. */
+export function shelterCheckin(id: string, code: string): Promise<Shelter> {
+  return withMockFallback(
+    () => apiCall<Shelter>('POST', `/api/v1/shelters/${encodeURIComponent(id)}/checkin`, { code }),
+    () => {
+      const current = mocks.listShelters().find((s) => s.id === id)
+      if (!current) throw new Error('Shelter not found')
+      if ((current.occupancy ?? 0) >= (current.capacity ?? 0)) throw new Error('Shelter is full')
+      const updated = mocks.updateShelter(id, { occupancy: (current.occupancy ?? 0) + 1 })
+      if (!updated) throw new Error('Shelter not found')
+      return updated
+    },
+    { mutating: true },
+  )
+}
+
+/** POST /api/v1/shelters/:id/checkout — citizen self check-out with the gate code. */
+export function shelterCheckout(id: string, code: string): Promise<Shelter> {
+  return withMockFallback(
+    () => apiCall<Shelter>('POST', `/api/v1/shelters/${encodeURIComponent(id)}/checkout`, { code }),
+    () => {
+      const current = mocks.listShelters().find((s) => s.id === id)
+      if (!current) throw new Error('Shelter not found')
+      const updated = mocks.updateShelter(id, { occupancy: Math.max(0, (current.occupancy ?? 1) - 1) })
+      if (!updated) throw new Error('Shelter not found')
+      return updated
+    },
+    { mutating: true },
+  )
+}
+
+// ---- RED escalation SLA sweep ------------------------------------------------------
+
+export interface EscalationSweepResult {
+  thresholdMinutes: number
+  escalated: { id: string; trackingId: string; escalationLevel: number; waitingMinutes: number }[]
+}
+
+/** POST /api/v1/admin/escalations/sweep — flag unassigned RED breaches. */
+export function runEscalationSweep(thresholdMinutes?: number): Promise<EscalationSweepResult> {
+  return withMockFallback(
+    () =>
+      apiCall<EscalationSweepResult>('POST', '/api/v1/admin/escalations/sweep', {
+        ...(thresholdMinutes !== undefined ? { thresholdMinutes } : {}),
+      }),
+    () => ({ thresholdMinutes: thresholdMinutes ?? 5, escalated: [] }),
+    { mutating: true },
+  )
+}
+
+// ---- volunteer trust review ----------------------------------------------------------
+
+export interface VolunteerInviteResult {
+  volunteerId: string
+  accessCode: string
+}
+
+/** POST /api/v1/admin/volunteers/:id/invite-code — issue a personal code (shown once). */
+export function inviteVolunteerCode(id: string): Promise<VolunteerInviteResult> {
+  return withMockFallback(
+    () => apiCall<VolunteerInviteResult>('POST', `/api/v1/admin/volunteers/${encodeURIComponent(id)}/invite-code`),
+    () => ({ volunteerId: id, accessCode: 'DEMO-CODE' }),
+    { mutating: true },
+  )
+}
+
+/** PATCH /api/v1/admin/volunteers/:id/verification — verify / suspend + training. */
+export function setVolunteerVerification(
+  id: string,
+  patch: { verificationStatus: 'pending' | 'verified' | 'suspended'; trainingCompleted?: boolean; idDocumentRef?: string },
+): Promise<Volunteer> {
+  return withMockFallback(
+    () =>
+      apiCall<RawVolunteer>('PATCH', `/api/v1/admin/volunteers/${encodeURIComponent(id)}/verification`, patch).then(
+        toVolunteer,
+      ),
+    () => {
+      const updated = mocks.updateVolunteer(id, patch)
+      if (!updated) throw new Error('Volunteer not found')
+      return updated
+    },
+    { mutating: true },
+  )
 }

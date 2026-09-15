@@ -2,8 +2,10 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { computeTriage, IncidentType, PriorityLabel } from '../lib/triage.js';
+import { haversineDistanceKm } from '../lib/haversine.js';
 import { NotFoundError, ConflictError } from '../lib/errors.js';
 import { writeAuditLog } from './audit.service.js';
+import { consumePhoneToken, normalizeOtpPhone } from './otp.service.js';
 import { realtimeHub } from '../realtime/hub.js';
 
 
@@ -43,6 +45,9 @@ export interface CreateSosInput {
   clientRequestId?: string;
   // Original on-device time for submissions queued offline and replayed later
   clientCreatedAt?: string;
+  // Single-use OTP verification token for the reporter phone (see otp.service).
+  // Optional: an SOS without it is still dispatched, just marked unverified.
+  phoneOtpToken?: string;
 }
 
 export interface CreateReportInput extends CreateSosInput {
@@ -71,6 +76,15 @@ export async function createSosReport(input: CreateSosInput) {
     }
   }
 
+  const trust = await resolveCallerTrust(input);
+  const nearDup = await findNearDuplicate({
+    normalizedPhone: trust.normalized,
+    type: input.type,
+    latitude: input.latitude,
+    longitude: input.longitude,
+  });
+  if (nearDup) return duplicateResult(nearDup);
+
   const triage = computeTriage({
     type: input.type,
     description: input.description,
@@ -91,6 +105,8 @@ export async function createSosReport(input: CreateSosInput) {
         landmark: input.landmark,
         reporterName: input.reporterName,
         reporterPhone: input.reporterPhone,
+        reporterPhoneNormalized: trust.normalized,
+        reporterPhoneVerified: trust.verified,
         medicalCondition: input.medicalCondition,
         bloodType: input.bloodType,
         mediaData: input.mediaData,
@@ -140,6 +156,65 @@ function isUniqueViolation(err: unknown): boolean {
   );
 }
 
+/** Resolve caller trust: normalized phone + single-use OTP token consumption. */
+async function resolveCallerTrust(input: {
+  reporterPhone?: string | null;
+  phoneOtpToken?: string | null;
+}): Promise<{ normalized: string | null; verified: boolean }> {
+  const digits = input.reporterPhone ? normalizeOtpPhone(input.reporterPhone) : '';
+  const normalized = /^\d{10}$/.test(digits) ? digits : null;
+  const verifiedPhone = await consumePhoneToken(input.phoneOtpToken, input.reporterPhone);
+  return { normalized, verified: verifiedPhone !== null };
+}
+
+/**
+ * Near-duplicate SOS clustering: same caller + same emergency type within
+ * 10 minutes and ~500 m is almost always a re-tap / retry storm, not a new
+ * incident. Returns the existing report so the caller gets `duplicate: true`
+ * instead of spawning a second dispatch.
+ */
+async function findNearDuplicate(input: {
+  normalizedPhone: string | null;
+  type: IncidentType;
+  latitude: number;
+  longitude: number;
+}) {
+  if (!input.normalizedPhone) return null;
+  const since = new Date(Date.now() - 10 * 60 * 1000);
+  const candidates = await prisma.report.findMany({
+    where: {
+      reporterPhoneNormalized: input.normalizedPhone,
+      type: input.type,
+      createdAt: { gte: since },
+      status: { not: 'resolved' },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+  });
+  for (const c of candidates) {
+    const distKm = haversineDistanceKm(input.latitude, input.longitude, c.latitude, c.longitude);
+    if (distKm <= 0.5) return c;
+  }
+  return null;
+}
+
+function duplicateResult(existing: {
+  priorityScore: number;
+  priorityLabel: string;
+  triageFactors: unknown;
+}) {
+  const serialized = serializeReport(existing);
+  return {
+    ...serialized,
+    triage: {
+      score: existing.priorityScore,
+      label: existing.priorityLabel as PriorityLabel,
+      factors: existing.triageFactors,
+    },
+    duplicate: true,
+  };
+}
+
 export async function createIncidentReport(input: CreateReportInput) {
   // Same idempotency contract as the SOS path: the outbox stamps and replays
   // 'report' items with clientRequestId/clientCreatedAt, so an offline report
@@ -162,6 +237,15 @@ export async function createIncidentReport(input: CreateReportInput) {
     }
   }
 
+  const trust = await resolveCallerTrust(input);
+  const nearDup = await findNearDuplicate({
+    normalizedPhone: trust.normalized,
+    type: input.type,
+    latitude: input.latitude,
+    longitude: input.longitude,
+  });
+  if (nearDup) return duplicateResult(nearDup);
+
   const triage = computeTriage({
     type: input.type,
     description: input.description,
@@ -182,6 +266,8 @@ export async function createIncidentReport(input: CreateReportInput) {
         landmark: input.landmark,
         reporterName: input.reporterName,
         reporterPhone: input.reporterPhone,
+        reporterPhoneNormalized: trust.normalized,
+        reporterPhoneVerified: trust.verified,
         missingPersonName: input.missingPersonName,
         missingPersonAge: input.missingPersonAge,
         missingPersonDesc: input.missingPersonDesc,
@@ -310,6 +396,12 @@ export async function assignDispatch(input: {
   if (input.volunteerId) {
     const volunteer = await prisma.volunteer.findUnique({ where: { id: input.volunteerId } });
     if (!volunteer) throw new NotFoundError('Volunteer not found');
+    // Dispatch eligibility = active AND verified. Pending/suspended roster
+    // entries must complete admin review before they touch live rescues.
+    if (!volunteer.isActive) throw new ConflictError('Volunteer account is disabled');
+    if (volunteer.verificationStatus !== 'verified') {
+      throw new ConflictError('Volunteer is not verified for dispatch');
+    }
   }
 
   if (input.agencyId) {

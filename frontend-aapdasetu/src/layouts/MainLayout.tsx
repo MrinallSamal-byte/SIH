@@ -18,7 +18,8 @@ import {
   ShieldCheck,
   Smartphone,
   Bot,
-  Phone
+  Phone,
+  HeartHandshake
 } from 'lucide-react'
 import AapdaSetuLogo from '../components/common/AapdaSetuLogo'
 import ErrorBoundary from '../components/common/ErrorBoundary'
@@ -54,6 +55,7 @@ const featureNavItems: NavLinkItem[] = [
   { to: '/shelters', labelKey: 'nav.shelters' },
   { to: '/safe-routes', labelKey: 'nav.routes' },
   { to: '/pfa-chat', labelKey: 'nav.pfa' },
+  { to: '/donate', labelKey: 'nav.donate' },
   { to: '/app', labelKey: 'appdl.navLabel' },
 ]
 
@@ -67,6 +69,7 @@ const featureIconMap: Record<string, typeof Siren> = {
   '/shelters': Building,
   '/safe-routes': Compass,
   '/pfa-chat': Bot,
+  '/donate': HeartHandshake,
   '/app': Smartphone,
 }
 

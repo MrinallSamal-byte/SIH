@@ -69,6 +69,10 @@ async function main() {
         latitude: sec.lat + (Math.sin(i) * 0.02),
         longitude: sec.lng + (Math.cos(i) * 0.02),
         status: (i % 3 === 0 ? 'available' : i % 3 === 1 ? 'on_duty' : 'offline') as VolunteerStatus,
+        // Seed roster is admin-created demo data: grandfather in as verified
+        // so dispatch keeps working (new signups start `pending` by default).
+        verificationStatus: 'verified' as never,
+        trainingCompleted: i % 2 === 0,
       });
     }
 
@@ -148,8 +152,10 @@ async function main() {
       },
     ];
 
-    for (const s of sheltersList) {
-      await prisma.shelter.create({ data: s });
+    for (const [i, s] of sheltersList.entries()) {
+      // Deterministic demo gate codes so reviewers can exercise self
+      // check-in without an admin round-trip (production codes are random).
+      await prisma.shelter.create({ data: { ...s, checkinCode: `DEMO0${i + 1}` } });
     }
     console.log('Seeded shelters');
   }

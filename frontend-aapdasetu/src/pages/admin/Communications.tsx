@@ -8,7 +8,8 @@ import {
   Send,
   Sparkles,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Bell
 } from 'lucide-react'
 import { broadcastAlert } from '../../api/endpoints'
 import { Field, Input, Textarea } from '../../components/common/Input'
@@ -57,6 +58,7 @@ const PRESETS: {
 
 const CHANNELS = [
   { id: 'web', labelKey: 'cm.channelWeb', icon: Globe },
+  { id: 'push', labelKey: 'cm.channelPush', icon: Bell },
   { id: 'sms', labelKey: 'cm.channelSms', icon: Smartphone },
   { id: 'whatsapp', labelKey: 'cm.channelWhatsapp', icon: MessageSquare },
 ]
@@ -344,6 +346,7 @@ export default function Communications() {
               <div className="font-bold text-slate-800 dark:text-slate-200">{t('cm.activeGateways')}:</div>
               <ul className="list-disc list-inside space-y-1 text-[11px]">
                 {channels.includes('web') && <li>{t('cm.gwWebDesc')}</li>}
+                {channels.includes('push') && <li>{t('cm.gwPushDesc', 'Push: subscribed devices get the bulletin even with the app closed')}</li>}
                 {channels.includes('sms') && <li>{t('cm.gwSmsDesc')}</li>}
                 {channels.includes('whatsapp') && <li>{t('cm.gwWhatsappDesc')}</li>}
               </ul>

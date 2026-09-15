@@ -10,12 +10,14 @@ import {
   ArrowRight,
   MapPin,
   Monitor,
+  AlertTriangle,
 } from 'lucide-react'
-import { listReports, updateReport } from '../../api/endpoints'
+import { listReports, updateReport, runEscalationSweep } from '../../api/endpoints'
 import Loader from '../../components/common/Loader'
 import LeafletMap, { type MapMarker, type MapPopupAction } from '../../components/map/LeafletMap'
 import { useRealtime } from '../../hooks/useRealtime'
 import { emitRealtimeUpdate } from '../../lib/realtimeEventBus'
+import { isSlaBreached, SLA_THRESHOLD_MINUTES } from '../../lib/sla'
 import { timeAgo, getNavigationUrl } from '../../lib/helpers'
 import { useLanguage } from '../../lib/i18n'
 import { useToast } from '../../components/common/Toast'
@@ -332,6 +334,30 @@ export default function LiveSOS() {
 
   const unackedRedCount = reports?.filter((r) => r.priorityLabel === 'RED').length ?? 0
 
+  // RED escalation SLA: unassigned RED reports waiting past the threshold.
+  const breachedReports = useMemo(() => reports.filter((r) => isSlaBreached(r)), [reports])
+  const [sweeping, setSweeping] = useState(false)
+
+  const runSweep = useCallback(async () => {
+    if (sweeping) return
+    markInteraction()
+    setSweeping(true)
+    try {
+      const res = await runEscalationSweep(SLA_THRESHOLD_MINUTES)
+      emitRealtimeUpdate('report_updated', 'escalation-sweep')
+      toast(
+        res.escalated.length > 0
+          ? t('ls.sweepDone', 'Escalated {n} breached RED incident(s) to state command.').replace('{n}', String(res.escalated.length))
+          : t('ls.sweepClean', 'No SLA breaches — every RED incident is assigned or fresh.'),
+        res.escalated.length > 0 ? 'error' : 'success',
+      )
+    } catch (err) {
+      toast(err instanceof Error ? err.message : t('ls.sweepFailed', 'Escalation sweep failed'), 'error')
+    } finally {
+      setSweeping(false)
+    }
+  }, [sweeping, markInteraction, toast, t])
+
   useEffect(() => {
     const base = getBaseTabTitle()
     if (unackedRedCount <= 0) {
@@ -513,6 +539,30 @@ export default function LiveSOS() {
         </div>
       </div>
 
+      {/* SLA breach banner — RED incidents waiting unassigned past the threshold */}
+      {breachedReports.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-300 bg-red-50 px-4 py-3 dark:border-red-900/60 dark:bg-red-950/30" role="alert">
+          <div className="flex items-center gap-2.5 text-sm">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
+            <p className="font-bold text-red-800 dark:text-red-200">
+              {t('ls.slaBreach', '{n} RED incident(s) waiting unassigned over {m} min — escalate now.')
+                .replace('{n}', String(breachedReports.length))
+                .replace('{m}', String(SLA_THRESHOLD_MINUTES))}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={runSweep}
+            disabled={sweeping}
+            className="rounded-lg bg-red-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-2xs transition hover:bg-red-700 disabled:opacity-60 cursor-pointer"
+          >
+            {sweeping
+              ? t('ls.sweeping', 'Escalating…')
+              : t('ls.runSweep', 'Run escalation sweep')}
+          </button>
+        </div>
+      )}
+
       {/* Realistic Tactical Satellite Map */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mono">
@@ -551,6 +601,7 @@ export default function LiveSOS() {
           {reports.map((r) => {
             const isSelected = selectedId === r.id
             const isRed = r.priorityLabel === 'RED'
+            const breached = isSlaBreached(r)
 
             return (
               <div
@@ -591,6 +642,13 @@ export default function LiveSOS() {
                     <span className="rounded border border-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-600 dark:border-zinc-800 dark:text-zinc-400 mono">
                       {statusLabel(r.status)}
                     </span>
+
+                    {breached && (
+                      <span className="inline-flex items-center gap-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-white mono animate-pulse">
+                        <AlertTriangle className="h-3 w-3" />
+                        <span>{r.escalatedAt ? t('ls.escalated', 'Escalated') : t('ls.slaBreachShort', 'SLA breach')}</span>
+                      </span>
+                    )}
                   </div>
 
                   <span className="text-[11px] text-zinc-400 dark:text-zinc-500 mono">

@@ -58,6 +58,9 @@ const reportCommon = {
       }
       return v;
     }),
+  // Single-use OTP verification token for the reporter phone (otp.service).
+  // Optional: SOS without it is still dispatched, marked unverified.
+  phoneOtpToken: z.string().max(200).optional().nullable(),
 };
 
 export const createSosSchema = z.object({
@@ -94,6 +97,35 @@ export const nearbySheltersSchema = z.object({
 // Public family search by phone — results are PII-masked server-side.
 export const familyCheckinSearchSchema = z.object({
   phone: z.string().min(6).max(30),
+});
+
+// OTP caller verification challenge.
+export const otpRequestSchema = z.object({
+  phone: z.string().min(6).max(30),
+  purpose: z.enum(['sos_verify', 'volunteer_verify']).optional(),
+});
+
+export const otpVerifySchema = z.object({
+  requestId: z.string().min(8).max(64),
+  phone: z.string().min(6).max(30),
+  code: z.string().min(4).max(12),
+});
+
+// Web Push subscription registry.
+export const pushSubscriptionSchema = z.object({
+  endpoint: z.string().url().max(2000),
+  p256dh: z.string().max(500).optional(),
+  auth: z.string().max(500).optional(),
+  userAgent: z.string().max(300).optional(),
+});
+
+export const pushUnsubscribeSchema = z.object({
+  endpoint: z.string().url().max(2000),
+});
+
+// Shelter gate self check-in/out (poster code).
+export const shelterCheckinSchema = z.object({
+  code: z.string().min(4).max(16),
 });
 
 export const pfaChatSchema = z.object({
@@ -166,7 +198,7 @@ export const broadcastSchema = z.object({
   title: z.string().min(1).max(300),
   body: z.string().min(1).max(5000),
   region: z.string().max(300).optional(),
-  channels: z.array(z.enum(['sms', 'whatsapp', 'web'])).min(1).max(5),
+  channels: z.array(z.enum(['sms', 'whatsapp', 'web', 'push'])).min(1).max(5),
   recipientNumbers: z.array(z.string().max(30)).max(500).optional(),
 });
 
@@ -269,6 +301,18 @@ export const updateVolunteerSchema = z.object({
   skills: z.array(z.enum(['medical', 'search_rescue', 'driving', 'logistics'])).max(20).optional(),
   latitude: latSchema.optional(),
   longitude: lngSchema.optional(),
+  trainingCompleted: z.boolean().optional(),
+  idDocumentRef: z.string().max(300).optional(),
+});
+
+export const setVolunteerVerificationSchema = z.object({
+  verificationStatus: z.enum(['pending', 'verified', 'suspended']),
+  trainingCompleted: z.boolean().optional(),
+  idDocumentRef: z.string().max(300).optional(),
+});
+
+export const escalationSweepSchema = z.object({
+  thresholdMinutes: z.number().int().min(1).max(120).optional(),
 });
 
 export const updateVolunteerStatusSchema = z.object({

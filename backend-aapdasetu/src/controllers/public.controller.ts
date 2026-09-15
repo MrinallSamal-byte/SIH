@@ -7,7 +7,9 @@ import {
   serializePublicTracking,
 } from '../services/reports.service.js';
 import { createCheckin, searchCheckinsForFamily } from '../services/checkins.service.js';
-import { findNearbyShelters, listShelters } from '../services/shelters.service.js';
+import { findNearbyShelters, listShelters, shelterCheckin, shelterCheckout } from '../services/shelters.service.js';
+import { requestOtp, verifyOtp } from '../services/otp.service.js';
+import { savePushSubscription, removePushSubscription } from '../services/push.service.js';
 import { listActiveAlerts } from '../services/alerts.service.js';
 import { getPfaReply, isOpenRouterConfigured } from '../services/pfa.service.js';
 import { assessDamage } from '../services/damage.service.js';
@@ -107,4 +109,36 @@ export async function listMissingPersonsHandler(req: Request, res: Response): Pr
 export async function createMissingPersonHandler(req: Request, res: Response): Promise<void> {
   const person = await createMissingPerson(req.body);
   res.status(201).json({ success: true, data: person });
+}
+
+export async function otpRequestHandler(req: Request, res: Response): Promise<void> {
+  const result = await requestOtp(req.body);
+  res.status(201).json({ success: true, data: result });
+}
+
+export async function otpVerifyHandler(req: Request, res: Response): Promise<void> {
+  const result = await verifyOtp(req.body);
+  res.json({ success: true, data: result });
+}
+
+export async function pushSubscribeHandler(req: Request, res: Response): Promise<void> {
+  const sub = await savePushSubscription(req.body);
+  res.status(201).json({ success: true, data: { id: sub.id, endpoint: sub.endpoint } });
+}
+
+export async function pushUnsubscribeHandler(req: Request, res: Response): Promise<void> {
+  const removed = await removePushSubscription(req.body.endpoint);
+  res.json({ success: true, data: { removed } });
+}
+
+export async function shelterCheckinHandler(req: Request, res: Response): Promise<void> {
+  const { id } = (req as Request & { validatedParams: { id: string } }).validatedParams;
+  const shelter = await shelterCheckin({ id, code: req.body.code });
+  res.json({ success: true, data: shelter });
+}
+
+export async function shelterCheckoutHandler(req: Request, res: Response): Promise<void> {
+  const { id } = (req as Request & { validatedParams: { id: string } }).validatedParams;
+  const shelter = await shelterCheckout({ id, code: req.body.code });
+  res.json({ success: true, data: shelter });
 }

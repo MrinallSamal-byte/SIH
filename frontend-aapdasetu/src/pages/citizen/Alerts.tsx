@@ -10,7 +10,8 @@ import {
   MessageSquare,
   Crosshair
 } from 'lucide-react'
-import { listAlerts } from '../../api/endpoints'
+import { listAlerts, subscribePush, unsubscribePush } from '../../api/endpoints'
+import { useToast } from '../../components/common/Toast'
 import Badge from '../../components/common/Badge'
 import { useRealtime } from '../../hooks/useRealtime'
 import { useGeoLocation } from '../../hooks/useLocation'
@@ -19,6 +20,135 @@ import { reverseGeocode, timeAgo, formatDateTimeIST } from '../../lib/helpers'
 import type { Alert } from '../../types'
 
 const severityRank: Record<string, number> = { critical: 0, warning: 1, info: 2 }
+
+function urlBase64ToUint8Array(base64: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64.length % 4)) % 4)
+  const raw = window.atob((base64 + padding).replace(/-/g, '+').replace(/_/g, '/'))
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0))
+}
+
+/**
+ * Critical-bulletin push opt-in. Registers the device with the service worker
+ * and stores the subscription server-side. Fully degrades: unsupported
+ * browsers or a missing VAPID key show an honest note instead of failing.
+ */
+function PushOptIn() {
+  const { t } = useLanguage()
+  const { toast } = useToast()
+  const [supported] = useState(
+    () => typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window,
+  )
+  const vapidKey = (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined)?.trim() || ''
+  const [enabled, setEnabled] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [checked, setChecked] = useState(false)
+
+  useEffect(() => {
+    if (!supported) {
+      setChecked(true)
+      return
+    }
+    let cancelled = false
+    navigator.serviceWorker.ready
+      .then((reg) => reg.pushManager.getSubscription())
+      .then((sub) => {
+        if (!cancelled) {
+          setEnabled(Boolean(sub))
+          setChecked(true)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setChecked(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [supported])
+
+  if (!checked) return null
+
+  const enable = async () => {
+    if (!vapidKey) return
+    setBusy(true)
+    try {
+      if (Notification.permission === 'denied') {
+        toast(t('alerts.pushBlocked', 'Notifications are blocked for this site — allow them in browser settings first.'), 'error')
+        return
+      }
+      const permission = await Notification.requestPermission()
+      if (permission !== 'granted') {
+        toast(t('alerts.pushDenied', 'Permission not granted. You can enable it later.'), 'info')
+        return
+      }
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+      })
+      const json = sub.toJSON()
+      await subscribePush({ endpoint: sub.endpoint, p256dh: json.keys?.p256dh, auth: json.keys?.auth })
+      setEnabled(true)
+      toast(t('alerts.pushOn', 'Push alerts on — critical bulletins will reach this device.'), 'success')
+    } catch {
+      toast(t('alerts.pushFailed', 'Could not enable push alerts on this device.'), 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const disable = async () => {
+    setBusy(true)
+    try {
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.getSubscription()
+      const endpoint = sub?.endpoint
+      if (sub) await sub.unsubscribe().catch(() => {})
+      if (endpoint) await unsubscribePush(endpoint).catch(() => {})
+      setEnabled(false)
+      toast(t('alerts.pushOff', 'Push alerts off for this device.'), 'info')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+      <div className="flex items-center gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-white dark:bg-slate-100 dark:text-zinc-800">
+          <Radio className="h-4 w-4" />
+        </div>
+        <div>
+          <div className="text-sm font-bold text-zinc-800 dark:text-slate-200">
+            {t('alerts.pushTitle', 'Critical alerts on this device')}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {!supported
+              ? t('alerts.pushUnsupported', 'This browser does not support push notifications.')
+              : !vapidKey
+                ? t('alerts.pushUnconfigured', 'Push delivery is not configured by the admin yet — in-app bulletins above still work.')
+                : enabled
+                  ? t('alerts.pushEnabledDesc', 'You will get critical bulletins even with the app closed.')
+                  : t('alerts.pushDisabledDesc', 'Get critical bulletins even with the app closed.')}
+          </p>
+        </div>
+      </div>
+      {supported && vapidKey && (
+        <button
+          type="button"
+          onClick={enabled ? disable : enable}
+          disabled={busy}
+          className={`rounded-xl px-4 py-2 text-xs font-bold transition disabled:opacity-60 ${
+            enabled
+              ? 'border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#222] dark:text-slate-200'
+              : 'bg-zinc-900 text-white hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-900'
+          }`}
+        >
+          {busy ? t('common.loading', 'Loading…') : enabled ? t('alerts.pushDisable', 'Turn off') : t('alerts.pushEnable', 'Turn on')}
+        </button>
+      )}
+    </div>
+  )
+}
 
 export default function Alerts() {
   const { t } = useLanguage()
@@ -110,6 +240,8 @@ export default function Alerts() {
           ))}
         </div>
       </div>
+
+      <PushOptIn />
 
       {/* Skeleton cards while first load is in flight */}
       {alerts === null && (

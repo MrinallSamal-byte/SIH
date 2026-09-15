@@ -38,6 +38,10 @@ Framework preset: **Other**. Build command: none needed (Vercel compiles
 | `OPENROUTER_API_KEY` | PFA chatbot serves its deterministic safety fallback (still answers crisis keywords) |
 | `DAMAGE_ML_BASE_URL` | Damage-assessment route returns a clean 503 after timeout |
 | `TWILIO_*` / `WHATSAPP_*` | SMS/WhatsApp broadcast channels are skipped; alerts still persist to web |
+| `SMS_PROVIDER` / `SMS_WEBHOOK_URL` / `SMS_WEBHOOK_TOKEN` | `webhook` posts `{messages:[{to,text}]}` to your SMS gateway (NIC/DLT); unset = Twilio if configured, else SMS skipped |
+| `OTP_DEMO_MODE` | `true` outside production (code returned in API response for review); **set `false` in prod** and configure SMS |
+| `VAPID_PUBLIC_KEY` | Push subscriptions are stored but not deliverable; set it (plus `VITE_VAPID_PUBLIC_KEY` on web) to light up the Alerts-page toggle |
+| `ESCALATION_THRESHOLD_MINUTES` | `5` — unassigned RED age before the sweep flags it |
 | `UPLOAD_MAX_SIZE_MB` | `3` recommended (Vercel body cap ≈ 4.5 MB) |
 | `RATE_LIMIT_*` | Defaults are sane; the SOS route has its own dedicated bucket |
 

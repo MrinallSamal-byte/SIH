@@ -28,7 +28,8 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { aiSatelliteFloodMap } from '../../api/ai'
-import { listShelters } from '../../api/endpoints'
+import { listShelters, shelterCheckin, shelterCheckout } from '../../api/endpoints'
+import { useToast } from '../../components/common/Toast'
 import Card from '../../components/common/Card'
 import Badge from '../../components/common/Badge'
 import LeafletMap, { type MapMarker, type MapPolyline } from '../../components/map/LeafletMap'
@@ -48,6 +49,109 @@ const criticalFacilities: { key: string; labelKey: string }[] = [
   { key: 'water', labelKey: 'shelter.filterWater' },
   { key: 'power_generator', labelKey: 'shelter.filterPower' },
 ]
+
+/**
+ * Gate self check-in: a citizen standing at the shelter enters the 6-char
+ * code from the gate poster. Occupancy updates live for everyone via the
+ * 5 s shelter poll. Hidden until the backend provides a code for the row.
+ */
+function GateCheckin({ shelterId, hasCode }: { shelterId: string; hasCode: boolean }) {
+  const { t } = useLanguage()
+  const { toast } = useToast()
+  const [open, setOpen] = useState(false)
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState<null | 'in' | 'out'>(null)
+
+  if (!hasCode) return null
+
+  const submit = async (dir: 'in' | 'out') => {
+    const clean = code.trim().toUpperCase()
+    if (!/^[A-Z2-9]{6}$/.test(clean)) {
+      toast(t('sh.gateCodeInvalid', 'Enter the 6-character gate code from the shelter poster.'), 'error')
+      return
+    }
+    setBusy(dir)
+    try {
+      if (dir === 'in') {
+        await shelterCheckin(shelterId, clean)
+        toast(t('sh.checkedIn', 'Checked in — stay safe. Show this screen to the gate volunteer.'), 'success')
+      } else {
+        await shelterCheckout(shelterId, clean)
+        toast(t('sh.checkedOut', 'Checked out. Travel safe.'), 'success')
+      }
+      setCode('')
+      setOpen(false)
+    } catch (err) {
+      toast(err instanceof Error ? err.message : t('sh.gateFailed', 'Gate check-in failed. Confirm the code with staff.'), 'error')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          setOpen(true)
+        }}
+        className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-200 bg-white py-2 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200"
+      >
+        <Users className="h-3.5 w-3.5" />
+        <span>{t('sh.gateCheckin', 'At the gate? Check in')}</span>
+      </button>
+    )
+  }
+
+  return (
+    <div
+      className="mt-3 rounded-xl border border-zinc-200 bg-[#f4f4f5] p-3 dark:border-white/[0.1] dark:bg-[#151515]"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <label htmlFor={`gate-${shelterId}`} className="mb-1 block text-[11px] font-bold text-zinc-600 dark:text-slate-300">
+        {t('sh.gateCodeLabel', 'Gate code (on the shelter poster)')}
+      </label>
+      <div className="flex gap-2">
+        <input
+          id={`gate-${shelterId}`}
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z2-9]/g, '').slice(0, 6))}
+          placeholder="A3K9P2"
+          className="mono w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-center text-sm font-bold tracking-[0.25em] outline-none focus:border-emerald-600 dark:border-white/[0.1] dark:bg-[#222] dark:text-slate-100"
+        />
+      </div>
+      <div className="mt-2 flex gap-2">
+        <button
+          type="button"
+          onClick={() => submit('in')}
+          disabled={busy !== null}
+          className="flex-1 rounded-xl bg-emerald-700 py-2 text-xs font-bold text-white transition hover:bg-emerald-800 disabled:opacity-60"
+        >
+          {busy === 'in' ? t('sh.checkingIn', 'Checking in…') : t('sh.checkInBtn', 'Check in')}
+        </button>
+        <button
+          type="button"
+          onClick={() => submit('out')}
+          disabled={busy !== null}
+          className="flex-1 rounded-xl border border-zinc-300 bg-white py-2 text-xs font-bold text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-60 dark:border-white/[0.1] dark:bg-[#222] dark:text-slate-200"
+        >
+          {busy === 'out' ? t('sh.checkingOut', 'Checking out…') : t('sh.checkOutBtn', 'Check out')}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false)
+            setCode('')
+          }}
+          className="rounded-xl px-2 text-xs font-semibold text-zinc-500 hover:text-zinc-800 dark:text-slate-400"
+        >
+          {t('common.cancel', 'Cancel')}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export default function ShelterFinder() {
   const { t } = useLanguage()
@@ -1403,6 +1507,8 @@ export default function ShelterFinder() {
                     )
                   })}
                 </div>
+
+                <GateCheckin shelterId={s.id} hasCode={Boolean(s.checkinCode)} />
 
                 <div className="mt-4 flex items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-white/[0.08]">
                   <span className="text-[10px] text-slate-400 mono">{hasCoords ? `${(s.latitude as number).toFixed(4)}, ${(s.longitude as number).toFixed(4)}` : t('shelter.locationUnavailable', 'GPS unavailable')}</span>

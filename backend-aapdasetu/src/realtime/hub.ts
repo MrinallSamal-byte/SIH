@@ -22,6 +22,7 @@ export type RealtimeEventType =
   | 'report:update'
   | 'report:assignment'
   | 'report:resolution'
+  | 'report:escalated'
   | 'alert:new'
   | 'alert:update'
   | 'volunteer:status'

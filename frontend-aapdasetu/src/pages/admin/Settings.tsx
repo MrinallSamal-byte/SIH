@@ -118,10 +118,41 @@ export default function Settings() {
               configured={status.whatsapp.configured}
               detail={status.whatsapp.provider}
             />
+            <StatusRow
+              label={t('st.pushChannel', 'Push alerts (Web Push)')}
+              configured={status.push?.configured ?? false}
+              detail={
+                status.push
+                  ? `${status.push.provider} · ${status.push.subscriptions ?? 0} ${t('st.pushSubscribed', 'subscribed')}`
+                  : t('st.pushUnavailable', 'backend unreachable or no data')
+              }
+            />
+            <StatusRow
+              label={t('st.otpChannel', 'SOS caller OTP verification')}
+              configured={status.otp ? status.otp.smsConfigured || status.otp.demoMode : false}
+              detail={
+                status.otp
+                  ? status.otp.demoMode
+                    ? t('st.otpDemo', 'demo mode — codes shown in-app')
+                    : status.otp.smsConfigured
+                      ? t('st.otpSms', 'codes via SMS')
+                      : t('st.otpOff', 'no SMS provider — enable demo or configure SMS')
+                  : undefined
+              }
+            />
+            <StatusRow
+              label={t('st.escalationSla', 'RED escalation SLA')}
+              configured
+              detail={
+                status.escalation
+                  ? t('st.escalationDetail', 'unassigned RED older than {m} min').replace('{m}', String(status.escalation.thresholdMinutes))
+                  : undefined
+              }
+            />
             <p className="pt-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
               {t(
                 'st.credsNote',
-                'Provider credentials are set as backend environment variables (TWILIO_*, WHATSAPP_*). Without them, broadcasts still persist to the web channel.',
+                'Provider credentials are set as backend environment variables (SMS_PROVIDER=twilio|webhook, SMS_WEBHOOK_URL, TWILIO_*, WHATSAPP_*, VAPID_PUBLIC_KEY). Without them, broadcasts still persist to the web channel.',
               )}
             </p>
           </div>

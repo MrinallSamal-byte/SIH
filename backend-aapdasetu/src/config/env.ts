@@ -26,6 +26,14 @@ function number(name: string, fallback: number): number {
   return parsed;
 }
 
+/** Tri-state flag: explicit 'true'/'false' win, otherwise the default. */
+function parseFlag(name: string, fallback: boolean): boolean {
+  const raw = (process.env[name] ?? '').trim().toLowerCase();
+  if (raw === 'true' || raw === '1' || raw === 'yes') return true;
+  if (raw === 'false' || raw === '0' || raw === 'no') return false;
+  return fallback;
+}
+
 // Vercel serverless always sits behind exactly one proxy hop that sets
 // x-forwarded-for. Without `trust proxy`, express-rate-limit v7 throws
 // ERR_ERL_UNEXPECTED_X_FORWARDED_FOR on every request and the whole public
@@ -80,4 +88,28 @@ export const env = {
   whatsappCloudApiToken: required('WHATSAPP_CLOUD_API_TOKEN', ''),
   whatsappPhoneNumberId: required('WHATSAPP_PHONE_NUMBER_ID', ''),
   whatsappDefaultToNumber: required('WHATSAPP_DEFAULT_TO_NUMBER', ''),
+
+  // Generic SMS gateway (government NIC/DLT or aggregator webhook).
+  // `webhook` POSTs { to, text } as JSON with an optional bearer token;
+  // `twilio` uses the Twilio credentials above; anything else disables SMS.
+  smsProvider: required('SMS_PROVIDER', ''),
+  smsWebhookUrl: required('SMS_WEBHOOK_URL', ''),
+  smsWebhookToken: required('SMS_WEBHOOK_TOKEN', ''),
+
+  // OTP challenge for SOS caller verification. Demo mode returns the code in
+  // the request response so the flow is reviewable without an SMS provider.
+  // NEVER enable demo mode in production (the code would leak to any caller).
+  otpDemoMode: parseFlag('OTP_DEMO_MODE', process.env.NODE_ENV !== 'production'),
+  otpTtlMinutes: number('OTP_TTL_MINUTES', 10),
+  otpMaxAttempts: number('OTP_MAX_ATTEMPTS', 5),
+
+  // Web Push (VAPID). Subscriptions are stored regardless; actual delivery
+  // needs both keys plus a push sender worker (upgrade path documented in
+  // push.service.ts).
+  vapidPublicKey: required('VAPID_PUBLIC_KEY', ''),
+  vapidSubject: required('VAPID_SUBJECT', 'mailto:admin@aapdasetu.org'),
+
+  // RED escalation SLA: minutes an unassigned RED report may wait before the
+  // sweep flags it.
+  escalationThresholdMinutes: number('ESCALATION_THRESHOLD_MINUTES', 5),
 };

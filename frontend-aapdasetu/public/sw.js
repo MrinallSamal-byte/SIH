@@ -75,6 +75,56 @@ self.addEventListener('sync', (event) => {
   )
 })
 
+// Web Push (critical bulletins): the Alerts page subscribes the device and
+// the backend stores the subscription. Payloads are plain JSON
+// { title, body, url } — anything unparseable still raises a generic alert.
+self.addEventListener('push', (event) => {
+  let title = 'AapdaSetu — Critical Alert'
+  let body = 'A new emergency bulletin was published. Open the app for details.'
+  let url = '/#/alerts'
+  try {
+    const data = event.data ? event.data.json() : null
+    if (data) {
+      if (typeof data.title === 'string' && data.title) title = data.title.slice(0, 120)
+      if (typeof data.body === 'string' && data.body) body = data.body.slice(0, 300)
+      if (typeof data.url === 'string' && data.url.startsWith('/')) url = data.url
+    }
+  } catch (_) {
+    // Non-JSON push payload — fall back to the generic alert above.
+  }
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: '/favicon.svg',
+      badge: '/favicon.svg',
+      tag: 'aapdasetu-critical',
+      renotify: true,
+      requireInteraction: true,
+      data: { url },
+    })
+  )
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const url = (event.notification.data && event.notification.data.url) || '/#/alerts'
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        try {
+          if ('focus' in client) {
+            client.navigate(url)
+            return client.focus()
+          }
+        } catch (_) {
+          // client gone — fall through to opening a fresh window
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url)
+    })
+  )
+})
+
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url)
 

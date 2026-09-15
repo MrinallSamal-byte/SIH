@@ -21,6 +21,7 @@ import Loader from '../../components/common/Loader'
 import { useRealtime } from '../../hooks/useRealtime'
 import { useToast } from '../../components/common/Toast'
 import { formatDateTime, haversineKm } from '../../lib/helpers'
+import { isSlaBreached } from '../../lib/sla'
 import { useLanguage } from '../../lib/i18n'
 import type { Agency, Report, Volunteer } from '../../types'
 
@@ -476,6 +477,11 @@ export default function Reports() {
                     <span className="mono text-xs font-bold text-slate-600 dark:text-slate-400">
                       {r.priorityScore}
                     </span>
+                    {isSlaBreached(r) && (
+                      <span className="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-white mono animate-pulse" title={t('ls.slaBreachShort', 'SLA breach')}>
+                        {r.escalatedAt ? t('ls.escalated', 'Escalated') : t('rp.sla', 'SLA')}
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="px-4 py-3"><Badge value={r.status} label={statusLabel(r.status)} /></td>
@@ -484,7 +490,14 @@ export default function Reports() {
                 </td>
                 <td className="px-4 py-3 text-xs">
                   <div className="font-semibold text-slate-800 dark:text-slate-200">{r.reporterName || t('rp.citizen')}</div>
-                  <div className="mono text-[11px] text-slate-400">{r.reporterPhone || '—'}</div>
+                  <div className="mono text-[11px] text-slate-400">
+                    {r.reporterPhone || '—'}
+                    {r.reporterPhoneVerified && (
+                      <span className="ml-1 font-sans font-bold text-emerald-600 dark:text-emerald-400">
+                        {t('rp.verifiedCaller', '· verified')}
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 max-w-[160px] truncate">
                   {r.assignedVolunteerName ? (

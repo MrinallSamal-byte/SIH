@@ -1,7 +1,7 @@
 /** Public citizen routes (zero authentication). */
 import { Router } from 'express';
 import { validateBody, validateQuery, validateParams } from '../middleware/validate.js';
-import { publicRateLimiter, sosRateLimiter, uploadRateLimiter } from '../middleware/rateLimit.js';
+import { publicRateLimiter, sosRateLimiter, uploadRateLimiter, otpRateLimiter } from '../middleware/rateLimit.js';
 import * as c from '../controllers/public.controller.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import * as schemas from '../schemas/index.js';
@@ -104,4 +104,48 @@ publicRouter.post(
   publicRateLimiter,
   validateBody(schemas.createMissingPersonSchema),
   asyncHandler(c.createMissingPersonHandler),
+);
+
+// OTP caller verification (strict per-IP bucket + per-phone throttle in service).
+publicRouter.post(
+  '/otp/request',
+  otpRateLimiter,
+  validateBody(schemas.otpRequestSchema),
+  asyncHandler(c.otpRequestHandler),
+);
+publicRouter.post(
+  '/otp/verify',
+  otpRateLimiter,
+  validateBody(schemas.otpVerifySchema),
+  asyncHandler(c.otpVerifyHandler),
+);
+
+// Web Push subscriptions (opt-in from the Alerts page).
+publicRouter.post(
+  '/push/subscriptions',
+  publicRateLimiter,
+  validateBody(schemas.pushSubscriptionSchema),
+  asyncHandler(c.pushSubscribeHandler),
+);
+publicRouter.delete(
+  '/push/subscriptions',
+  publicRateLimiter,
+  validateBody(schemas.pushUnsubscribeSchema),
+  asyncHandler(c.pushUnsubscribeHandler),
+);
+
+// Shelter gate self check-in/out (poster code).
+publicRouter.post(
+  '/shelters/:id/checkin',
+  publicRateLimiter,
+  validateParams(schemas.idParamsSchema),
+  validateBody(schemas.shelterCheckinSchema),
+  asyncHandler(c.shelterCheckinHandler),
+);
+publicRouter.post(
+  '/shelters/:id/checkout',
+  publicRateLimiter,
+  validateParams(schemas.idParamsSchema),
+  validateBody(schemas.shelterCheckinSchema),
+  asyncHandler(c.shelterCheckoutHandler),
 );

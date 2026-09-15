@@ -68,6 +68,8 @@ export interface ReportInput {
   clientRequestId?: string
   /** Original on-device time for submissions queued offline and replayed later. */
   clientCreatedAt?: string
+  /** Single-use OTP verification token for the reporter phone (optional). */
+  phoneOtpToken?: string
 }
 
 export interface Report {
@@ -95,6 +97,11 @@ export interface Report {
   updatedAt?: string
   /** Echo of the client idempotency key — used for offline dedupe. */
   clientRequestId?: string
+  /** True when the reporter completed the OTP challenge for this number. */
+  reporterPhoneVerified?: boolean
+  /** Set when an unassigned RED report breached the response SLA. */
+  escalatedAt?: string | null
+  escalationLevel?: number
 }
 
 export interface Volunteer {
@@ -106,6 +113,9 @@ export interface Volunteer {
   longitude?: number
   status: VolunteerStatus
   assignedReportId?: string
+  /** Trust tier: only `verified` volunteers are dispatch-eligible. */
+  verificationStatus?: 'pending' | 'verified' | 'suspended'
+  trainingCompleted?: boolean
 }
 
 export interface Shelter {
@@ -119,6 +129,8 @@ export interface Shelter {
   facilities: string[]
   contactPhone?: string
   status: ShelterStatus
+  /** Public gate check-in code (poster/QR). Absent on legacy rows. */
+  checkinCode?: string
 }
 
 export interface Agency {
@@ -216,6 +228,7 @@ export interface VolunteerUser {
   name: string
   phone?: string
   skills?: string[]
+  verificationStatus?: 'pending' | 'verified' | 'suspended'
 }
 
 export interface PfaChatMessage {
