@@ -35,6 +35,8 @@ export default function SafeRoutes() {
 
   const [dualRoutes, setDualRoutes] = useState<{ safe: RouteOption; shortest: RouteOption } | null>(null)
   const [routingLoading, setRoutingLoading] = useState(false)
+  const [fitTrigger, setFitTrigger] = useState(0)
+  const [showSteps, setShowSteps] = useState(false)
   const [destMenuOpen, setDestMenuOpen] = useState(false)
   const [destQuery, setDestQuery] = useState('')
   const destMenuRef = useRef<HTMLDivElement | null>(null)
@@ -195,6 +197,7 @@ export default function SafeRoutes() {
         .then((res) => {
           if (!cancelled && res) {
             setDualRoutes(res)
+            setFitTrigger((n) => n + 1)
             setRoutingLoading(false)
           }
         })
@@ -284,7 +287,14 @@ export default function SafeRoutes() {
     }
 
     // 3. Safe Route Waypoint Markers (Green Shields)
-    if (dualRoutes?.safe.points && dualRoutes.safe.points.length > 2 && (activeRouteView === 'safe' || activeRouteView === 'both')) {
+    // Only display checkpoint when the safe route is a genuine alternative bypass (differs > 50m)
+    const isBypass = Boolean(
+      dualRoutes &&
+      Math.abs(dualRoutes.safe.distanceKm - dualRoutes.shortest.distanceKm) > 0.05 &&
+      dualRoutes.safe.points &&
+      dualRoutes.safe.points.length > 2,
+    )
+    if (isBypass && dualRoutes?.safe.points && (activeRouteView === 'safe' || activeRouteView === 'both')) {
       const midPoint = dualRoutes.safe.points[Math.floor(dualRoutes.safe.points.length / 2)]
       if (midPoint) {
         list.push({
@@ -623,6 +633,69 @@ export default function SafeRoutes() {
                   <span className="font-mono text-[10px] text-zinc-400">Dashed Amber Line</span>
                 </div>
               </div>
+
+              {/* Turn-by-Turn Directions Accordion */}
+              <div className="rounded-2xl border border-zinc-200/80 bg-white p-3.5 text-xs shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+                <button
+                  type="button"
+                  onClick={() => setShowSteps((s) => !s)}
+                  className="flex w-full items-center justify-between font-bold text-zinc-900 transition hover:text-zinc-700 dark:text-zinc-100 dark:hover:text-zinc-300 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Navigation className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    <span>
+                      Turn-by-Turn Guidance ({activeRouteView === 'fastest' ? dualRoutes.shortest.steps.length : dualRoutes.safe.steps.length} steps)
+                    </span>
+                  </div>
+                  <ChevronDown className={`h-4 w-4 text-zinc-400 transition-transform ${showSteps ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showSteps && (
+                  <div className="mt-3 space-y-2 border-t border-zinc-100 pt-2.5 dark:border-zinc-800">
+                    <div className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                      Showing navigation maneuvers for{' '}
+                      <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+                        {activeRouteView === 'fastest' ? 'Direct Urban Route' : 'Safe Evacuation Corridor'}
+                      </span>:
+                    </div>
+                    <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1">
+                      {(activeRouteView === 'fastest' ? dualRoutes.shortest.steps : dualRoutes.safe.steps).map((st, idx) => (
+                        <div
+                          key={st.id || idx}
+                          className="flex items-start gap-2.5 rounded-xl border border-zinc-100 bg-zinc-50/70 p-2 text-zinc-800 dark:border-zinc-800/80 dark:bg-zinc-800/50 dark:text-zinc-200"
+                        >
+                          <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-white text-[10px] font-bold text-zinc-700 shadow-xs dark:bg-zinc-700 dark:text-zinc-200">
+                            {idx + 1}
+                          </div>
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <div className="text-[12px] font-medium leading-snug">{st.instruction}</div>
+                            <div className="flex flex-wrap items-center gap-x-2 text-[10px] text-zinc-500 dark:text-zinc-400">
+                              {st.distanceMeters > 0 && (
+                                <span>
+                                  {st.distanceMeters >= 1000
+                                    ? `${(st.distanceMeters / 1000).toFixed(1)} km`
+                                    : `${st.distanceMeters} m`}
+                                </span>
+                              )}
+                              {st.durationMin > 0 && <span>· ~{st.durationMin} min</span>}
+                              {st.roadName && (
+                                <span className="rounded bg-zinc-200/70 px-1.5 py-0.2 text-[9px] font-mono text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300">
+                                  {st.roadName}
+                                </span>
+                              )}
+                            </div>
+                            {st.safetyNote && (
+                              <div className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+                                ✓ {st.safetyNote}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -653,8 +726,8 @@ export default function SafeRoutes() {
               polygons={mapPolygons}
               polylines={polylines}
               height="100%"
-              autoFit={false}
-              selectedId={destination ? `dest-${destination.id}` : null}
+              autoFit={true}
+              fitTrigger={fitTrigger}
             />
           </div>
 

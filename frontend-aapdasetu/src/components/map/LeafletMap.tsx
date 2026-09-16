@@ -450,6 +450,21 @@ function MapController({
     const safePolygons = polygons ?? []
     const safePolylines = polylines ?? []
 
+    // When an active route polyline is present, prioritize fitting the route geometry
+    // and key endpoint markers (user, destination, waypoint) so the camera frames the route cleanly
+    // without zooming out to encompass unrelated background markers across 30+ km.
+    const activeRoutePoints = safePolylines
+      .flatMap((p) => p?.points ?? [])
+      .filter((p): p is GeoPoint => Boolean(p && typeof p.lat === 'number' && typeof p.lng === 'number'))
+
+    if (activeRoutePoints.length > 1) {
+      const endpointMarkers = safeMarkers
+        .filter((m) => m?.isSos || m?.markerKind === 'user' || m?.markerKind === 'destination' || m?.markerKind === 'waypoint' || m?.isDestination)
+        .map((m) => m.position)
+        .filter((p): p is GeoPoint => Boolean(p && typeof p.lat === 'number' && typeof p.lng === 'number'))
+      return [...activeRoutePoints, ...endpointMarkers]
+    }
+
     return [
       ...safeMarkers
         .map((m) => m?.position)
@@ -545,6 +560,7 @@ export default function LeafletMap({
   polylines = [],
   height = '420px',
   autoFit = false,
+  fitTrigger: externalFitTrigger = 0,
   defaultLayer = 'streets',
   popupActions,
   selectedId = null,
@@ -557,6 +573,7 @@ export default function LeafletMap({
   polylines?: MapPolyline[]
   height?: string
   autoFit?: boolean
+  fitTrigger?: number
   defaultLayer?: MapLayerMode
   popupActions?: MapPopupAction[]
   selectedId?: string | null
@@ -573,7 +590,7 @@ export default function LeafletMap({
   })
 
   const [showLayerMenu, setShowLayerMenu] = useState(false)
-  const [fitTrigger, setFitTrigger] = useState(0)
+  const [internalFitTrigger, setInternalFitTrigger] = useState(0)
 
   const selectLayer = (mode: MapLayerMode) => {
     setLayerMode(mode)
@@ -586,7 +603,7 @@ export default function LeafletMap({
   }
 
   const handleFitBounds = useCallback(() => {
-    setFitTrigger((c) => c + 1)
+    setInternalFitTrigger((c) => c + 1)
   }, [])
 
   const currentLayer = MAP_LAYERS[layerMode]
@@ -820,7 +837,7 @@ export default function LeafletMap({
           polylines={polylines}
           autoFit={autoFit}
           selectedId={selectedId}
-          fitTrigger={fitTrigger}
+          fitTrigger={externalFitTrigger + internalFitTrigger}
         />
 
         {/* Hazard Polygons */}
