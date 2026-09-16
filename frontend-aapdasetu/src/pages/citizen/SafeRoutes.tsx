@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  Check,
+  ChevronDown,
   Compass,
   Navigation,
   AlertTriangle,
   MapPin,
+  Search,
   ShieldCheck,
   Zap,
   Radio,
@@ -12,7 +15,7 @@ import {
 import { aiSatelliteFloodMap } from '../../api/ai'
 import { listShelters } from '../../api/endpoints'
 import Loader from '../../components/common/Loader'
-import LeafletMap, { type MapMarker, type MapPolyline } from '../../components/map/LeafletMap'
+import LeafletMap, { type MapMarker, type MapPolygon, type MapPolyline } from '../../components/map/LeafletMap'
 import { useGeoLocation } from '../../hooks/useLocation'
 import { useLanguage } from '../../lib/i18n'
 import { getNavigationUrl } from '../../lib/helpers'
@@ -32,6 +35,26 @@ export default function SafeRoutes() {
 
   const [dualRoutes, setDualRoutes] = useState<{ safe: RouteOption; shortest: RouteOption } | null>(null)
   const [routingLoading, setRoutingLoading] = useState(false)
+  const [destMenuOpen, setDestMenuOpen] = useState(false)
+  const [destQuery, setDestQuery] = useState('')
+  const destMenuRef = useRef<HTMLDivElement | null>(null)
+
+  // Close the custom dropdown on outside tap / Escape (mobile-safe).
+  useEffect(() => {
+    if (!destMenuOpen) return
+    const onPointerDown = (e: PointerEvent) => {
+      if (destMenuRef.current && !destMenuRef.current.contains(e.target as Node)) setDestMenuOpen(false)
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDestMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [destMenuOpen])
 
   useEffect(() => {
     aiSatelliteFloodMap({ center: DEFAULT_CENTER, radiusKm: 30 })
@@ -117,24 +140,64 @@ export default function SafeRoutes() {
     return DEFAULT_CENTER
   }, [coords, isFarFromShelter, useLocalSimulation, destPoint])
 
+  // Nearest-first ordering so the destination dropdown shows reachable camps
+  // first instead of statewide generation order (Silchar/Dibrugarh mixed in).
+  const sortedShelters = useMemo(() => {
+    const list = [...(shelters ?? [])]
+    if (list.length === 0) return list
+    const origin = effectiveOrigin ?? DEFAULT_CENTER
+    return list.sort((a, b) => {
+      const aValid = typeof a.latitude === 'number' && typeof a.longitude === 'number'
+      const bValid = typeof b.latitude === 'number' && typeof b.longitude === 'number'
+      if (aValid && !bValid) return -1
+      if (!aValid && bValid) return 1
+      if (!aValid && !bValid) return 0
+      const da = haversineKm(origin, { lat: a.latitude as number, lng: a.longitude as number })
+      const db = haversineKm(origin, { lat: b.latitude as number, lng: b.longitude as number })
+      return da - db
+    })
+  }, [shelters, effectiveOrigin])
+
+  // Flood hazard overlays for the map — previously computed for routing only
+  // and never rendered, so users saw routes but no red hazard zones.
+  const mapPolygons: MapPolygon[] = useMemo(
+    () =>
+      floodZones
+        .filter((z) => Array.isArray(z.points) && z.points.length >= 3)
+        .map((z) => ({
+          id: z.id,
+          points: z.points,
+          color: '#dc2626',
+          fillColor: '#ef4444',
+          fillOpacity: 0.28,
+          weight: 2,
+          label: z.label,
+        })),
+    [floodZones],
+  )
+
   useEffect(() => {
     if (!destPoint || !effectiveOrigin) return
     let cancelled = false
-    setRoutingLoading(true)
-
-    calculateDualRoutes(effectiveOrigin, destPoint, hazardPolys, destination?.name || 'Safe Haven')
-      .then((res) => {
-        if (!cancelled && res) {
-          setDualRoutes(res)
-          setRoutingLoading(false)
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setRoutingLoading(false)
-      })
+    // Debounce GPS-watch jitter: rapid coords ticks previously fired a full
+    // dual OSRM fetch per tick. Coalesce to one calculation per settle.
+    const timer = window.setTimeout(() => {
+      setRoutingLoading(true)
+      calculateDualRoutes(effectiveOrigin, destPoint, hazardPolys, destination?.name || 'Safe Haven')
+        .then((res) => {
+          if (!cancelled && res) {
+            setDualRoutes(res)
+            setRoutingLoading(false)
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setRoutingLoading(false)
+        })
+    }, 350)
 
     return () => {
       cancelled = true
+      window.clearTimeout(timer)
     }
   }, [effectiveOrigin, destPoint, hazardPolys, destination?.name])
 
@@ -229,9 +292,16 @@ export default function SafeRoutes() {
       }
     }
 
-    // 4. Other Available Shelters in region
-    ;(shelters ?? [])
+    // 4. Other Available Shelters in region — nearest only, so a statewide
+    // 250+ marker cloud no longer buries the evacuation corridor at zoom 14.
+    ;(sortedShelters ?? [])
       .filter((s) => s.id !== destinationId && typeof s.latitude === 'number' && typeof s.longitude === 'number')
+      .filter((s) => {
+        const anchor = destPoint ?? effectiveOrigin
+        if (!anchor) return true
+        return haversineKm(anchor, { lat: s.latitude as number, lng: s.longitude as number }) <= 30
+      })
+      .slice(0, 20)
       .forEach((s) => {
         list.push({
           id: s.id,
@@ -251,7 +321,7 @@ export default function SafeRoutes() {
       })
 
     return list
-  }, [effectiveOrigin, coords, isFarFromShelter, useLocalSimulation, destination, destPoint, dualRoutes, activeRouteView, shelters, destinationId, accuracy, t])
+  }, [effectiveOrigin, coords, isFarFromShelter, useLocalSimulation, destination, destPoint, dualRoutes, activeRouteView, sortedShelters, destinationId, accuracy, t])
 
   if (!flood || !shelters) return <Loader />
 
@@ -351,21 +421,95 @@ export default function SafeRoutes() {
               <span>{status === 'locating' ? t('shelter.locating') : coords ? t('shelter.updateLocation') : t('shelter.detectLocation')}</span>
             </button>
 
-            <label htmlFor="safe-route-dest" className="mt-4 block text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mono">
+            <span id="safe-route-dest-label" className="mt-4 block text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mono">
               {t('routes.destination')}
-            </label>
-            <select
-              id="safe-route-dest"
-              value={destinationId}
-              onChange={(e) => setDestinationId(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-            >
-              {(shelters ?? []).map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} — {s.status === 'open' ? t('shelter.statusOpen') : t('shelter.full')} ({s.occupancy || 0}/{s.capacity || 0})
-                </option>
-              ))}
-            </select>
+            </span>
+            {/* Custom responsive dropdown: native <select> popups are sized by the
+                longest option string by the OS and spill outside a 426px viewport.
+                This listbox is constrained to the parent width with wrapping rows. */}
+            <div ref={destMenuRef} className="relative mt-1 min-w-0">
+              <button
+                type="button"
+                id="safe-route-dest"
+                aria-haspopup="listbox"
+                aria-expanded={destMenuOpen}
+                aria-labelledby="safe-route-dest-label safe-route-dest"
+                title={destination?.name}
+                onClick={() => setDestMenuOpen((o) => !o)}
+                className="flex w-full min-w-0 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-left outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:focus:border-zinc-500"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                    {destination?.name ?? t('common.loading', 'Loading…')}
+                  </span>
+                  {destination && (
+                    <span className="mt-0.5 block text-[11px] text-zinc-500 dark:text-zinc-400">
+                      {destination.status === 'open' ? t('shelter.statusOpen') : t('shelter.full')} ({destination.occupancy || 0}/{destination.capacity || 0})
+                      {typeof destination.latitude === 'number' && typeof destination.longitude === 'number'
+                        ? ` · ${haversineKm(effectiveOrigin, { lat: destination.latitude, lng: destination.longitude }).toFixed(1)} km`
+                        : ''}
+                    </span>
+                  )}
+                </span>
+                <ChevronDown className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform ${destMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {destMenuOpen && (
+                <div role="listbox" aria-labelledby="safe-route-dest-label" className="absolute inset-x-0 top-full z-50 mt-1 max-w-full overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
+                  <div className="flex items-center gap-2 border-b border-zinc-100 px-3 py-2 dark:border-zinc-800">
+                    <Search className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+                    <input
+                      value={destQuery}
+                      onChange={(e) => setDestQuery(e.target.value)}
+                      placeholder={t('shelter.searchPlaceholder', 'Search shelters…')}
+                      aria-label={t('shelter.searchPlaceholder', 'Search shelters…')}
+                      className="w-full min-w-0 bg-transparent text-sm text-zinc-800 outline-none placeholder:text-zinc-400 dark:text-zinc-200"
+                    />
+                  </div>
+                  <div className="max-h-72 overflow-y-auto overscroll-contain py-1">
+                    {sortedShelters
+                      .filter((s) => {
+                        const q = destQuery.trim().toLowerCase()
+                        if (!q) return true
+                        return `${s.name ?? ''} ${s.address ?? ''}`.toLowerCase().includes(q)
+                      })
+                      .map((s) => {
+                        const valid = typeof s.latitude === 'number' && typeof s.longitude === 'number'
+                        const dist = valid ? haversineKm(effectiveOrigin, { lat: s.latitude as number, lng: s.longitude as number }) : null
+                        const selected = s.id === destinationId
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            role="option"
+                            aria-selected={selected}
+                            onClick={() => {
+                              setDestinationId(s.id)
+                              setDestMenuOpen(false)
+                              setDestQuery('')
+                            }}
+                            className={`flex w-full min-w-0 items-start gap-2 px-3 py-2 text-left transition hover:bg-zinc-50 dark:hover:bg-zinc-800 ${selected ? 'bg-emerald-50/70 dark:bg-emerald-950/30' : ''}`}
+                          >
+                            <span className="min-w-0 flex-1">
+                              <span className="block break-words text-[13px] font-medium leading-snug text-zinc-800 dark:text-zinc-200">
+                                {s.name}
+                              </span>
+                              <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+                                <span className={`font-semibold ${s.status === 'open' ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
+                                  {s.status === 'open' ? t('shelter.statusOpen') : t('shelter.full')}
+                                </span>
+                                <span>({s.occupancy || 0}/{s.capacity || 0})</span>
+                                {dist != null && <span className="font-medium">· {dist.toFixed(1)} km</span>}
+                              </span>
+                            </span>
+                            {selected && <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />}
+                          </button>
+                        )
+                      })}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {destination && (
               <a
@@ -491,6 +635,7 @@ export default function SafeRoutes() {
               center={effectiveOrigin}
               zoom={14}
               markers={markers}
+              polygons={mapPolygons}
               polylines={polylines}
               height="100%"
               autoFit={false}
@@ -509,6 +654,9 @@ export default function SafeRoutes() {
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="inline-block h-2.5 w-2.5 rounded-sm bg-emerald-600" /> {t('routes.safeWaypoint', 'Safe Checkpoint')}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-2.5 w-2.5 rounded-sm bg-red-500/80" /> {t('routes.floodZone', 'Flood Inundation')}
               </span>
             </div>
 

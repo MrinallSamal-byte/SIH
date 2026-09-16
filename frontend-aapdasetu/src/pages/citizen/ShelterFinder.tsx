@@ -32,7 +32,7 @@ import { listShelters, shelterCheckin, shelterCheckout } from '../../api/endpoin
 import { useToast } from '../../components/common/Toast'
 import Card from '../../components/common/Card'
 import Badge from '../../components/common/Badge'
-import LeafletMap, { type MapMarker, type MapPolyline } from '../../components/map/LeafletMap'
+import LeafletMap, { type MapMarker, type MapPolygon, type MapPolyline } from '../../components/map/LeafletMap'
 import { useGeoLocation } from '../../hooks/useLocation'
 import { useRealtime } from '../../hooks/useRealtime'
 import { useLanguage } from '../../lib/i18n'
@@ -384,13 +384,21 @@ export default function ShelterFinder() {
     return { lat: 26.1445, lng: 91.7362 }
   }, [selectedShelter, userPos, filteredAndSorted])
 
-  // Fetch contextual satellite flood & hazard polygons
+  // Fetch contextual satellite flood & hazard polygons.
+  // Deps are stable lat/lng numbers only: `center` is a fresh object on every
+  // 5 s shelter poll (filteredAndSorted re-sorts), which previously refetched
+  // flood AI on every poll tick.
+  const userLatKey = userPos?.lat
+  const userLngKey = userPos?.lng
+  const centerLatKey = center.lat
+  const centerLngKey = center.lng
   useEffect(() => {
-    const originPoint = userPos || center
+    const originPoint: GeoPoint =
+      userLatKey != null && userLngKey != null ? { lat: userLatKey, lng: userLngKey } : { lat: centerLatKey, lng: centerLngKey }
     aiSatelliteFloodMap({ center: originPoint, radiusKm: 20 })
       .then((res) => setFlood(res || { type: 'FeatureCollection', features: [] }))
       .catch(() => setFlood({ type: 'FeatureCollection', features: [] }))
-  }, [userPos, center])
+  }, [userLatKey, userLngKey, centerLatKey, centerLngKey])
 
   // Hazard polygon structures
   const floodZones = useMemo(() => {
@@ -436,6 +444,24 @@ export default function ShelterFinder() {
 
   const hazardPolys = useMemo(() => floodZones.map((z) => z.points), [floodZones])
 
+  // Flood hazard overlays for the map — previously computed for routing only
+  // and never rendered, so hazard zones were invisible on the shelter map.
+  const mapPolygons: MapPolygon[] = useMemo(
+    () =>
+      floodZones
+        .filter((z) => Array.isArray(z.points) && z.points.length >= 3)
+        .map((z) => ({
+          id: z.id,
+          points: z.points,
+          color: '#dc2626',
+          fillColor: '#ef4444',
+          fillOpacity: 0.28,
+          weight: 2,
+          label: z.label,
+        })),
+    [floodZones],
+  )
+
   // Real-time calculation of dual routes (Shortest vs Safe Highest Confidence)
   useEffect(() => {
     if (
@@ -451,17 +477,24 @@ export default function ShelterFinder() {
     const destPoint: GeoPoint = { lat: selectedShelter.latitude, lng: selectedShelter.longitude }
 
     let cancelled = false
-    setIsCalculatingRoute(true)
-
-    calculateDualRoutes(originPoint, destPoint, hazardPolys, selectedShelter.name).then((routes) => {
-      if (!cancelled) {
-        setDualRoutes(routes)
-        setIsCalculatingRoute(false)
-      }
-    })
+    // Debounce GPS-watch jitter so rapid position ticks coalesce.
+    const timer = window.setTimeout(() => {
+      setIsCalculatingRoute(true)
+      calculateDualRoutes(originPoint, destPoint, hazardPolys, selectedShelter.name)
+        .then((routes) => {
+          if (!cancelled) {
+            setDualRoutes(routes)
+            setIsCalculatingRoute(false)
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setIsCalculatingRoute(false)
+        })
+    }, 350)
 
     return () => {
       cancelled = true
+      window.clearTimeout(timer)
     }
   }, [userPos, selectedShelter, hazardPolys])
 
@@ -1227,6 +1260,7 @@ export default function ShelterFinder() {
           center={center}
           zoom={14}
           markers={markers}
+          polygons={mapPolygons}
           polylines={polylines}
           height="100%"
           autoFit={false}
@@ -1248,6 +1282,9 @@ export default function ShelterFinder() {
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-sm bg-red-600" /> {t('shelter.filterMedical', 'Medical Station')}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-sm bg-red-500/70" /> {t('routes.floodZone', 'Flood Inundation')}
           </span>
         </div>
 

@@ -425,7 +425,7 @@ function generate250Shelters(): Shelter[] {
 
     list.push({
       id,
-      name: `${sector.city} — ${sType} #${(i % 20) + 1}`,
+      name: `${sector.city} — ${sType} #${i + 1}`,
       address: `Sector ${(i % 15) + 1}, ${sector.city}, ${sector.district}, ${sector.state}`,
       latitude: Number((sector.lat + latJitter).toFixed(4)),
       longitude: Number((sector.lng + lngJitter).toFixed(4)),
