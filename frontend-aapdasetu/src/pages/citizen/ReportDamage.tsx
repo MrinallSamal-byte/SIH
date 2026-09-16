@@ -505,12 +505,12 @@ Verify status online at: https://aapdasetu-v3.vercel.app/#/track?id=${claimRef}
                   {claimRef}
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={downloadOfficialReceipt}
                   title={t('damage.downloadSlip', 'Download SDRF Assessment Slip')}
-                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 dark:hover:bg-[#2a2a2a] transition cursor-pointer"
+                  className="flex-1 sm:flex-initial justify-center inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 dark:hover:bg-[#2a2a2a] transition cursor-pointer"
                 >
                   <Download className="h-3.5 w-3.5" />
                   <span>{t('damage.downloadSlip', 'Download Slip')}</span>
@@ -519,7 +519,7 @@ Verify status online at: https://aapdasetu-v3.vercel.app/#/track?id=${claimRef}
                   type="button"
                   onClick={printOfficialReceipt}
                   title={t('damage.printSlip', 'Print Official Claim Slip')}
-                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 dark:hover:bg-[#2a2a2a] transition cursor-pointer"
+                  className="flex-1 sm:flex-initial justify-center inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 dark:hover:bg-[#2a2a2a] transition cursor-pointer"
                 >
                   <Printer className="h-3.5 w-3.5" />
                   <span>{t('damage.printSlip', 'Print')}</span>
@@ -527,7 +527,7 @@ Verify status online at: https://aapdasetu-v3.vercel.app/#/track?id=${claimRef}
                 <button
                   type="button"
                   onClick={copyClaimReceipt}
-                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-2 text-xs font-bold text-white transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white cursor-pointer"
+                  className="flex-1 sm:flex-initial justify-center inline-flex items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-2 text-xs font-bold text-white transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white cursor-pointer"
                 >
                   <Copy className="h-3.5 w-3.5" />
                   <span>{copied ? t('common.copied') : t('damage.copyId')}</span>

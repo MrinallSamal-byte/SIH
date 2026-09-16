@@ -181,7 +181,7 @@ export default function Communications() {
 
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Broadcast Form */}
-        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-span-7">
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-span-7">
           <Field label={t('cm.severityLabel')}>
             <div className="flex gap-2">
               {(['critical', 'warning', 'info'] as AlertSeverity[]).map((s) => (
@@ -246,7 +246,7 @@ export default function Communications() {
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mono">
               {t('cm.channelsLabel')}
             </label>
-            <div className="grid gap-2 sm:grid-cols-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {CHANNELS.map((c) => {
                 const Icon = c.icon
                 const active = channels.includes(c.id)

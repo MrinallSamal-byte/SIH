@@ -145,7 +145,7 @@ export default function SafetyCheckinPage() {
       {activeTab === 'checkin' && (
         <>
           {confirm ? (
-            <div className="mt-5 space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/40">
+            <div className="mt-5 space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 sm:p-6 text-center shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/40">
               <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-300" />
                 <span>{t('checkin.statusRecorded')}</span>
@@ -160,9 +160,10 @@ export default function SafetyCheckinPage() {
                 )}
               </p>
 
-              <div className="flex justify-center gap-2 pt-2">
+              <div className="flex flex-col sm:flex-row justify-center gap-2 pt-2">
                 <Button
                   variant="secondary"
+                  className="w-full sm:w-auto"
                   onClick={() => {
                     setConfirm(null)
                     setFullName('')
@@ -175,6 +176,7 @@ export default function SafetyCheckinPage() {
                 </Button>
                 <Button
                   variant="outline"
+                  className="w-full sm:w-auto"
                   onClick={() => setActiveTab('search')}
                 >
                   {t('checkin.viewRegistry')}

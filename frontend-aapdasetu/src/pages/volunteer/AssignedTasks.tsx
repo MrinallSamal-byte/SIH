@@ -109,7 +109,7 @@ export default function AssignedTasks() {
           return (
             <div
               key={task.id}
-              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+              className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
             >
               <div className="flex flex-wrap items-center gap-2">
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-600 text-white shadow-xs">
@@ -164,13 +164,13 @@ export default function AssignedTasks() {
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                   <Button
                     variant="danger"
                     size="sm"
                     disabled={updatingId === task.id}
                     onClick={() => setResolveTarget(task)}
-                    className="font-bold"
+                    className="w-full sm:w-auto font-bold"
                   >
                     {t('vt.completeMission')}
                   </Button>

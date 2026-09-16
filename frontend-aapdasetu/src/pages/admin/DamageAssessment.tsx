@@ -312,7 +312,7 @@ export default function DamageAssessment() {
           onClick={() => setSelectedReport(null)}
         >
           <div
-            className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+            className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
@@ -351,7 +351,7 @@ export default function DamageAssessment() {
               )}
 
               {/* Metrics Grid */}
-              <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-950">
                   <div className="text-[10px] uppercase font-bold text-slate-400 mono">{t('dm.modalClass')}</div>
                   <div className="mt-1 font-mono text-[11px] font-bold text-slate-900 dark:text-slate-100">

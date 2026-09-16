@@ -81,7 +81,7 @@ export default function CheckIn() {
         {t('vc.subtitle')}
       </p>
 
-      <div className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         {volunteer && (
           <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-950">
             <div className="font-bold text-slate-800 dark:text-slate-200">{t('vc.responderProfile')}: {volunteer.name}</div>

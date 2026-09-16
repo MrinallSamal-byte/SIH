@@ -36,7 +36,7 @@ export default function AdminLogin() {
       <div className="w-full max-w-sm">
         <form
           onSubmit={onSubmit}
-          className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-2xs dark:border-zinc-800 dark:bg-[#181818]"
+          className="rounded-2xl border border-zinc-200 bg-white p-5 sm:p-8 shadow-2xs dark:border-zinc-800 dark:bg-[#181818]"
         >
           <div className="flex items-center gap-2.5 mb-4">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-600 font-bold text-white text-xs font-mono">
@@ -59,7 +59,7 @@ export default function AdminLogin() {
             {t('adminLogin.subtitle')}
           </p>
 
-          <div className="mt-3 rounded-xl border border-zinc-200/80 bg-zinc-50 p-2.5 text-[11px] text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400 flex items-center justify-between gap-2">
+          <div className="mt-3 rounded-xl border border-zinc-200/80 bg-zinc-50 p-2.5 text-[11px] text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <span>{t('adminLogin.testAccountHint', 'Restricted to authorised control-room personnel.')}</span>
             <button
               type="button"
@@ -67,7 +67,7 @@ export default function AdminLogin() {
                 setEmail('adminapp@gmail.com')
                 setPassword('12345')
               }}
-              className="shrink-0 rounded-lg border border-zinc-300 bg-white px-2.5 py-1 font-mono font-bold text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+              className="w-full sm:w-auto text-center shrink-0 rounded-lg border border-zinc-300 bg-white px-2.5 py-1 font-mono font-bold text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
             >
               {t('adminLogin.useTestAccount', 'Use field test account')}
             </button>

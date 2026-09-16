@@ -160,17 +160,17 @@ export default function Home() {
             <span>{t('hero.tapSos')}</span>
           </Link>
 
-          <div className="flex w-full items-stretch gap-2.5 md:w-auto">
+          <div className="flex flex-col sm:flex-row w-full items-stretch gap-2.5 md:w-auto">
             <Link
               to="/track"
-              className="group flex-1 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-4 text-sm font-semibold whitespace-nowrap text-zinc-700 shadow-sm transition hover:bg-zinc-50 active:scale-[0.98] inline-flex md:w-auto sm:text-base dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-slate-200 dark:hover:bg-[#252525]"
+              className="group flex-1 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 sm:px-5 py-3.5 sm:py-4 text-sm font-semibold whitespace-nowrap text-zinc-700 shadow-sm transition hover:bg-zinc-50 active:scale-[0.98] inline-flex md:w-auto sm:text-base dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-slate-200 dark:hover:bg-[#252525]"
             >
               <Search className="size-[18px]" />
               <span>{t('nav.track')}</span>
             </Link>
             <Link
               to="/report"
-              className="group flex-1 items-center justify-center gap-2 rounded-xl bg-zinc-800 px-5 py-4 text-sm font-semibold whitespace-nowrap text-white shadow-sm transition hover:bg-zinc-700 active:scale-[0.98] inline-flex md:w-auto sm:text-base dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
+              className="group flex-1 items-center justify-center gap-2 rounded-xl bg-zinc-800 px-4 sm:px-5 py-3.5 sm:py-4 text-sm font-semibold whitespace-nowrap text-white shadow-sm transition hover:bg-zinc-700 active:scale-[0.98] inline-flex md:w-auto sm:text-base dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
             >
               <span>{t('hero.submitReport')}</span>
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -271,7 +271,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-zinc-200/80 bg-white p-6 sm:p-8 dark:border-white/[0.08] dark:bg-[#181818]">
+      <section className="rounded-2xl border border-zinc-200/80 bg-white p-4 sm:p-8 dark:border-white/[0.08] dark:bg-[#181818]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-6 dark:border-white/[0.06]">
           <div>
             <span className="text-[11px] font-semibold tracking-widest text-red-600 dark:text-red-400 uppercase mono">
@@ -293,11 +293,11 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 pt-6 sm:grid-cols-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-6">
           <a
             href="tel:112"
             aria-label={`${t('home.helpline112')} 112`}
-            className="group rounded-2xl border border-red-100 bg-red-50/50 p-4 transition hover:bg-red-50 dark:border-red-950/40 dark:bg-red-950/20 dark:hover:bg-red-950/40"
+            className="group rounded-2xl border border-red-100 bg-red-50/50 p-3.5 sm:p-4 transition hover:bg-red-50 dark:border-red-950/40 dark:bg-red-950/20 dark:hover:bg-red-950/40"
           >
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 mono">{t('home.helpline112')}</span>
@@ -310,7 +310,7 @@ export default function Home() {
           <a
             href="tel:1078"
             aria-label={`${t('home.helpline1078')} 1078`}
-            className="group rounded-2xl border border-zinc-200/80 bg-zinc-50/60 p-4 transition hover:bg-zinc-50 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:hover:bg-[#222]"
+            className="group rounded-2xl border border-zinc-200/80 bg-zinc-50/60 p-3.5 sm:p-4 transition hover:bg-zinc-50 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:hover:bg-[#222]"
           >
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600 dark:text-slate-400 mono">{t('home.helpline1078')}</span>
@@ -323,7 +323,7 @@ export default function Home() {
           <a
             href="tel:1077"
             aria-label={`${t('home.helpline1077')} 1077`}
-            className="group rounded-2xl border border-zinc-200/80 bg-zinc-50/60 p-4 transition hover:bg-zinc-50 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:hover:bg-[#222]"
+            className="group rounded-2xl border border-zinc-200/80 bg-zinc-50/60 p-3.5 sm:p-4 transition hover:bg-zinc-50 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:hover:bg-[#222]"
           >
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600 dark:text-slate-400 mono">{t('home.helpline1077')}</span>
@@ -336,13 +336,13 @@ export default function Home() {
           <a
             href="tel:01124363260"
             aria-label={`${t('home.helplineNdrf')} 011-24363260`}
-            className="group rounded-2xl border border-zinc-200/80 bg-zinc-50/60 p-4 transition hover:bg-zinc-50 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:hover:bg-[#222]"
+            className="group rounded-2xl border border-zinc-200/80 bg-zinc-50/60 p-3.5 sm:p-4 transition hover:bg-zinc-50 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:hover:bg-[#222]"
           >
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600 dark:text-slate-400 mono">{t('home.helplineNdrf')}</span>
               <ArrowUpRight className="h-3.5 w-3.5 text-zinc-400" />
             </div>
-            <div className="mt-2 text-lg font-bold tracking-tight text-zinc-800 dark:text-slate-200 mono">011-24363260</div>
+            <div className="mt-2 text-base sm:text-lg font-bold tracking-tight text-zinc-800 dark:text-slate-200 mono truncate">011-24363260</div>
             <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">{t('home.helplineNdrfDesc')}</div>
           </a>
         </div>

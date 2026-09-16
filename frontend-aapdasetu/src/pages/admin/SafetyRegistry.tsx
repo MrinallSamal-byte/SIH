@@ -156,12 +156,12 @@ export default function SafetyRegistry() {
           />
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1 w-full sm:w-auto">
           {(['all', 'safe', 'need_assistance'] as const).map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
-              className={`rounded-xl px-3 py-1.5 text-xs font-bold capitalize transition cursor-pointer ${
+              className={`flex-1 sm:flex-initial text-center justify-center rounded-xl px-2.5 sm:px-3 py-1.5 text-xs font-bold capitalize transition cursor-pointer ${
                 statusFilter === st
                   ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'

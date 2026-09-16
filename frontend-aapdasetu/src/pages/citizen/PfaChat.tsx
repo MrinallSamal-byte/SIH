@@ -406,20 +406,20 @@ export default function PfaChatPage() {
       </div>
 
       {/* Bottom Input */}
-      <div className="flex gap-2 rounded-b-2xl border border-zinc-200/80 bg-white p-3.5 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+      <div className="flex gap-1.5 sm:gap-2 rounded-b-2xl border border-zinc-200/80 bg-white p-2.5 sm:p-3.5 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && send()}
           placeholder={t('chat.placeholder')}
-          className="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-800 outline-none focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 dark:focus:border-slate-500"
+          className="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white px-3 sm:px-4 py-2 sm:py-2.5 text-sm text-zinc-800 outline-none focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 dark:focus:border-slate-500"
         />
         {speechSupported && (
           <button
             type="button"
             onClick={toggleVoiceInput}
             title={isListening ? t('chat.stopVoice', 'Stop voice input') : t('chat.startVoice', 'Speak in your language')}
-            className={`shrink-0 inline-flex items-center justify-center rounded-xl p-2.5 transition cursor-pointer ${
+            className={`shrink-0 inline-flex items-center justify-center rounded-xl p-2 sm:p-2.5 transition cursor-pointer ${
               isListening
                 ? 'bg-rose-600 text-white animate-pulse shadow-md shadow-rose-500/30'
                 : 'border border-zinc-200 bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 dark:hover:bg-[#2a2a2a]'
@@ -432,7 +432,7 @@ export default function PfaChatPage() {
           type="button"
           onClick={() => send()}
           disabled={busy || !input.trim()}
-          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-zinc-800 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-zinc-700 disabled:opacity-50 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-zinc-800 px-3.5 sm:px-6 py-2 sm:py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-zinc-700 disabled:opacity-50 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white cursor-pointer"
         >
           <Send className="h-4 w-4" />
           <span>{t('common.send')}</span>

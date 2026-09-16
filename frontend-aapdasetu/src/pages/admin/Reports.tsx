@@ -534,7 +534,7 @@ export default function Reports() {
 
         {/* Pagination Bar */}
         {totalCount > 0 && (
-          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-400">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100 px-4 py-3 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-400">
             <div>
               {t('rp.showing')} <strong className="mono">{(page - 1) * pageSize + 1}</strong> {t('rp.to')}{' '}
               <strong className="mono">{Math.min(page * pageSize, totalCount)}</strong> {t('rp.of')}{' '}
@@ -572,7 +572,7 @@ export default function Reports() {
 
       {/* Bulk Actions Floating Bar */}
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-16 left-1/2 z-50 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/95 px-4 py-2.5 shadow-xl backdrop-blur dark:border-white/[0.1] dark:bg-slate-900/95">
+        <div className="fixed bottom-16 left-1/2 z-50 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/95 px-4 py-2.5 shadow-xl backdrop-blur dark:border-white/[0.1] dark:bg-slate-900/95 max-w-[95vw]">
           <span className="text-xs font-bold text-slate-700 mono dark:text-slate-200">
             {selectedIds.size} {t('rp.selected', 'selected')}
           </span>

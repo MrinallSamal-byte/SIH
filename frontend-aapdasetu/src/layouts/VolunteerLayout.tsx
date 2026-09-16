@@ -27,7 +27,7 @@ export default function VolunteerLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-zinc-800 dark:bg-slate-950 dark:text-slate-100">
       <header className="border-b border-zinc-200/80 bg-white dark:border-slate-800 dark:bg-zinc-800">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-3 sm:px-4 py-2 sm:py-3">
           <div className="flex items-center gap-3">
             <Link to="/" className="shrink-0">
               <AapdaSetuLogo size={32} />
@@ -40,7 +40,7 @@ export default function VolunteerLayout() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <nav className="hidden sm:flex gap-1">
               {links.map((l) => (
                 <NavLink
@@ -71,19 +71,23 @@ export default function VolunteerLayout() {
 
             <Link
               to="/"
-              className="flex items-center gap-1 rounded-lg border border-zinc-200/80 px-2.5 py-1 text-xs font-medium text-slate-500 hover:bg-zinc-100 dark:border-white/[0.1] dark:text-slate-400 dark:hover:bg-zinc-700"
+              title={t('volNav.publicApp')}
+              aria-label={t('volNav.publicApp')}
+              className="flex items-center gap-1 rounded-lg border border-zinc-200/80 px-2 sm:px-2.5 py-1 text-xs font-medium text-slate-500 hover:bg-zinc-100 dark:border-white/[0.1] dark:text-slate-400 dark:hover:bg-zinc-700"
             >
-              <span>{t('volNav.publicApp')}</span>
+              <span className="hidden sm:inline">{t('volNav.publicApp')}</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
 
             <button
               type="button"
               onClick={handleLogout}
-              className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-100 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-900/60"
+              title={t('volNav.exit')}
+              aria-label={t('volNav.exit')}
+              className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 sm:px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-100 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-900/60 cursor-pointer"
             >
               <LogOut className="h-3.5 w-3.5" />
-              <span>{t('volNav.exit')}</span>
+              <span className="hidden sm:inline">{t('volNav.exit')}</span>
             </button>
           </div>
         </div>

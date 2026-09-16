@@ -228,13 +228,14 @@ export default function MainLayout() {
 
       {/* Main Navigation Header */}
       <header className="sticky top-0 z-40 border-b border-zinc-200/60 bg-white/90 backdrop-blur-md dark:border-white/[0.06] dark:bg-[#181818]/90">
-        <div className="mx-auto flex max-w-screen-2xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-screen-2xl items-center justify-between px-3 sm:px-6 py-2.5 sm:py-4">
           {/* Logo / Brand */}
-          <div className="flex items-center gap-2.5">
-            <Link to="/" className="flex items-center gap-2.5 font-bold tracking-tight group">
-              <AapdaSetuLogo size={34} />
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <Link to="/" className="flex items-center gap-2 sm:gap-2.5 font-bold tracking-tight group">
+              <span className="sm:hidden"><AapdaSetuLogo size={28} /></span>
+              <span className="hidden sm:inline-flex"><AapdaSetuLogo size={34} /></span>
               <div className="flex flex-col">
-                <span className="text-base font-extrabold leading-none text-zinc-800 dark:text-slate-200 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                <span className="text-sm sm:text-base font-extrabold leading-none text-zinc-800 dark:text-slate-200 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
                   {t('app.name')}
                 </span>
               </div>
@@ -308,14 +309,14 @@ export default function MainLayout() {
           </nav>
 
           {/* Controls: Language Selector, Theme Toggle, Mobile Menu Button */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {/* Language Selector */}
             <div className="relative">
               <select
                 aria-label={t('layout.langSelector')}
                 value={lang}
                 onChange={(e) => setLang(e.target.value as Language)}
-                className="rounded-lg border border-zinc-200/80 bg-[#f4f4f5] px-2.5 py-1.5 text-xs font-bold text-zinc-700 outline-none transition hover:bg-zinc-100 focus:border-zinc-500 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-200 dark:hover:bg-[#252525] cursor-pointer"
+                className="rounded-lg border border-zinc-200/80 bg-[#f4f4f5] px-1.5 sm:px-2.5 py-1.5 text-[11px] sm:text-xs font-bold text-zinc-700 outline-none transition hover:bg-zinc-100 focus:border-zinc-500 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-200 dark:hover:bg-[#252525] cursor-pointer max-w-[76px] sm:max-w-none"
               >
                   {LANGUAGES.map((l) => (
                   <option key={l.code} value={l.code}>
@@ -332,20 +333,20 @@ export default function MainLayout() {
             <button
               type="button"
               onClick={toggleTheme}
-              className="rounded-lg border border-zinc-200/80 bg-white p-2.5 text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-400 dark:hover:bg-[#252525] dark:hover:text-slate-200"
+              className="rounded-lg border border-zinc-200/80 bg-white p-2 sm:p-2.5 text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-400 dark:hover:bg-[#252525] dark:hover:text-slate-200 cursor-pointer"
               aria-label={t('layout.toggleTheme')}
             >
-              {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              {theme === 'dark' ? <Sun className="h-4 w-4 sm:h-5 sm:w-5" /> : <Moon className="h-4 w-4 sm:h-5 sm:w-5" />}
             </button>
 
             {/* Mobile Hamburger Toggle */}
             <button
               type="button"
               onClick={() => setMobileMenuOpen((o) => !o)}
-              className="rounded-lg border border-zinc-200/80 bg-white p-2.5 text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800 lg:hidden dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-400 dark:hover:bg-[#252525]"
+              className="rounded-lg border border-zinc-200/80 bg-white p-2 sm:p-2.5 text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800 lg:hidden dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-400 dark:hover:bg-[#252525] cursor-pointer"
               aria-label={t('layout.toggleMenu')}
             >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {mobileMenuOpen ? <X className="h-4 w-4 sm:h-5 sm:w-5" /> : <Menu className="h-4 w-4 sm:h-5 sm:w-5" />}
             </button>
           </div>
         </div>

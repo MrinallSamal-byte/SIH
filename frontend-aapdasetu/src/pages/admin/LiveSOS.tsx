@@ -682,7 +682,7 @@ export default function LiveSOS() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-1.5 ml-auto">
+                  <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto sm:ml-auto">
                     {r.latitude && r.longitude && (
                       <a
                         href={getNavigationUrl(r.latitude, r.longitude)}

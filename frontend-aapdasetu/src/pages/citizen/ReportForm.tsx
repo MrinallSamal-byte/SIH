@@ -677,7 +677,7 @@ export default function ReportForm() {
           />
 
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-white/[0.1] dark:bg-[#1a1a1a] shadow-sm space-y-3">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => videoInputRef.current?.click()}
@@ -710,7 +710,7 @@ export default function ReportForm() {
 
             {/* Attached Media List */}
             {media.length > 0 && (
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-white/[0.08]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-white/[0.08]">
                 {media.map((m, i) => (
                   <div key={i} className="relative rounded-lg border border-zinc-200/80 bg-[#f4f4f5] p-2 dark:border-white/[0.08] dark:bg-[#151515]">
                     {m.kind === 'image' && m.dataUrl && (

@@ -280,7 +280,7 @@ export default function ReportTracker() {
               </div>
             </div>
 
-            <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
               <PriorityBadge label={report.priorityLabel} />
               <div className="flex items-center gap-2">
                 <button
@@ -464,7 +464,7 @@ function InfoRow({ label, value, highlight }: { label: string; value: string; hi
     <div className="flex justify-between border-b border-zinc-200/80 pb-1.5 last:border-none last:pb-0 dark:border-white/[0.08]">
       <span className="text-slate-500 dark:text-slate-400">{label}:</span>
       <span
-        className={`max-w-[65%] text-right font-medium ${
+        className={`max-w-[65%] text-right font-medium break-words ${
           highlight ? 'font-bold text-emerald-600 dark:text-emerald-400' : 'text-zinc-700 dark:text-slate-200'
         }`}
       >

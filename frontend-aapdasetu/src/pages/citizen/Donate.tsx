@@ -675,14 +675,14 @@ export default function Donate() {
                     type="button"
                     onClick={() => setMethod(m.id)}
                     aria-pressed={active}
-                    className={`flex flex-col items-center gap-1.5 rounded-xl border py-3 text-xs font-bold transition active:scale-95 ${
+                    className={`flex flex-col items-center gap-1.5 rounded-xl border py-2.5 sm:py-3 px-1 text-center text-[11px] sm:text-xs font-bold transition active:scale-95 ${
                       active
                         ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200'
                         : 'border-zinc-200 text-zinc-600 hover:border-zinc-400 dark:border-white/[0.1] dark:text-slate-300'
                     }`}
                   >
-                    <Icon className="h-5 w-5" />
-                    <span>{m.label}</span>
+                    <Icon className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+                    <span className="truncate max-w-full">{m.label}</span>
                   </button>
                 )
               })}

@@ -40,7 +40,7 @@ export default function VolunteerLogin() {
       <div className="w-full max-w-sm">
         <form
           onSubmit={onSubmit}
-          className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-2xs dark:border-zinc-800 dark:bg-[#181818]"
+          className="rounded-2xl border border-zinc-200 bg-white p-5 sm:p-8 shadow-2xs dark:border-zinc-800 dark:bg-[#181818]"
         >
           <div className="flex items-center gap-2.5 mb-4">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 font-bold text-white text-xs font-mono dark:bg-zinc-100 dark:text-zinc-900">

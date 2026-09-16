@@ -31,13 +31,13 @@ function StatusRow({
   detail?: string
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-2">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 py-2">
       <div className="min-w-0">
         <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{label}</div>
-        {detail && <div className="text-[11px] text-slate-500 dark:text-slate-400 mono truncate">{detail}</div>}
+        {detail && <div className="text-[11px] text-slate-500 dark:text-slate-400 mono break-words sm:truncate">{detail}</div>}
       </div>
       <span
-        className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${
+        className={`inline-flex shrink-0 self-start sm:self-auto items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${
           configured
             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-900/50'
             : 'bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'

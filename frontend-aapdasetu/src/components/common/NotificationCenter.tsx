@@ -154,9 +154,9 @@ export default function NotificationCenter({ role = 'citizen', align = 'right' }
       {/* Popover Dropdown Drawer */}
       {open && (
         <div
-          className={`absolute ${
-            align === 'left' ? 'left-0' : 'right-0'
-          } top-full z-50 mt-2 w-[22rem] sm:w-[26rem] md:w-[28rem] rounded-2xl border border-zinc-200/90 bg-white shadow-2xl dark:border-white/[0.08] dark:bg-[#181818] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150`}
+          className={`fixed inset-x-2.5 top-16 sm:absolute sm:inset-x-auto ${
+            align === 'left' ? 'sm:left-0' : 'sm:right-0'
+          } sm:top-full z-50 sm:mt-2 sm:w-[26rem] md:w-[28rem] rounded-2xl border border-zinc-200/90 bg-white shadow-2xl dark:border-white/[0.08] dark:bg-[#181818] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150`}
         >
           {/* Popover Header */}
           <div className="border-b border-zinc-100 bg-zinc-50/70 px-4 py-3.5 dark:border-white/[0.06] dark:bg-[#202020]/90">
@@ -252,7 +252,7 @@ export default function NotificationCenter({ role = 'citizen', align = 'right' }
           </div>
 
           {/* Notifications Scroll List */}
-          <div className="max-h-[26rem] divide-y divide-zinc-100 overflow-y-auto dark:divide-white/[0.06]">
+          <div className="max-h-[min(26rem,calc(100vh-14rem))] divide-y divide-zinc-100 overflow-y-auto dark:divide-white/[0.06]">
             {filtered.length === 0 ? (
               <div className="px-6 py-12 text-center">
                 <CheckCircle2 className="mx-auto mb-2 h-8 w-8 text-emerald-500" />

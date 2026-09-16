@@ -183,13 +183,13 @@ export default function MissingPersons() {
           />
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex flex-wrap items-center gap-1 shrink-0 w-full sm:w-auto">
           {(['all', 'open', 'matched', 'resolved'] as const).map((st) => (
             <button
               key={st}
               type="button"
               onClick={() => setStatusFilter(st)}
-              className={`rounded-xl px-3 py-1.5 text-xs font-bold capitalize transition cursor-pointer ${
+              className={`flex-1 sm:flex-initial text-center justify-center rounded-xl px-2.5 sm:px-3 py-1.5 text-xs font-bold capitalize transition cursor-pointer ${
                 statusFilter === st
                   ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
                   : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
@@ -295,7 +295,7 @@ export default function MissingPersons() {
 
       {/* Pending Match Review Queue */}
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-5 py-3.5 dark:border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 px-4 sm:px-5 py-3.5 dark:border-slate-800">
           <div className="flex items-center gap-2">
             <GitCompareArrows className="h-4 w-4 text-amber-600" />
             <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mono">

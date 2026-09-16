@@ -63,16 +63,16 @@ export default function Contacts() {
             <a
               key={c.num}
               href={`tel:${c.num}`}
-              className="group flex items-center gap-5 rounded-2xl border-2 border-red-200 bg-red-50 p-6 transition-all duration-200 hover:border-red-300 active:scale-[0.98] dark:border-red-900/60 dark:bg-red-950/40 dark:hover:border-red-800"
+              className="group flex items-center gap-3.5 sm:gap-5 rounded-2xl border-2 border-red-200 bg-red-50 p-4 sm:p-6 transition-all duration-200 hover:border-red-300 active:scale-[0.98] dark:border-red-900/60 dark:bg-red-950/40 dark:hover:border-red-800"
             >
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-red-600 text-white shadow-sm">
+              <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-xl bg-red-600 text-white shadow-sm">
                 <Icon className="h-6 w-6" />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-bold text-red-700 dark:text-red-300">
                   {c.name ?? (c.nameKey ? t(c.nameKey) : '')}
                 </h3>
-                <span className="mono text-2xl font-extrabold tracking-tight text-red-700 dark:text-red-300">
+                <span className="mono text-xl sm:text-2xl font-extrabold tracking-tight text-red-700 dark:text-red-300">
                   {c.num}
                 </span>
               </div>
@@ -91,7 +91,7 @@ export default function Contacts() {
               <a
                 key={c.num + c.nameKey}
                 href={`tel:${c.num}`}
-                className="group flex items-center gap-4 rounded-2xl border border-zinc-200/80 bg-white p-5 transition-all duration-200 hover:border-slate-400 active:scale-[0.98] dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:hover:border-slate-600/80"
+                className="group flex items-center gap-3.5 sm:gap-4 rounded-2xl border border-zinc-200/80 bg-white p-4 sm:p-5 transition-all duration-200 hover:border-slate-400 active:scale-[0.98] dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:hover:border-slate-600/80"
               >
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-white transition-transform duration-200 group-hover:scale-105 dark:bg-slate-100 dark:text-zinc-800">
                   <Icon className="h-5 w-5" />

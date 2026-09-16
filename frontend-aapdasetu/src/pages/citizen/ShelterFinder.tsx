@@ -835,11 +835,11 @@ export default function ShelterFinder() {
             </div>
 
             {/* Route Selector Tabs: Safe vs Shortest vs Both */}
-            <div className="flex items-center rounded-xl border border-zinc-200 bg-zinc-100/80 p-1 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-1 rounded-xl border border-zinc-200 bg-zinc-100/80 p-1 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setActiveRouteView('safe')}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
+                className={`flex-1 sm:flex-initial justify-center flex items-center gap-1.5 rounded-lg px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
                   activeRouteView === 'safe'
                     ? 'bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-zinc-100'
                     : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200'
@@ -852,7 +852,7 @@ export default function ShelterFinder() {
               <button
                 type="button"
                 onClick={() => setActiveRouteView('shortest')}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
+                className={`flex-1 sm:flex-initial justify-center flex items-center gap-1.5 rounded-lg px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
                   activeRouteView === 'shortest'
                     ? 'bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-zinc-100'
                     : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200'
@@ -865,7 +865,7 @@ export default function ShelterFinder() {
               <button
                 type="button"
                 onClick={() => setActiveRouteView('both')}
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition cursor-pointer ${
+                className={`flex-1 sm:flex-initial justify-center flex items-center gap-1.5 rounded-lg px-2 sm:px-2.5 py-1.5 text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
                   activeRouteView === 'both'
                     ? 'bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-zinc-100'
                     : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200'
@@ -1058,12 +1058,12 @@ export default function ShelterFinder() {
           )}
 
           {/* Action Strip: Turn-by-turn drawer toggle, live GPS simulation, external navigation */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/50 px-4 py-2.5 dark:border-white/[0.05] dark:bg-black/20 text-xs">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/50 px-4 py-2.5 dark:border-white/[0.05] dark:bg-black/20 text-xs">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setShowTurnByTurn((o) => !o)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-300/80 bg-white px-3 py-1.5 font-bold text-zinc-800 shadow-xs hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200 cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-zinc-300/80 bg-white px-3 py-1.5 font-bold text-zinc-800 shadow-xs hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200 cursor-pointer"
               >
                 <Compass className="h-3.5 w-3.5 text-emerald-600" />
                 <span>{showTurnByTurn ? 'Hide Turn Directions' : 'View Step-by-Step Directions'}</span>
@@ -1080,7 +1080,7 @@ export default function ShelterFinder() {
                     setIsSimulating(true)
                   }
                 }}
-                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 font-bold shadow-xs transition cursor-pointer ${
+                className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 font-bold shadow-xs transition cursor-pointer ${
                   isSimulating
                     ? 'bg-red-600 text-white hover:bg-red-700 animate-pulse'
                     : 'bg-emerald-600 text-white hover:bg-emerald-700'
@@ -1091,7 +1091,7 @@ export default function ShelterFinder() {
               </button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-end gap-2 pt-1 sm:pt-0">
               <a
                 href={getNavigationUrl(selectedShelter.latitude, selectedShelter.longitude)}
                 target="_blank"

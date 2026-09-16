@@ -192,7 +192,7 @@ export default function Overview() {
       {/* Operational Dial & Response Pulse Section */}
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Crisis Dial Card */}
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-[#181818] flex flex-col justify-between">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6 shadow-2xs dark:border-zinc-800 dark:bg-[#181818] flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-zinc-900 dark:text-slate-100 uppercase tracking-wider mono">
@@ -210,8 +210,8 @@ export default function Overview() {
             </p>
           </div>
 
-          <div className="my-4 flex items-center justify-center gap-6">
-            <div className="relative flex h-36 w-36 items-center justify-center rounded-full border-4 border-zinc-100 dark:border-zinc-800 shadow-inner">
+          <div className="my-4 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
+            <div className="relative flex h-36 w-36 shrink-0 items-center justify-center rounded-full border-4 border-zinc-100 dark:border-zinc-800 shadow-inner">
               <div
                 className="absolute inset-0 rounded-full transition-all duration-1000"
                 style={{
@@ -250,7 +250,7 @@ export default function Overview() {
         </div>
 
         {/* Live Response Pulse */}
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-[#181818] flex flex-col justify-between">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6 shadow-2xs dark:border-zinc-800 dark:bg-[#181818] flex flex-col justify-between">
           <div>
             <h2 className="text-sm font-bold text-zinc-900 dark:text-slate-100 uppercase tracking-wider mono">
               {t('ov.readinessPulse')}
@@ -291,7 +291,7 @@ export default function Overview() {
         </div>
 
         {/* Quick Dispatch Hub */}
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xs dark:border-zinc-800 dark:bg-[#181818] flex flex-col justify-between">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6 shadow-2xs dark:border-zinc-800 dark:bg-[#181818] flex flex-col justify-between">
           <div>
             <h2 className="text-sm font-bold text-zinc-900 dark:text-slate-100 uppercase tracking-wider mono">
               {t('ov.quickLaunch')}

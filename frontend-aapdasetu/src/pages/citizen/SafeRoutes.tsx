@@ -345,11 +345,11 @@ export default function SafeRoutes() {
         </div>
 
         {/* Route Filter View Toggle */}
-        <div className="flex flex-wrap items-center rounded-xl border border-zinc-200 bg-zinc-100/80 p-0.5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="flex flex-wrap items-center rounded-xl border border-zinc-200 bg-zinc-100/80 p-0.5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setActiveRouteView('both')}
-            className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition cursor-pointer ${
+            className={`flex-1 sm:flex-initial justify-center rounded-lg px-2.5 py-1 text-xs font-semibold transition cursor-pointer ${
               activeRouteView === 'both'
                 ? 'bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-zinc-100'
                 : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200'
@@ -360,7 +360,7 @@ export default function SafeRoutes() {
           <button
             type="button"
             onClick={() => setActiveRouteView('safe')}
-            className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition cursor-pointer ${
+            className={`flex-1 sm:flex-initial justify-center flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition cursor-pointer ${
               activeRouteView === 'safe'
                 ? 'bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-zinc-100'
                 : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200'
@@ -372,7 +372,7 @@ export default function SafeRoutes() {
           <button
             type="button"
             onClick={() => setActiveRouteView('fastest')}
-            className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition cursor-pointer ${
+            className={`flex-1 sm:flex-initial justify-center flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition cursor-pointer ${
               activeRouteView === 'fastest'
                 ? 'bg-white text-zinc-900 shadow-xs dark:bg-zinc-800 dark:text-zinc-100'
                 : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200'

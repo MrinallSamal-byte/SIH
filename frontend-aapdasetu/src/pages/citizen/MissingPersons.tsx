@@ -124,9 +124,9 @@ export default function MissingPersons() {
               {filteredPersons.map((p) => (
                 <div
                   key={p.id}
-                  className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]"
+                  className="rounded-2xl border border-zinc-200/80 bg-white p-4 sm:p-5 shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]"
                 >
-                  <div className="flex items-start gap-4">
+                  <div className="flex items-start gap-3 sm:gap-4">
                     {/* Photo thumbnail */}
                     {p.photoUrl ? (
                       <button
@@ -136,7 +136,7 @@ export default function MissingPersons() {
                           if (url && (url.startsWith('data:image/') || url.startsWith('https://') || url.startsWith('http://')))
                             setEnlargedPhoto(url)
                         }}
-                        className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-zinc-200/80 bg-slate-100 dark:border-white/[0.1] dark:bg-[#222222]"
+                        className="group relative h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-xl border border-zinc-200/80 bg-slate-100 dark:border-white/[0.1] dark:bg-[#222222]"
                       >
                         <img src={p.photoUrl} alt={p.name} className="h-full w-full object-cover transition" />
                         <span className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition group-hover:opacity-100 text-[10px] font-bold text-white">
@@ -144,8 +144,8 @@ export default function MissingPersons() {
                         </span>
                       </button>
                     ) : (
-                      <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400 dark:bg-[#222222] dark:text-slate-500">
-                        <User className="h-8 w-8" />
+                      <div className="flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400 dark:bg-[#222222] dark:text-slate-500">
+                        <User className="h-6 w-6 sm:h-8 sm:w-8" />
                       </div>
                     )}
 
@@ -182,11 +182,11 @@ export default function MissingPersons() {
                   </div>
 
                   {p.contactPhone && (
-                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-white/[0.08]">
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-white/[0.08]">
                       <span className="text-xs text-slate-500 mono">{t('missing.contact')}: {maskPhone(p.contactPhone)}</span>
                       <a
                         href={`tel:${p.contactPhone}`}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-1 text-xs font-bold text-white hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
+                        className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-bold text-white hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white w-full sm:w-auto"
                       >
                         <Phone className="h-3 w-3" />
                         <span>{t('missing.callLead')}</span>

@@ -223,18 +223,18 @@ export default function Alerts() {
         </div>
 
         {/* Severity Filter Tabs */}
-        <div className="flex items-center gap-1 rounded-xl border border-zinc-200/80 bg-white p-1 dark:border-white/[0.08] dark:bg-[#1a1a1a] shadow-sm">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-1 rounded-xl border border-zinc-200/80 bg-white p-1 dark:border-white/[0.08] dark:bg-[#1a1a1a] shadow-sm w-full sm:w-auto">
           {(['all', 'critical', 'warning', 'info'] as const).map((sev) => (
             <button
               key={sev}
               type="button"
               onClick={() => setFilter(sev)}
-              className={`rounded-lg px-3 py-1 text-xs font-semibold transition ${
+              className={`flex-1 sm:flex-initial text-center justify-center rounded-lg px-2 sm:px-3 py-1 text-xs font-semibold transition cursor-pointer ${
                 filter === sev
                   ? 'bg-zinc-800 text-white dark:bg-slate-100 dark:text-zinc-800'
                   : 'text-zinc-500 hover:text-zinc-800 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
-              >
+            >
               {sev === 'all' ? t('common.all') : sev === 'critical' ? t('alerts.sevCritical') : sev === 'warning' ? t('alerts.sevWarning') : t('alerts.sevInfo')}
             </button>
           ))}
