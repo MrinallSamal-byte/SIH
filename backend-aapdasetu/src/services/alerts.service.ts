@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.js';
 import { NotFoundError } from '../lib/errors.js';
 import { writeAuditLog } from './audit.service.js';
 import { realtimeHub } from '../realtime/hub.js';
+import { fetchCollection } from '../lib/firebase-rtdb.js';
 
 export interface CreateAlertInput {
   title: string;
@@ -48,16 +49,24 @@ export async function listAlerts(params: {
   page?: number;
   pageSize?: number;
 }) {
-  // The admin route validates page/pageSize — honor them (capped) instead of
-  // silently always returning the first 100 rows.
-  const pageSize = Math.min(params.pageSize ?? params.limit ?? 100, 200);
-  const page = Math.max(params.page ?? 1, 1);
-  return prisma.alert.findMany({
-    where: params.severity ? { severity: params.severity as never } : {},
-    orderBy: { createdAt: 'desc' },
-    skip: (page - 1) * pageSize,
-    take: pageSize,
-  });
+  try {
+    if (process.env.USE_FIREBASE_DB === 'true') {
+      const all = await fetchCollection('alerts');
+      return params.severity ? all.filter((a: any) => a.severity === params.severity) : all;
+    }
+    const pageSize = Math.min(params.pageSize ?? params.limit ?? 100, 200);
+    const page = Math.max(params.page ?? 1, 1);
+    return await prisma.alert.findMany({
+      where: params.severity ? { severity: params.severity as never } : {},
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    });
+  } catch (err) {
+    console.warn('[Alerts] Prisma failed, falling back to Firebase RTDB:', err);
+    const all = await fetchCollection('alerts');
+    return params.severity ? all.filter((a: any) => a.severity === params.severity) : all;
+  }
 }
 
 const ACTIVE_ALERT_TTL_HOURS = 24;

@@ -18,6 +18,8 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:firestore": "tsx scripts/seed-firestore.ts",
+    "db:seed:rtdb": "tsx scripts/seed-firebase-rtdb.ts",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
     "fastapi:dev": "uvicorn app.main:app --reload --port 8001 --app-dir fastapi-service",
@@ -36,6 +38,7 @@
     "exifr": "^7.1.3",
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
+    "firebase-admin": "^14.4.0",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.2.0",
@@ -56,4 +59,3 @@
     "vitest": "^3.2.7"
   }
 }
-

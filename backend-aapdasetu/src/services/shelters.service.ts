@@ -7,6 +7,7 @@ import { NotFoundError, UnprocessableEntityError, UnauthorizedError } from '../l
 import { writeAuditLog } from './audit.service.js';
 import { safeEqualHex } from './otp.service.js';
 import { realtimeHub } from '../realtime/hub.js';
+import { fetchCollection } from '../lib/firebase-rtdb.js';
 
 /** 6-char public check-in code (no ambiguous 0/O/1/I). Not a secret — it is printed on shelter posters. */
 export function makeCheckinCode(): string {
@@ -44,17 +45,27 @@ export async function findNearbyShelters(params: {
 }
 
 export async function listShelters(params: { status?: string; page?: number; pageSize?: number }) {
-  // page/pageSize absent → return all rows (legacy behavior)
-  const take =
-    params.page !== undefined || params.pageSize !== undefined
-      ? Math.min(params.pageSize ?? 50, 200)
-      : undefined;
-  return prisma.shelter.findMany({
-    where: params.status ? { status: params.status as never } : {},
-    orderBy: { createdAt: 'desc' },
-    include: { resources: true },
-    ...(take !== undefined ? { skip: ((params.page ?? 1) - 1) * take, take } : {}),
-  });
+  try {
+    if (process.env.USE_FIREBASE_DB === 'true') {
+      const all = await fetchCollection('shelters');
+      return params.status ? all.filter((s: any) => s.status === params.status) : all;
+    }
+    // page/pageSize absent → return all rows (legacy behavior)
+    const take =
+      params.page !== undefined || params.pageSize !== undefined
+        ? Math.min(params.pageSize ?? 50, 200)
+        : undefined;
+    return await prisma.shelter.findMany({
+      where: params.status ? { status: params.status as never } : {},
+      orderBy: { createdAt: 'desc' },
+      include: { resources: true },
+      ...(take !== undefined ? { skip: ((params.page ?? 1) - 1) * take, take } : {}),
+    });
+  } catch (err) {
+    console.warn('[Shelters] Prisma failed, falling back to Firebase RTDB:', err);
+    const all = await fetchCollection('shelters');
+    return params.status ? all.filter((s: any) => s.status === params.status) : all;
+  }
 }
 
 export async function getShelter(id: string) {

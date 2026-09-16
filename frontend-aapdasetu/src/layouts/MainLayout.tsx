@@ -30,6 +30,7 @@ import { useTheme } from '../lib/theme'
 import { listAlerts } from '../api/endpoints'
 import { initGlobalOutboxSync } from '../lib/outbox'
 import { initSupabaseRealtime } from '../lib/supabase'
+import { initFirebaseRealtime } from '../lib/firebase'
 import type { Alert } from '../types'
 
 interface NavLinkItem {
@@ -121,9 +122,11 @@ export default function MainLayout() {
   useEffect(() => {
     const cleanupOutbox = initGlobalOutboxSync()
     const cleanupSupabase = initSupabaseRealtime()
+    const cleanupFirebase = initFirebaseRealtime()
     return () => {
       if (typeof cleanupOutbox === 'function') cleanupOutbox()
       if (typeof cleanupSupabase === 'function') cleanupSupabase()
+      if (typeof cleanupFirebase === 'function') cleanupFirebase()
     }
   }, [])
 

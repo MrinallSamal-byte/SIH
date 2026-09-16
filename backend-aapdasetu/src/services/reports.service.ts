@@ -7,6 +7,7 @@ import { NotFoundError, ConflictError } from '../lib/errors.js';
 import { writeAuditLog } from './audit.service.js';
 import { consumePhoneToken, normalizeOtpPhone } from './otp.service.js';
 import { realtimeHub } from '../realtime/hub.js';
+import { fetchCollection, saveDocument } from '../lib/firebase-rtdb.js';
 
 
 function generateFinalIncidentID(phoneNumber?: string) {
@@ -143,6 +144,7 @@ export async function createSosReport(input: CreateSosInput) {
     throw err;
   }
 
+  saveDocument('reports', report.id, serializeReport(report)).catch((err) => console.warn('[Firebase RTDB] Failed to sync SOS report:', err));
   realtimeHub.emitSos(serializeReport(report));
 
   return { ...serializeReport(report), triage };
@@ -303,6 +305,7 @@ export async function createIncidentReport(input: CreateReportInput) {
     throw err;
   }
 
+  saveDocument('reports', report.id, serializeReport(report)).catch((err) => console.warn('[Firebase RTDB] Failed to sync incident report:', err));
   realtimeHub.broadcast({
     type: 'report:new',
     payload: serializeReport(report),
@@ -314,28 +317,58 @@ export async function createIncidentReport(input: CreateReportInput) {
 }
 
 export async function getReportByTrackingId(trackingId: string) {
-  const report = await prisma.report.findUnique({
-    where: { trackingId },
-    include: {
-      assignedVolunteer: { select: { id: true, name: true, phone: true, status: true } },
-      assignedAgency: { select: { id: true, name: true, type: true } },
-    },
-  });
-  if (!report) throw new NotFoundError('Report not found');
-  return serializeReport(report, true);
+  try {
+    if (process.env.USE_FIREBASE_DB === 'true') {
+      const all = await fetchCollection('reports');
+      const found = all.find((r: any) => r.trackingId === trackingId);
+      if (!found) throw new NotFoundError('Report not found');
+      return serializeReport(found, true);
+    }
+    const report = await prisma.report.findUnique({
+      where: { trackingId },
+      include: {
+        assignedVolunteer: { select: { id: true, name: true, phone: true, status: true } },
+        assignedAgency: { select: { id: true, name: true, type: true } },
+      },
+    });
+    if (!report) throw new NotFoundError('Report not found');
+    return serializeReport(report, true);
+  } catch (err) {
+    if (err instanceof NotFoundError) throw err;
+    console.warn('[Reports] Prisma failed, checking Firebase RTDB:', err);
+    const all = await fetchCollection('reports');
+    const found = all.find((r: any) => r.trackingId === trackingId);
+    if (!found) throw new NotFoundError('Report not found');
+    return serializeReport(found, true);
+  }
 }
 
 export async function getReportById(id: string) {
-  const report = await prisma.report.findUnique({
-    where: { id },
-    include: {
-      assignedVolunteer: { select: { id: true, name: true, phone: true, status: true } },
-      assignedAgency: { select: { id: true, name: true, type: true } },
-      damageAssessments: { select: { id: true, classification: true, status: true } },
-    },
-  });
-  if (!report) throw new NotFoundError('Report not found');
-  return serializeReport(report, true);
+  try {
+    if (process.env.USE_FIREBASE_DB === 'true') {
+      const all = await fetchCollection('reports');
+      const found = all.find((r: any) => r.id === id);
+      if (!found) throw new NotFoundError('Report not found');
+      return serializeReport(found, true);
+    }
+    const report = await prisma.report.findUnique({
+      where: { id },
+      include: {
+        assignedVolunteer: { select: { id: true, name: true, phone: true, status: true } },
+        assignedAgency: { select: { id: true, name: true, type: true } },
+        damageAssessments: { select: { id: true, classification: true, status: true } },
+      },
+    });
+    if (!report) throw new NotFoundError('Report not found');
+    return serializeReport(report, true);
+  } catch (err) {
+    if (err instanceof NotFoundError) throw err;
+    console.warn('[Reports] Prisma failed, checking Firebase RTDB:', err);
+    const all = await fetchCollection('reports');
+    const found = all.find((r: any) => r.id === id);
+    if (!found) throw new NotFoundError('Report not found');
+    return serializeReport(found, true);
+  }
 }
 
 export async function updateReportStatus(input: {
@@ -542,34 +575,77 @@ export async function listReports(params: {
   const page = params.page ?? 1;
   const pageSize = Math.min(params.pageSize ?? 50, 200);
 
-  const where: Record<string, unknown> = {};
-  if (params.status) where.status = params.status;
-  if (params.type) where.type = params.type;
-  if (params.priorityLabel) where.priorityLabel = params.priorityLabel;
-  if (params.search) {
-    where.OR = [
-      { trackingId: { contains: params.search, mode: 'insensitive' } },
-      { reporterName: { contains: params.search, mode: 'insensitive' } },
-      { description: { contains: params.search, mode: 'insensitive' } },
-      { landmark: { contains: params.search, mode: 'insensitive' } },
-    ];
+  try {
+    if (process.env.USE_FIREBASE_DB === 'true') {
+      const all = await fetchCollection('reports');
+      let filtered = all;
+      if (params.status) filtered = filtered.filter((r: any) => r.status === params.status);
+      if (params.type) filtered = filtered.filter((r: any) => r.type === params.type);
+      if (params.priorityLabel) filtered = filtered.filter((r: any) => r.priorityLabel === params.priorityLabel);
+      if (params.search) {
+        const q = params.search.toLowerCase();
+        filtered = filtered.filter((r: any) =>
+          (r.trackingId && String(r.trackingId).toLowerCase().includes(q)) ||
+          (r.reporterName && String(r.reporterName).toLowerCase().includes(q)) ||
+          (r.description && String(r.description).toLowerCase().includes(q)) ||
+          (r.landmark && String(r.landmark).toLowerCase().includes(q))
+        );
+      }
+      const total = filtered.length;
+      const start = (page - 1) * pageSize;
+      const items = filtered.slice(start, start + pageSize);
+      return { items: items.map((r: any) => serializeReport(r, true)), total, page, pageSize };
+    }
+
+    const where: Record<string, unknown> = {};
+    if (params.status) where.status = params.status;
+    if (params.type) where.type = params.type;
+    if (params.priorityLabel) where.priorityLabel = params.priorityLabel;
+    if (params.search) {
+      where.OR = [
+        { trackingId: { contains: params.search, mode: 'insensitive' } },
+        { reporterName: { contains: params.search, mode: 'insensitive' } },
+        { description: { contains: params.search, mode: 'insensitive' } },
+        { landmark: { contains: params.search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [items, total] = await Promise.all([
+      prisma.report.findMany({
+        where,
+        orderBy: [{ priorityLabel: 'asc' }, { createdAt: 'desc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: {
+          assignedVolunteer: { select: { id: true, name: true } },
+          assignedAgency: { select: { id: true, name: true, type: true } },
+        },
+      }),
+      prisma.report.count({ where }),
+    ]);
+
+    return { items: items.map((r: (typeof items)[number]) => serializeReport(r, true)), total, page, pageSize };
+  } catch (err) {
+    console.warn('[Reports] Prisma failed, falling back to Firebase RTDB:', err);
+    const all = await fetchCollection('reports');
+    let filtered = all;
+    if (params.status) filtered = filtered.filter((r: any) => r.status === params.status);
+    if (params.type) filtered = filtered.filter((r: any) => r.type === params.type);
+    if (params.priorityLabel) filtered = filtered.filter((r: any) => r.priorityLabel === params.priorityLabel);
+    if (params.search) {
+      const q = params.search.toLowerCase();
+      filtered = filtered.filter((r: any) =>
+        (r.trackingId && String(r.trackingId).toLowerCase().includes(q)) ||
+        (r.reporterName && String(r.reporterName).toLowerCase().includes(q)) ||
+        (r.description && String(r.description).toLowerCase().includes(q)) ||
+        (r.landmark && String(r.landmark).toLowerCase().includes(q))
+      );
+    }
+    const total = filtered.length;
+    const start = (page - 1) * pageSize;
+    const items = filtered.slice(start, start + pageSize);
+    return { items: items.map((r: any) => serializeReport(r, true)), total, page, pageSize };
   }
-
-  const [items, total] = await Promise.all([
-    prisma.report.findMany({
-      where,
-      orderBy: [{ priorityLabel: 'asc' }, { createdAt: 'desc' }],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      include: {
-        assignedVolunteer: { select: { id: true, name: true } },
-        assignedAgency: { select: { id: true, name: true, type: true } },
-      },
-    }),
-    prisma.report.count({ where }),
-  ]);
-
-  return { items: items.map((r: (typeof items)[number]) => serializeReport(r, true)), total, page, pageSize };
 }
 
 export function serializeReport(report: Record<string, unknown>, includeRelations = false) {

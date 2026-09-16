@@ -14,7 +14,10 @@ import {
   Smartphone,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { useLanguage } from '../../lib/i18n'
+import { getOverviewKPIs } from '../../api/endpoints'
+import Reveal from '../../components/common/Reveal'
 
 const GITHUB_URL = 'https://github.com/MrinallSamal-byte/SIH'
 const LIVE_URL = 'https://aapdasetu-v3.vercel.app/'
@@ -180,6 +183,30 @@ const STACK = ['React 19', 'TypeScript', 'Express', 'PostgreSQL + Prisma', 'Fast
 export default function About() {
   const { t } = useLanguage()
 
+  // Live deployment counters — real numbers from this backend (or its local
+  // emergency database when offline). Skeletons until the first fetch lands.
+  const [liveStats, setLiveStats] = useState<
+    { reports: number; red: number; shelters: number; volunteers: number } | null
+  >(null)
+  useEffect(() => {
+    let cancelled = false
+    getOverviewKPIs()
+      .then((k) => {
+        if (!cancelled) {
+          setLiveStats({
+            reports: Number(k.totalReports) || 0,
+            red: Number(k.activeRedAlerts) || 0,
+            shelters: Number(k.openShelters) || 0,
+            volunteers: Number(k.availableVolunteers) || 0,
+          })
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   return (
     <div className="mx-auto max-w-5xl space-y-14 pb-16">
       {/* ── Hero ─────────────────────────────────────────── */}
@@ -217,7 +244,90 @@ export default function About() {
         </div>
       </section>
 
+      {/* ── System in numbers ────────────────────────────── */}
+      <Reveal>
+        <section className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+          {/* Live counters from this deployment */}
+          <div className="grid grid-cols-2 divide-x divide-zinc-100 dark:divide-white/[0.06] lg:grid-cols-4">
+            {[
+              {
+                value: liveStats ? liveStats.reports.toLocaleString('en-IN') : null,
+                labelKey: 'about.statReports',
+                labelFallback: 'SOS & reports tracked',
+              },
+              {
+                value: liveStats ? liveStats.red.toLocaleString('en-IN') : null,
+                labelKey: 'about.statRed',
+                labelFallback: 'Active RED alerts',
+              },
+              {
+                value: liveStats ? liveStats.shelters.toLocaleString('en-IN') : null,
+                labelKey: 'about.statShelters',
+                labelFallback: 'Shelters open',
+              },
+              {
+                value: liveStats ? liveStats.volunteers.toLocaleString('en-IN') : null,
+                labelKey: 'about.statVolunteers',
+                labelFallback: 'Volunteers ready',
+              },
+            ].map((stat) => (
+              <div key={stat.labelKey} className="p-4 text-center sm:p-5">
+                {stat.value === null ? (
+                  <div className="skeleton-shimmer mx-auto h-8 w-20 rounded-lg" />
+                ) : (
+                  <div className="font-mono text-2xl font-black tracking-tight text-zinc-900 dark:text-white sm:text-3xl">
+                    {stat.value}
+                  </div>
+                )}
+                <div className="mt-1 text-[11px] font-semibold text-zinc-500 dark:text-slate-400">
+                  {t(stat.labelKey, stat.labelFallback)}
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Key capabilities — every number below is verifiable in the product */}
+          <div className="grid grid-cols-1 divide-y divide-zinc-100 border-t border-zinc-100 dark:divide-white/[0.06] dark:border-white/[0.06] sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4">
+            {[
+              {
+                bigKey: 'about.capTriageBig',
+                bigFallback: '1–100',
+                textKey: 'about.capTriage',
+                textFallback: 'urgency score on every SOS, reasons listed',
+              },
+              {
+                bigKey: 'about.capGpsBig',
+                bigFallback: '±m GPS',
+                textKey: 'about.capGps',
+                textFallback: 'high-accuracy fix with live accuracy readout',
+              },
+              {
+                bigKey: 'about.capLangBig',
+                bigFallback: '4',
+                textKey: 'about.capLang',
+                textFallback: 'full languages, alerts included',
+              },
+              {
+                bigKey: 'about.capPortalsBig',
+                bigFallback: '3 + 11',
+                textKey: 'about.capPortals',
+                textFallback: 'portals, and 11 command-center views',
+              },
+            ].map((cap) => (
+              <div key={cap.bigKey} className="flex items-baseline justify-center gap-2 p-3.5 text-center sm:border-l sm:border-zinc-100 sm:first:border-l-0 dark:sm:border-white/[0.06]">
+                <span className="font-mono text-sm font-black text-zinc-900 dark:text-white">
+                  {t(cap.bigKey, cap.bigFallback)}
+                </span>
+                <span className="text-[11px] text-zinc-500 dark:text-slate-400">
+                  {t(cap.textKey, cap.textFallback)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      </Reveal>
+
       {/* ── Why we built this ────────────────────────────── */}
+      <Reveal>
       <section className="grid gap-4 md:grid-cols-2">
         <div className="flex flex-col justify-between rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a] sm:p-7">
           <div>
@@ -285,6 +395,7 @@ export default function About() {
           </div>
         </div>
       </section>
+      </Reveal>
 
       {/* ── Three doors ──────────────────────────────────── */}
       <section className="space-y-5">
@@ -397,6 +508,7 @@ export default function About() {
       </section>
 
       {/* ── Offline mesh companion spotlight ───────────────── */}
+      <Reveal>
       <section className="relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-white p-6 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a] sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-100 px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-wider text-zinc-700 dark:border-white/[0.1] dark:bg-white/[0.06] dark:text-slate-300">
@@ -500,6 +612,79 @@ export default function About() {
           </Link>
         </div>
       </section>
+      </Reveal>
+
+      {/* ── Roadmap ──────────────────────────────────────── */}
+      <Reveal>
+        <section className="space-y-5">
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-slate-100 sm:text-2xl">
+              {t('about.roadmapTitle', 'Where this goes next')}
+            </h2>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-slate-400 sm:text-sm">
+              {t('about.roadmapSubtitle', 'Public roadmap, in priority order. Done items ship; the rest is tracked in the repository.')}
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {[
+              {
+                dot: 'bg-emerald-500',
+                badgeKey: 'about.roadNow',
+                badgeFallback: 'LIVE NOW',
+                itemsFallback: [
+                  'SOS intake with triage scores',
+                  'Volunteer dispatch queue',
+                  'Offline outbox + SMS fallback',
+                  'Shelter gate check-in',
+                  'OTP verification & SLA sweep',
+                ],
+              },
+              {
+                dot: 'bg-amber-500',
+                badgeKey: 'about.roadNext',
+                badgeFallback: 'NEXT',
+                itemsFallback: [
+                  'Mesh gateway relay into dashboard',
+                  'Production SMS gateway for OTP',
+                  'District shelter & roster onboarding',
+                  'Push delivery worker (VAPID ready)',
+                ],
+              },
+              {
+                dot: 'bg-zinc-400',
+                badgeKey: 'about.roadLater',
+                badgeFallback: 'LATER',
+                itemsFallback: [
+                  'Live satellite flood feed',
+                  'Volunteer mobile app',
+                  'Multi-district tenancy',
+                  'Regional language expansion',
+                ],
+              },
+            ].map((col) => (
+              <div
+                key={col.badgeKey}
+                className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-white/[0.08] dark:bg-[#1a1a1a]"
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${col.dot}`} />
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-600 dark:text-slate-300">
+                    {t(col.badgeKey, col.badgeFallback)}
+                  </span>
+                </div>
+                <ul className="mt-3 space-y-2">
+                  {col.itemsFallback.map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-xs leading-relaxed text-zinc-600 dark:text-slate-300">
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-400" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </section>
+      </Reveal>
 
       {/* ── Project facts ────────────────────────────────── */}
       <section className="rounded-2xl border border-zinc-200/80 bg-zinc-50/50 p-6 dark:border-white/[0.08] dark:bg-[#161616] sm:p-7">
@@ -617,6 +802,15 @@ export default function About() {
           >
             {t('nav.donate', 'Donate & Relief Fund')}
           </Link>
+          <a
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/25 px-5 py-2.5 text-xs font-bold text-white transition hover:bg-white/10 dark:border-zinc-700 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          >
+            <GitBranch className="h-3.5 w-3.5" />
+            <span>{t('about.ctaContribute', 'Contribute code')}</span>
+          </a>
         </div>
       </section>
     </div>

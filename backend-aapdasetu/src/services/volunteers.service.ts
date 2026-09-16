@@ -4,19 +4,34 @@ import { NotFoundError, ConflictError } from '../lib/errors.js';
 import { writeAuditLog } from './audit.service.js';
 import { realtimeHub } from '../realtime/hub.js';
 import { normalizePhone } from './volunteer-auth.service.js';
+import { fetchCollection } from '../lib/firebase-rtdb.js';
 
 export async function listVolunteers(params: { status?: string; skill?: string }) {
-  return prisma.volunteer.findMany({
-    where: {
-      ...(params.status ? { status: params.status as never } : {}),
-      ...(params.skill ? { skills: { has: params.skill as never } } : {}),
-    },
-    orderBy: { createdAt: 'desc' },
-    // Unbounded findMany with an include would load every assignment on every
-    // roster poll — cap at a sane page for the dashboard.
-    take: 500,
-    include: { assignments: { select: { id: true, trackingId: true, status: true } } },
-  });
+  try {
+    if (process.env.USE_FIREBASE_DB === 'true') {
+      const all = await fetchCollection('volunteers');
+      let filtered = all;
+      if (params.status) filtered = filtered.filter((v: any) => v.status === params.status);
+      if (params.skill) filtered = filtered.filter((v: any) => Array.isArray(v.skills) && v.skills.includes(params.skill));
+      return filtered;
+    }
+    return await prisma.volunteer.findMany({
+      where: {
+        ...(params.status ? { status: params.status as never } : {}),
+        ...(params.skill ? { skills: { has: params.skill as never } } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+      include: { assignments: { select: { id: true, trackingId: true, status: true } } },
+    });
+  } catch (err) {
+    console.warn('[Volunteers] Prisma failed, falling back to Firebase RTDB:', err);
+    const all = await fetchCollection('volunteers');
+    let filtered = all;
+    if (params.status) filtered = filtered.filter((v: any) => v.status === params.status);
+    if (params.skill) filtered = filtered.filter((v: any) => Array.isArray(v.skills) && v.skills.includes(params.skill));
+    return filtered;
+  }
 }
 
 export async function createVolunteer(input: {

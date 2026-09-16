@@ -2,6 +2,7 @@
 import { prisma } from '../lib/prisma.js';
 import { NotFoundError } from '../lib/errors.js';
 import { writeAuditLog } from './audit.service.js';
+import { fetchCollection } from '../lib/firebase-rtdb.js';
 
 export async function listResources(params: {
   shelterId?: string;
@@ -9,20 +10,36 @@ export async function listResources(params: {
   page?: number;
   pageSize?: number;
 }) {
-  // page/pageSize absent → return all rows (legacy behavior)
-  const take =
-    params.page !== undefined || params.pageSize !== undefined
-      ? Math.min(params.pageSize ?? 50, 200)
-      : undefined;
-  return prisma.resource.findMany({
-    where: {
-      ...(params.shelterId ? { shelterId: params.shelterId } : {}),
-      ...(params.category ? { category: params.category as never } : {}),
-    },
-    orderBy: { createdAt: 'desc' },
-    include: { shelter: { select: { id: true, name: true } } },
-    ...(take !== undefined ? { skip: ((params.page ?? 1) - 1) * take, take } : {}),
-  });
+  try {
+    if (process.env.USE_FIREBASE_DB === 'true') {
+      const all = await fetchCollection('resources');
+      let filtered = all;
+      if (params.shelterId) filtered = filtered.filter((r: any) => r.shelterId === params.shelterId);
+      if (params.category) filtered = filtered.filter((r: any) => r.category === params.category);
+      return filtered;
+    }
+    // page/pageSize absent → return all rows (legacy behavior)
+    const take =
+      params.page !== undefined || params.pageSize !== undefined
+        ? Math.min(params.pageSize ?? 50, 200)
+        : undefined;
+    return await prisma.resource.findMany({
+      where: {
+        ...(params.shelterId ? { shelterId: params.shelterId } : {}),
+        ...(params.category ? { category: params.category as never } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      include: { shelter: { select: { id: true, name: true } } },
+      ...(take !== undefined ? { skip: ((params.page ?? 1) - 1) * take, take } : {}),
+    });
+  } catch (err) {
+    console.warn('[Resources] Prisma failed, falling back to Firebase RTDB:', err);
+    const all = await fetchCollection('resources');
+    let filtered = all;
+    if (params.shelterId) filtered = filtered.filter((r: any) => r.shelterId === params.shelterId);
+    if (params.category) filtered = filtered.filter((r: any) => r.category === params.category);
+    return filtered;
+  }
 }
 
 export async function createResource(input: {

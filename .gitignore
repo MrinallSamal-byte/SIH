@@ -12,11 +12,18 @@ build/
 # Vercel
 .vercel/
 
-# Environment files
+# Environment and credential files
 .env
 .env.local
 .env.*.local
 *.env
+*serviceAccount*.json
+*firebase-adminsdk*.json
+*firebase*service*.json
+!firebase.json
+*.credential*.json
+.secrets/
+secrets/
 
 # Logs
 *.log
