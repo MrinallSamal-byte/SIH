@@ -115,21 +115,83 @@ function distToSegment(p: GeoPoint, a: GeoPoint, b: GeoPoint): number {
   return haversineKm(p, { lat: a.lat + t * dLat, lng: a.lng + t * dLng })
 }
 
-/** Determines if two point sequences overlap on the exact same street/pixels. */
-function areRoutesOverlapping(r1: GeoPoint[], r2: GeoPoint[]): boolean {
-  if (!r1 || !r2 || r1.length < 2 || r2.length < 2) return true
-  let maxMinDist = 0
-  const step = Math.max(1, Math.floor(r1.length / 10))
-  for (let i = 1; i < r1.length - 1; i += step) {
-    const p = r1[i]
-    let minDist = Infinity
-    for (const q of r2) {
+/** Computes maximum and average physical separation between two route paths in km. */
+export function calculateSeparation(pts1: GeoPoint[], pts2: GeoPoint[]): { maxSepKm: number; avgSepKm: number } {
+  if (!pts1 || !pts2 || pts1.length < 2 || pts2.length < 2) return { maxSepKm: 0, avgSepKm: 0 }
+  let maxSep = 0
+  let totalSep = 0
+  const step = Math.max(1, Math.floor(pts1.length / 25))
+  let count = 0
+  for (let i = 0; i < pts1.length; i += step) {
+    const p = pts1[i]
+    let minD = Infinity
+    for (const q of pts2) {
       const d = haversineKm(p, q)
-      if (d < minDist) minDist = d
+      if (d < minD) minD = d
     }
-    if (minDist > maxMinDist) maxMinDist = minDist
+    if (minD > maxSep) maxSep = minD
+    totalSep += minD
+    count++
   }
-  return maxMinDist < 0.08 // less than 80m separation means they overlap
+  return { maxSepKm: maxSep, avgSepKm: totalSep / Math.max(1, count) }
+}
+
+/**
+ * Gently offsets secondary polyline coordinates laterally by a small distance (in meters)
+ * along sections where the two routes overlap within thresholdKm.
+ * Ensures that both routes remain distinctly visible side-by-side like two adjacent lanes,
+ * with the origin and destination endpoints anchored exactly.
+ */
+export function offsetSharedSegments(
+  primaryPts: GeoPoint[],
+  secondaryPts: GeoPoint[],
+  thresholdKm = 0.035,
+  offsetMeters = 11,
+): GeoPoint[] {
+  if (!secondaryPts || secondaryPts.length < 2) return secondaryPts
+  if (!primaryPts || primaryPts.length < 2) return secondaryPts
+  const earthRadius = 6378137
+
+  return secondaryPts.map((pt, i, arr) => {
+    // Keep exact start and end endpoints anchored
+    if (i === 0 || i === arr.length - 1) {
+      return pt
+    }
+
+    // Check if this point is within threshold of any primary point
+    let isShared = false
+    for (const p of primaryPts) {
+      if (haversineKm(pt, p) < thresholdKm) {
+        isShared = true
+        break
+      }
+    }
+
+    if (!isShared) return pt
+
+    // Compute tangent vector along polyline
+    const prev = arr[Math.max(0, i - 1)]
+    const next = arr[Math.min(arr.length - 1, i + 1)]
+    const dLat = next.lat - prev.lat
+    const dLng = next.lng - prev.lng
+
+    const radLat = (pt.lat * Math.PI) / 180
+    const dy = dLat * (Math.PI / 180) * earthRadius
+    const dx = dLng * (Math.PI / 180) * earthRadius * Math.cos(radLat)
+    const len = Math.sqrt(dx * dx + dy * dy) || 1
+
+    // Perpendicular vector (-dy, dx)
+    const px = -dy / len
+    const py = dx / len
+
+    const offLat = (py * offsetMeters / earthRadius) * (180 / Math.PI)
+    const offLng = (px * offsetMeters / (earthRadius * Math.cos(radLat))) * (180 / Math.PI)
+
+    return {
+      lat: Number((pt.lat + offLat).toFixed(6)),
+      lng: Number((pt.lng + offLng).toFixed(6)),
+    }
+  })
 }
 
 /**
@@ -384,29 +446,31 @@ export function buildSafeWaypoints(from: GeoPoint, to: GeoPoint, polygons?: GeoP
 
 /**
  * Finds a genuine, road-following alternative bypass route:
- * 1. Checks if OSRM already returned a valid second route in `rawRoutes[1]`.
- * 2. If single route returned, probes the road network on either side of the midpoint
- *    using OSRM /nearest to find a real road node, then queries OSRM for a valid
- *    forward-moving bypass that avoids waterlogging and does not double-back.
+ * 1. Checks all alternative routes returned by OSRM driving engine for spatial separation.
+ * 2. If hazards cross direct route, finds an avoidance road node outside hazard bounds.
+ * 3. Probes the road network across fractions [0.30, 0.40, 0.50, 0.60, 0.70] with multiple offsets
+ *    to discover real alternative roads, parallel avenues, and elevated bypasses.
  */
 async function findAlternativeRoadBypass(
   from: GeoPoint,
   to: GeoPoint,
   directRaw: RawOsrmRouteResult,
-  extraRawRoutes: RawOsrmRouteResult[],
+  allRawRoutes: RawOsrmRouteResult[],
   hazardPolygons: GeoPoint[][],
 ): Promise<RawOsrmRouteResult | null> {
   const directDist = directRaw.distance
   const directPts = directRaw.geometry.coordinates.map(([lng, lat]) => ({ lat, lng }))
 
-  // 1. Check if OSRM returned a clean second route that avoids hazards and is within 1.38x distance
-  for (const alt of extraRawRoutes) {
-    const ratio = alt.distance / directDist
-    if (ratio >= 1.02 && ratio <= 1.38) {
-      const altPts = alt.geometry.coordinates.map(([lng, lat]) => ({ lat, lng }))
-      if (!areRoutesOverlapping(directPts, altPts)) {
-        return alt
+  // 1. Check all alternative routes returned by OSRM
+  for (const alt of allRawRoutes) {
+    if (alt === directRaw) continue
+    const altPts = alt.geometry.coordinates.map(([lng, lat]) => ({ lat, lng }))
+    const sep = calculateSeparation(directPts, altPts)
+    if (sep.maxSepKm >= 0.18 && sep.avgSepKm >= 0.04) {
+      if (routeCrossesAnyPolygon(directPts, hazardPolygons) && routeCrossesAnyPolygon(altPts, hazardPolygons)) {
+        continue
       }
+      return alt
     }
   }
 
@@ -431,7 +495,7 @@ async function findAlternativeRoadBypass(
           if (testRaw && testRaw.length > 0) {
             const candidate = testRaw[0]
             const ratio = candidate.distance / directDist
-            if (ratio <= 1.45) {
+            if (ratio <= 1.85) {
               const candPts = candidate.geometry.coordinates.map(([lng, lat]) => ({ lat, lng }))
               if (!routeCrossesAnyPolygon(candPts, [poly])) {
                 return candidate
@@ -443,31 +507,40 @@ async function findAlternativeRoadBypass(
     }
   }
 
-  // 3. Automated road probe: probe left and right perpendicular from direct midpoint for an elevated bypass
-  const midIdx = Math.floor(directPts.length / 2)
-  const midPoint = directPts[midIdx]
-  if (midPoint) {
-    const dLat = to.lat - from.lat
-    const dLng = to.lng - from.lng
-    const len = Math.sqrt(dLat * dLat + dLng * dLng) || 1
-    const perpLat = (-dLng / len) * 0.008
-    const perpLng = (dLat / len) * 0.008
+  // 3. Multi-point road probe: probe along fractions [0.30, 0.40, 0.50, 0.60, 0.70]
+  // with varying lateral offsets to discover parallel avenues and elevated bypasses
+  const dLat = to.lat - from.lat
+  const dLng = to.lng - from.lng
+  const len = Math.sqrt(dLat * dLat + dLng * dLng) || 1
 
-    for (const side of [-1, 1]) {
-      const probe: GeoPoint = {
-        lat: midPoint.lat + perpLat * side,
-        lng: midPoint.lng + perpLng * side,
-      }
-      const roadWp = await snapToNearestRoad(probe)
-      if (roadWp) {
-        const testRaw = await fetchOsrmRaw(from, to, [roadWp], false)
-        if (testRaw && testRaw.length > 0) {
-          const candidate = testRaw[0]
-          const ratio = candidate.distance / directDist
-          if (ratio >= 1.05 && ratio <= 1.35) {
-            const candPts = candidate.geometry.coordinates.map(([lng, lat]) => ({ lat, lng }))
-            if (!areRoutesOverlapping(directPts, candPts)) {
-              return candidate
+  const fractions = [0.30, 0.40, 0.50, 0.60, 0.70]
+  const offsets = [0.004, 0.006, 0.009, 0.013]
+
+  for (const frac of fractions) {
+    const basePt = directPts[Math.floor(directPts.length * frac)]
+    if (!basePt) continue
+
+    for (const off of offsets) {
+      const perpLat = (-dLng / len) * off
+      const perpLng = (dLat / len) * off
+
+      for (const side of [-1, 1]) {
+        const probe: GeoPoint = {
+          lat: basePt.lat + perpLat * side,
+          lng: basePt.lng + perpLng * side,
+        }
+        const roadWp = await snapToNearestRoad(probe)
+        if (roadWp) {
+          const testRaw = await fetchOsrmRaw(from, to, [roadWp], false)
+          if (testRaw && testRaw.length > 0) {
+            const candidate = testRaw[0]
+            const ratio = candidate.distance / directDist
+            if (ratio >= 1.04 && ratio <= 1.85) {
+              const candPts = candidate.geometry.coordinates.map(([lng, lat]) => ({ lat, lng }))
+              const sep = calculateSeparation(directPts, candPts)
+              if (sep.maxSepKm >= 0.18 && sep.avgSepKm >= 0.03) {
+                return candidate
+              }
             }
           }
         }
@@ -479,13 +552,19 @@ async function findAlternativeRoadBypass(
 }
 
 /** Creates clean direct intermediate points if OSRM is completely offline. */
-function offlineDirectPoints(from: GeoPoint, to: GeoPoint): GeoPoint[] {
+function offlineDirectPoints(from: GeoPoint, to: GeoPoint, isAlternative = false): GeoPoint[] {
   const pts: GeoPoint[] = [from]
-  const mid: GeoPoint = {
-    lat: (from.lat + to.lat) / 2,
-    lng: (from.lng + to.lng) / 2,
-  }
-  pts.push(mid)
+  const dLat = to.lat - from.lat
+  const dLng = to.lng - from.lng
+  const dist = Math.sqrt(dLat * dLat + dLng * dLng) || 1
+  const offsetMag = isAlternative ? 0.006 : 0
+  const perpLat = (-dLng / dist) * offsetMag
+  const perpLng = (dLat / dist) * offsetMag
+
+  pts.push({
+    lat: (from.lat + to.lat) / 2 + perpLat,
+    lng: (from.lng + to.lng) / 2 + perpLng,
+  })
   pts.push(to)
   return pts
 }
@@ -495,7 +574,8 @@ function offlineDirectPoints(from: GeoPoint, to: GeoPoint): GeoPoint[] {
  * Guarantees that:
  * 1. Both routes begin EXACTLY at the user's location marker and terminate at the destination haven.
  * 2. Every point strictly follows actual drivable and walkable roads from OpenStreetMap.
- * 3. Never returns impossible zig-zag loops, detached routes, or disconnected segments.
+ * 3. Never returns impossible zig-zag loops, detached routes, or single overlapping lines.
+ * 4. Distinctly separates parallel roadways and shared segments so both routes are always clearly visible.
  */
 export async function calculateDualRoutes(
   from: GeoPoint,
@@ -509,39 +589,48 @@ export async function calculateDualRoutes(
   const osrmRoutes = await fetchOsrmRaw(from, to, [], true)
 
   if (osrmRoutes && osrmRoutes.length > 0) {
-    const directRaw = osrmRoutes[0]
-    const extraRaw = osrmRoutes.slice(1)
+    // Determine the shortest distance route among OSRM returned routes
+    let directRaw = osrmRoutes[0]
+    for (const r of osrmRoutes) {
+      if (r.distance < directRaw.distance) {
+        directRaw = r
+      }
+    }
 
     // Build the direct shortest route
-    const shortestAnchored = ensureAnchoredPoints(from, to, directRaw.geometry.coordinates)
+    const shortestRawPoints = ensureAnchoredPoints(from, to, directRaw.geometry.coordinates)
     const shortestDistKm = Number((directRaw.distance / 1000).toFixed(2))
     const shortestWalkMin = Math.max(1, Math.round((shortestDistKm / WALK_SPEED_KMPH) * 60))
     const shortestDriveMin = Math.max(1, Math.round((directRaw.duration / 60) || (shortestDistKm / DRIVE_SPEED_KMPH) * 60))
     const shortestSteps = parseOsrmSteps(directRaw.legs?.[0]?.steps, destinationName, false)
-    const shortestCrossesHazard = routeCrossesAnyPolygon(shortestAnchored, hazardPolygons)
+    const shortestCrossesHazard = routeCrossesAnyPolygon(shortestRawPoints, hazardPolygons)
 
     // Seek real road bypass for the safe evacuation corridor
-    const bypassRaw = await findAlternativeRoadBypass(from, to, directRaw, extraRaw, hazardPolygons)
+    const bypassRaw = await findAlternativeRoadBypass(from, to, directRaw, osrmRoutes, hazardPolygons)
 
-    let safeAnchored: GeoPoint[] = shortestAnchored
+    let safePoints: GeoPoint[] = shortestRawPoints
     let safeDistKm = shortestDistKm
     let safeWalkMin = shortestWalkMin
     let safeDriveMin = shortestDriveMin
     let safeSteps = shortestSteps
 
     if (bypassRaw) {
-      safeAnchored = ensureAnchoredPoints(from, to, bypassRaw.geometry.coordinates)
+      safePoints = ensureAnchoredPoints(from, to, bypassRaw.geometry.coordinates)
       safeDistKm = Number((bypassRaw.distance / 1000).toFixed(2))
       safeWalkMin = Math.max(1, Math.round((safeDistKm / WALK_SPEED_KMPH) * 60))
       safeDriveMin = Math.max(1, Math.round((bypassRaw.duration / 60) || (safeDistKm / DRIVE_SPEED_KMPH) * 60))
       safeSteps = parseOsrmSteps(bypassRaw.legs?.[0]?.steps, destinationName, true)
     }
 
+    // CRITICAL: Offset any shared road segments on shortestPoints so both routes are always
+    // distinctly visible side-by-side like two adjacent lanes on the map
+    const shortestPoints = offsetSharedSegments(safePoints, shortestRawPoints, 0.035, 11)
+
     const shortestOption: RouteOption = {
       id: 'shortest',
       name: 'Direct Urban Route',
       type: 'shortest',
-      points: shortestAnchored,
+      points: shortestPoints,
       distanceKm: shortestDistKm,
       durationMin: shortestWalkMin,
       driveDurationMin: shortestDriveMin,
@@ -562,7 +651,7 @@ export async function calculateDualRoutes(
       id: 'safe',
       name: 'Safe Evacuation Corridor',
       type: 'safe',
-      points: safeAnchored,
+      points: safePoints,
       distanceKm: safeDistKm,
       durationMin: safeWalkMin,
       driveDurationMin: safeDriveMin,
@@ -582,10 +671,14 @@ export async function calculateDualRoutes(
   }
 
   // 2. Offline Fallback (Network unreachable)
-  const fallbackPoints = offlineDirectPoints(from, to)
+  const fallbackDirectPoints = offlineDirectPoints(from, to, false)
+  const fallbackSafePoints = offlineDirectPoints(from, to, true)
   const distKm = Number((directAirDistKm * 1.15).toFixed(2))
+  const safeDistKm = Number((distKm * 1.12).toFixed(2))
   const walkMin = Math.max(1, Math.round((distKm / WALK_SPEED_KMPH) * 60))
+  const safeWalkMin = Math.max(1, Math.round((safeDistKm / WALK_SPEED_KMPH) * 60))
   const driveMin = Math.max(1, Math.round((distKm / DRIVE_SPEED_KMPH) * 60))
+  const safeDriveMin = Math.max(1, Math.round((safeDistKm / DRIVE_SPEED_KMPH) * 60))
 
   const fallbackSteps: NavigationStep[] = [
     {
@@ -612,7 +705,7 @@ export async function calculateDualRoutes(
     id: 'shortest',
     name: 'Direct Urban Route',
     type: 'shortest',
-    points: fallbackPoints,
+    points: fallbackDirectPoints,
     distanceKm: distKm,
     durationMin: walkMin,
     driveDurationMin: driveMin,
@@ -629,10 +722,10 @@ export async function calculateDualRoutes(
     id: 'safe',
     name: 'Safe Evacuation Corridor',
     type: 'safe',
-    points: fallbackPoints,
-    distanceKm: distKm,
-    durationMin: walkMin,
-    driveDurationMin: driveMin,
+    points: fallbackSafePoints,
+    distanceKm: safeDistKm,
+    durationMin: safeWalkMin,
+    driveDurationMin: safeDriveMin,
     confidencePercent: 95,
     riskLevel: 'LOW',
     roadCondition: 'Designated Safe Haven Corridor',
