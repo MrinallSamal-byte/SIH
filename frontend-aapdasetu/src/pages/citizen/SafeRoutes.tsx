@@ -158,6 +158,14 @@ export default function SafeRoutes() {
     })
   }, [shelters, effectiveOrigin])
 
+  // Filtered dropdown options (search box). Extracted so the listbox can
+  // render an honest empty state instead of a bare search field.
+  const destOptions = useMemo(() => {
+    const q = destQuery.trim().toLowerCase()
+    if (!q) return sortedShelters
+    return sortedShelters.filter((s) => `${s.name ?? ''} ${s.address ?? ''}`.toLowerCase().includes(q))
+  }, [sortedShelters, destQuery])
+
   // Flood hazard overlays for the map — previously computed for routing only
   // and never rendered, so users saw routes but no red hazard zones.
   const mapPolygons: MapPolygon[] = useMemo(
@@ -440,7 +448,10 @@ export default function SafeRoutes() {
               >
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                    {destination?.name ?? t('common.loading', 'Loading…')}
+                    {destination?.name ??
+                      (shelters === null
+                        ? t('common.loading', 'Loading…')
+                        : t('shelter.empty', 'No shelters available'))}
                   </span>
                   {destination && (
                     <span className="mt-0.5 block text-[11px] text-zinc-500 dark:text-zinc-400">
@@ -467,13 +478,16 @@ export default function SafeRoutes() {
                     />
                   </div>
                   <div className="max-h-72 overflow-y-auto overscroll-contain py-1">
-                    {sortedShelters
-                      .filter((s) => {
-                        const q = destQuery.trim().toLowerCase()
-                        if (!q) return true
-                        return `${s.name ?? ''} ${s.address ?? ''}`.toLowerCase().includes(q)
-                      })
-                      .map((s) => {
+                    {destOptions.length === 0 ? (
+                      <div className="px-3 py-4 text-center text-xs text-zinc-500 dark:text-zinc-400">
+                        {shelters === null
+                          ? t('common.loading', 'Loading…')
+                          : destQuery.trim()
+                            ? t('sh.noResultsDesc', 'Try clearing filters or search queries')
+                            : t('shelter.empty', 'No shelters available')}
+                      </div>
+                    ) : (
+                      destOptions.map((s) => {
                         const valid = typeof s.latitude === 'number' && typeof s.longitude === 'number'
                         const dist = valid ? haversineKm(effectiveOrigin, { lat: s.latitude as number, lng: s.longitude as number }) : null
                         const selected = s.id === destinationId
@@ -505,7 +519,8 @@ export default function SafeRoutes() {
                             {selected && <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />}
                           </button>
                         )
-                      })}
+                      })
+                    )}
                   </div>
                 </div>
               )}

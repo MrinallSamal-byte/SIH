@@ -35,9 +35,13 @@ export function errorHandler(
     code = 'VALIDATION_ERROR';
     details = err.errors.map((issue) => ({ path: issue.path.join('.'), message: issue.message }));
   } else if (typeof (err as { code?: unknown }).code === 'string' && String((err as { code?: unknown }).code).startsWith('P')) {
-    status = 400;
-    code = 'DB_ERROR';
-    message = 'Database request failed';
+    // Default Prisma failures are server-side (unreachable DB, missing
+    // table/column, constraint internals) — never a 400. A 400 tells clients
+    // the request was wrong, which also disables the frontend mock fallback
+    // and leaves citizen pages permanently empty during a DB outage.
+    status = 503;
+    code = 'DB_UNAVAILABLE';
+    message = 'Service temporarily unavailable — please retry shortly';
     const prismaCode = String((err as { code?: unknown }).code);
     if (prismaCode === 'P2002') {
       status = 409;
