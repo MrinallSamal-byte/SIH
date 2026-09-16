@@ -38,17 +38,34 @@ function resolveTimeAgoLocale(): string {
 }
 
 /** RelativeTimeFormat is missing on some old browsers and throws RangeError on unknown locales — degrade to English, never crash. */
-function createTimeAgoFormatter(): Intl.RelativeTimeFormat | null {
+const timeAgoFormatterCache = new Map<string, Intl.RelativeTimeFormat | null>()
+
+/**
+ * Cached RelativeTimeFormat lookup, keyed by resolved locale.
+ * Perf: constructing `new Intl.RelativeTimeFormat()` resolves CLDR locale data
+ * (~10-100x costlier than `.format()` itself). `timeAgo()` runs per-row in list
+ * views (Alerts ~160 rows, LiveSOS markers, NotificationCenter) on every
+ * 3-5 s poll tick, so a fresh construction per call is constant main-thread
+ * churn. Cache is bounded to the 4 app locales (+ 'en' fallback) and naturally
+ * follows <html lang> switches via the locale key.
+ */
+function getTimeAgoFormatter(): Intl.RelativeTimeFormat | null {
   if (typeof Intl === 'undefined' || typeof Intl.RelativeTimeFormat !== 'function') return null
+  const locale = resolveTimeAgoLocale()
+  const cached = timeAgoFormatterCache.get(locale)
+  if (cached !== undefined) return cached
+  let formatter: Intl.RelativeTimeFormat | null = null
   try {
-    return new Intl.RelativeTimeFormat(resolveTimeAgoLocale(), { numeric: 'auto' })
+    formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
   } catch {
     try {
-      return new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
+      formatter = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
     } catch {
-      return null
+      formatter = null
     }
   }
+  timeAgoFormatterCache.set(locale, formatter)
+  return formatter
 }
 
 /** Plain-English fallback for environments without a usable Intl.RelativeTimeFormat. */
@@ -69,7 +86,7 @@ export function timeAgo(iso: string): string {
   const time = iso ? new Date(iso).getTime() : NaN
   if (!Number.isFinite(time)) return '—'
   const seconds = Math.max(0, Math.floor((Date.now() - time) / 1000))
-  const rtf = createTimeAgoFormatter()
+  const rtf = getTimeAgoFormatter()
   if (!rtf) return formatEnglishFallback(seconds)
   if (seconds < 60) return rtf.format(-seconds, 'second')
   const minutes = Math.floor(seconds / 60)
