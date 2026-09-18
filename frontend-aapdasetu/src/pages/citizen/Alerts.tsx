@@ -89,10 +89,10 @@ export default function Alerts() {
 
               <p className="mt-2.5 text-xs leading-relaxed text-zinc-500 dark:text-white">{a.message}</p>
 
-              {a.region && (
+              {a.targetArea && (
                 <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-500 dark:text-white border-t border-slate-100 pt-2.5 dark:border-white/[0.08]">
                   <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                  <span className="font-semibold text-zinc-600 dark:text-white">Affected Area: {a.region}</span>
+                  <span className="font-semibold text-zinc-600 dark:text-white">Affected Area: {a.targetArea}</span>
                 </div>
               )}
             </div>

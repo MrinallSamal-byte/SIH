@@ -21,7 +21,7 @@ export default function AssignedTasks() {
 
   const loadTasks = useCallback(async () => {
     try {
-      const reports = await listReports({ status: 'in_progress' })
+      const { items: reports } = await listReports({ status: 'in_progress' })
       // Filter for this volunteer, or fallback to all in_progress if none set
       const relevant = activeVolunteerId
         ? reports.filter((r) => !r.assignedVolunteerId || r.assignedVolunteerId === activeVolunteerId)

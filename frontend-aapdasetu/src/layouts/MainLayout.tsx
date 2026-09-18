@@ -376,8 +376,8 @@ export default function MainLayout() {
                             <div className="min-w-0 flex-1">
                               <h4 className="text-xs font-bold text-zinc-800 dark:text-white line-clamp-1">{a.title}</h4>
                               <p className="mt-0.5 text-[11px] text-slate-500 dark:text-white line-clamp-2">{a.message}</p>
-                              {a.region && (
-                                <span className="mt-1 inline-block text-[10px] text-slate-400 dark:text-white mono">{a.region}</span>
+                              {a.targetArea && (
+                                <span className="mt-1 inline-block text-[10px] text-slate-400 dark:text-white mono">{a.targetArea}</span>
                               )}
                               {!isRead && (
                                 <button

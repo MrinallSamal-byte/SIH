@@ -52,7 +52,7 @@ export default function Reports() {
       priority: priorityFilter || undefined,
       type: typeFilter || undefined,
       q: query || undefined,
-    })
+    }).then((d) => d.items)
   }, [statusFilter, priorityFilter, typeFilter, query])
 
   const reports = useRealtime<Report[]>(fetchReports, 4000)

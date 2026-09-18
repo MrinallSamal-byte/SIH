@@ -27,7 +27,7 @@ export default function Dashboard() {
       }
 
       // Load tasks
-      const reports = await listReports({ status: 'in_progress' })
+      const { items: reports } = await listReports({ status: 'in_progress' })
       setActiveTasks(reports.filter((r) => !matched || r.assignedVolunteerId === matched.id))
     } catch {
       toast('Failed to load volunteer data', 'error')
@@ -47,7 +47,7 @@ export default function Dashboard() {
       localStorage.setItem('aapdasetu_volunteer_session', matched.id)
       toast(`Active session switched to: ${matched.name}`)
       // Reload tasks for this volunteer
-      listReports({ status: 'in_progress' }).then((reports) => {
+      listReports({ status: 'in_progress' }).then(({ items: reports }) => {
         setActiveTasks(reports.filter((r) => r.assignedVolunteerId === matched.id))
       })
     }

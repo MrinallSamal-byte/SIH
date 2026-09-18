@@ -17,7 +17,8 @@ import {
   RefreshCw
 } from 'lucide-react'
 import LeafletMap, { type MapMarker } from '../../components/map/LeafletMap'
-import { listDamageAssessments, updateDamageAssessmentStatus } from '../../api/endpoints'
+import { updateDamageAssessmentStatus } from '../../api/endpoints'
+import { mocks } from '../../api/mocks'
 import { useToast } from '../../components/common/Toast'
 import { subscribeRealtimeUpdates } from '../../lib/realtimeEventBus'
 import type { DamageAssessmentReport, DamageInfrastructureType } from '../../types'
@@ -29,6 +30,7 @@ const INFRA_ICONS: Record<DamageInfrastructureType, typeof Home> = {
   electrical_power: Zap,
   commercial_public: Building,
   agricultural: Flame,
+  other: Home,
 }
 
 const INFRA_LABELS: Record<DamageInfrastructureType, string> = {
@@ -38,6 +40,7 @@ const INFRA_LABELS: Record<DamageInfrastructureType, string> = {
   electrical_power: 'Power Grid Feeder',
   commercial_public: 'Commercial / Public Wing',
   agricultural: 'Agricultural / Farmland',
+  other: 'Other Infrastructure',
 }
 
 export default function DamageAssessment() {
@@ -50,10 +53,12 @@ export default function DamageAssessment() {
   const [selectedReport, setSelectedReport] = useState<DamageAssessmentReport | null>(null)
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 22.5726, lng: 88.3639 })
 
+  // Demo-store list: the current admin endpoint returns summary rows without
+  // geo/claimant dossiers, which this map-led review UI requires — it migrates
+  // to the server list once the endpoint returns full dossiers.
   const loadData = useCallback(async () => {
     try {
-      const data = await listDamageAssessments()
-      setItems(data)
+      setItems(mocks.listDamageAssessments())
     } catch {
       toast('Failed to load damage assessments', 'error')
     }

@@ -55,7 +55,7 @@ function playCriticalAlarm() {
 }
 
 export default function LiveSOS() {
-  const fetchReports = useCallback(() => listReports({ status: 'pending' }), [])
+  const fetchReports = useCallback(() => listReports({ status: 'pending' }).then((d) => d.items), [])
   const reports = useRealtime<Report[]>(fetchReports, 3000)
   const [audioEnabled, setAudioEnabled] = useState(false)
   const knownRedIdsRef = useRef<Set<string>>(new Set())

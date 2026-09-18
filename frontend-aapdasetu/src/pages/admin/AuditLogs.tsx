@@ -17,7 +17,7 @@ export default function AuditLogs() {
   const [actionFilter, setActionFilter] = useState<string>('all')
 
   useEffect(() => {
-    listAuditLogs().then(setLogs)
+    listAuditLogs().then((d) => setLogs(d.items))
   }, [])
 
   const filtered = useMemo(() => {

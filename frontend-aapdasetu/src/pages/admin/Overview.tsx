@@ -26,7 +26,7 @@ export default function Overview() {
   const fetchKpis = useCallback(() => getOverviewKPIs(), [])
   const kpis = useRealtime<OverviewKPIs>(fetchKpis, 6000)
 
-  const fetchRecentPending = useCallback(() => listReports({ status: 'pending' }), [])
+  const fetchRecentPending = useCallback(() => listReports({ status: 'pending' }).then((d) => d.items), [])
   const pendingReports = useRealtime<Report[]>(fetchRecentPending, 5000)
 
   const handleAcknowledge = async (id: string) => {

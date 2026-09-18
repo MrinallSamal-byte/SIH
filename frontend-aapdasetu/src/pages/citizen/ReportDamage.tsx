@@ -91,28 +91,24 @@ export default function ReportDamage() {
       setVerdict(v)
 
       const saved = await createDamageAssessment({
-        claimantName: ownerName.trim() || undefined,
-        claimantPhone: ownerPhone.trim(),
-        infrastructureType: infraType,
-        propertyAddress: address.trim() || 'Sector On-Record',
-        district,
+        photoDataUrl: photo,
         latitude: coords?.lat ?? 22.5726,
         longitude: coords?.lng ?? 88.3639,
-        photoUrl: photo,
-        structuralDamage: v.damageGrade === 'DESTROYED' || v.damageGrade === 'MAJOR',
-        estimatedLossInr: v.compensationInr,
-        damageGrade: v.damageGrade,
-        damageScore: v.damageScore,
-        confidence: v.confidence,
+        reporterName: ownerName.trim() || undefined,
+        reporterPhone: ownerPhone.trim(),
+        district,
+        propertyAddress: address.trim() || 'Sector On-Record',
+        description: description.trim() || undefined,
+        infraType,
       })
 
-      setClaimId(saved.claimId)
+      setClaimId(saved.id)
       toast(t('damage.claimCreated'), 'success')
 
       try {
         const stored = JSON.parse(localStorage.getItem('aapdasetu_damage_claims') || '[]') as string[]
-        if (!stored.includes(saved.claimId)) {
-          localStorage.setItem('aapdasetu_damage_claims', JSON.stringify([saved.claimId, ...stored]))
+        if (!stored.includes(saved.id)) {
+          localStorage.setItem('aapdasetu_damage_claims', JSON.stringify([saved.id, ...stored]))
         }
       } catch {
         // Storage unavailable
