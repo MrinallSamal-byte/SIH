@@ -59,8 +59,8 @@ export default function AdminLayout() {
 
   return (
     <div className="flex min-h-screen bg-slate-100 dark:bg-slate-950">
-      {/* Admin Sidebar */}
-      <aside className="flex w-64 flex-col border-r border-slate-800 bg-zinc-800 text-slate-100">
+      {/* Admin Sidebar — desktop only; mobile gets the top bar below */}
+      <aside className="hidden w-64 flex-col border-r border-slate-800 bg-zinc-800 text-slate-100 md:flex">
         {/* Brand Header */}
         <div className="flex items-center gap-3 border-b border-slate-800 px-5 py-4">
           <AapdaSetuLogo size={32} />
@@ -123,12 +123,57 @@ export default function AdminLayout() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        {/* Mobile command bar — horizontal scroll nav, sidebar is desktop-only */}
+        <div className="sticky top-0 z-30 border-b border-slate-800 bg-zinc-800 text-slate-100 md:hidden">
+          <div className="flex items-center justify-between gap-2 px-4 py-2.5">
+            <div className="flex items-center gap-2">
+              <AapdaSetuLogo size={26} />
+              <span className="text-xs font-bold tracking-tight text-white">AapdaSetu Command</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Link
+                to="/"
+                className="rounded-lg border border-slate-700 px-2.5 py-1.5 text-[11px] font-medium text-slate-300"
+              >
+                Public App
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="rounded-lg border border-red-900/40 bg-red-950/40 px-2.5 py-1.5 text-[11px] font-semibold text-red-300 cursor-pointer"
+              >
+                Exit
+              </button>
+            </div>
+          </div>
+          <nav className="flex gap-1 overflow-x-auto px-3 pb-2.5" aria-label="Command views">
+            {adminViews.map((v) => {
+              const Icon = v.icon
+              return (
+                <NavLink
+                  key={v.to}
+                  to={v.to}
+                  end={v.end}
+                  className={({ isActive }) =>
+                    `flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${
+                      isActive
+                        ? 'bg-slate-100 text-slate-950 font-bold'
+                        : 'text-slate-400 hover:bg-zinc-700 hover:text-slate-200'
+                    }`
+                  }
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0" />
+                  <span className="whitespace-nowrap">{v.label}</span>
+                </NavLink>
+              )
+            })}
+          </nav>
+        </div>
         {demo && (
           <div className="bg-amber-400 px-4 py-1 text-center text-xs font-semibold text-slate-950">
             Field Simulation Active (Mock Fallback Enabled)
           </div>
         )}
-        <main className="flex-1 p-6 md:p-8">
+        <main className="flex-1 p-4 md:p-8">
           <Outlet />
         </main>
       </div>

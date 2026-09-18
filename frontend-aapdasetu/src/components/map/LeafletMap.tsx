@@ -229,10 +229,10 @@ export default function LeafletMap({
         <button
           type="button"
           onClick={() => setShowLayerMenu((o) => !o)}
-          className="flex items-center gap-1.5 rounded-xl border border-slate-300/80 bg-white/95 px-3 py-1.5 text-xs font-bold text-slate-800 shadow-md backdrop-blur-md transition hover:bg-white dark:border-white/[0.1] dark:bg-slate-900/95 dark:text-slate-100 cursor-pointer"
+          className="flex items-center gap-1.5 rounded-xl border border-slate-300/80 bg-white/95 px-3 py-1.5 text-xs font-bold text-slate-800 shadow-md backdrop-blur-md transition hover:bg-white dark:border-white/[0.1] dark:bg-slate-900/95 dark:text-white cursor-pointer"
           title="Change Map View"
         >
-          <Layers className="h-3.5 w-3.5 text-slate-900 dark:text-slate-100" />
+          <Layers className="h-3.5 w-3.5 text-slate-900 dark:text-white" />
           <span>{currentLayer.name} View</span>
         </button>
 
@@ -244,7 +244,7 @@ export default function LeafletMap({
               className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
                 layerMode === 'satellite'
                   ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                  : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                  : 'text-slate-700 hover:bg-slate-100 dark:text-white dark:hover:bg-slate-800'
               }`}
             >
               <Globe className="h-3.5 w-3.5" />
@@ -257,7 +257,7 @@ export default function LeafletMap({
               className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
                 layerMode === 'terrain'
                   ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                  : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                  : 'text-slate-700 hover:bg-slate-100 dark:text-white dark:hover:bg-slate-800'
               }`}
             >
               <Mountain className="h-3.5 w-3.5" />
@@ -270,7 +270,7 @@ export default function LeafletMap({
               className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
                 layerMode === 'streets'
                   ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                  : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                  : 'text-slate-700 hover:bg-slate-100 dark:text-white dark:hover:bg-slate-800'
               }`}
             >
               <MapIcon className="h-3.5 w-3.5" />
@@ -283,7 +283,7 @@ export default function LeafletMap({
               className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition cursor-pointer ${
                 layerMode === 'dark'
                   ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                  : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                  : 'text-slate-700 hover:bg-slate-100 dark:text-white dark:hover:bg-slate-800'
               }`}
             >
               <Moon className="h-3.5 w-3.5" />

@@ -5,7 +5,9 @@ import {
   createVolunteer,
   updateVolunteer,
   updateVolunteerStatus,
+  setVolunteerVerification,
 } from '../services/volunteers.service.js';
+import { rotatePersonalCode } from '../services/volunteer-auth.service.js';
 import {
   listShelters,
   getShelter,
@@ -36,6 +38,20 @@ export async function adminUpdateVolunteerStatusHandler(req: Request, res: Respo
   const { id } = (req as Request & { validatedParams: { id: string } }).validatedParams;
   const volunteer = await updateVolunteerStatus({ id, adminEmail: req.admin!.email, ...req.body });
   res.json({ success: true, data: volunteer });
+}
+
+export async function adminVerifyVolunteerHandler(req: Request, res: Response): Promise<void> {
+  const { id } = (req as Request & { validatedParams: { id: string } }).validatedParams;
+  const volunteer = await setVolunteerVerification({ id, adminEmail: req.admin!.email, ...req.body });
+  res.json({ success: true, data: volunteer });
+}
+
+export async function adminInviteVolunteerCodeHandler(req: Request, res: Response): Promise<void> {
+  const { id } = (req as Request & { validatedParams: { id: string } }).validatedParams;
+  // The plaintext code is returned exactly once — the admin hands it to the
+  // volunteer out-of-band (call/SMS). It is never stored or logged.
+  const result = await rotatePersonalCode({ id, adminEmail: req.admin!.email });
+  res.status(201).json({ success: true, data: result });
 }
 
 export async function adminListSheltersHandler(req: Request, res: Response): Promise<void> {

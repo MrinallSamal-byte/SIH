@@ -10,19 +10,28 @@ import {
   Phone,
   ArrowRight,
   MessageSquare,
-  Edit3
+  Edit3,
 } from 'lucide-react'
-import { createReport } from '../../api/endpoints'
+import { createReport, requestOtp, verifyOtp } from '../../api/endpoints'
 import { aiTriage } from '../../api/ai'
-import PriorityBadge from '../../components/common/PriorityBadge'
+import { apiHealth } from '../../api/client'
+import { enqueueOutbox, getOutbox, hasQueuedClientRequest, initGlobalOutboxSync, subscribeOutbox } from '../../lib/outbox'
 import { Field, Input } from '../../components/common/Input'
 import Modal from '../../components/common/Modal'
 import LandmarkPicker from '../../components/map/LandmarkPicker'
 import { useToast } from '../../components/common/Toast'
 import { useLanguage } from '../../lib/i18n'
-import { getCurrentPosition, generateEmergencySms } from '../../lib/helpers'
+import { getHighPrecisionPosition, generateEmergencySms, searchPlaces } from '../../lib/helpers'
 import { useGeoLocation } from '../../hooks/useLocation'
-import type { Report, ReportInput, GeoPoint } from '../../types'
+import type { IncidentType, Report, ReportInput, GeoPoint } from '../../types'
+
+const emergencyTypes: { type: IncidentType; labelKey: string }[] = [
+  { type: 'other', labelKey: 'sos.typeGeneral' },
+  { type: 'flood', labelKey: 'sos.typeFlood' },
+  { type: 'medical', labelKey: 'sos.typeMedical' },
+  { type: 'fire', labelKey: 'sos.typeFire' },
+  { type: 'earthquake', labelKey: 'sos.typeEarthquake' },
+]
 
 export default function SOS() {
   const { t } = useLanguage()
@@ -31,27 +40,55 @@ export default function SOS() {
   const {
     coords,
     address,
-    setAddress,
     setManualLocation,
     status: geoStatus,
     accuracy,
-    refresh: refreshLocation,
+    locateHighAccuracy,
     source,
-  } = useGeoLocation()
+    cachedAt,
+  } = useGeoLocation() as ReturnType<typeof useGeoLocation> & { isFallback: boolean }
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [landmark, setLandmark] = useState('')
-
+  // Category selector removed — SOS always dispatches as General Emergency.
+  const selectedType: IncidentType = 'other'
   const [phoneError, setPhoneError] = useState<string | null>(null)
+  // Optional OTP challenge for the callback number. Never blocks SOS:
+  // an unverified SOS is still dispatched, just marked unverified.
+  const [otpToken, setOtpToken] = useState<string | null>(null)
+  const [otpVerifiedPhone, setOtpVerifiedPhone] = useState<string | null>(null)
+  const [otpRequestId, setOtpRequestId] = useState<string | null>(null)
+  const [otpDemoCode, setOtpDemoCode] = useState<string | null>(null)
+  const [otpCode, setOtpCode] = useState('')
+  const [otpStatus, setOtpStatus] = useState<'idle' | 'sending' | 'sent' | 'verifying' | 'verified'>('idle')
+  const [otpError, setOtpError] = useState<string | null>(null)
   const [triggering, setTriggering] = useState(false)
+  const [rescanning, setRescanning] = useState(false)
   const [result, setResult] = useState<Report | null>(null)
   const [copied, setCopied] = useState(false)
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
+  // Live count of SOS submissions parked in the global outbox — the queued
+  // banner reflects the REAL queue (updates on enqueue, replay and drop).
+  const [queuedSosCount, setQueuedSosCount] = useState(
+    () => getOutbox().filter((item) => item.kind === 'sos').length,
+  )
   const [showLocationModal, setShowLocationModal] = useState(false)
   const [editAddressText, setEditAddressText] = useState('')
   const [editPoint, setEditPoint] = useState<GeoPoint | null>(null)
+  const [geocodingAddress, setGeocodingAddress] = useState(false)
   const phoneInputRef = useRef<HTMLInputElement>(null)
+  // Belt-and-braces against double-click double-submits: state `triggering`
+  // only applies after re-render; the ref blocks synchronously.
+  const busyRef = useRef(false)
+  const editAddressInitRef = useRef('')
+  const editPointChosenRef = useRef(false)
+
+  useEffect(() => {
+    const syncQueuedCount = () => setQueuedSosCount(getOutbox().filter((item) => item.kind === 'sos').length)
+    syncQueuedCount()
+    return subscribeOutbox(syncQueuedCount)
+  }, [])
 
   // Clear phone error when user types
   useEffect(() => {
@@ -60,112 +97,170 @@ export default function SOS() {
     }
   }, [phone, phoneError])
 
-  // Track online/offline status
+  // Track online/offline status for the banner + arm the global outbox sync.
+  // Flushing is owned by initGlobalOutboxSync (app-wide, idempotent) — it also
+  // replays any SOS/report queued from previous sessions on mount/reconnect.
   useEffect(() => {
-    const handleOnline = () => {
-      setIsOffline(false)
-      // Check for pending offline SOS
-      try {
-        const pending = localStorage.getItem('aapdasetu_pending_sos')
-        if (pending) {
-          const parsed = JSON.parse(pending) as ReportInput
-          createReport(parsed)
-            .then(() => {
-              localStorage.removeItem('aapdasetu_pending_sos')
-              toast('Pending offline SOS synced successfully!', 'success')
-            })
-            .catch(() => {
-              // Retry on next online cycle
-            })
-        }
-      } catch {
-        // Storage access error
-      }
-    }
+    const cleanupOutbox = initGlobalOutboxSync()
+    const handleOnline = () => setIsOffline(false)
     const handleOffline = () => setIsOffline(true)
 
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
     return () => {
+      cleanupOutbox()
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
     }
-  }, [toast])
+  }, [])
 
   const validatePhone = (raw: string): boolean => {
     const clean = raw.replace(/\D/g, '')
     return clean.length >= 10 && clean.length <= 15
   }
 
+  const handleRescanGps = async () => {
+    setRescanning(true)
+    toast(t('sos.scanningGps'), 'info')
+    try {
+      const c = await locateHighAccuracy()
+      if (c) {
+        toast(`${t('report.gpsLockedToast')} (±${Math.round(c.accuracy ?? 5)}m)`, 'success')
+      } else {
+        toast(t('sos.gpsWeakToast'), 'info')
+      }
+    } catch {
+      toast(t('sos.gpsFailToast'), 'error')
+    } finally {
+      setRescanning(false)
+    }
+  }
+
   const trigger = async () => {
     if (!phone.trim()) {
       setPhoneError(t('sos.phoneRequiredError'))
       phoneInputRef.current?.focus()
-      toast('Mobile number is required for emergency dispatch', 'error')
+      toast(t('sos.errPhoneRequired'), 'error')
       return
     }
 
     if (!validatePhone(phone.trim())) {
-      setPhoneError('Please enter a valid 10-digit mobile number.')
+      setPhoneError(t('sos.errPhoneInvalid'))
       phoneInputRef.current?.focus()
-      toast('Invalid mobile number format', 'error')
+      toast(t('sos.errPhoneFormat'), 'error')
       return
     }
 
     setPhoneError(null)
+    if (busyRef.current) return // double-click guard (synchronous, pre-render)
+    busyRef.current = true
     setTriggering(true)
+    let pendingInput: ReportInput | null = null
 
     try {
-      const typeLabel = 'General Emergency'
+      const foundType = emergencyTypes.find((e) => e.type === selectedType)
+      const typeLabel = foundType ? t(foundType.labelKey) : t('sos.typeFallback')
 
-      // Resilient GPS coordinates retrieval with fallback
-      let lat = coords?.latitude
-      let lng = coords?.longitude
+      // coords is never null (hook seeds a hardcoded fallback), so gate on provenance:
+      // only trust gps/manual fixes — and cached fixes only while they are
+      // fresh. Coordinates from a previous session/city must never become a
+      // dispatch location, so anything untrusted falls through to a fresh
+      // high-accuracy fix or the manual location modal.
+      const CACHED_FIX_MAX_AGE_MS = 30 * 60 * 1000
+      const cachedFixIsFresh =
+        source === 'cached' && typeof cachedAt === 'number' && Date.now() - cachedAt < CACHED_FIX_MAX_AGE_MS
+      const hasTrustedFix = source === 'gps' || source === 'manual' || cachedFixIsFresh
+      let lat = hasTrustedFix ? coords?.latitude : undefined
+      let lng = hasTrustedFix ? coords?.longitude : undefined
 
       if (lat === undefined || lng === undefined) {
         try {
-          const pos = await getCurrentPosition(false, 3500)
+          const pos = await getHighPrecisionPosition()
           lat = pos.coords.latitude
           lng = pos.coords.longitude
         } catch {
-          lat = 22.5726
-          lng = 88.3639
+          toast(t('sos.pickLocationToast'), 'error')
+          setShowLocationModal(true)
+          setTriggering(false)
+          return
         }
       }
+      if (lat === undefined || lng === undefined) {
+        toast(t('sos.pickLocationToast'), 'error')
+        setShowLocationModal(true)
+        setTriggering(false)
+        return
+      }
 
-      const fullLandmark = [address, landmark.trim()].filter(Boolean).join(' | ') || undefined
+      const fullLandmark =
+        [address, landmark.trim()].filter(Boolean).join(' | ').slice(0, 500) || undefined
+
+      // One stable idempotency key per logical submission: it rides on the
+      // direct POST and on any outbox replay, so a timeout-then-retry can
+      // never produce two rescue dispatches for the same tap.
+      let clientRequestId: string
+      try {
+        clientRequestId = crypto.randomUUID()
+      } catch {
+        clientRequestId = `sos-${Date.now()}-${Math.random().toString(36).slice(2)}`
+      }
 
       const input: ReportInput = {
-        type: 'other',
-        description: `1-Tap SOS distress trigger: ${typeLabel}`,
+        type: selectedType,
+        description: `${t('sos.autoDescription')}: ${typeLabel}`,
         isOneTapSos: true,
         reporterName: name.trim() || undefined,
         reporterPhone: phone.trim(),
         location: { lat, lng },
         landmark: fullLandmark,
+        clientRequestId,
+        clientCreatedAt: new Date().toISOString(),
+        // Attach only when the number shown was the verified one — a token
+        // minted for a different number must never ride along.
+        phoneOtpToken:
+          otpToken && otpVerifiedPhone === phone.replace(/\D/g, '').slice(-10) ? otpToken : undefined,
       }
+      pendingInput = input
 
-      // Offline handling
       if (!navigator.onLine) {
-        localStorage.setItem('aapdasetu_pending_sos', JSON.stringify(input))
-        toast('Offline: SOS queued! Will dispatch as soon as network reconnects.', 'error')
+        // Queue for background sync on reconnect
+        if (!hasQueuedClientRequest(clientRequestId)) enqueueOutbox('sos', input)
       }
 
-      // AI urgency triage
-      const triage = await aiTriage(input)
+      // Dispatch emergency SOS (persists to central backend or local emergency database)
       const report = await createReport({ ...input, description: input.description })
-      const finalReport = report.priorityLabel
-        ? report
-        : { ...report, priorityScore: triage.score, priorityLabel: triage.label }
+      // Backend-down while online: createReport mock-succeeds, so ensure the
+      // submission is still queued for server sync (offline case already queued).
+      if (apiHealth.lastWasMock && navigator.onLine && !hasQueuedClientRequest(clientRequestId)) {
+        enqueueOutbox('sos', input)
+      }
+      setResult(report)
+      navigator.vibrate?.([200, 100, 200])
 
-      setResult(finalReport)
+      // Near-duplicate clustering: the backend merged this tap into an
+      // identical SOS from the last minutes instead of double-dispatching.
+      if ((report as unknown as { duplicate?: boolean }).duplicate) {
+        toast(t('sos.duplicateMerged', 'This SOS matches one you already sent — rescue is already on it.'), 'info')
+      }
+
+      void aiTriage(input)
+        .then((triage) => {
+          if (report.priorityLabel) return
+          // Fire-and-forget priority hint: updates the local result view only.
+          setResult((prev) =>
+            prev && prev.trackingId === report.trackingId
+              ? { ...prev, priorityScore: triage.score, priorityLabel: triage.label }
+              : prev,
+          )
+        })
+        .catch(() => {})
 
       // Save to localStorage for quick tracking
       try {
-        localStorage.setItem('aapdasetu_last_sos', JSON.stringify(finalReport))
+        localStorage.setItem('aapdasetu_last_sos', JSON.stringify(report))
         const existingTracked = JSON.parse(localStorage.getItem('aapdasetu_tracked_reports') || '[]') as string[]
-        if (!existingTracked.includes(finalReport.trackingId)) {
-          localStorage.setItem('aapdasetu_tracked_reports', JSON.stringify([finalReport.trackingId, ...existingTracked]))
+        if (!existingTracked.includes(report.trackingId)) {
+          localStorage.setItem('aapdasetu_tracked_reports', JSON.stringify([report.trackingId, ...existingTracked]))
         }
       } catch {
         // Storage unavailable
@@ -173,23 +268,85 @@ export default function SOS() {
 
       toast(t('sos.sent'))
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Failed to send SOS', 'error')
+      if (pendingInput?.clientRequestId && !hasQueuedClientRequest(pendingInput.clientRequestId)) {
+        enqueueOutbox('sos', pendingInput)
+      }
+      toast(err instanceof Error && err.message ? err.message : t('common.submissionFailed'), 'error')
     } finally {
+      busyRef.current = false
       setTriggering(false)
     }
+  }
+
+  const handleRequestOtp = async () => {
+    if (!validatePhone(phone.trim())) {
+      setPhoneError(t('sos.errPhoneFormat'))
+      phoneInputRef.current?.focus()
+      return
+    }
+    setOtpError(null)
+    setOtpStatus('sending')
+    try {
+      const res = await requestOtp(phone.trim())
+      setOtpRequestId(res.requestId)
+      setOtpDemoCode(res.demoCode ?? null)
+      setOtpCode('')
+      setOtpStatus('sent')
+      toast(
+        res.demoCode
+          ? t('sos.otpDemoSent', 'Demo code generated — enter it below. No SMS was sent.')
+          : t('sos.otpSent', 'Verification code sent by SMS.'),
+        'info',
+      )
+    } catch (err) {
+      setOtpStatus('idle')
+      setOtpError(err instanceof Error ? err.message : t('sos.otpFailed', 'Could not send the code. SOS still works without it.'))
+    }
+  }
+
+  const handleVerifyOtp = async () => {
+    if (!otpRequestId || otpCode.replace(/\D/g, '').length !== 6) {
+      setOtpError(t('sos.otpEnter6', 'Enter the 6-digit code.'))
+      return
+    }
+    setOtpError(null)
+    setOtpStatus('verifying')
+    try {
+      const res = await verifyOtp(otpRequestId, phone.trim(), otpCode)
+      setOtpToken(res.verificationToken)
+      setOtpVerifiedPhone(res.phone)
+      setOtpStatus('verified')
+      toast(t('sos.otpVerified', 'Number verified — dispatchers can trust this callback number.'), 'success')
+    } catch {
+      setOtpStatus('sent')
+      setOtpError(t('sos.otpInvalid', 'Wrong code. Check and try again — or send SOS anyway.'))
+    }
+  }
+
+  const resetOtp = () => {
+    setOtpStatus('idle')
+    setOtpToken(null)
+    setOtpVerifiedPhone(null)
+    setOtpRequestId(null)
+    setOtpDemoCode(null)
+    setOtpCode('')
+    setOtpError(null)
   }
 
   const copyTrackingId = (id: string) => {
     navigator.clipboard.writeText(id).then(() => {
       setCopied(true)
-      toast('Tracking ID copied to clipboard')
+      toast(t('common.copiedClipboard'))
       setTimeout(() => setCopied(false), 3000)
     })
   }
 
   const emergencySmsLink = generateEmergencySms({
-    lat: coords?.latitude,
-    lng: coords?.longitude,
+    // Include coordinates for trusted fixes (gps/manual/cached); exclude only
+    // IP-derived or fabricated-default positions. isFallback === source !== 'gps',
+    // so manual pins were previously stripped from the SMS.
+    lat: source === 'ip' || source === 'default' ? undefined : coords?.latitude,
+    lng: source === 'ip' || source === 'default' ? undefined : coords?.longitude,
     name: name.trim() || undefined,
     type: 'other',
     phone: phone.trim() || undefined,
@@ -198,68 +355,53 @@ export default function SOS() {
   })
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:py-10">
+    <div className="mx-auto w-full max-w-3xl sm:py-4">
         <div className="flex flex-col items-center text-center">
           {/* Header */}
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200/80 bg-red-50 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300 shadow-xs mono">
+            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200/80 bg-red-50 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300 shadow-sm mono">
               <span className="h-2 w-2 rounded-full bg-red-600 animate-ping" />
               {t('sos.channelBadge')}
             </div>
 
-            <h1 className="mt-4 text-2xl font-bold tracking-tight text-zinc-800 dark:text-slate-300 sm:text-4xl lg:text-5xl">
+            <h1 className="mt-4 text-2xl font-bold tracking-tight text-zinc-800 dark:text-white sm:text-4xl lg:text-5xl">
               {t('sos.title')}
             </h1>
-            <p className="mt-2 max-w-lg text-sm text-zinc-500 dark:text-slate-400">
+            <p className="mt-2 max-w-lg text-sm text-zinc-500 dark:text-white">
               {t('sos.subtitle')}
             </p>
           </div>
 
           {/* Location Card */}
-          <div className="mt-6 w-full max-w-3xl rounded-2xl border border-zinc-200/80 bg-white p-4 text-left shadow-xs transition-all dark:border-white/[0.08] dark:bg-[#1a1a1a]">
-            <div className="flex items-start justify-between gap-3">
+          <div className="mt-6 w-full max-w-3xl rounded-2xl border border-zinc-200 bg-white p-4 text-left shadow-2xs transition-all dark:border-zinc-800 dark:bg-[#2d2d2d]">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
               <div className="flex items-start gap-3 min-w-0 flex-1">
-                <div
-                  className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-                    source === 'gps'
-                      ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400'
-                      : source === 'manual'
-                      ? 'bg-blue-100 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400'
-                      : 'bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400'
-                  }`}
-                >
+                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-700 dark:bg-[#2d2d2d] dark:text-white">
                   <MapPin className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
-                      Rescue Dispatch Location
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-white mono">
+                      {t('sos.dispatchLocationLabel')}
                     </span>
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                        source === 'gps'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                          : source === 'manual'
-                          ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800'
-                          : 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
-                      }`}
-                    >
+                    <span className="inline-flex items-center gap-1.5 rounded-md border border-zinc-200 bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold mono text-zinc-800 dark:border-zinc-700 dark:bg-[#2d2d2d] dark:text-white">
+                      <span className={`h-1.5 w-1.5 rounded-full ${source === 'gps' ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-400'}`} />
                       {source === 'gps'
-                        ? 'Live GPS Locked'
+                        ? t('sos.gpsLive')
                         : source === 'manual'
-                        ? 'Manually Verified'
+                        ? t('sos.manuallyVerified')
                         : source === 'cached'
-                        ? 'Cached GPS'
-                        : 'Estimated Area'}
+                        ? t('sos.cachedGps')
+                        : t('sos.estimatedArea')}
                       {accuracy !== null && accuracy < 5000 && ` (±${Math.round(accuracy)}m)`}
                     </span>
                   </div>
 
-                  <div className="mt-1 font-bold text-sm sm:text-base text-zinc-800 dark:text-slate-300 leading-snug break-words">
-                    {address || (geoStatus === 'locating' ? 'Resolving street address...' : 'Bhubaneswar, Odisha, India')}
+                  <div className="mt-1 font-bold text-sm sm:text-base text-zinc-800 dark:text-white leading-snug break-words">
+                    {address || (geoStatus === 'locating' ? t('sos.resolvingAddress') : t('sos.defaultCity'))}
                   </div>
 
-                  <div className="mt-1.5 flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                  <div className="mt-1.5 flex items-center gap-3 text-[11px] text-slate-500 dark:text-white font-mono">
                     {coords && (
                       <span>
                         {coords.latitude.toFixed(4)}°N, {coords.longitude.toFixed(4)}°E
@@ -267,14 +409,12 @@ export default function SOS() {
                     )}
                     <button
                       type="button"
-                      onClick={() => {
-                        refreshLocation()
-                        toast('Re-scanning for precision GPS signal...', 'info')
-                      }}
-                      className="inline-flex items-center gap-1 text-slate-500 hover:text-zinc-800 dark:hover:text-slate-200 cursor-pointer transition font-sans"
+                      onClick={handleRescanGps}
+                      disabled={rescanning}
+                      className="inline-flex items-center gap-1 text-zinc-600 hover:text-zinc-900 dark:text-white dark:hover:text-zinc-200 cursor-pointer transition font-sans font-semibold"
                     >
-                      <RefreshCw className="h-3 w-3" />
-                      <span>Re-scan GPS</span>
+                      <RefreshCw className={`h-3 w-3 ${rescanning ? 'animate-spin' : ''}`} />
+                      <span>{rescanning ? t('sos.acquiring') : t('sos.rescan')}</span>
                     </button>
                   </div>
                 </div>
@@ -283,41 +423,54 @@ export default function SOS() {
               <button
                 type="button"
                 onClick={() => {
-                  setEditAddressText(address || '')
+                  const currentAddr = address || ''
+                  editAddressInitRef.current = currentAddr
+                  editPointChosenRef.current = false
+                  setEditAddressText(currentAddr)
                   setEditPoint(coords ? { lat: coords.latitude, lng: coords.longitude } : null)
                   setShowLocationModal(true)
                 }}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100 hover:border-red-300 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-900/70 cursor-pointer shadow-2xs transition shrink-0"
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-bold text-zinc-700 hover:bg-zinc-50 hover:border-zinc-300 dark:border-zinc-700 dark:bg-[#2d2d2d] dark:text-white dark:hover:bg-zinc-700 cursor-pointer shadow-2xs transition w-full sm:w-auto shrink-0"
               >
                 <Edit3 className="h-3.5 w-3.5" />
-                <span>Correct Area</span>
+                <span>{t('sos.correctArea')}</span>
               </button>
             </div>
           </div>
 
           {isOffline && (
-            <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-400 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300 shadow-xs max-w-3xl w-full">
+            <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-400 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300 shadow-sm max-w-3xl w-full">
               <AlertTriangle className="h-4 w-4 shrink-0" />
               <span>{t('sos.offlineNotice')}</span>
             </div>
           )}
 
+          {queuedSosCount > 0 && (
+            <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-400 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300 shadow-sm max-w-3xl w-full">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>
+                {t('sos.queuedOnDevice', 'Saved on device — will send automatically when you reconnect.')}
+                {queuedSosCount > 1 && ` (${queuedSosCount})`}
+              </span>
+            </div>
+          )}
+
           {!result ? (
             <>
-              {/* Category + Contact form — wider on desktop */}
+              {/* Contact form — wider on desktop */}
               <div className="mt-6 w-full max-w-3xl space-y-5">
                 {/* Rescue Details Card */}
-                <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 text-left shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+                <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 text-left shadow-sm dark:border-white/[0.08] dark:bg-[#2d2d2d]">
                   <div className="mb-3 flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-slate-200 mono">
+                    <span className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-white mono">
                       {t('sos.contactTitle')}
                     </span>
-                    <span className="text-[11px] font-bold text-red-600 dark:text-red-400">* Mobile required for rescue call</span>
+                    <span className="text-[11px] font-bold text-red-600 dark:text-red-400">{t('sos.phoneHint')}</span>
                   </div>
 
                   <div className="space-y-3">
                     <div>
-                      <label className="mb-1 block text-xs font-bold text-zinc-600 dark:text-slate-300">
+                      <label className="mb-1 block text-xs font-bold text-zinc-600 dark:text-white">
                         {t('sos.phone')}
                       </label>
                       <div className="relative">
@@ -326,14 +479,21 @@ export default function SOS() {
                           ref={phoneInputRef}
                           value={phone}
                           onChange={(e) => {
-                            setPhone(e.target.value)
+                            const v = e.target.value
+                            setPhone(v)
                             if (phoneError) setPhoneError(null)
+                            // A code belongs to the number it was sent to —
+                            // any edit restarts verification for the new number.
+                            if (otpStatus === 'sent' || otpStatus === 'verified') {
+                              const digits = v.replace(/\D/g, '').slice(-10)
+                              if (otpStatus === 'sent' || digits !== otpVerifiedPhone) resetOtp()
+                            }
                           }}
                           placeholder={t('sos.phonePlaceholder')}
                           type="tel"
                           autoComplete="tel"
                           required
-                          className={`w-full rounded-xl border pl-10 pr-3.5 py-2.5 text-sm font-mono outline-none transition dark:bg-[#222222] dark:text-slate-300 ${
+                          className={`w-full rounded-xl border pl-10 pr-3.5 py-2.5 text-sm font-mono outline-none transition dark:bg-[#2d2d2d] dark:text-white ${
                             phoneError
                               ? 'border-red-500 bg-red-50 ring-2 ring-red-200 dark:border-red-500 dark:bg-red-950/30 dark:ring-red-900'
                               : 'border-zinc-200 focus:border-red-500 focus:ring-2 focus:ring-red-200 dark:border-white/[0.1]'
@@ -346,6 +506,60 @@ export default function SOS() {
                           <span>{phoneError}</span>
                         </p>
                       )}
+
+                      {/* Optional number verification — never blocks SOS. */}
+                      <div className="mt-2.5 rounded-xl border border-zinc-200 bg-[#f4f4f5] p-3 dark:border-white/[0.08] dark:bg-[#2d2d2d]">
+                        {otpStatus === 'verified' ? (
+                          <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                            <CheckCircle2 className="h-4 w-4 shrink-0" />
+                            <span>{t('sos.otpVerifiedBadge', 'Number verified — dispatchers can call you back with confidence.')}</span>
+                          </div>
+                        ) : otpStatus === 'sent' || otpStatus === 'verifying' ? (
+                          <div className="space-y-2">
+                            <p className="text-xs text-zinc-600 dark:text-white">
+                              {t('sos.otpEnterPrompt', 'Enter the 6-digit code sent to your number:')}
+                              {otpDemoCode && (
+                                <span className="mono ml-1 font-bold text-zinc-900 dark:text-white">
+                                  {t('sos.otpDemoCode', 'Demo code:')} {otpDemoCode}
+                                </span>
+                              )}
+                            </p>
+                            <div className="flex gap-2">
+                              <input
+                                value={otpCode}
+                                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                placeholder="••••••"
+                                inputMode="numeric"
+                                className="mono w-full rounded-xl border border-zinc-200 px-3.5 py-2 text-center text-sm font-bold tracking-[0.3em] outline-none focus:border-emerald-600 dark:border-white/[0.1] dark:bg-[#2d2d2d] dark:text-white"
+                              />
+                              <button
+                                type="button"
+                                onClick={handleVerifyOtp}
+                                disabled={otpStatus === 'verifying'}
+                                className="shrink-0 rounded-xl bg-emerald-700 px-4 py-2 text-xs font-bold text-white transition hover:bg-emerald-800 disabled:opacity-60"
+                              >
+                                {otpStatus === 'verifying' ? t('sos.otpChecking', 'Checking…') : t('sos.otpConfirm', 'Confirm')}
+                              </button>
+                            </div>
+                            {otpError && <p className="text-xs font-semibold text-red-600 dark:text-red-400">{otpError}</p>}
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-xs text-zinc-600 dark:text-white">
+                              {t('sos.otpPitch', 'Verify this number so rescue teams trust callbacks (optional, 30 sec).')}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={handleRequestOtp}
+                              disabled={otpStatus === 'sending'}
+                              className="rounded-xl border border-zinc-300 bg-white px-3 py-1.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-60 dark:border-white/[0.1] dark:bg-[#2d2d2d] dark:text-white"
+                            >
+                              {otpStatus === 'sending' ? t('sos.otpSending', 'Sending…') : t('sos.otpGetCode', 'Get code')}
+                            </button>
+                            {otpError && <p className="w-full text-xs font-semibold text-red-600 dark:text-red-400">{otpError}</p>}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -358,11 +572,11 @@ export default function SOS() {
                         />
                       </Field>
 
-                      <Field label="Floor / Landmark (Optional)">
+                      <Field label={t('sos.floorLabel')}>
                         <Input
                           value={landmark}
                           onChange={(e) => setLandmark(e.target.value)}
-                          placeholder="e.g. 2nd Floor, Room 204"
+                          placeholder={t('sos.floorPlaceholder')}
                         />
                       </Field>
                     </div>
@@ -376,7 +590,7 @@ export default function SOS() {
                   type="button"
                   onClick={trigger}
                   disabled={triggering}
-                  aria-label="Press for Emergency Satellite SOS Dispatch"
+                  aria-label={t('sos.sosAria')}
                   className="
                     relative flex h-14 sm:h-16 w-full
                     flex-row items-center justify-center gap-2 sm:gap-3
@@ -397,77 +611,71 @@ export default function SOS() {
                     <>
                       <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
                       <span className="text-base font-bold uppercase tracking-wide">
-                        Dispatching SOS Signal…
+                        {t('sos.dispatchingSos')}
                       </span>
                     </>
                   ) : (
                     <>
                       <Siren className="h-6 w-6" />
                       <span className="text-sm sm:text-lg font-extrabold uppercase tracking-tight">
-                        Send SOS Distress Signal Now
+                        {t('sos.sendNow')}
                       </span>
                     </>
                   )}
                 </button>
 
-                <p className="mt-3 max-w-lg text-xs text-slate-500 dark:text-slate-400 text-center">
-                  * Tap to alert response units immediately. Your exact GPS coordinates and contact phone will be broadcasted to NDRF/SDRF command.
+                <p className="mt-3 max-w-lg text-xs text-slate-500 dark:text-white text-center">
+                  {t('sos.disclaimer')}
                 </p>
               </div>
 
               {/* Offline Fallback */}
-              <div className="mt-3 w-full max-w-3xl space-y-2 rounded-2xl border border-zinc-200/80 bg-white p-4 text-left shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+              <div className="mt-3 w-full max-w-3xl space-y-2 rounded-2xl border border-zinc-200/80 bg-white p-4 text-left shadow-sm dark:border-white/[0.08] dark:bg-[#2d2d2d]">
                 <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">
-                  OFFLINE FALLBACK OPTIONS
+                  {t('sos.offlineOptionsTitle')}
                 </span>
                 <a
                   href={emergencySmsLink}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-[#f4f4f5] py-2.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-200 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200 shadow-xs cursor-pointer"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-[#f4f4f5] py-2.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-200 dark:border-white/[0.1] dark:bg-[#2d2d2d] dark:text-white shadow-sm cursor-pointer"
                 >
                   <MessageSquare className="h-4 w-4" />
-                  <span>1-Tap Emergency SMS (112 Offline Fallback)</span>
+                  <span>{t('sos.smsLink')}</span>
                 </a>
               </div>
             </>
           ) : (
             /* Result screen */
-            <div className="mt-6 w-full max-w-3xl space-y-5 rounded-2xl border border-red-200 bg-white p-6 text-left shadow-xs dark:border-red-900/50 dark:bg-[#1a1a1a]">
+            <div className="mt-6 w-full max-w-3xl space-y-5 rounded-2xl border border-red-200 bg-white p-6 text-left shadow-sm dark:border-red-900/50 dark:bg-[#2d2d2d]">
               <div className="flex items-center gap-3 rounded-xl bg-red-50 p-4 text-red-800 dark:bg-red-950/50 dark:text-red-300">
                 <CheckCircle2 className="h-6 w-6 shrink-0 text-red-600 dark:text-red-400" />
                 <div>
-                  <h2 className="text-sm font-bold">SOS Distress Signal Broadcasted!</h2>
+                  <h2 className="text-sm font-bold">{t('sos.broadcastTitle')}</h2>
                   <p className="text-xs text-red-700 dark:text-red-400 mt-0.5">
-                    Disaster control room & nearby rescue units have been notified with your phone and GPS location.
+                    {t('sos.broadcastDesc')}
                   </p>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-zinc-200/80 bg-[#f4f4f5] p-4 dark:border-white/[0.08] dark:bg-[#151515]">
-                <div className="flex items-center justify-between">
-                  <div>
+              <div className="rounded-xl border border-zinc-200/80 bg-[#f4f4f5] p-4 dark:border-white/[0.08] dark:bg-[#2d2d2d]">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mono">
-                      YOUR INCIDENT TRACKING ID
+                      {t('sos.trackingIdHeading')}
                     </span>
-                    <div className="mt-1 flex items-center gap-2">
-                      <span className="font-mono text-xl sm:text-2xl font-bold text-zinc-800 dark:text-slate-300">
+                    <div className="mt-1 flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-xl sm:text-2xl font-bold text-zinc-800 dark:text-white break-all">
                         {result.trackingId}
                       </span>
                       <button
                         type="button"
                         onClick={() => copyTrackingId(result.trackingId)}
-                        className="inline-flex items-center gap-1 rounded-md border border-zinc-200 bg-white px-2 py-0.5 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-100 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300"
+                        className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-zinc-800 px-2.5 py-1.5 text-xs font-bold text-white transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white"
                       >
                         <Copy className="h-3 w-3" />
-                        <span>{copied ? 'Copied' : 'Copy'}</span>
+                        <span>{copied ? t('sos.copied') : t('common.copy')}</span>
                       </button>
                     </div>
                   </div>
-                  <PriorityBadge label={result.priorityLabel} />
-                </div>
-
-                <div className="mt-3 flex items-center justify-between border-t border-zinc-200/80 pt-2 text-xs text-zinc-500 dark:border-white/[0.08] dark:text-slate-400">
-                  <span>Urgency Score: <strong>{result.priorityScore}/100</strong></span>
-                  <span>Contact: <strong className="mono">{result.reporterPhone}</strong></span>
                 </div>
               </div>
 
@@ -477,7 +685,7 @@ export default function SOS() {
                   onClick={() => navigate(`/track?id=${encodeURIComponent(result.trackingId)}`)}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-800 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-zinc-700 dark:bg-slate-100 dark:text-zinc-800 dark:hover:bg-white cursor-pointer"
                 >
-                  <span>Track Live Response Status</span>
+                  <span>{t('sos.trackResponse')}</span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
 
@@ -486,7 +694,7 @@ export default function SOS() {
                   onClick={() => navigate('/report-damage')}
                   className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50/80 py-2.5 text-xs font-bold text-red-700 transition hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300 cursor-pointer"
                 >
-                  <span>Facing Broken Home / Pipeline Damage? Upload for AI Relief</span>
+                  <span>{t('sos.damageCta')}</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </button>
 
@@ -497,29 +705,30 @@ export default function SOS() {
                     setPhone('')
                     setName('')
                     setLandmark('')
+                    resetOtp()
                   }}
-                  className="w-full rounded-xl border border-zinc-200/80 bg-white py-2 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 cursor-pointer"
+                  className="w-full rounded-xl border border-zinc-200/80 bg-white py-2 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#2d2d2d] dark:text-white cursor-pointer"
                 >
-                  Trigger Another SOS
+                  {t('sos.anotherSos')}
                 </button>
               </div>
 
               <div className="border-t border-zinc-200/80 pt-4 dark:border-white/[0.08]">
                 <span className="block text-center text-xs font-bold text-slate-400 mono mb-2 uppercase">
-                  Direct Emergency Helplines (Toll-Free)
+                  {t('sos.helplinesTitle')}
                 </span>
-                <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold">
-                  <a href="tel:112" className="rounded-xl bg-[#f4f4f5] p-2.5 text-zinc-700 transition hover:bg-zinc-200 dark:bg-[#222222] dark:text-slate-200">
-                    <div className="text-base font-bold text-red-600 mono">112</div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400">National SOS</div>
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-center text-xs font-bold">
+                  <a href="tel:112" className="rounded-xl bg-[#f4f4f5] p-2 sm:p-2.5 text-zinc-700 transition hover:bg-zinc-200 dark:bg-[#2d2d2d] dark:text-white">
+                    <div className="text-sm sm:text-base font-bold text-red-600 mono">112</div>
+                    <div className="text-[9px] sm:text-[10px] text-slate-500 dark:text-white break-words leading-tight mt-0.5">{t('helpline.nationalSos')}</div>
                   </a>
-                  <a href="tel:108" className="rounded-xl bg-[#f4f4f5] p-2.5 text-zinc-700 transition hover:bg-zinc-200 dark:bg-[#222222] dark:text-slate-200">
-                    <div className="text-base font-bold text-amber-600 mono">108</div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400">Ambulance</div>
+                  <a href="tel:108" className="rounded-xl bg-[#f4f4f5] p-2 sm:p-2.5 text-zinc-700 transition hover:bg-zinc-200 dark:bg-[#2d2d2d] dark:text-white">
+                    <div className="text-sm sm:text-base font-bold text-amber-600 mono">108</div>
+                    <div className="text-[9px] sm:text-[10px] text-slate-500 dark:text-white break-words leading-tight mt-0.5">{t('helpline.ambulance')}</div>
                   </a>
-                  <a href="tel:1070" className="rounded-xl bg-[#f4f4f5] p-2.5 text-zinc-700 transition hover:bg-zinc-200 dark:bg-[#222222] dark:text-slate-200">
-                    <div className="text-base font-bold text-emerald-600 mono">1070</div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400">Disaster Ops</div>
+                  <a href="tel:1070" className="rounded-xl bg-[#f4f4f5] p-2 sm:p-2.5 text-zinc-700 transition hover:bg-zinc-200 dark:bg-[#2d2d2d] dark:text-white">
+                    <div className="text-sm sm:text-base font-bold text-emerald-600 mono">1070</div>
+                    <div className="text-[9px] sm:text-[10px] text-slate-500 dark:text-white break-words leading-tight mt-0.5">{t('helpline.disaster')}</div>
                   </a>
                 </div>
               </div>
@@ -530,40 +739,47 @@ export default function SOS() {
       {/* Location Correction & Map Picker Modal */}
       <Modal
         open={showLocationModal}
-        title="Correct Emergency Location"
+        title={t('sos.modalTitle')}
         onClose={() => setShowLocationModal(false)}
       >
         <div className="space-y-4 text-left">
-          <p className="text-xs text-zinc-500 dark:text-slate-400">
-            Ensure rescue teams reach your exact location. You can type your local neighborhood/address, choose a quick region, or tap the map to place a precise pin.
+          <p className="text-xs text-zinc-500 dark:text-white">
+            {t('sos.modalDesc')}
           </p>
 
           {/* Manual Address Input */}
           <div>
-            <label className="mb-1 block text-xs font-bold text-zinc-600 dark:text-slate-300">
-              Address / Area / Landmark
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-slate-700 dark:text-white">
+                {t('sos.addressLabel')}
+              </label>
+            </div>
             <input
               value={editAddressText}
               onChange={(e) => setEditAddressText(e.target.value)}
-              placeholder="e.g. Nayapalli, Near ISKCON Temple, Bhubaneswar"
-              className="w-full rounded-xl border border-zinc-200 px-3.5 py-2.5 text-xs font-semibold text-zinc-800 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-200 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300"
+              placeholder={t('sos.addressPlaceholder')}
+              className="w-full rounded-xl border border-zinc-200 px-3.5 py-2.5 text-xs font-semibold text-zinc-800 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-200 dark:border-white/[0.1] dark:bg-[#2d2d2d] dark:text-white"
             />
+            <p className="mt-1 text-[11px] text-slate-500 dark:text-white">
+              {t('sos.modalHint')}
+            </p>
           </div>
 
           {/* Quick Regional Presets */}
           <div>
-            <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
-              Quick Region Presets
+            <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-white mono">
+              {t('sos.presetsLabel')}
             </label>
             <div className="flex flex-wrap gap-1.5">
               {[
-                { name: 'Bhubaneswar', lat: 20.2961, lng: 85.8245, addr: 'Bhubaneswar, Khordha, Odisha' },
-                { name: 'Cuttack', lat: 20.4625, lng: 85.8828, addr: 'Cuttack, Odisha' },
-                { name: 'Puri', lat: 19.8135, lng: 85.8312, addr: 'Puri Beach Road, Odisha' },
-                { name: 'Kolkata (Salt Lake)', lat: 22.5726, lng: 88.3639, addr: 'Sector V, Salt Lake, Kolkata' },
-                { name: 'Howrah', lat: 22.5958, lng: 88.2636, addr: 'Howrah Station Area, West Bengal' },
-                { name: 'Sundarbans Coastal', lat: 21.9497, lng: 88.8997, addr: 'Sundarbans Coastal Delta, West Bengal' },
+                { name: 'Guwahati (Paltan Bazar)', lat: 26.1820, lng: 91.7500, addr: 'Paltan Bazar, Guwahati, Kamrup Metro, Assam - 781008' },
+                { name: 'Guwahati (Dispur)', lat: 26.1420, lng: 91.7880, addr: 'Dispur Capital Complex, Guwahati, Assam - 781006' },
+                { name: 'Silchar (Cachar)', lat: 24.8333, lng: 92.7789, addr: 'Tarapur Ghat Road, Silchar, Cachar, Assam - 788003' },
+                { name: 'Dibrugarh (AMC)', lat: 27.4728, lng: 94.9120, addr: 'Boiragimoth / AMC Hospital, Dibrugarh, Assam - 786004' },
+                { name: 'Jorhat (AT Road)', lat: 26.7509, lng: 94.2037, addr: 'AT Road, Baruah Chariali, Jorhat, Assam - 785001' },
+                { name: 'Tezpur (Sonitpur)', lat: 26.6338, lng: 92.8000, addr: 'Mission Chariali, Tezpur, Sonitpur, Assam - 784001' },
+                { name: 'Nagaon (Haibargaon)', lat: 26.3489, lng: 92.6800, addr: 'Haibargaon, Nagaon, Assam - 782002' },
+                { name: 'Majuli (Garamur Satra)', lat: 27.0285, lng: 94.2055, addr: 'Garamur Satra Island Zone, Majuli, Assam - 785104' },
               ].map((preset) => (
                 <button
                   key={preset.name}
@@ -572,7 +788,7 @@ export default function SOS() {
                     setEditPoint({ lat: preset.lat, lng: preset.lng })
                     setEditAddressText(preset.addr)
                   }}
-                  className="rounded-lg border border-zinc-200/80 bg-[#f4f4f5] px-2.5 py-1 text-[11px] font-medium text-zinc-600 hover:border-slate-400 hover:bg-white dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300 dark:hover:bg-slate-700 cursor-pointer transition"
+                  className="rounded-lg border border-zinc-200/80 bg-[#f4f4f5] px-2.5 py-1 text-[11px] font-medium text-zinc-600 hover:border-slate-400 hover:bg-white dark:border-white/[0.1] dark:bg-[#2d2d2d] dark:text-white dark:hover:bg-slate-700 cursor-pointer transition"
                 >
                   {preset.name}
                 </button>
@@ -582,8 +798,8 @@ export default function SOS() {
 
           {/* Interactive Map Picker */}
           <div>
-            <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
-              Tap Map to Reposition Pin
+            <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-white mono">
+              {t('sos.mapLabel')}
             </label>
             <div className="overflow-hidden rounded-xl border border-zinc-200/80 dark:border-white/[0.1]">
               <LandmarkPicker
@@ -594,8 +810,11 @@ export default function SOS() {
                     : { lat: 20.2706, lng: 85.8334 })
                 }
                 onChange={(p, addr) => {
+                  editPointChosenRef.current = true
                   setEditPoint(p)
-                  if (addr) setEditAddressText(addr)
+                  if (addr) {
+                    setEditAddressText(addr)
+                  }
                 }}
                 height="220px"
               />
@@ -607,24 +826,49 @@ export default function SOS() {
             <button
               type="button"
               onClick={() => setShowLocationModal(false)}
-              className="rounded-xl border border-zinc-200/80 px-4 py-2 text-xs font-semibold text-zinc-500 hover:bg-zinc-100 dark:border-white/[0.1] dark:text-slate-300 dark:hover:bg-[#252525] cursor-pointer"
+              className="rounded-xl border border-zinc-200/80 px-4 py-2 text-xs font-semibold text-zinc-500 hover:bg-zinc-100 dark:border-white/[0.1] dark:text-white dark:hover:bg-[#252525] cursor-pointer"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="button"
-              onClick={() => {
-                if (editPoint) {
-                  setManualLocation(editPoint, editAddressText.trim() || undefined)
-                } else if (editAddressText.trim()) {
-                  setAddress(editAddressText.trim())
+              disabled={geocodingAddress}
+              onClick={async () => {
+                const query = editAddressText.trim()
+                const addressChanged = query !== editAddressInitRef.current.trim()
+
+                if (editPoint && (!addressChanged || editPointChosenRef.current)) {
+                  setManualLocation(editPoint, query || undefined)
+                  setShowLocationModal(false)
+                  toast(t('sos.savedToast'), 'success')
+                  return
                 }
-                setShowLocationModal(false)
-                toast('Emergency dispatch location updated successfully!', 'success')
+
+                // Typed address only: resolve it to real coordinates
+                if (!query) {
+                  toast(t('sos.pickLocationToast'), 'error')
+                  return
+                }
+                setGeocodingAddress(true)
+                try {
+                  const results = await searchPlaces(query)
+                  const hit = results[0]
+                  if (!hit) {
+                    toast(t('sos.addressNotFoundToast', 'Could not find that address — please tap the map instead.'), 'error')
+                    return
+                  }
+                  setManualLocation({ lat: hit.lat, lng: hit.lng }, hit.name || query)
+                  setShowLocationModal(false)
+                  toast(t('sos.savedToast'), 'success')
+                } catch {
+                  toast(t('sos.addressNotFoundToast', 'Could not find that address — please tap the map instead.'), 'error')
+                } finally {
+                  setGeocodingAddress(false)
+                }
               }}
-              className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-red-700 cursor-pointer"
+              className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-red-700 cursor-pointer disabled:opacity-60"
             >
-              Save & Apply Location
+              {geocodingAddress ? t('common.loading') : t('sos.saveLocation')}
             </button>
           </div>
         </div>

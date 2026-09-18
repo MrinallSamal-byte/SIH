@@ -27,6 +27,12 @@ async function main() {
   const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@aapdasetu.org';
   const adminPassword = process.env.ADMIN_PASSWORD ?? 'Admin@123';
 
+  // Refuse to install the publicly-known default password into any
+  // production-looking database — it would be a full admin compromise.
+  if (adminPassword === 'Admin@123' && process.env.NODE_ENV === 'production') {
+    throw new Error('Refusing to seed the default ADMIN_PASSWORD in production — set ADMIN_EMAIL/ADMIN_PASSWORD.');
+  }
+
   const existingAdmin = await prisma.adminUser.findUnique({ where: { email: adminEmail } });
   if (!existingAdmin) {
     await prisma.adminUser.create({
@@ -56,11 +62,17 @@ async function main() {
       const sec = DISASTER_SECTORS[i % DISASTER_SECTORS.length];
       volData.push({
         name: `${f} ${l}`,
-        phone: `+91-98765${(10000 + i).toString()}`,
+        // Digits-only last-10 form — the same normalization the volunteer
+        // login applies, otherwise seeded volunteers could never sign in.
+        phone: `98765${(10000 + i).toString()}`,
         skills: skillsList[i % skillsList.length],
         latitude: sec.lat + (Math.sin(i) * 0.02),
         longitude: sec.lng + (Math.cos(i) * 0.02),
         status: (i % 3 === 0 ? 'available' : i % 3 === 1 ? 'on_duty' : 'offline') as VolunteerStatus,
+        // Seed roster is admin-created demo data: grandfather in as verified
+        // so dispatch keeps working (new signups start `pending` by default).
+        verificationStatus: 'verified' as never,
+        trainingCompleted: i % 2 === 0,
       });
     }
 
@@ -140,8 +152,10 @@ async function main() {
       },
     ];
 
-    for (const s of sheltersList) {
-      await prisma.shelter.create({ data: s });
+    for (const [i, s] of sheltersList.entries()) {
+      // Deterministic demo gate codes so reviewers can exercise self
+      // check-in without an admin round-trip (production codes are random).
+      await prisma.shelter.create({ data: { ...s, checkinCode: `DEMO0${i + 1}` } });
     }
     console.log('Seeded shelters');
   }

@@ -248,9 +248,13 @@ class SecurityManager(private val encryptionService: EncryptionService, private 
                 "${packet.timestamp}-$peerID-${packet.type}-${packet.payload.contentHashCode()}"
             }
             else -> {
-                // For other messages, use a truncated payload hash
+                // For other messages, use a truncated payload hash.
+                // The type must be part of the ID: SOS shares the MESSAGE payload
+                // encoding, so without it a MESSAGE and an SOS with the same
+                // timestamp and payload would collide and whichever arrived
+                // first would suppress the other for the whole replay window.
                 val payloadHash = packet.payload.sliceArray(0 until minOf(64, packet.payload.size)).contentHashCode()
-                "${packet.timestamp}-$peerID-$payloadHash"
+                "${packet.timestamp}-$peerID-${packet.type}-$payloadHash"
             }
         }
     }
@@ -267,6 +271,7 @@ class SecurityManager(private val encryptionService: EncryptionService, private 
             if (MessageType.fromValue(packet.type) !in setOf(
                     MessageType.ANNOUNCE,
                     MessageType.MESSAGE,
+                    MessageType.SOS,
                     MessageType.FILE_TRANSFER,
                     MessageType.VOICE_FRAME,
                     MessageType.LEAVE

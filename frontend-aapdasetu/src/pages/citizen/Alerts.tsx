@@ -32,9 +32,9 @@ export default function Alerts() {
         <div>
           <div className="flex items-center gap-2">
             <Radio className="h-5 w-5 text-red-600 animate-pulse" />
-            <h1 className="text-2xl font-bold text-zinc-800 dark:text-slate-300">{t('bulletin.title')}</h1>
+            <h1 className="text-2xl font-bold text-zinc-800 dark:text-white">{t('bulletin.title')}</h1>
           </div>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-xs text-slate-500 dark:text-white">
             Real-time emergency broadcasts from NDMA, SDMA, and National Incident Command.
           </p>
         </div>
@@ -48,7 +48,7 @@ export default function Alerts() {
               className={`rounded-lg px-3 py-1 text-xs font-semibold capitalize transition ${
                 filter === sev
                   ? 'bg-zinc-800 text-white dark:bg-slate-100 dark:text-zinc-800'
-                  : 'text-zinc-500 hover:text-zinc-800 dark:text-slate-400 dark:hover:text-slate-200'
+                  : 'text-zinc-500 hover:text-zinc-800 dark:text-white dark:hover:text-white'
               }`}
             >
               {sev}
@@ -79,7 +79,7 @@ export default function Alerts() {
                 <div className="flex items-center gap-2">
                   <Icon className="h-4.5 w-4.5 text-slate-500" />
                   <Badge value={a.severity} />
-                  <h3 className="text-sm font-bold text-zinc-800 dark:text-slate-300">{a.title}</h3>
+                  <h3 className="text-sm font-bold text-zinc-800 dark:text-white">{a.title}</h3>
                 </div>
                 <div className="flex items-center gap-1 text-xs text-slate-400 mono">
                   <Clock className="h-3.5 w-3.5" />
@@ -87,12 +87,12 @@ export default function Alerts() {
                 </div>
               </div>
 
-              <p className="mt-2.5 text-xs leading-relaxed text-zinc-500 dark:text-slate-300">{a.message}</p>
+              <p className="mt-2.5 text-xs leading-relaxed text-zinc-500 dark:text-white">{a.message}</p>
 
               {a.region && (
-                <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 pt-2.5 dark:border-white/[0.08]">
+                <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-500 dark:text-white border-t border-slate-100 pt-2.5 dark:border-white/[0.08]">
                   <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                  <span className="font-semibold text-zinc-600 dark:text-slate-300">Affected Area: {a.region}</span>
+                  <span className="font-semibold text-zinc-600 dark:text-white">Affected Area: {a.region}</span>
                 </div>
               )}
             </div>

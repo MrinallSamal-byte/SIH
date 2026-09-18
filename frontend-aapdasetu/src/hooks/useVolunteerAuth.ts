@@ -1,33 +1,79 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { VOLUNTEER_AUTH_KEY, clearSnapshots } from '../api/client'
 import { volunteerLogin } from '../api/endpoints'
 import type { VolunteerUser } from '../types'
 
-export const VOLUNTEER_AUTH_KEY = 'aapdasetu_volunteer_auth'
+export { VOLUNTEER_AUTH_KEY }
 export const VOLUNTEER_ID_KEY = 'aapdasetu_volunteer_session'
 
-export function useVolunteerAuth() {
-  const [user, setUser] = useState<VolunteerUser | null>(() => {
-    try {
-      const raw = localStorage.getItem(VOLUNTEER_AUTH_KEY)
-      return raw ? (JSON.parse(raw) as VolunteerUser) : null
-    } catch {
+// Fallback shown only when a thrown value is not an Error (raw backend messages
+// always pass through untouched). Read outside React — mirrors ErrorBoundary's
+// localStorage language pattern (src/lib/i18n.tsx keeps 'aapdasetu_lang' in sync).
+const LOGIN_FAILED_STRINGS = {
+  en: 'Volunteer login failed',
+  hi: 'स्वयंसेवक लॉगिन विफल',
+  bn: 'স্বেচ্ছাসেবী লগইন ব্যর্থ',
+  or: 'ସ୍ୱେଚ୍ଛାସେବୀ ଲଗଇନ୍ ବିଫଳ',
+} as const
+
+function readStoredLanguage(): keyof typeof LOGIN_FAILED_STRINGS {
+  try {
+    const stored = localStorage.getItem('aapdasetu_lang')
+    if (stored === 'hi' || stored === 'bn' || stored === 'or') return stored
+  } catch {
+    // Storage unavailable — fall back to English
+  }
+  return 'en'
+}
+
+function isTokenExpired(token: string | undefined): boolean {
+  if (!token) return true
+  try {
+    const payloadPart = token.split('.')[1]
+    if (!payloadPart) return false
+    const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/')
+    const pad = base64.length % 4
+    const padded = pad ? base64 + '='.repeat(4 - pad) : base64
+    const payload = JSON.parse(atob(padded)) as { exp?: number }
+    if (typeof payload.exp !== 'number') return false
+    return Date.now() / 1000 >= payload.exp
+  } catch {
+    return false
+  }
+}
+
+function readStoredVolunteer(): VolunteerUser | null {
+  try {
+    const raw = localStorage.getItem(VOLUNTEER_AUTH_KEY)
+    if (!raw) return null
+    const session = JSON.parse(raw) as VolunteerUser
+    if (isTokenExpired(session.token)) {
+      localStorage.removeItem(VOLUNTEER_AUTH_KEY)
+      localStorage.removeItem(VOLUNTEER_ID_KEY)
       return null
     }
-  })
+    return session
+  } catch {
+    return null
+  }
+}
+
+export function useVolunteerAuth() {
+  const [user, setUser] = useState<VolunteerUser | null>(() => readStoredVolunteer())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (phone: string, accessCode: string) => {
     setLoading(true)
     setError(null)
     try {
-      const data = await volunteerLogin(email, password)
+      const data = await volunteerLogin(phone, accessCode)
       localStorage.setItem(VOLUNTEER_AUTH_KEY, JSON.stringify(data))
       localStorage.setItem(VOLUNTEER_ID_KEY, data.id)
       setUser(data)
       return data
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Volunteer login failed')
+      setError(err instanceof Error ? err.message : LOGIN_FAILED_STRINGS[readStoredLanguage()])
       throw err
     } finally {
       setLoading(false)
@@ -37,6 +83,7 @@ export function useVolunteerAuth() {
   const logout = useCallback(() => {
     localStorage.removeItem(VOLUNTEER_AUTH_KEY)
     localStorage.removeItem(VOLUNTEER_ID_KEY)
+    clearSnapshots()
     setUser(null)
   }, [])
 
@@ -48,9 +95,9 @@ export function useVolunteerAuth() {
 }
 
 export function useIsVolunteerAuthed(): boolean {
-  const [authed, setAuthed] = useState(() => !!localStorage.getItem(VOLUNTEER_AUTH_KEY))
+  const [authed, setAuthed] = useState(() => readStoredVolunteer() !== null)
   useEffect(() => {
-    const onStorage = () => setAuthed(!!localStorage.getItem(VOLUNTEER_AUTH_KEY))
+    const onStorage = () => setAuthed(readStoredVolunteer() !== null)
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
   }, [])

@@ -4,9 +4,12 @@ import {
   createSosReport,
   createIncidentReport,
   getReportByTrackingId,
+  serializePublicTracking,
 } from '../services/reports.service.js';
-import { createCheckin } from '../services/checkins.service.js';
-import { findNearbyShelters, listShelters } from '../services/shelters.service.js';
+import { createCheckin, searchCheckinsForFamily } from '../services/checkins.service.js';
+import { findNearbyShelters, listShelters, shelterCheckin, shelterCheckout } from '../services/shelters.service.js';
+import { requestOtp, verifyOtp } from '../services/otp.service.js';
+import { savePushSubscription, removePushSubscription } from '../services/push.service.js';
 import { listActiveAlerts } from '../services/alerts.service.js';
 import { getPfaReply, isOpenRouterConfigured } from '../services/pfa.service.js';
 import { assessDamage } from '../services/damage.service.js';
@@ -15,7 +18,11 @@ import { listActiveHazards, computeSafeReroute } from '../services/routes.servic
 import { listMissingPersons, createMissingPerson } from '../services/missing-persons.service.js';
 
 export async function sosHandler(req: Request, res: Response): Promise<void> {
-  const result = await createSosReport(req.body);
+  // The /sos route IS the 1-Tap emergency button — force the triage boost
+  // and provenance server-side so a client that omits or mislabels them can
+  // never land a real SOS in the GREEN queue (the bug that silenced the
+  // command-center siren).
+  const result = await createSosReport({ ...req.body, isOneTapSos: true, source: 'sos' });
   res.status(201).json({ success: true, data: result });
 }
 
@@ -27,12 +34,19 @@ export async function reportHandler(req: Request, res: Response): Promise<void> 
 export async function trackingHandler(req: Request, res: Response): Promise<void> {
   const { trackingId } = (req as Request & { validatedParams: { trackingId: string } }).validatedParams;
   const report = await getReportByTrackingId(trackingId);
-  res.json({ success: true, data: report });
+  // ponytail: public tracking payload only — no relations/PII leak via includeRelations
+  res.json({ success: true, data: serializePublicTracking(report) });
 }
 
 export async function checkinHandler(req: Request, res: Response): Promise<void> {
   const checkin = await createCheckin(req.body);
   res.status(201).json({ success: true, data: checkin });
+}
+
+export async function familyCheckinSearchHandler(req: Request, res: Response): Promise<void> {
+  const { phone } = (req as Request & { validatedQuery: { phone: string } }).validatedQuery;
+  const results = await searchCheckinsForFamily({ phone });
+  res.json({ success: true, data: results });
 }
 
 export async function nearbySheltersHandler(req: Request, res: Response): Promise<void> {
@@ -69,7 +83,10 @@ export async function damageAssessmentHandler(req: Request, res: Response): Prom
 
 export async function missingMatchesHandler(req: Request, res: Response): Promise<void> {
   const { reportId, threshold } = req.body;
-  const matches = await findMissingPersonMatches({ reportId, threshold });
+  // Public path computes scores read-only. It must NOT persist match rows:
+  // an anonymous caller could otherwise poison the admin review queue with
+  // junk pairs that auto-resolve real missing-person reports when confirmed.
+  const matches = await findMissingPersonMatches({ reportId, threshold, persist: false });
   res.json({ success: true, data: matches });
 }
 
@@ -92,4 +109,36 @@ export async function listMissingPersonsHandler(req: Request, res: Response): Pr
 export async function createMissingPersonHandler(req: Request, res: Response): Promise<void> {
   const person = await createMissingPerson(req.body);
   res.status(201).json({ success: true, data: person });
+}
+
+export async function otpRequestHandler(req: Request, res: Response): Promise<void> {
+  const result = await requestOtp(req.body);
+  res.status(201).json({ success: true, data: result });
+}
+
+export async function otpVerifyHandler(req: Request, res: Response): Promise<void> {
+  const result = await verifyOtp(req.body);
+  res.json({ success: true, data: result });
+}
+
+export async function pushSubscribeHandler(req: Request, res: Response): Promise<void> {
+  const sub = await savePushSubscription(req.body);
+  res.status(201).json({ success: true, data: { id: sub.id, endpoint: sub.endpoint } });
+}
+
+export async function pushUnsubscribeHandler(req: Request, res: Response): Promise<void> {
+  const removed = await removePushSubscription(req.body.endpoint);
+  res.json({ success: true, data: { removed } });
+}
+
+export async function shelterCheckinHandler(req: Request, res: Response): Promise<void> {
+  const { id } = (req as Request & { validatedParams: { id: string } }).validatedParams;
+  const shelter = await shelterCheckin({ id, code: req.body.code });
+  res.json({ success: true, data: shelter });
+}
+
+export async function shelterCheckoutHandler(req: Request, res: Response): Promise<void> {
+  const { id } = (req as Request & { validatedParams: { id: string } }).validatedParams;
+  const shelter = await shelterCheckout({ id, code: req.body.code });
+  res.json({ success: true, data: shelter });
 }

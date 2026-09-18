@@ -262,12 +262,12 @@ export default function SafeRoutes() {
   return (
     <div className="mx-auto max-w-6xl">
       <div className="flex items-center gap-2 mb-1">
-        <Compass className="h-6 w-6 text-zinc-800 dark:text-slate-300" />
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-800 dark:text-slate-300">
+        <Compass className="h-6 w-6 text-zinc-800 dark:text-white" />
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-800 dark:text-white">
           {t('routes.title')}
         </h1>
       </div>
-      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+      <p className="mt-1 text-xs text-slate-500 dark:text-white">
         {t('routes.subtitle')}
       </p>
 
@@ -275,16 +275,16 @@ export default function SafeRoutes() {
         <div className="space-y-3 lg:col-span-1">
           <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 text-xs dark:border-white/[0.08] dark:bg-[#1a1a1a] shadow-xs">
             <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mono">{t('routes.origin')}</label>
-            <div className="mt-1 font-medium text-zinc-600 dark:text-slate-200">
+            <div className="mt-1 font-medium text-zinc-600 dark:text-white">
               {coords ? `GPS: ${origin.lat.toFixed(4)}°N, ${origin.lng.toFixed(4)}°E` : 'Regional Center Fallback'}
             </div>
             <button
               type="button"
               onClick={refresh}
               disabled={status === 'locating'}
-              className="mt-2.5 inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200"
+              className="mt-2.5 inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-white"
             >
-              <MapPin className="h-3.5 w-3.5 text-zinc-800 dark:text-slate-300" />
+              <MapPin className="h-3.5 w-3.5 text-zinc-800 dark:text-white" />
               <span>{status === 'locating' ? t('shelter.locating') : coords ? t('shelter.updateLocation') : t('shelter.detectLocation')}</span>
             </button>
 
@@ -295,7 +295,7 @@ export default function SafeRoutes() {
               id="safe-route-dest"
               value={destinationId}
               onChange={(e) => setDestinationId(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-600 outline-none focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300"
+              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-600 outline-none focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#222222] dark:text-white"
             >
               {shelterMarkers.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -329,11 +329,11 @@ export default function SafeRoutes() {
                   {r.safe ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertTriangle className="h-4 w-4 text-amber-600" />}
                   <span>{r.safe ? t('routes.safeDistance') : t('routes.directDistance')}</span>
                 </div>
-                <div className="mt-1 text-zinc-500 dark:text-slate-400 leading-relaxed">{r.hazard}</div>
+                <div className="mt-1 text-zinc-500 dark:text-white leading-relaxed">{r.hazard}</div>
               </div>
               <div className="shrink-0 text-right">
-                <div className="font-bold text-zinc-800 dark:text-slate-300 mono text-sm">{routeLengthKm(r.points).toFixed(1)} km</div>
-                <div className="text-slate-500 dark:text-slate-400">
+                <div className="font-bold text-zinc-800 dark:text-white mono text-sm">{routeLengthKm(r.points).toFixed(1)} km</div>
+                <div className="text-slate-500 dark:text-white">
                   ~{formatEta((routeLengthKm(r.points) / WALK_SPEED_KMPH) * 60)} {t('routes.walkingTime')}
                 </div>
               </div>
@@ -348,7 +348,7 @@ export default function SafeRoutes() {
                 Severity: {f.properties.severity} · ~{f.properties.water_depth_est_meters}m depth
               </div>
               {f.properties.affected_villages && (
-                <div className="mt-1 text-zinc-500 dark:text-slate-400">Villages: {f.properties.affected_villages.join(', ')}</div>
+                <div className="mt-1 text-zinc-500 dark:text-white">Villages: {f.properties.affected_villages.join(', ')}</div>
               )}
             </div>
           ))}
@@ -365,7 +365,7 @@ export default function SafeRoutes() {
               autoFit
             />
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+          <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-slate-500 dark:text-white">
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-0.5 w-5 bg-amber-500" /> {t('routes.directDistance')}
             </span>

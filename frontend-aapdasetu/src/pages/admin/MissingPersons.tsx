@@ -65,17 +65,17 @@ export default function MissingPersons() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <Search className="h-6 w-6 text-slate-900 dark:text-slate-100" />
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            <Search className="h-6 w-6 text-slate-900 dark:text-white" />
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
               Missing Persons Case Management
             </h1>
           </div>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-xs text-slate-500 dark:text-white">
             Investigative case review, photo facial verification, guardian lead contacts, and rescue cross-referencing.
           </p>
         </div>
 
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300 mono">
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-white mono">
           {totalCount} Total Cases
         </span>
       </div>
@@ -84,7 +84,7 @@ export default function MissingPersons() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">Total Cases</div>
-          <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-slate-100">{totalCount}</div>
+          <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-white">{totalCount}</div>
           <div className="text-[11px] text-slate-400">Registered bulletins</div>
         </div>
 
@@ -124,7 +124,7 @@ export default function MissingPersons() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search cases by missing person name, last seen location, clothes, or phone…"
-            className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3.5 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3.5 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
           />
         </div>
 
@@ -137,7 +137,7 @@ export default function MissingPersons() {
               className={`rounded-xl px-3 py-1.5 text-xs font-bold capitalize transition cursor-pointer ${
                 statusFilter === st
                   ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                  : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+                  : 'text-slate-600 hover:bg-slate-100 dark:text-white dark:hover:bg-slate-800'
               }`}
             >
               {st}
@@ -174,8 +174,8 @@ export default function MissingPersons() {
                   )}
 
                   <div>
-                    <div className="font-bold text-base text-slate-900 dark:text-slate-100">{p.name}</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    <div className="font-bold text-base text-slate-900 dark:text-white">{p.name}</div>
+                    <div className="text-xs text-slate-500 dark:text-white mt-0.5">
                       {p.age !== undefined ? `Age ${p.age}` : 'Age unknown'} · <span className="capitalize">{p.gender || 'Not specified'}</span>
                     </div>
                   </div>
@@ -185,20 +185,20 @@ export default function MissingPersons() {
               </div>
 
               {/* Sighting & Description Metadata */}
-              <div className="mt-4 space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
+              <div className="mt-4 space-y-1.5 text-xs text-slate-600 dark:text-white">
                 <div className="flex items-start gap-1.5">
                   <MapPin className="h-3.5 w-3.5 shrink-0 text-red-500 mt-0.5" />
                   <span>Last Seen: <strong>{p.lastSeenLocation || 'Location unspecified'}</strong></span>
                 </div>
                 {p.clothes && (
-                  <div className="text-slate-500 dark:text-slate-400 text-[11px]">
+                  <div className="text-slate-500 dark:text-white text-[11px]">
                     Wearing: <span className="italic">{p.clothes}</span>
                   </div>
                 )}
                 {p.contactPhone && (
                   <div className="flex items-center gap-1.5 pt-1">
                     <Phone className="h-3.5 w-3.5 text-emerald-600" />
-                    <span>Guardian Contact: <a href={`tel:${p.contactPhone}`} className="font-mono font-bold text-slate-900 dark:text-slate-100 underline hover:text-emerald-600">{p.contactPhone}</a></span>
+                    <span>Guardian Contact: <a href={`tel:${p.contactPhone}`} className="font-mono font-bold text-slate-900 dark:text-white underline hover:text-emerald-600">{p.contactPhone}</a></span>
                   </div>
                 )}
               </div>

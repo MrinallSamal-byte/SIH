@@ -11,14 +11,16 @@ import * as sys from '../controllers/admin.system.controller.js';
 
 export const adminRouter = Router();
 
-// ---- Auth (public endpoints) ----
+// ---- Auth ----
 adminRouter.post('/auth/login', loginRateLimiter, validateBody(schemas.adminLoginSchema), asyncHandler(core.adminLoginHandler));
-adminRouter.get('/auth/me', requireAdmin, asyncHandler(core.adminMeHandler));
-adminRouter.post('/auth/change-password', requireAdmin, validateBody(schemas.changePasswordSchema), asyncHandler(core.adminChangePasswordHandler));
 
-// Everything below requires an admin session.
-adminRouter.use(requireAdmin);
+// Everything below requires an admin session (guards must sit ABOVE /auth/me and /auth/change-password).
+// Limiter BEFORE auth: cheap rejection of token brute-force without a DB hit.
 adminRouter.use(adminRateLimiter);
+adminRouter.use(requireAdmin);
+
+adminRouter.get('/auth/me', asyncHandler(core.adminMeHandler));
+adminRouter.post('/auth/change-password', validateBody(schemas.changePasswordSchema), asyncHandler(core.adminChangePasswordHandler));
 
 // ---- Overview / KPI ----
 adminRouter.get('/overview', asyncHandler(core.adminOverviewHandler));
@@ -35,25 +37,32 @@ adminRouter.get('/volunteers', validateQuery(schemas.listVolunteersQuerySchema),
 adminRouter.post('/volunteers', validateBody(schemas.createVolunteerSchema), asyncHandler(res.adminCreateVolunteerHandler));
 adminRouter.patch('/volunteers/:id', validateParams(schemas.idParamsSchema), validateBody(schemas.updateVolunteerSchema), asyncHandler(res.adminUpdateVolunteerHandler));
 adminRouter.patch('/volunteers/:id/status', validateParams(schemas.idParamsSchema), validateBody(schemas.updateVolunteerStatusSchema), asyncHandler(res.adminUpdateVolunteerStatusHandler));
+// Trust-tier review (verify / suspend + training + ID reference).
+adminRouter.patch('/volunteers/:id/verification', validateParams(schemas.idParamsSchema), validateBody(schemas.setVolunteerVerificationSchema), asyncHandler(res.adminVerifyVolunteerHandler));
+// Per-volunteer personal access code (plaintext returned once).
+adminRouter.post('/volunteers/:id/invite-code', validateParams(schemas.idParamsSchema), asyncHandler(res.adminInviteVolunteerCodeHandler));
+
+// ---- RED escalation SLA sweep ----
+adminRouter.post('/escalations/sweep', validateBody(schemas.escalationSweepSchema), asyncHandler(sys.adminEscalationSweepHandler));
 
 // ---- Shelters ----
-adminRouter.get('/shelters', validateQuery(schemas.paginationQuerySchema.partial()), asyncHandler(res.adminListSheltersHandler));
+adminRouter.get('/shelters', validateQuery(schemas.listSheltersQuerySchema), asyncHandler(res.adminListSheltersHandler));
 adminRouter.get('/shelters/:id', validateParams(schemas.idParamsSchema), asyncHandler(res.adminGetShelterHandler));
 adminRouter.post('/shelters', validateBody(schemas.createShelterSchema), asyncHandler(res.adminCreateShelterHandler));
 adminRouter.patch('/shelters/:id', validateParams(schemas.idParamsSchema), validateBody(schemas.updateShelterSchema), asyncHandler(res.adminUpdateShelterHandler));
 
 // ---- Agencies ----
-adminRouter.get('/agencies', validateQuery(schemas.paginationQuerySchema.partial()), asyncHandler(res.adminListAgenciesHandler));
+adminRouter.get('/agencies', validateQuery(schemas.adminAgencyQuerySchema), asyncHandler(res.adminListAgenciesHandler));
 adminRouter.post('/agencies', validateBody(schemas.createAgencySchema), asyncHandler(res.adminCreateAgencyHandler));
 adminRouter.patch('/agencies/:id', validateParams(schemas.idParamsSchema), validateBody(schemas.updateAgencySchema), asyncHandler(res.adminUpdateAgencyHandler));
 
 // ---- Resources ----
-adminRouter.get('/resources', validateQuery(schemas.paginationQuerySchema.partial()), asyncHandler(res.adminListResourcesHandler));
+adminRouter.get('/resources', validateQuery(schemas.adminResourceQuerySchema), asyncHandler(res.adminListResourcesHandler));
 adminRouter.post('/resources', validateBody(schemas.createResourceSchema), asyncHandler(res.adminCreateResourceHandler));
 adminRouter.patch('/resources/:id/quantity', validateParams(schemas.idParamsSchema), validateBody(schemas.updateResourceQuantitySchema), asyncHandler(res.adminUpdateResourceQuantityHandler));
 
 // ---- Alerts ----
-adminRouter.get('/alerts', validateQuery(schemas.paginationQuerySchema.partial()), asyncHandler(sys.adminListAlertsHandler));
+adminRouter.get('/alerts', validateQuery(schemas.adminAlertQuerySchema), asyncHandler(sys.adminListAlertsHandler));
 adminRouter.post('/alerts', validateBody(schemas.createAlertSchema), asyncHandler(sys.adminCreateAlertHandler));
 
 // ---- Analytics ----
@@ -66,7 +75,9 @@ adminRouter.get('/audit-logs', validateQuery(schemas.paginationQuerySchema), asy
 adminRouter.get('/checkins', validateQuery(schemas.paginationQuerySchema.partial()), asyncHandler(sys.adminListCheckinsHandler));
 
 // ---- Missing person matches ----
-adminRouter.get('/missing/matches', validateQuery(schemas.paginationQuerySchema.partial()), asyncHandler(sys.adminListMatchesHandler));
+adminRouter.get('/missing/matches', validateQuery(schemas.missingMatchQuerySchema), asyncHandler(sys.adminListMatchesHandler));
+// Admin-triggered matching run — persists candidates into the review queue.
+adminRouter.post('/missing/matches/compute', validateBody(schemas.missingMatchSchema), asyncHandler(sys.adminComputeMatchesHandler));
 adminRouter.post('/missing/matches/:id/review', validateParams(schemas.idParamsSchema), validateBody(schemas.reviewMatchSchema), asyncHandler(sys.adminReviewMatchHandler));
 
 // ---- Damage assessments ----
@@ -74,7 +85,7 @@ adminRouter.get('/damage-assessments', validateQuery(schemas.paginationQuerySche
 adminRouter.post('/damage-assessments/:id/flag', validateParams(schemas.idParamsSchema), asyncHandler(sys.adminFlagDamageHandler));
 
 // ---- Route hazards (safe routes admin) ----
-adminRouter.get('/hazards', validateQuery(schemas.paginationQuerySchema.partial()), asyncHandler(sys.adminListHazardsHandler));
+adminRouter.get('/hazards', validateQuery(schemas.adminHazardQuerySchema), asyncHandler(sys.adminListHazardsHandler));
 adminRouter.post('/hazards', validateBody(schemas.createHazardSchema), asyncHandler(sys.adminCreateHazardHandler));
 adminRouter.patch('/hazards/:id', validateParams(schemas.idParamsSchema), validateBody(schemas.updateHazardSchema), asyncHandler(sys.adminUpdateHazardHandler));
 
@@ -92,3 +103,6 @@ adminRouter.post(
   validateBody(schemas.broadcastSchema),
   asyncHandler(sys.adminBroadcastHandler),
 );
+
+// ---- System status (read-only integration truth) ----
+adminRouter.get('/system/status', asyncHandler(sys.adminSystemStatusHandler));

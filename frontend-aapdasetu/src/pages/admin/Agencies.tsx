@@ -59,17 +59,17 @@ export default function Agencies() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <Building2 className="h-6 w-6 text-slate-900 dark:text-slate-100" />
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            <Building2 className="h-6 w-6 text-slate-900 dark:text-white" />
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
               Multi-Agency Disaster Response Roster
             </h1>
           </div>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-xs text-slate-500 dark:text-white">
             Command directory of NDRF battalions, SDRF units, Fire Services, Armed Forces, and district medical wings.
           </p>
         </div>
 
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300 mono">
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-white mono">
           {totalCount} Operational Agencies
         </span>
       </div>
@@ -82,7 +82,7 @@ export default function Agencies() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search agencies by name, jurisdiction sector, or phone…"
-            className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3.5 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3.5 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
           />
         </div>
 
@@ -95,7 +95,7 @@ export default function Agencies() {
             className={`rounded-lg px-2.5 py-1 text-xs font-bold transition cursor-pointer ${
               typeFilter === 'all'
                 ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-white'
             }`}
           >
             All Wings
@@ -110,7 +110,7 @@ export default function Agencies() {
                 className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold transition cursor-pointer ${
                   typeFilter === t
                     ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-white'
                 }`}
               >
                 <Icon className="h-3 w-3" />
@@ -134,11 +134,11 @@ export default function Agencies() {
               <div>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-white">
                       <Icon className="h-5 w-5" />
                     </div>
                     <div>
-                      <h2 className="font-bold text-sm text-slate-900 dark:text-slate-100 leading-tight">{a.name}</h2>
+                      <h2 className="font-bold text-sm text-slate-900 dark:text-white leading-tight">{a.name}</h2>
                       <div className="text-[10px] uppercase font-bold text-slate-400 mono mt-0.5">{a.type} Wing</div>
                     </div>
                   </div>
@@ -146,10 +146,10 @@ export default function Agencies() {
                   <Badge value={a.type} />
                 </div>
 
-                <div className="mt-4 space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
+                <div className="mt-4 space-y-1.5 text-xs text-slate-600 dark:text-white">
                   <div className="flex items-start gap-1.5">
                     <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400 mt-0.5" />
-                    <span>Jurisdiction: <strong className="text-slate-800 dark:text-slate-200">{a.jurisdiction || 'Statewide Command'}</strong></span>
+                    <span>Jurisdiction: <strong className="text-slate-800 dark:text-white">{a.jurisdiction || 'Statewide Command'}</strong></span>
                   </div>
 
                   {a.contactPhone && (
@@ -182,7 +182,7 @@ export default function Agencies() {
                 {a.contactEmail && (
                   <a
                     href={`mailto:${a.contactEmail}`}
-                    className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 transition"
+                    className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-white transition"
                   >
                     <Mail className="h-3.5 w-3.5" />
                     <span>Email</span>

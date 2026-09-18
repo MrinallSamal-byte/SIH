@@ -241,6 +241,119 @@ class SecurityManagerTest {
     }
 
     @Test
+    fun `validatePacket rejects unsigned and invalidly signed SOS packets like MESSAGE`() {
+        setupKnownPeer(otherPeerID, otherSigningKey)
+
+        val unsigned = BitchatPacket(
+            type = MessageType.SOS.value,
+            ttl = 10u,
+            senderID = otherPeerID,
+            payload = dummyPayload
+        )
+        assertFalse("Unsigned SOS must be rejected exactly like an unsigned MESSAGE", securityManager.validatePacket(unsigned, otherPeerID))
+
+        val invalid = BitchatPacket(
+            type = MessageType.SOS.value,
+            ttl = 10u,
+            senderID = otherPeerID,
+            payload = dummyPayload
+        ).also { it.signature = invalidSignature }
+        assertFalse("SOS with invalid signature must be rejected", securityManager.validatePacket(invalid, otherPeerID))
+    }
+
+    @Test
+    fun `validatePacket accepts signed SOS from known peer`() {
+        setupKnownPeer(otherPeerID, otherSigningKey)
+        val packet = BitchatPacket(
+            type = MessageType.SOS.value,
+            ttl = 10u,
+            senderID = otherPeerID,
+            payload = dummyPayload
+        ).also { it.signature = validSignature }
+
+        assertTrue("A valid signed SOS should be accepted", securityManager.validatePacket(packet, otherPeerID))
+        assertTrue(fakeEncryptionService.lastVerifyKey.contentEquals(otherSigningKey))
+    }
+
+    @Test
+    fun `sos and message with identical timestamp and payload do not collide in dedup`() {
+        setupKnownPeer(otherPeerID, otherSigningKey)
+        val sharedTimestamp = System.currentTimeMillis().toULong()
+
+        val message = BitchatPacket(
+            version = 1u,
+            type = MessageType.MESSAGE.value,
+            senderID = MeshPacketUtils.hexStringToByteArray(otherPeerID),
+            recipientID = null,
+            timestamp = sharedTimestamp,
+            payload = dummyPayload,
+            signature = validSignature,
+            ttl = 10u
+        )
+        val sos = BitchatPacket(
+            version = 1u,
+            type = MessageType.SOS.value,
+            senderID = MeshPacketUtils.hexStringToByteArray(otherPeerID),
+            recipientID = null,
+            timestamp = sharedTimestamp,
+            payload = dummyPayload,
+            signature = validSignature,
+            ttl = 10u
+        )
+
+        assertTrue("Signed MESSAGE must be accepted", securityManager.validatePacket(message, otherPeerID))
+        assertTrue(
+            "An SOS sharing timestamp and payload with a seen MESSAGE must not be suppressed as a duplicate",
+            securityManager.validatePacket(sos, otherPeerID)
+        )
+        assertFalse("The MESSAGE itself must still dedup", securityManager.validatePacket(message, otherPeerID))
+        assertFalse("The SOS itself must still dedup", securityManager.validatePacket(sos, otherPeerID))
+    }
+
+    @Test
+    fun `invalid sos signature does not poison duplicate detection for a later valid sos`() {
+        setupKnownPeer(otherPeerID, otherSigningKey)
+        val sos = BitchatPacket(
+            type = MessageType.SOS.value,
+            ttl = 10u,
+            senderID = otherPeerID,
+            payload = dummyPayload
+        )
+
+        sos.signature = invalidSignature
+        assertFalse(securityManager.validatePacket(sos, otherPeerID))
+
+        sos.signature = validSignature
+        assertTrue(
+            "A rejected unsigned/forged SOS must leave the duplicate cache untouched",
+            securityManager.validatePacket(sos, otherPeerID)
+        )
+    }
+
+    @Test
+    fun `sos replay suppression expires exactly with the five minute window`() {
+        setupKnownPeer(otherPeerID, otherSigningKey)
+        val sos = BitchatPacket(
+            type = MessageType.SOS.value,
+            ttl = 10u,
+            senderID = otherPeerID,
+            payload = dummyPayload
+        ).also { it.signature = validSignature }
+
+        assertTrue(securityManager.validatePacket(sos, otherPeerID))
+        assertFalse("Replay inside the window must be suppressed",
+            securityManager.validatePacket(sos, otherPeerID))
+
+        securityManager.cleanupOldData(
+            System.currentTimeMillis() +
+                com.bitchat.android.util.AppConstants.Security.MESSAGE_TIMEOUT_MS + 1_000
+        )
+
+        assertTrue("Replay protection lasts exactly the dedup window, no longer",
+            securityManager.validatePacket(sos, otherPeerID))
+    }
+
+    @Test
     fun `validatePacket accepts signed LEAVE from known peer`() {
         setupKnownPeer(otherPeerID, otherSigningKey)
         val packet = BitchatPacket(

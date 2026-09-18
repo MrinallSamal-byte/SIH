@@ -71,8 +71,8 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Volunteer Dashboard</h1>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Volunteer Dashboard</h1>
+          <p className="mt-1 text-xs text-slate-500 dark:text-white">
             Manage your active tasks and duty availability.
           </p>
         </div>
@@ -84,7 +84,7 @@ export default function Dashboard() {
             <select
               value={volunteer?.id || ''}
               onChange={(e) => selectVolunteerProfile(e.target.value)}
-              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-800 outline-none dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200"
+              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-800 outline-none dark:border-white/[0.1] dark:bg-slate-800 dark:text-white"
             >
               {allVolunteers.map((v) => (
                 <option key={v.id} value={v.id}>
@@ -102,8 +102,8 @@ export default function Dashboard() {
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-start justify-between">
               <div>
-                <div className="text-xl font-bold text-slate-900 dark:text-slate-100">{volunteer.name}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">{volunteer.phone ?? 'Contact on file'}</div>
+                <div className="text-xl font-bold text-slate-900 dark:text-white">{volunteer.name}</div>
+                <div className="text-xs text-slate-500 dark:text-white">{volunteer.phone ?? 'Contact on file'}</div>
               </div>
               <span
                 className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${
@@ -120,7 +120,7 @@ export default function Dashboard() {
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Registered Skills:</span>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {volunteer.skills.map((s) => (
-                  <span key={s} className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-800 border border-slate-200 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 mono">
+                  <span key={s} className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-800 border border-slate-200 dark:border-white/[0.1] dark:bg-slate-800 dark:text-white mono">
                     {s.replace('_', ' ').toUpperCase()}
                   </span>
                 ))}
@@ -144,12 +144,12 @@ export default function Dashboard() {
           <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
             <div>
               <div className="flex items-center justify-between">
-                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Active Missions</h2>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">Active Missions</h2>
                 <span className="flex h-6 w-6 items-center justify-center rounded-md bg-slate-900 text-xs font-bold text-white dark:bg-slate-100 dark:text-slate-900 mono">
                   {activeTasks.length}
                 </span>
               </div>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              <p className="mt-1 text-xs text-slate-500 dark:text-white">
                 {activeTasks.length > 0
                   ? `You have ${activeTasks.length} task(s) assigned.`
                   : 'No active tasks currently assigned.'}

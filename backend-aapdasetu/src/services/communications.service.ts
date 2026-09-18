@@ -1,7 +1,9 @@
-/** Multi-channel alert broadcaster (SMS / WhatsApp / Web). */
+/** Multi-channel alert broadcaster (Web Push / SMS / WhatsApp / Web). */
 import { env } from '../config/env.js';
 import { createAlert } from './alerts.service.js';
 import { writeAuditLog } from './audit.service.js';
+import { sendSmsBatch } from './sms.service.js';
+import { countPushSubscriptions } from './push.service.js';
 
 export interface BroadcastInput {
   severity: 'info' | 'warning' | 'critical';
@@ -21,14 +23,16 @@ export interface BroadcastResult {
 
 /**
  * Persists the alert to the DB (web channel) and, when provider credentials
- * are configured, attempts real Twilio SMS / WhatsApp Cloud API delivery.
- * Without credentials it returns a graceful count (web=1, others=0).
+ * are configured, attempts real push / SMS / WhatsApp delivery.
+ * Without credentials each channel reports delivered:false with an honest
+ * note instead of throwing — the bulletin is never lost.
  */
 export async function broadcastAlert(input: BroadcastInput): Promise<BroadcastResult> {
-  const channelKey = input.channels.includes('all')
-    ? 'all'
-    : input.channels.filter((c) => c !== 'web').join(',') || 'public';
-  const channel = input.channels.includes('sms') && input.channels.includes('whatsapp') ? 'all' : channelKey;
+  // ponytail: removed dead channels.includes('all') branch — broadcastSchema restricts input to sms|whatsapp|web
+  const channel =
+    input.channels.includes('sms') && input.channels.includes('whatsapp')
+      ? 'all'
+      : input.channels.filter((c) => c !== 'web').join(',') || 'public';
 
   const alert = await createAlert({
     title: input.title,
@@ -49,9 +53,12 @@ export async function broadcastAlert(input: BroadcastInput): Promise<BroadcastRe
   const deliveredChannels = ['web'];
 
   if (input.channels.includes('sms')) {
-    const sms = env.twilioAccountSid && env.twilioAuthToken ? await sendSms(input) : { ok: false, note: 'Twilio credentials not configured' };
-    details.push({ channel: 'sms', delivered: sms.ok, note: sms.note });
-    if (sms.ok) {
+    const recipients = input.recipientNumbers?.length
+      ? input.recipientNumbers
+      : [env.twilioDefaultToNumber, env.whatsappDefaultToNumber].filter(Boolean) as string[];
+    const sms = await sendSmsBatch({ to: recipients, text: `${input.title}\n\n${input.body}` });
+    details.push({ channel: 'sms', delivered: sms.sent > 0, note: sms.note ?? `provider: ${sms.provider}` });
+    if (sms.sent > 0) {
       delivered += 1;
       deliveredChannels.push('sms');
     }
@@ -64,6 +71,20 @@ export async function broadcastAlert(input: BroadcastInput): Promise<BroadcastRe
       delivered += 1;
       deliveredChannels.push('whatsapp');
     }
+  }
+
+  if (input.channels.includes('push')) {
+    const subs = await countPushSubscriptions().catch(() => 0);
+    const pushReady = Boolean(env.vapidPublicKey) && subs > 0;
+    details.push({
+      channel: 'push',
+      delivered: false,
+      note: pushReady
+        ? `${subs} device(s) subscribed — delivery needs the push sender worker`
+        : subs > 0
+          ? `${subs} device(s) subscribed — VAPID keys not configured`
+          : 'no push subscriptions yet',
+    });
   }
 
   await writeAuditLog({
@@ -82,50 +103,53 @@ interface DeliveryOutcome {
   note?: string;
 }
 
-async function sendSms(input: BroadcastInput): Promise<DeliveryOutcome> {
-  try {
-    const recipients = input.recipientNumbers?.length
-      ? input.recipientNumbers
-      : [env.twilioDefaultToNumber].filter(Boolean);
-    let sent = 0;
-    for (const to of recipients) {
-      const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${env.twilioAccountSid}/Messages.json`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Basic ${Buffer.from(`${env.twilioAccountSid}:${env.twilioAuthToken}`).toString('base64')}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({ To: to, From: env.twilioFromNumber!, Body: `${input.title}\n\n${input.body}` }).toString(),
-      });
-      if (res.ok) sent += 1;
+const PROVIDER_TIMEOUT_MS = 10000;
+const RECIPIENT_BATCH_SIZE = 10;
+
+async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
+  let lastError: unknown;
+  // ponytail: one retry for network errors / 5xx only
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(url, { ...init, signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS) });
+      if (res.status < 500 || attempt === 1) return res;
+      lastError = new Error(`provider responded HTTP ${res.status}`);
+    } catch (err) {
+      lastError = err;
     }
-    return { ok: sent > 0, note: `sent ${sent}/${recipients.length}` };
-  } catch {
-    return { ok: false, note: 'SMS delivery failed' };
   }
+  throw lastError;
 }
 
 async function sendWhatsApp(input: BroadcastInput): Promise<DeliveryOutcome> {
+  if (!env.whatsappPhoneNumberId) {
+    return { ok: false, note: 'WHATSAPP_PHONE_NUMBER_ID missing' };
+  }
   try {
     const recipients = input.recipientNumbers?.length
       ? input.recipientNumbers
       : [env.whatsappDefaultToNumber].filter(Boolean);
     let sent = 0;
-    for (const to of recipients) {
-      const res = await fetch(`https://graph.facebook.com/v19.0/${env.whatsappPhoneNumberId}/messages`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${env.whatsappCloudApiToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          to,
-          type: 'text',
-          text: { body: `${input.title}\n\n${input.body}` },
+    for (let i = 0; i < recipients.length; i += RECIPIENT_BATCH_SIZE) {
+      const results = await Promise.all(
+        recipients.slice(i, i + RECIPIENT_BATCH_SIZE).map(async (to) => {
+          const res = await fetchWithRetry(`https://graph.facebook.com/v19.0/${env.whatsappPhoneNumberId}/messages`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${env.whatsappCloudApiToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              messaging_product: 'whatsapp',
+              to,
+              type: 'text',
+              text: { body: `${input.title}\n\n${input.body}` },
+            }),
+          });
+          return res.ok;
         }),
-      });
-      if (res.ok) sent += 1;
+      );
+      sent += results.filter(Boolean).length;
     }
     return { ok: sent > 0, note: `sent ${sent}/${recipients.length}` };
   } catch {

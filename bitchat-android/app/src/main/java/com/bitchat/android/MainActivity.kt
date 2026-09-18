@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -37,6 +38,7 @@ import com.bitchat.android.onboarding.LocationCheckScreen
 import com.bitchat.android.onboarding.LocationStatus
 import com.bitchat.android.onboarding.LocationStatusManager
 import com.bitchat.android.onboarding.OnboardingCoordinator
+import com.bitchat.android.onboarding.OnboardingProgressSteps
 import com.bitchat.android.onboarding.OnboardingState
 import com.bitchat.android.onboarding.PermissionExplanationScreen
 import com.bitchat.android.onboarding.PermissionManager
@@ -51,6 +53,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : OrientationAwareActivity() {
+
+    companion object {
+        private const val PERMISSION_GRANT_SETTLE_TIMEOUT_MS = 1000L
+        private const val PERMISSION_GRANT_SETTLE_POLL_INTERVAL_MS = 50L
+    }
 
     private lateinit var permissionManager: PermissionManager
     private lateinit var onboardingCoordinator: OnboardingCoordinator
@@ -152,7 +159,8 @@ class MainActivity : OrientationAwareActivity() {
             onBackgroundLocationRequired = {
                 mainViewModel.updateOnboardingState(OnboardingState.BACKGROUND_LOCATION_EXPLANATION)
             },
-            onOnboardingFailed = ::handleOnboardingFailed
+            onOnboardingFailed = ::handleOnboardingFailed,
+            onPartialPermissionWarning = ::handlePartialPermissionWarning
         )
         
         setContent {
@@ -231,7 +239,7 @@ class MainActivity : OrientationAwareActivity() {
 
         when (onboardingState) {
             OnboardingState.PERMISSION_REQUESTING -> {
-                InitializingScreen(modifier)
+                InitializingScreen(modifier, OnboardingProgressSteps.STEP_PERMISSION_EXPLANATION)
             }
             
             OnboardingState.BLUETOOTH_CHECK -> {
@@ -375,10 +383,6 @@ class MainActivity : OrientationAwareActivity() {
     
     private fun checkOnboardingStatus() {
         lifecycleScope.launch {
-            // Small delay to show the checking state
-            delay(500)
-            
-            // First check Bluetooth status (always required)
             checkBluetoothAndProceed()
         }
     }
@@ -434,8 +438,6 @@ class MainActivity : OrientationAwareActivity() {
      */
     private fun proceedWithPermissionCheck() {
         lifecycleScope.launch {
-            delay(200) // Small delay for smooth transition
-
             if (permissionManager.isFirstTimeLaunch()) {
                 mainViewModel.updateOnboardingState(OnboardingState.WELCOME)
             } else if (permissionManager.getUnrequestedOptionalPermissions().isNotEmpty()) {
@@ -605,6 +607,11 @@ class MainActivity : OrientationAwareActivity() {
         mainViewModel.updateOnboardingState(OnboardingState.ERROR)
     }
 
+    private fun handlePartialPermissionWarning(message: String) {
+        Log.w("MainActivity", "Partial permissions granted, continuing with limited functionality")
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+    }
+
     private fun startMeshForegroundServiceBestEffort() {
         if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
             pendingMeshForegroundServiceStart = true
@@ -689,9 +696,14 @@ class MainActivity : OrientationAwareActivity() {
     private fun initializeApp() {
         lifecycleScope.launch {
             try {
-                // Initialize the app with a proper delay to ensure Bluetooth stack is ready
-                // This solves the issue where app needs restart to work on first install
-                delay(1000) // Give the system time to process permission grants
+                // Wait until freshly granted permissions are visible to this process before
+                // starting transports, bounded by a timeout so slow systems still proceed.
+                val settleDeadline = android.os.SystemClock.elapsedRealtime() + PERMISSION_GRANT_SETTLE_TIMEOUT_MS
+                while (!permissionManager.areAllPermissionsGranted() &&
+                    android.os.SystemClock.elapsedRealtime() < settleDeadline
+                ) {
+                    delay(PERMISSION_GRANT_SETTLE_POLL_INTERVAL_MS)
+                }
 
                 // Initialize PoW preferences early in the initialization process
                 PoWPreferenceManager.init(this@MainActivity)
@@ -716,8 +728,6 @@ class MainActivity : OrientationAwareActivity() {
                 handleNotificationIntent(intent)
                 handleVerificationIntent(intent)
 
-                // Small delay to ensure mesh service is fully initialized
-                delay(500)
                 Log.i("MainActivity", "App initialization complete")
                 mainViewModel.updateOnboardingState(OnboardingState.COMPLETE)
             } catch (e: Exception) {

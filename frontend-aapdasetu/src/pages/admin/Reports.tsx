@@ -131,15 +131,15 @@ export default function Reports() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <FileText className="h-6 w-6 text-slate-900 dark:text-slate-100" />
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            <FileText className="h-6 w-6 text-slate-900 dark:text-white" />
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
               Incident Reports & Dispatch Command
             </h1>
-            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300 mono">
+            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-white mono">
               {totalCount.toLocaleString()} Total Records
             </span>
           </div>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-xs text-slate-500 dark:text-white">
             Real-time live incident stream across all disaster zones. AI triage scoring, proximity volunteer assignment, and multi-agency dispatch.
           </p>
         </div>
@@ -153,7 +153,7 @@ export default function Reports() {
                 toast('Database reset with 1,000+ fresh records!', 'success')
               }
             }}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-white"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             <span>Reset 1000+ Records</span>
@@ -201,7 +201,7 @@ export default function Reports() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Tracking ID, name, phone, landmark…"
-              className="w-full rounded-xl border border-slate-300 bg-white pl-8 pr-3 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-white/[0.1] dark:bg-slate-950 dark:text-slate-100"
+              className="w-full rounded-xl border border-slate-300 bg-white pl-8 pr-3 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-white/[0.1] dark:bg-slate-950 dark:text-white"
             />
           </div>
         </Field>
@@ -210,7 +210,7 @@ export default function Reports() {
       {/* Incident Reports Table */}
       <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900">
         <table className="w-full text-left text-sm">
-          <thead className="border-b bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400 mono font-bold">
+          <thead className="border-b bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-white mono font-bold">
             <tr>
               <th className="px-4 py-3">Tracking ID</th>
               <th className="px-4 py-3">Type</th>
@@ -226,36 +226,36 @@ export default function Reports() {
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {paginatedReports.map((r) => (
               <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
-                <td className="px-4 py-3 font-mono text-xs font-bold text-slate-900 dark:text-slate-100">
+                <td className="px-4 py-3 font-mono text-xs font-bold text-slate-900 dark:text-white">
                   <div className="flex items-center gap-1.5">
                     {r.source === 'sos' && <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse" />}
                     <span>{r.trackingId}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3 capitalize font-bold text-xs text-slate-800 dark:text-slate-200">
+                <td className="px-4 py-3 capitalize font-bold text-xs text-slate-800 dark:text-white">
                   {r.type.replace('_', ' ')}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1.5">
                     <PriorityBadge label={r.priorityLabel} />
-                    <span className="mono text-xs font-bold text-slate-600 dark:text-slate-400">
+                    <span className="mono text-xs font-bold text-slate-600 dark:text-white">
                       {r.priorityScore}
                     </span>
                   </div>
                 </td>
                 <td className="px-4 py-3"><Badge value={r.status} /></td>
-                <td className="px-4 py-3 text-xs max-w-[200px] truncate text-slate-700 dark:text-slate-300">
+                <td className="px-4 py-3 text-xs max-w-[200px] truncate text-slate-700 dark:text-white">
                   {r.landmark ?? (r.latitude ? `${r.latitude.toFixed(4)}, ${r.longitude?.toFixed(4)}` : 'GPS Record')}
                 </td>
                 <td className="px-4 py-3 text-xs">
-                  <div className="font-semibold text-slate-800 dark:text-slate-200">{r.reporterName || 'Citizen'}</div>
+                  <div className="font-semibold text-slate-800 dark:text-white">{r.reporterName || 'Citizen'}</div>
                   <div className="mono text-[11px] text-slate-400">{r.reporterPhone || '—'}</div>
                 </td>
-                <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 max-w-[160px] truncate">
+                <td className="px-4 py-3 text-xs text-slate-500 dark:text-white max-w-[160px] truncate">
                   {r.assignedVolunteerName ? (
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">{r.assignedVolunteerName}</span>
+                    <span className="font-semibold text-slate-800 dark:text-white">{r.assignedVolunteerName}</span>
                   ) : r.assignedAgencyName ? (
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">{r.assignedAgencyName}</span>
+                    <span className="font-semibold text-slate-800 dark:text-white">{r.assignedAgencyName}</span>
                   ) : (
                     <span className="text-amber-600 dark:text-amber-400 font-medium">Unassigned</span>
                   )}
@@ -267,7 +267,7 @@ export default function Reports() {
                   <button
                     type="button"
                     onClick={() => setSelected(r)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-800 hover:bg-slate-100 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-800 hover:bg-slate-100 dark:border-white/[0.1] dark:bg-slate-800 dark:text-white cursor-pointer"
                   >
                     <span>Dispatch</span>
                     <span>→</span>
@@ -286,7 +286,7 @@ export default function Reports() {
 
         {/* Pagination Bar */}
         {totalCount > 0 && (
-          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-400">
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-xs text-slate-600 dark:border-slate-800 dark:text-white">
             <div>
               Showing <strong className="mono">{(page - 1) * pageSize + 1}</strong> to{' '}
               <strong className="mono">{Math.min(page * pageSize, totalCount)}</strong> of{' '}
@@ -298,7 +298,7 @@ export default function Reports() {
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300"
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-white/[0.1] dark:bg-slate-800 dark:text-white"
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
                 <span>Prev</span>
@@ -312,7 +312,7 @@ export default function Reports() {
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300"
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-white/[0.1] dark:bg-slate-800 dark:text-white"
               >
                 <span>Next</span>
                 <ChevronRight className="h-3.5 w-3.5" />
@@ -328,14 +328,14 @@ export default function Reports() {
           <div className="space-y-4">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs dark:border-slate-800 dark:bg-slate-950">
               <div className="flex items-center justify-between">
-                <span className="font-mono text-base font-bold text-slate-900 dark:text-slate-100">{selected.trackingId}</span>
+                <span className="font-mono text-base font-bold text-slate-900 dark:text-white">{selected.trackingId}</span>
                 <PriorityBadge label={selected.priorityLabel} />
               </div>
-              <p className="mt-2 text-slate-800 dark:text-slate-200 font-medium leading-relaxed">{selected.description}</p>
+              <p className="mt-2 text-slate-800 dark:text-white font-medium leading-relaxed">{selected.description}</p>
               <div className="mt-2 flex flex-wrap items-center gap-4 text-slate-500 border-t border-slate-200/60 pt-2 dark:border-slate-800">
-                {selected.landmark && <div>Landmark: <strong className="text-slate-700 dark:text-slate-300">{selected.landmark}</strong></div>}
-                {selected.reporterPhone && <div>Phone: <strong className="text-slate-700 dark:text-slate-300 mono">{selected.reporterPhone}</strong></div>}
-                <div>Type: <strong className="capitalize text-slate-700 dark:text-slate-300">{selected.type}</strong></div>
+                {selected.landmark && <div>Landmark: <strong className="text-slate-700 dark:text-white">{selected.landmark}</strong></div>}
+                {selected.reporterPhone && <div>Phone: <strong className="text-slate-700 dark:text-white mono">{selected.reporterPhone}</strong></div>}
+                <div>Type: <strong className="capitalize text-slate-700 dark:text-white">{selected.type}</strong></div>
               </div>
             </div>
 

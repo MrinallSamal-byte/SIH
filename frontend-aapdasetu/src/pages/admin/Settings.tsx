@@ -71,12 +71,12 @@ export default function Settings() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <SettingsIcon className="h-6 w-6 text-slate-900 dark:text-slate-100" />
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            <SettingsIcon className="h-6 w-6 text-slate-900 dark:text-white" />
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
               System Settings & Integration Gateway
             </h1>
           </div>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-xs text-slate-500 dark:text-white">
             Configure multi-channel communication keys, AI endpoint hooks, and Incident Command operational parameters.
           </p>
         </div>
@@ -92,7 +92,7 @@ export default function Settings() {
       <div className="grid gap-5 md:grid-cols-2">
         {/* SMS Gateway Card */}
         <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
+          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white border-b border-slate-100 pb-3 dark:border-slate-800">
             <Smartphone className="h-4 w-4 text-blue-600" />
             <span>Cellular SMS Gateway (Twilio / Telecom)</span>
           </div>
@@ -128,7 +128,7 @@ export default function Settings() {
 
         {/* WhatsApp Gateway Card */}
         <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
+          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white border-b border-slate-100 pb-3 dark:border-slate-800">
             <MessageSquare className="h-4 w-4 text-emerald-600" />
             <span>WhatsApp Business (Meta Cloud API)</span>
           </div>
@@ -152,14 +152,14 @@ export default function Settings() {
             />
           </Field>
 
-          <div className="rounded-xl bg-slate-50 p-3 text-[11px] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-            Webhook Callback URL: <code className="text-slate-800 dark:text-slate-200">https://api.aapdasetu.org/webhook/whatsapp</code>
+          <div className="rounded-xl bg-slate-50 p-3 text-[11px] text-slate-500 dark:bg-slate-800 dark:text-white">
+            Webhook Callback URL: <code className="text-slate-800 dark:text-white">https://api.aapdasetu.org/webhook/whatsapp</code>
           </div>
         </div>
 
         {/* AI Engine Hooks */}
         <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
+          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white border-b border-slate-100 pb-3 dark:border-slate-800">
             <Cpu className="h-4 w-4 text-purple-600" />
             <span>AI Vision & Neural NLP Endpoints</span>
           </div>
@@ -185,7 +185,7 @@ export default function Settings() {
 
         {/* Incident Command SOP Parameters */}
         <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-b border-slate-100 pb-3 dark:border-slate-800">
+          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white border-b border-slate-100 pb-3 dark:border-slate-800">
             <Sliders className="h-4 w-4 text-amber-600" />
             <span>Incident Command Operational Thresholds</span>
           </div>
@@ -209,11 +209,11 @@ export default function Settings() {
       {/* Database Diagnostic & Environment Banner */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <div className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
             <RotateCcw className="h-4 w-4 text-slate-500" />
             <span>Simulation Database & Telemetry Reset</span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-white mt-0.5">
             Reset mock database with 1,000+ realistic disaster incidents, live shelter feeds, and volunteer units.
           </p>
         </div>
@@ -226,7 +226,7 @@ export default function Settings() {
               toast('Database reset with 1,000+ fresh records!', 'success')
             }
           }}
-          className="rounded-xl border border-slate-300 bg-slate-50 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 shrink-0 cursor-pointer"
+          className="rounded-xl border border-slate-300 bg-slate-50 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white shrink-0 cursor-pointer"
         >
           Reset 1,000+ Records
         </button>

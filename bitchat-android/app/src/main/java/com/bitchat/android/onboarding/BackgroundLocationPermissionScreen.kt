@@ -65,6 +65,12 @@ fun BackgroundLocationPermissionScreen(
                     .padding(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                OnboardingProgress(
+                    currentStep = OnboardingProgressSteps.STEP_BACKGROUND_LOCATION,
+                    totalSteps = OnboardingProgressSteps.TOTAL_STEPS,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
                 HeaderSection(colorScheme)
 
                 Surface(

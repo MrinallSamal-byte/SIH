@@ -48,15 +48,15 @@ export default function CheckIn() {
 
   return (
     <div className="max-w-md">
-      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Volunteer Check-In</h1>
-      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Volunteer Check-In</h1>
+      <p className="mt-1 text-xs text-slate-500 dark:text-white">
         Record your safe status and mark yourself available for active missions.
       </p>
 
       <div className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
         {volunteer && (
           <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-950">
-            <div className="font-bold text-slate-800 dark:text-slate-200">Responder Profile: {volunteer.name}</div>
+            <div className="font-bold text-slate-800 dark:text-white">Responder Profile: {volunteer.name}</div>
             <div className="text-slate-500">{volunteer.phone ?? 'Contact on file'}</div>
           </div>
         )}

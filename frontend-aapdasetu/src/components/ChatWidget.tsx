@@ -224,10 +224,10 @@ export default function ChatWidget() {
                       m.role === 'user'
                         ? 'bg-slate-900 text-white rounded-br-none dark:bg-slate-100 dark:text-slate-950'
                         : isCrit
-                        ? 'border border-red-200 bg-red-50/90 text-slate-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-slate-100 rounded-bl-none'
+                        ? 'border border-red-200 bg-red-50/90 text-slate-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-white rounded-bl-none'
                         : isMod
-                        ? 'border border-amber-200 bg-amber-50/90 text-slate-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-slate-100 rounded-bl-none'
-                        : 'border border-slate-200 bg-white text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 rounded-bl-none'
+                        ? 'border border-amber-200 bg-amber-50/90 text-slate-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-white rounded-bl-none'
+                        : 'border border-slate-200 bg-white text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-white rounded-bl-none'
                     }`}
                   >
                     {/* Message Body */}
@@ -279,7 +279,7 @@ export default function ChatWidget() {
                         {/* Immediate Rescue Team Callback Input */}
                         {!m.callbackSubmitted ? (
                           <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                            <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                            <label className="block text-[11px] font-semibold text-slate-700 dark:text-white mb-1.5">
                               {isCrit
                                 ? 'Enter phone number — Rescue team will call & dispatch:'
                                 : 'Enter phone number for relief volunteer callback:'}
@@ -292,7 +292,7 @@ export default function ChatWidget() {
                                   setCallbackPhones((prev) => ({ ...prev, [i]: e.target.value }))
                                 }
                                 placeholder="10-digit mobile number"
-                                className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-slate-50 px-2 py-1 text-xs outline-none focus:border-red-500 focus:bg-white dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-100 font-mono"
+                                className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-slate-50 px-2 py-1 text-xs outline-none focus:border-red-500 focus:bg-white dark:border-white/[0.1] dark:bg-slate-800 dark:text-white font-mono"
                               />
                               <button
                                 type="button"
@@ -323,7 +323,7 @@ export default function ChatWidget() {
 
             {busy && (
               <div className="flex justify-start">
-                <div className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 shadow-xs">
+                <div className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-white shadow-xs">
                   <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" />
                   <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce [animation-delay:0.2s]" />
                   <span className="h-2 w-2 rounded-full bg-slate-400 animate-bounce [animation-delay:0.4s]" />
@@ -347,7 +347,7 @@ export default function ChatWidget() {
                 type="button"
                 onClick={() => send(qp.text)}
                 disabled={busy}
-                className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[10px] font-semibold text-slate-700 shadow-xs hover:bg-slate-100 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300 cursor-pointer"
+                className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[10px] font-semibold text-slate-700 shadow-xs hover:bg-slate-100 dark:border-white/[0.1] dark:bg-slate-800 dark:text-white cursor-pointer"
               >
                 {qp.label}
               </button>
@@ -368,7 +368,7 @@ export default function ChatWidget() {
               onChange={(e) => setInput(e.target.value)}
               placeholder={t('chat.placeholder')}
               disabled={busy}
-              className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 outline-none transition focus:border-slate-900 focus:bg-white dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-300"
+              className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 outline-none transition focus:border-slate-900 focus:bg-white dark:border-white/[0.1] dark:bg-slate-800 dark:text-white dark:focus:border-slate-300"
             />
             <button
               type="submit"

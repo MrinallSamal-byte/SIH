@@ -75,11 +75,12 @@ if (typeof window !== 'undefined') {
  * Emit a real-time event across the current tab and all other open tabs.
  */
 export function emitRealtimeUpdate(type: RealtimeEventType, entityId?: string, payload?: unknown) {
-  const event: RealtimeEvent = {
+  const event: RealtimeEvent & { nonce?: number } = {
     type,
     entityId,
     timestamp: Date.now(),
     payload,
+    nonce: Math.random(),
   }
 
   // 1. Notify in-memory listeners in current window
@@ -91,14 +92,18 @@ export function emitRealtimeUpdate(type: RealtimeEventType, entityId?: string, p
     }
   })
 
-  // 2. Broadcast to other tabs via BroadcastChannel
+  // 2. Broadcast to other tabs via BroadcastChannel (preferred)
   try {
-    broadcastChannel?.postMessage(event)
+    if (broadcastChannel) {
+      broadcastChannel.postMessage(event)
+      return
+    }
   } catch {
     // BroadcastChannel posting may fail if closed or structured clone unsupported
   }
 
-  // 3. Fallback via localStorage storage event
+  // 3. Fallback via localStorage storage event (only when BroadcastChannel unavailable,
+  //    otherwise remote tabs receive the event twice)
   try {
     localStorage.setItem('aapdasetu_realtime_storage_event', JSON.stringify(event))
   } catch {

@@ -1,7 +1,6 @@
 /** Central error handler + 404 handler. */
 import type { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
-import { Prisma } from '@prisma/client';
 import { isHttpError } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
 
@@ -34,19 +33,31 @@ export function errorHandler(
     status = 400;
     message = 'Validation failed';
     code = 'VALIDATION_ERROR';
-    details = err.errors;
-  } else if (err instanceof Prisma.PrismaClientKnownRequestError) {
-    status = 400;
-    code = 'DB_ERROR';
-    message = 'Database request failed';
-    if (err.code === 'P2002') {
+    details = err.errors.map((issue) => ({ path: issue.path.join('.'), message: issue.message }));
+  } else if (typeof (err as { code?: unknown }).code === 'string' && String((err as { code?: unknown }).code).startsWith('P')) {
+    // Default Prisma failures are server-side (unreachable DB, missing
+    // table/column, constraint internals) — never a 400. A 400 tells clients
+    // the request was wrong, which also disables the frontend mock fallback
+    // and leaves citizen pages permanently empty during a DB outage.
+    status = 503;
+    code = 'DB_UNAVAILABLE';
+    message = 'Service temporarily unavailable — please retry shortly';
+    const prismaCode = String((err as { code?: unknown }).code);
+    if (prismaCode === 'P2002') {
       status = 409;
       code = 'DUPLICATE';
       message = 'A record with this value already exists';
-    } else if (err.code === 'P2025') {
+    } else if (prismaCode === 'P2025') {
       status = 404;
       code = 'NOT_FOUND';
       message = 'Record not found';
+    } else if (prismaCode.startsWith('P1')) {
+      // P1xxx = connectivity/infrastructure failures (P1001 can't reach DB,
+      // P1017 server closed the connection) — a 400 would tell clients the
+      // request was wrong and hide the outage from monitoring.
+      status = 503;
+      code = 'DB_UNAVAILABLE';
+      message = 'Service temporarily unavailable — please retry shortly';
     }
   } else {
     const statusMaybe = (err as Error & { status?: number }).status;

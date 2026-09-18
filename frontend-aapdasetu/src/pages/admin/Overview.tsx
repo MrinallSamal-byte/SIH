@@ -53,7 +53,7 @@ export default function Overview() {
     {
       label: 'Total Incident Reports',
       value: kpis.totalReports.toLocaleString(),
-      color: 'text-slate-900 dark:text-slate-100',
+      color: 'text-slate-900 dark:text-white',
       bg: 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800',
       icon: FileText,
       to: '/admin/reports',
@@ -139,11 +139,11 @@ export default function Overview() {
         <div>
           <div className="flex items-center gap-2">
             <Radio className="h-6 w-6 text-red-600 animate-pulse" />
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
               Disaster Command Center & Live Gauge
             </h1>
           </div>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-xs text-slate-500 dark:text-white">
             Realtime situational awareness, multi-agency response telemetry, and tactical resource allocation.
           </p>
         </div>
@@ -174,11 +174,11 @@ export default function Overview() {
                 <div className={`text-2xl sm:text-3xl font-extrabold font-mono tracking-tight ${c.color}`}>
                   {c.value}
                 </div>
-                <div className="text-[11px] font-bold text-slate-700 dark:text-slate-200 leading-snug">
+                <div className="text-[11px] font-bold text-slate-700 dark:text-white leading-snug">
                   {c.label}
                 </div>
               </div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2">
+              <div className="text-[10px] text-slate-500 dark:text-white line-clamp-2">
                 {c.desc}
               </div>
             </Link>
@@ -192,7 +192,7 @@ export default function Overview() {
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mono">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mono">
                 Crisis Severity Gauge
               </h2>
               <span className={`text-xs font-bold font-mono px-2 py-0.5 rounded-full ${
@@ -203,7 +203,7 @@ export default function Overview() {
                 {kpis.crisisScore >= 80 ? 'CRITICAL LEVEL' : kpis.crisisScore >= 50 ? 'ELEVATED RISK' : 'STABLE RISK'}
               </span>
             </div>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            <p className="mt-1 text-xs text-slate-500 dark:text-white">
               Composite index computed from active RED alerts, pending rescue requests, and flood water levels.
             </p>
           </div>
@@ -219,7 +219,7 @@ export default function Overview() {
                 }}
               />
               <div className="flex flex-col items-center justify-center rounded-full bg-white h-28 w-28 text-center dark:bg-slate-900 shadow-md">
-                <span className="text-3xl font-black font-mono text-slate-900 dark:text-slate-100">
+                <span className="text-3xl font-black font-mono text-slate-900 dark:text-white">
                   {kpis.crisisScore}
                 </span>
                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mono">/ 100 PTS</span>
@@ -229,20 +229,20 @@ export default function Overview() {
             <div className="space-y-2 text-xs">
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full bg-red-600" />
-                <span className="font-medium text-slate-700 dark:text-slate-300">RED: &gt;80 Critical</span>
+                <span className="font-medium text-slate-700 dark:text-white">RED: &gt;80 Critical</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
-                <span className="font-medium text-slate-700 dark:text-slate-300">YELLOW: 50-80 Alert</span>
+                <span className="font-medium text-slate-700 dark:text-white">YELLOW: 50-80 Alert</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                <span className="font-medium text-slate-700 dark:text-slate-300">GREEN: &lt;50 Normal</span>
+                <span className="font-medium text-slate-700 dark:text-white">GREEN: &lt;50 Normal</span>
               </div>
             </div>
           </div>
 
-          <div className="border-t border-slate-100 pt-3 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400">
+          <div className="border-t border-slate-100 pt-3 dark:border-slate-800 text-[11px] text-slate-500 dark:text-white">
             Updated live every 6s via National Incident Command telemetry.
           </div>
         </div>
@@ -250,10 +250,10 @@ export default function Overview() {
         {/* Live Response Pulse */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
           <div>
-            <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mono">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mono">
               Response Readiness Pulse
             </h2>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            <p className="mt-1 text-xs text-slate-500 dark:text-white">
               Real-time resource deployment vs active incident load.
             </p>
           </div>
@@ -286,8 +286,8 @@ export default function Overview() {
           </div>
 
           <div className="flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800 text-[11px]">
-            <span className="text-slate-500">Volunteers: <strong className="text-slate-800 dark:text-slate-200">{kpis.availableVolunteers} Ready</strong></span>
-            <Link to="/admin/analytics" className="font-bold text-slate-900 dark:text-slate-100 hover:underline inline-flex items-center gap-1">
+            <span className="text-slate-500">Volunteers: <strong className="text-slate-800 dark:text-white">{kpis.availableVolunteers} Ready</strong></span>
+            <Link to="/admin/analytics" className="font-bold text-slate-900 dark:text-white hover:underline inline-flex items-center gap-1">
               <span>View Full Intel</span>
               <ArrowRight className="h-3 w-3" />
             </Link>
@@ -297,10 +297,10 @@ export default function Overview() {
         {/* Quick Dispatch Hub */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
           <div>
-            <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mono">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mono">
               Command Quick Launch
             </h2>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            <p className="mt-1 text-xs text-slate-500 dark:text-white">
               Instant operations shortcuts for emergency controllers.
             </p>
           </div>
@@ -317,10 +317,10 @@ export default function Overview() {
                   <div className="flex items-center gap-2.5">
                     <Icon className="h-4 w-4 shrink-0" />
                     <div>
-                      <div className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-none">
+                      <div className="text-xs font-bold text-slate-900 dark:text-white leading-none">
                         {act.title}
                       </div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">
+                      <div className="text-[10px] text-slate-500 dark:text-white mt-0.5 line-clamp-1">
                         {act.desc}
                       </div>
                     </div>
@@ -346,7 +346,7 @@ export default function Overview() {
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
             <div className="flex items-center gap-2">
               <Siren className="h-4.5 w-4.5 text-red-600 animate-pulse" />
-              <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mono">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mono">
                 Pending SOS Distress Stream ({pendingReports.length} Unassigned Incidents)
               </h2>
             </div>
@@ -367,9 +367,9 @@ export default function Overview() {
               >
                 <div className="flex flex-wrap items-center gap-2.5">
                   <PriorityBadge label={r.priorityLabel} />
-                  <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">{r.trackingId}</span>
-                  <span className="text-xs font-bold capitalize text-slate-700 dark:text-slate-300">{r.type} Emergency</span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs sm:max-w-md">{r.description}</span>
+                  <span className="font-mono text-xs font-bold text-slate-800 dark:text-white">{r.trackingId}</span>
+                  <span className="text-xs font-bold capitalize text-slate-700 dark:text-white">{r.type} Emergency</span>
+                  <span className="text-xs text-slate-500 dark:text-white truncate max-w-xs sm:max-w-md">{r.description}</span>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -396,7 +396,7 @@ function Bar({ label, value, max, color = 'bg-slate-900' }: { label: string; val
   const pct = Math.min(100, Math.max(0, Math.round((value / max) * 100)))
   return (
     <div>
-      <div className="flex justify-between text-xs text-slate-600 dark:text-slate-300 font-medium mb-1">
+      <div className="flex justify-between text-xs text-slate-600 dark:text-white font-medium mb-1">
         <span>{label}</span>
         <span className="font-mono font-bold">{value.toLocaleString()} ({pct}%)</span>
       </div>

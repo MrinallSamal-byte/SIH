@@ -120,11 +120,11 @@ export default function LiveSOS() {
         <div>
           <div className="flex items-center gap-2">
             <Siren className="h-6 w-6 text-red-600 animate-pulse" />
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
               Live Emergency SOS Stream
             </h1>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-white mt-1">
             <span className="inline-block h-2 w-2 rounded-full bg-red-500 animate-ping" />
             <span>Active Realtime Distress Queue ({reports.length} pending incidents)</span>
           </div>
@@ -133,7 +133,7 @@ export default function LiveSOS() {
         <div className="flex items-center gap-3">
           {!audioEnabled ? (
             <Button variant="outline" size="sm" onClick={enableAudio} className="font-bold flex items-center gap-1.5">
-              <Volume2 className="h-4 w-4 text-slate-700 dark:text-slate-300" />
+              <Volume2 className="h-4 w-4 text-slate-700 dark:text-white" />
               <span>Enable Audio Siren</span>
             </Button>
           ) : (
@@ -147,7 +147,7 @@ export default function LiveSOS() {
 
       {/* Realistic Tactical Satellite Map */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
+        <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-white mono">
           <span>Active Distress Map ({markers.length} Geolocated Incidents)</span>
           <span className="text-[11px] text-slate-400">Layer switcher active (Satellite / Terrain / Streets)</span>
         </div>
@@ -174,25 +174,25 @@ export default function LiveSOS() {
           >
             <div className="flex flex-wrap items-center gap-2">
               <PriorityBadge label={r.priorityLabel} />
-              <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100">{r.trackingId}</span>
-              <span className="text-xs font-bold capitalize text-slate-800 dark:text-slate-200">{r.type} Emergency</span>
+              <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">{r.trackingId}</span>
+              <span className="text-xs font-bold capitalize text-slate-800 dark:text-white">{r.type} Emergency</span>
               <Badge value={r.status} />
               <span className="ml-auto text-xs text-slate-400 mono">{timeAgo(r.createdAt)}</span>
             </div>
 
-            <p className="mt-2 text-sm text-slate-800 dark:text-slate-200 font-medium leading-relaxed">{r.description}</p>
+            <p className="mt-2 text-sm text-slate-800 dark:text-white font-medium leading-relaxed">{r.description}</p>
             
-            <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+            <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-slate-500 dark:text-white">
               {r.landmark && (
                 <div className="flex items-center gap-1">
                   <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                  <span>Location: <strong className="text-slate-700 dark:text-slate-300">{r.landmark}</strong></span>
+                  <span>Location: <strong className="text-slate-700 dark:text-white">{r.landmark}</strong></span>
                 </div>
               )}
               {r.reporterPhone && (
                 <div className="flex items-center gap-1">
                   <Phone className="h-3.5 w-3.5 text-slate-400" />
-                  <span>Contact: <a href={`tel:${r.reporterPhone}`} className="text-slate-900 dark:text-slate-100 underline font-mono font-bold hover:text-emerald-600">{r.reporterPhone}</a></span>
+                  <span>Contact: <a href={`tel:${r.reporterPhone}`} className="text-slate-900 dark:text-white underline font-mono font-bold hover:text-emerald-600">{r.reporterPhone}</a></span>
                 </div>
               )}
             </div>
@@ -204,7 +204,7 @@ export default function LiveSOS() {
                     href={getNavigationUrl(r.latitude, r.longitude)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
+                    className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-white/[0.1] dark:bg-slate-800 dark:text-white cursor-pointer"
                   >
                     <Navigation className="h-3.5 w-3.5" />
                     <span>Map Directions</span>

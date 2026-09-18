@@ -8,7 +8,7 @@ import App from './App'
 import './index.css'
 import 'leaflet/dist/leaflet.css'
 
-// ⚡ Auto-recover from stale chunks after new production deployments
+// Auto-recover from stale chunks after new production deployments
 window.addEventListener('vite:preloadError', (event) => {
   console.warn('[AapdaSetu] Outdated module chunk detected after deployment, reloading...', event)
   window.location.reload()

@@ -75,10 +75,10 @@ export default function SafetyRegistry() {
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                 Citizen Safety Registry & Check-ins
               </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-white">
                 Real-time stream of citizen self-checkins, distress flags, and family welfare verifications.
               </p>
             </div>
@@ -86,7 +86,7 @@ export default function SafetyRegistry() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300 mono">
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-white mono">
             {totalCount} Total Submissions
           </span>
         </div>
@@ -96,7 +96,7 @@ export default function SafetyRegistry() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">Total Check-Ins</div>
-          <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-slate-100">{totalCount}</div>
+          <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-white">{totalCount}</div>
           <div className="text-[11px] text-slate-400">Registered citizens</div>
         </div>
 
@@ -122,7 +122,7 @@ export default function SafetyRegistry() {
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">GPS Mapped</div>
-          <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-slate-100">
+          <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-white">
             {markers.length}
           </div>
           <div className="text-[11px] text-slate-400">Geotagged coordinates</div>
@@ -132,7 +132,7 @@ export default function SafetyRegistry() {
       {/* Map View of Check-ins */}
       {markers.length > 0 && (
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
+          <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-white mono">
             <span>Safety Checkin Geolocation Map ({markers.length} Mapped Pins)</span>
             <span className="text-[11px] text-slate-400">Green = Safe · Red = Needs Assistance</span>
           </div>
@@ -150,7 +150,7 @@ export default function SafetyRegistry() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search check-ins by citizen name, phone, locality, or notes…"
-            className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3.5 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-white/[0.1] dark:bg-slate-950 dark:text-slate-100"
+            className="w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3.5 py-2 text-xs text-slate-900 outline-none focus:border-slate-900 dark:border-white/[0.1] dark:bg-slate-950 dark:text-white"
           />
         </div>
 
@@ -162,7 +162,7 @@ export default function SafetyRegistry() {
               className={`rounded-xl px-3 py-1.5 text-xs font-bold capitalize transition cursor-pointer ${
                 statusFilter === st
                   ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-white'
               }`}
             >
               {st === 'need_assistance' ? 'Needs Assistance' : st}
@@ -174,7 +174,7 @@ export default function SafetyRegistry() {
       {/* Check-ins Table */}
       <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900">
         <table className="w-full text-left text-xs">
-          <thead className="border-b bg-slate-50 dark:bg-slate-800 text-[10px] uppercase text-slate-500 dark:text-slate-400 mono font-bold">
+          <thead className="border-b bg-slate-50 dark:bg-slate-800 text-[10px] uppercase text-slate-500 dark:text-white mono font-bold">
             <tr>
               <th className="px-4 py-3">Citizen Name</th>
               <th className="px-4 py-3">Contact Phone</th>
@@ -188,22 +188,22 @@ export default function SafetyRegistry() {
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {filtered.map((c) => (
               <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition">
-                <td className="px-4 py-3 font-semibold text-slate-900 dark:text-slate-100">
+                <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">
                   {c.fullName || 'Anonymous Citizen'}
                 </td>
-                <td className="px-4 py-3 mono text-slate-600 dark:text-slate-400">
+                <td className="px-4 py-3 mono text-slate-600 dark:text-white">
                   {c.phone ? maskPhone(c.phone) : '—'}
                 </td>
                 <td className="px-4 py-3">
                   <Badge value={c.status} />
                 </td>
-                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
+                <td className="px-4 py-3 text-slate-700 dark:text-white">
                   <div className="flex items-center gap-1">
                     <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
                     <span>{c.locationName || (c.latitude ? `${c.latitude.toFixed(4)}, ${c.longitude?.toFixed(4)}` : 'GPS Verified')}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300 max-w-xs truncate">
+                <td className="px-4 py-3 text-slate-600 dark:text-white max-w-xs truncate">
                   {c.notes || '—'}
                 </td>
                 <td className="px-4 py-3 mono text-slate-400">
@@ -216,7 +216,7 @@ export default function SafetyRegistry() {
                   {c.phone ? (
                     <a
                       href={`tel:${c.phone}`}
-                      className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200"
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-white"
                     >
                       <Phone className="h-3 w-3" />
                       <span>Contact</span>
@@ -224,7 +224,7 @@ export default function SafetyRegistry() {
                   ) : (
                     <button
                       onClick={() => setSelectedCheckin(c)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-white cursor-pointer"
                     >
                       Inspect
                     </button>
@@ -252,17 +252,17 @@ export default function SafetyRegistry() {
             className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">
               Safety Record Details
             </h3>
             <div className="mt-4 space-y-2 text-xs">
               <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
                 <span className="text-slate-500">Citizen:</span>
-                <span className="font-bold text-slate-900 dark:text-slate-100">{selectedCheckin.fullName || 'Anonymous'}</span>
+                <span className="font-bold text-slate-900 dark:text-white">{selectedCheckin.fullName || 'Anonymous'}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
                 <span className="text-slate-500">Contact Phone:</span>
-                <span className="font-mono font-bold text-slate-900 dark:text-slate-100">{selectedCheckin.phone || 'None'}</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">{selectedCheckin.phone || 'None'}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
                 <span className="text-slate-500">Status:</span>
@@ -270,11 +270,11 @@ export default function SafetyRegistry() {
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
                 <span className="text-slate-500">Reported Locality:</span>
-                <span className="font-semibold text-slate-900 dark:text-slate-100">{selectedCheckin.locationName || 'N/A'}</span>
+                <span className="font-semibold text-slate-900 dark:text-white">{selectedCheckin.locationName || 'N/A'}</span>
               </div>
               <div className="py-1">
                 <span className="text-slate-500">Notes:</span>
-                <p className="mt-1 text-slate-800 dark:text-slate-200 leading-relaxed bg-slate-50 p-2.5 rounded-xl dark:bg-slate-800">
+                <p className="mt-1 text-slate-800 dark:text-white leading-relaxed bg-slate-50 p-2.5 rounded-xl dark:bg-slate-800">
                   {selectedCheckin.notes || 'No additional details submitted.'}
                 </p>
               </div>

@@ -56,8 +56,8 @@ export default function AssignedTasks() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Assigned Tasks</h1>
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Assigned Tasks</h1>
+        <p className="mt-1 text-xs text-slate-500 dark:text-white">
           Active incidents assigned to you.
         </p>
       </div>
@@ -73,20 +73,20 @@ export default function AssignedTasks() {
             >
               <div className="flex flex-wrap items-center gap-2">
                 <PriorityBadge label={task.priorityLabel} />
-                <span className="font-mono text-xs font-bold text-slate-400 dark:text-slate-500">{task.trackingId}</span>
+                <span className="font-mono text-xs font-bold text-slate-400 dark:text-white">{task.trackingId}</span>
                 <span className="text-sm font-bold capitalize">{task.type} Emergency</span>
                 <Badge value={task.status} />
-                <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">{timeAgo(task.createdAt)}</span>
+                <span className="ml-auto text-xs text-slate-400 dark:text-white">{timeAgo(task.createdAt)}</span>
               </div>
 
-              <p className="mt-3 text-sm text-slate-800 dark:text-slate-200 font-medium">{task.description}</p>
+              <p className="mt-3 text-sm text-slate-800 dark:text-white font-medium">{task.description}</p>
               
-              <div className="mt-2 space-y-1 text-xs text-slate-500 dark:text-slate-400">
+              <div className="mt-2 space-y-1 text-xs text-slate-500 dark:text-white">
                 {task.landmark && <div>Landmark: <strong>{task.landmark}</strong></div>}
                 {task.reporterPhone && (
                   <div>
                     Contact:{' '}
-                    <a href={`tel:${task.reporterPhone}`} className="text-slate-900 dark:text-slate-100 underline font-bold hover:text-emerald-600">
+                    <a href={`tel:${task.reporterPhone}`} className="text-slate-900 dark:text-white underline font-bold hover:text-emerald-600">
                       {task.reporterPhone}
                     </a>
                   </div>
@@ -114,7 +114,7 @@ export default function AssignedTasks() {
                   {task.reporterPhone && (
                     <a
                       href={`tel:${task.reporterPhone}`}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-xs font-bold text-slate-800 hover:bg-slate-200 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-xs font-bold text-slate-800 hover:bg-slate-200 dark:border-white/[0.1] dark:bg-slate-800 dark:text-white cursor-pointer"
                     >
                       <span>Call Contact</span>
                     </a>
@@ -151,8 +151,8 @@ export default function AssignedTasks() {
       {resolveTarget && (
         <Modal open title="Complete Task" onClose={() => setResolveTarget(null)}>
           <div className="space-y-4">
-            <div className="text-xs text-slate-600 dark:text-slate-400">
-              Confirm resolution for incident <strong className="font-mono text-slate-800 dark:text-slate-200">{resolveTarget.trackingId}</strong> ({resolveTarget.type.toUpperCase()}).
+            <div className="text-xs text-slate-600 dark:text-white">
+              Confirm resolution for incident <strong className="font-mono text-slate-800 dark:text-white">{resolveTarget.trackingId}</strong> ({resolveTarget.type.toUpperCase()}).
             </div>
 
             <Field label="Resolution Notes">

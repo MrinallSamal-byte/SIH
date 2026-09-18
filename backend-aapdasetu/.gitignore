@@ -3,8 +3,14 @@ dist/
 coverage/
 .env
 .env.local
+*serviceAccount*.json
+*firebase-adminsdk*.json
+*firebase*service*.json
+*.credential*.json
+.secrets/
+secrets/
 *.log
 uploads/
-fastapi-service/__pycache__/
+**/__pycache__/
 fastapi-service/.venv/
 .pytest_cache/

@@ -4,14 +4,21 @@
 
 @layer base {
   html {
-    font-family: 'Google Sans', 'Open Sans', 'Noto Sans Devanagari', 'Noto Sans Oriya', system-ui, -apple-system, sans-serif;
+    /* 17px base (was 16px) — all rem-based type renders slightly larger site-wide */
+    font-size: 106.25%;
+    font-family: 'Google Sans', 'Open Sans', 'Lato', system-ui, -apple-system, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    font-variation-settings: normal;
     letter-spacing: -0.015em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
   body {
-    @apply bg-[#f4f4f5] text-zinc-800 selection:bg-zinc-800 selection:text-white dark:bg-[#111111] dark:text-slate-200 dark:selection:bg-slate-700 dark:selection:text-white;
+    @apply bg-[#f4f4f5] text-zinc-800 selection:bg-zinc-800 selection:text-white dark:bg-[#111111] dark:text-white dark:selection:bg-slate-700 dark:selection:text-white;
+    /* Safety net against sideways scroll on small phones (clip keeps sticky working) */
+    overflow-x: clip;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -20,6 +27,12 @@
 
   input, select, textarea, button {
     font-family: inherit;
+  }
+
+  /* Form fields never render below 1rem — keeps field text readable and
+     stops iOS Safari auto-zooming on focus (<16px inputs trigger zoom). */
+  input, select, textarea {
+    font-size: 1rem;
   }
 }
 
@@ -43,7 +56,7 @@
 
 /* Monospace font utility for IDs & counters */
 .mono {
-  font-family: 'Roboto Mono', 'JetBrains Mono', 'Courier New', monospace;
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Courier New', monospace;
 }
 
 /* Subtle page enter transition */
@@ -127,33 +140,60 @@
 @layer utilities {
   /* Nothing OS / Clean Monochrome Inverted UI Cards */
   .n-card {
-    @apply rounded-xl border border-zinc-200/80 bg-white text-zinc-800 shadow-xs dark:border-white/[0.08] dark:bg-[#181818] dark:text-slate-200;
+    @apply rounded-xl border border-zinc-200/80 bg-white text-zinc-800 shadow-xs dark:border-white/[0.08] dark:bg-[#181818] dark:text-white;
   }
 
   .n-tag {
-    @apply inline-flex items-center rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border border-zinc-200/80 bg-zinc-100 text-zinc-600 dark:border-white/[0.06] dark:bg-[#222222] dark:text-slate-400;
+    @apply inline-flex items-center rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border-2 border-black bg-zinc-100 text-zinc-600 dark:border-white/[0.06] dark:bg-[#222222] dark:text-white;
   }
 
   .n-btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-800 text-white px-5 py-3 text-sm font-bold tracking-tight transition hover:bg-zinc-700 active:scale-[0.98] disabled:opacity-50 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-white;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border-2 border-black bg-brand-600 text-white px-5 py-3 text-sm font-bold tracking-tight transition hover:bg-brand-700 hover:border-black active:scale-[0.98] disabled:opacity-50 shadow-sm shadow-brand-600/20 dark:border-black dark:bg-brand-600 dark:text-white dark:hover:bg-brand-700;
   }
 
   .n-btn-outline {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200/80 bg-transparent px-4 py-2.5 text-sm font-semibold tracking-tight text-zinc-700 transition hover:bg-zinc-100 active:scale-[0.98] dark:border-white/[0.1] dark:text-slate-400 dark:hover:bg-[#222222];
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border-2 border-black bg-transparent px-4 py-2.5 text-sm font-semibold tracking-tight text-zinc-700 transition hover:bg-zinc-100 active:scale-[0.98] dark:border-black dark:text-white dark:hover:bg-[#222222];
   }
 
   .n-btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-red-500 text-white px-5 py-3 text-sm font-bold tracking-tight transition hover:bg-red-600 active:scale-[0.98] disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border-2 border-black bg-red-500 text-white px-5 py-3 text-sm font-bold tracking-tight transition hover:bg-red-600 hover:border-black active:scale-[0.98] dark:border-black disabled:opacity-50;
   }
 
   .n-input {
-    @apply w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500/30 dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:border-slate-500 dark:focus:ring-slate-500;
+    @apply w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500/30 dark:border-white/[0.1] dark:bg-[#1a1a1a] dark:text-white dark:placeholder:text-white/60 dark:focus:border-slate-500 dark:focus:ring-slate-500;
   }
 }
 
 /* High-contrast dark mode surface overrides for clean black/white readability */
 .dark {
   color-scheme: dark;
+}
+
+/* Mobile side-panel slide-in + backdrop fade */
+@keyframes side-panel-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-side-panel {
+  animation: side-panel-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-backdrop {
+  animation: backdrop-in 0.2s ease both;
 }
 
 /* Clean Map Controls - Hide cluttered attribution banners & links on all maps */

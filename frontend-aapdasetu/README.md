@@ -4,7 +4,7 @@ Minimal, full-feature React (TypeScript + Vite + Tailwind) frontend covering eve
 `projectrequirement.md`, `README.md`, and `tech.md` — **except** Low-Bandwidth WebRTC telemedicine.
 
 **Stack:** React 19 · Vite 6 · TypeScript (strict) · Tailwind CSS 3 · React Router v6 (hash router) ·
-Leaflet (safe-route maps) · Recharts (admin analytics) · custom i18n (EN / हिंदी / ଓଡ଼ିଆ)
+Leaflet (safe-route maps) · Recharts (admin analytics) · custom i18n (EN / हिंदी / বাংলা / ଓଡ଼ିଆ)
 
 ## Quick start
 

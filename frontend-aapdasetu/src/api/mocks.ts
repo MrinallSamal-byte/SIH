@@ -19,10 +19,13 @@ import type {
   TriageResult,
   Volunteer,
   VolunteerStatus,
+  VolunteerUser,
 } from '../types'
 import { computeTriage } from '../lib/triage'
 import { generateTrackingId } from '../lib/helpers'
 import { emitRealtimeUpdate } from '../lib/realtimeEventBus'
+import { getInitialCitizenNotifications } from '../data/mockNotifications'
+import { isOffTopicQuery, isDisasterOrPlatformRelated, OFF_TOPIC_REPLIES } from '../lib/guardrails'
 
 // -----------------------------------------------------------------------------
 // Persistent mock store with 1000+ realistic records & realtime event emissions.
@@ -38,7 +41,9 @@ function loadLocal<T>(key: string, fallback: () => T): T {
     }
     return JSON.parse(raw) as T
   } catch {
-    return fallback()
+    const initial = fallback()
+    saveLocal(key, initial)
+    return initial
   }
 }
 
@@ -51,7 +56,7 @@ function saveLocal<T>(key: string, val: T): void {
   }
 }
 
-const STORAGE_VERSION = 'v5'
+const STORAGE_VERSION = 'v8'
 const STORAGE_KEY_VERSION = 'aapdasetu_data_version'
 const STORAGE_KEY_REPORTS = `aapdasetu_mock_reports_${STORAGE_VERSION}`
 const STORAGE_KEY_SHELTERS = `aapdasetu_mock_shelters_${STORAGE_VERSION}`
@@ -66,61 +71,82 @@ const STORAGE_KEY_DAMAGE = `aapdasetu_mock_damage_${STORAGE_VERSION}`
 if (typeof window !== 'undefined') {
   const currentVer = localStorage.getItem(STORAGE_KEY_VERSION)
   if (currentVer !== STORAGE_VERSION) {
+    // ponytail: purge mock blobs persisted by older schema versions
+    try {
+      const stale: string[] = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i)
+        if (k && k.startsWith('aapdasetu_mock_') && /_v\d+$/.test(k) && !k.endsWith(`_${STORAGE_VERSION}`)) {
+          stale.push(k)
+        }
+      }
+      stale.forEach((k) => localStorage.removeItem(k))
+    } catch {
+      // best-effort cleanup only
+    }
     localStorage.setItem(STORAGE_KEY_VERSION, STORAGE_VERSION)
   }
 }
 
 // -----------------------------------------------------------------------------
-// 1000s OF REALISTIC MULTI-SECTOR DATA GENERATORS
+// 1000s OF REALISTIC MULTI-SECTOR DATA GENERATORS (ASSAM COMPREHENSIVE)
 // -----------------------------------------------------------------------------
 
 const DISASTER_SECTORS = [
-  { city: 'Kolkata - Salt Lake Sector V', district: 'Kolkata', state: 'West Bengal', lat: 22.5726, lng: 88.3639 },
-  { city: 'Kolkata - New Town Action Area 1', district: 'Kolkata', state: 'West Bengal', lat: 22.579, lng: 88.378 },
-  { city: 'Kolkata - Bidhannagar Stadium', district: 'Kolkata', state: 'West Bengal', lat: 22.567, lng: 88.401 },
-  { city: 'Kolkata - Howrah Station & Shibpur', district: 'Howrah', state: 'West Bengal', lat: 22.5958, lng: 88.2636 },
-  { city: 'Kolkata - Dum Dum Cantonment', district: 'North 24 Parganas', state: 'West Bengal', lat: 22.642, lng: 88.396 },
-  { city: 'Kolkata - Alipore & Kalighat', district: 'Kolkata', state: 'West Bengal', lat: 22.528, lng: 88.334 },
-  { city: 'Kolkata - Behala & Taratala', district: 'Kolkata', state: 'West Bengal', lat: 22.498, lng: 88.315 },
-  { city: 'Kolkata - Jadavpur & Garia', district: 'Kolkata', state: 'West Bengal', lat: 22.492, lng: 88.371 },
-  { city: 'North 24 Parganas - Barasat High Road', district: 'North 24 Parganas', state: 'West Bengal', lat: 22.723, lng: 88.481 },
-  { city: 'North 24 Parganas - Basirhat Border', district: 'North 24 Parganas', state: 'West Bengal', lat: 22.658, lng: 88.892 },
-  { city: 'South 24 Parganas - Canning Sub-Division', district: 'South 24 Parganas', state: 'West Bengal', lat: 22.312, lng: 88.658 },
-  { city: 'South 24 Parganas - Diamond Harbour', district: 'South 24 Parganas', state: 'West Bengal', lat: 22.198, lng: 88.201 },
-  { city: 'Sundarbans - Gosaba Delta Coastal', district: 'Sundarbans Coastal', state: 'West Bengal', lat: 22.185, lng: 88.752 },
-  { city: 'Sundarbans - Sagar Island & Bakkhali', district: 'Sundarbans Coastal', state: 'West Bengal', lat: 21.642, lng: 88.082 },
-  { city: 'Hooghly - Chinsurah Riverfront', district: 'Hooghly', state: 'West Bengal', lat: 22.902, lng: 88.396 },
-  { city: 'Hooghly - Serampore Industrial', district: 'Hooghly', state: 'West Bengal', lat: 22.751, lng: 88.342 },
-  { city: 'Paschim Medinipur - Kharagpur Hub', district: 'Paschim Medinipur', state: 'West Bengal', lat: 22.341, lng: 87.321 },
-  { city: 'Purba Medinipur - Digha Cyclone Coast', district: 'Purba Medinipur', state: 'West Bengal', lat: 21.626, lng: 87.507 },
-  { city: 'Burdwan - Asansol Mining Belt', district: 'Paschim Bardhaman', state: 'West Bengal', lat: 23.688, lng: 86.966 },
-  { city: 'Burdwan - Durgapur Barrage Zone', district: 'Paschim Bardhaman', state: 'West Bengal', lat: 23.520, lng: 87.311 },
-  { city: 'Bhubaneswar - Central Secretariate', district: 'Khordha', state: 'Odisha', lat: 20.2961, lng: 85.8245 },
-  { city: 'Bhubaneswar - Kalinga Nagar Sector 4', district: 'Khordha', state: 'Odisha', lat: 20.2934, lng: 85.817 },
-  { city: 'Bhubaneswar - Patia Infocity', district: 'Khordha', state: 'Odisha', lat: 20.355, lng: 85.818 },
-  { city: 'Bhubaneswar - Rasulgarh Highway', district: 'Khordha', state: 'Odisha', lat: 20.301, lng: 85.865 },
-  { city: 'Cuttack - Badambadi & Mahanadi', district: 'Cuttack', state: 'Odisha', lat: 20.4625, lng: 85.883 },
-  { city: 'Cuttack - CDA Sector 6', district: 'Cuttack', state: 'Odisha', lat: 20.485, lng: 85.845 },
-  { city: 'Puri - Coastal Relief & Grand Road', district: 'Puri', state: 'Odisha', lat: 19.8135, lng: 85.8312 },
-  { city: 'Balasore - Coastal Cyclone Belt', district: 'Balasore', state: 'Odisha', lat: 21.493, lng: 86.932 },
-  { city: 'Patna - Ganga River Belt', district: 'Patna', state: 'Bihar', lat: 25.5941, lng: 85.1376 },
-  { city: 'Guwahati - Brahmaputra Inundation', district: 'Kamrup Metropolitan', state: 'Assam', lat: 26.1445, lng: 91.7362 },
-  { city: 'Siliguri - Mahananda River Basin', district: 'Darjeeling', state: 'West Bengal', lat: 26.727, lng: 88.395 },
+  { city: 'Guwahati - Paltan Bazar & Panbazar', district: 'Kamrup Metropolitan', state: 'Assam', lat: 26.1820, lng: 91.7500 },
+  { city: 'Guwahati - Dispur Capital Complex', district: 'Kamrup Metropolitan', state: 'Assam', lat: 26.1420, lng: 91.7880 },
+  { city: 'Guwahati - Jalukbari & Gauhati Univ', district: 'Kamrup Metropolitan', state: 'Assam', lat: 26.1550, lng: 91.6620 },
+  { city: 'Guwahati - Khanapara & Six Mile', district: 'Kamrup Metropolitan', state: 'Assam', lat: 26.1250, lng: 91.8020 },
+  { city: 'Guwahati - Bharalumukh Riverfront', district: 'Kamrup Metropolitan', state: 'Assam', lat: 26.1730, lng: 91.7280 },
+  { city: 'Guwahati - Chandmari & Zoo Road', district: 'Kamrup Metropolitan', state: 'Assam', lat: 26.1850, lng: 91.7760 },
+  { city: 'Silchar - Sadar & Tarapur Ghat', district: 'Cachar', state: 'Assam', lat: 24.8333, lng: 92.7789 },
+  { city: 'Silchar - Rangirkhari & SMCH Link', district: 'Cachar', state: 'Assam', lat: 24.8150, lng: 92.7950 },
+  { city: 'Silchar - Meherpur & Malugram', district: 'Cachar', state: 'Assam', lat: 24.8420, lng: 92.7680 },
+  { city: 'Dibrugarh - AMC Hospital & Boiragimoth', district: 'Dibrugarh', state: 'Assam', lat: 27.4728, lng: 94.9120 },
+  { city: 'Dibrugarh - Chowkidinghee & Graham Bazar', district: 'Dibrugarh', state: 'Assam', lat: 27.4850, lng: 94.9250 },
+  { city: 'Jorhat - AT Road & Baruah Chariali', district: 'Jorhat', state: 'Assam', lat: 26.7509, lng: 94.2037 },
+  { city: 'Jorhat - JMCH Medical & Kenduguri', district: 'Jorhat', state: 'Assam', lat: 26.7450, lng: 94.2250 },
+  { city: 'Tezpur - Mission Chariali & Trimurty', district: 'Sonitpur', state: 'Assam', lat: 26.6338, lng: 92.8000 },
+  { city: 'Tezpur - Mahabhairab & Tribeni', district: 'Sonitpur', state: 'Assam', lat: 26.6450, lng: 92.7850 },
+  { city: 'Nagaon - Haibargaon & Dimow Chariali', district: 'Nagaon', state: 'Assam', lat: 26.3489, lng: 92.6800 },
+  { city: 'Nagaon - Samaguri & Kolong Riverfront', district: 'Nagaon', state: 'Assam', lat: 26.3650, lng: 92.7100 },
+  { city: 'Tinsukia - Thana Chariali & Hijuguri', district: 'Tinsukia', state: 'Assam', lat: 27.4895, lng: 95.3670 },
+  { city: 'Tinsukia - Makum Bypass & Borguri', district: 'Tinsukia', state: 'Assam', lat: 27.5020, lng: 95.3850 },
+  { city: 'Sivasagar - Central Borpukhuri & Joysagar', district: 'Sivasagar', state: 'Assam', lat: 26.9855, lng: 94.6373 },
+  { city: 'Morigaon - Bhuragaon & Mayong Riverbank', district: 'Morigaon', state: 'Assam', lat: 26.2546, lng: 92.3540 },
+  { city: 'Goalpara - Bapuji Nagar & Baladmari', district: 'Goalpara', state: 'Assam', lat: 26.1660, lng: 90.6232 },
+  { city: 'Barpeta - Satra Road & Bilortari Hati', district: 'Barpeta', state: 'Assam', lat: 26.3222, lng: 91.0061 },
+  { city: 'Barpeta - Howly & Sarbhog Junction', district: 'Barpeta', state: 'Assam', lat: 26.3850, lng: 90.9650 },
+  { city: 'Dhubri - River Port & Boro Bazar', district: 'Dhubri', state: 'Assam', lat: 26.0206, lng: 89.9701 },
+  { city: 'Dhubri - Bilasipara Embankment Point', district: 'Dhubri', state: 'Assam', lat: 26.0450, lng: 90.0150 },
+  { city: 'Kokrajhar - JD Road & Bodofa Nwgwr', district: 'Kokrajhar', state: 'Assam', lat: 26.3984, lng: 90.2680 },
+  { city: 'Bongaigaon - Dhaligaon Refinery & Mayapuri', district: 'Bongaigaon', state: 'Assam', lat: 26.4775, lng: 90.5583 },
+  { city: 'Nalbari - Hajo Road & Japarkuchi', district: 'Nalbari', state: 'Assam', lat: 26.4282, lng: 91.4365 },
+  { city: 'North Lakhimpur - Court Tiniali & Khelmati', district: 'Lakhimpur', state: 'Assam', lat: 27.2365, lng: 94.1054 },
+  { city: 'Dhemaji - Silapathar & Subansiri Belt', district: 'Dhemaji', state: 'Assam', lat: 27.4792, lng: 94.5832 },
+  { city: 'Majuli - Garamur Satra Island Zone', district: 'Majuli', state: 'Assam', lat: 27.0285, lng: 94.2055 },
+  { city: 'Majuli - Kamalabari Ghat Riverfront', district: 'Majuli', state: 'Assam', lat: 26.9650, lng: 94.1620 },
+  { city: 'Karimganj - Main Road & Longai Riverfront', district: 'Karimganj', state: 'Assam', lat: 24.8698, lng: 92.3638 },
+  { city: 'Hailakandi - Station Road & Algapur', district: 'Hailakandi', state: 'Assam', lat: 24.6849, lng: 92.5560 },
+  { city: 'Golaghat - Court Field & Furkating Link', district: 'Golaghat', state: 'Assam', lat: 26.5167, lng: 93.9667 },
+  { city: 'Diphu - Karbi Hills Central & Lumding Rd', district: 'Karbi Anglong', state: 'Assam', lat: 25.8450, lng: 93.4300 },
+  { city: 'Haflong - Dima Hasao Hill Station Council', district: 'Dima Hasao', state: 'Assam', lat: 25.1800, lng: 93.0200 },
+  { city: 'Mangaldai - LNJ Road & Darrang Stadium', district: 'Darrang', state: 'Assam', lat: 26.4350, lng: 92.0350 },
 ]
 
 const FIRST_NAMES = [
-  'Aarav', 'Priya', 'Rahul', 'Sneha', 'Ramesh', 'Sunita', 'Amit', 'Ananya', 'Mohammed', 'Fatima',
-  'Bikram', 'Rojalin', 'Subhash', 'Deepa', 'Manoj', 'Kavita', 'Sanjay', 'Pooja', 'Tanmay', 'Meenakshi',
-  'Arjun', 'Ipsita', 'Debabrata', 'Padmini', 'Alok', 'Rinki', 'Siddharth', 'Shreya', 'Vikram', 'Rupa',
-  'Kunal', 'Swati', 'Rajesh', 'Neelam', 'Sourav', 'Aparna', 'Manas', 'Suchitra', 'Tushar', 'Geeta',
-  'Devendra', 'Nandini', 'Prabhat', 'Kalyani', 'Naveen', 'Sharmila', 'Ashok', 'Kusum', 'Hemant', 'Radha'
+  'Aarav', 'Pranab', 'Rahul', 'Sneha', 'Bipul', 'Sunita', 'Amit', 'Ananya', 'Wasim', 'Farhan',
+  'Bikram', 'Dhruba', 'Subhash', 'Deepa', 'Manoj', 'Kavita', 'Sanjay', 'Pooja', 'Tanmay', 'Dipen',
+  'Arjun', 'Runjun', 'Debabrata', 'Padmini', 'Alok', 'Hemanta', 'Siddharth', 'Shreya', 'Vikram', 'Rupa',
+  'Kunal', 'Kalyani', 'Rajesh', 'Pinky', 'Sourav', 'Aparna', 'Manash', 'Suchitra', 'Tushar', 'Geeta',
+  'Devendra', 'Nandita', 'Prabhat', 'Surajit', 'Naveen', 'Sharmila', 'Ashok', 'Kusum', 'Hemant', 'Radha',
+  'Jiten', 'Karuna', 'Gautam', 'Lakhi', 'Hima', 'Jyoti', 'Esha', 'Mina', 'Chitra', 'Nayan'
 ]
 
 const LAST_NAMES = [
-  'Das', 'Mohanty', 'Sharma', 'Patel', 'Sen', 'Banerjee', 'Ghosh', 'Chatterjee', 'Sahoo', 'Behera',
-  'Patnaik', 'Nayak', 'Mishra', 'Rout', 'Bose', 'Gupta', 'Singh', 'Ali', 'Khan', 'Roy',
-  'Dutta', 'Panda', 'Swain', 'Jena', 'Mukherjee', 'Chakraborty', 'Samal', 'Majumdar', 'Barman', 'Kundu',
-  'Bhowmik', 'Ganguly', 'Choudhury', 'Pradhan', 'Tripathy', 'Bastia', 'Padhi', 'Bhattacharya', 'Sarkar', 'Hossain'
+  'Das', 'Baruah', 'Sharma', 'Saikia', 'Borah', 'Hazarika', 'Kalita', 'Choudhury', 'Gogoi', 'Phukan',
+  'Patel', 'Medhi', 'Deka', 'Bey', 'Rajkhowa', 'Kashyap', 'Nath', 'Ali', 'Khan', 'Roy',
+  'Dutta', 'Ahmed', 'Bhatt', 'Goswami', 'Chaliha', 'Daimary', 'Kakoti', 'Bezbaruah', 'Barman', 'Khatun'
 ]
 
 const EMERGENCY_TEMPLATES: Array<{
@@ -243,12 +269,12 @@ function generate1500Reports(): Report[] {
       status: 'pending',
       priorityScore: 95,
       priorityLabel: 'RED',
-      latitude: 22.5726,
-      longitude: 88.3639,
-      landmark: 'Salt Lake Sector V, Block EP',
-      description: 'Water rising rapidly, 5 family members including 80yo grandmother trapped on roof.',
-      reporterName: 'Sunita Mohanty',
-      reporterPhone: '+91-9876543210',
+      latitude: 26.1820,
+      longitude: 91.7500,
+      landmark: 'Paltan Bazar & Panbazar, Guwahati',
+      description: 'Brahmaputra overflowed banks, 5 family members including infant trapped on roof near station.',
+      reporterName: 'Sunita Saikia',
+      reporterPhone: '+91-98640 72184',
       source: 'sos',
       createdAt: new Date(Date.now() - 1000 * 60 * 3).toISOString(),
     },
@@ -259,16 +285,16 @@ function generate1500Reports(): Report[] {
       status: 'in_progress',
       priorityScore: 92,
       priorityLabel: 'RED',
-      latitude: 22.579,
-      longitude: 88.378,
-      landmark: 'New Town Action Area 1, Near Axis Mall',
-      description: 'Pregnant woman in labor, surrounded by 4ft water. Rapid boat ambulance required.',
-      reporterName: 'Mohammed Ali',
-      reporterPhone: '+91-9123456780',
+      latitude: 24.8333,
+      longitude: 92.7789,
+      landmark: 'Rangirkhari Near SMCH Link, Silchar',
+      description: 'Pregnant woman in active labor, surrounded by 4ft Barak flood water. Rapid boat evacuation required.',
+      reporterName: 'Farhan Ahmed',
+      reporterPhone: '+91-94350 68217',
       assignedVolunteerId: 'vol-001',
-      assignedVolunteerName: 'Rahul Sharma',
+      assignedVolunteerName: 'Rahul Baruah',
       assignedAgencyId: 'agency-001',
-      assignedAgencyName: 'NDRF 2nd Battalion Command',
+      assignedAgencyName: 'NDRF 1st Battalion Guwahati',
       source: 'sos',
       createdAt: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
     },
@@ -279,16 +305,16 @@ function generate1500Reports(): Report[] {
       status: 'in_progress',
       priorityScore: 89,
       priorityLabel: 'RED',
-      latitude: 20.2961,
-      longitude: 85.8245,
-      landmark: 'Janata Maidan Sector 3, Bhubaneswar',
-      description: 'Building wall collapsed on ground floor, 2 persons trapped under debris.',
-      reporterName: 'Bikram Das',
-      reporterPhone: '+91-9437123456',
+      latitude: 26.7509,
+      longitude: 94.2037,
+      landmark: 'AT Road & Baruah Chariali, Jorhat',
+      description: 'Building wall collapsed on ground floor, 2 persons trapped under concrete debris.',
+      reporterName: 'Bikram Gogoi',
+      reporterPhone: '+91-97060 43908',
       assignedVolunteerId: 'vol-002',
-      assignedVolunteerName: 'Priya Singh',
+      assignedVolunteerName: 'Priya Hazarika',
       assignedAgencyId: 'agency-002',
-      assignedAgencyName: 'State Disaster Response Force (SDRF)',
+      assignedAgencyName: 'Assam State Disaster Response Force (SDRF)',
       source: 'sos',
       createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
     },
@@ -299,16 +325,16 @@ function generate1500Reports(): Report[] {
       status: 'resolved',
       priorityScore: 55,
       priorityLabel: 'YELLOW',
-      latitude: 22.567,
-      longitude: 88.401,
-      landmark: 'Bidhannagar Stadium Gate 2',
-      description: 'Elderly man separated during cyclone evacuation. Reunited at Shelter #02.',
-      reporterName: 'Suresh Bose',
-      reporterPhone: '+91-9988776655',
+      latitude: 27.4728,
+      longitude: 94.9120,
+      landmark: 'Chowkidinghee Relief Camp Gate, Dibrugarh',
+      description: 'Elderly person separated during flood evacuation. Safely reunited with family at Shelter #02.',
+      reporterName: 'Dipen Kalita',
+      reporterPhone: '+91-98540 91763',
       assignedVolunteerId: 'vol-001',
-      assignedVolunteerName: 'Rahul Sharma',
+      assignedVolunteerName: 'Rahul Baruah',
       assignedAgencyId: 'agency-005',
-      assignedAgencyName: 'Red Cross Disaster Relief Mission',
+      assignedAgencyName: 'Indian Red Cross Society Assam State Branch',
       resolutionNotes: 'Citizen located and safely escorted back to family.',
       source: 'form',
       createdAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
@@ -349,7 +375,7 @@ function generate1500Reports(): Report[] {
       latitude: Number(lat.toFixed(4)),
       longitude: Number(lng.toFixed(4)),
       landmark: `${sector.city}, Sector ${(i % 12) + 1}`,
-      description: `${desc} [Triage Urgency: ${score}/100]`,
+      description: desc,
       reporterName: `${fName} ${lName}`,
       reporterPhone: `+91-9${(100000000 + ((i * 987654) % 899999999)).toString()}`,
       assignedVolunteerId: status !== 'pending' ? assignedVolId : undefined,
@@ -399,17 +425,43 @@ function generate250Shelters(): Shelter[] {
 
     list.push({
       id,
-      name: `${sector.city} — ${sType} #${(i % 20) + 1}`,
+      name: `${sector.city} — ${sType} #${i + 1}`,
       address: `Sector ${(i % 15) + 1}, ${sector.city}, ${sector.district}, ${sector.state}`,
       latitude: Number((sector.lat + latJitter).toFixed(4)),
       longitude: Number((sector.lng + lngJitter).toFixed(4)),
       capacity: cap,
       occupancy: occ,
       facilities: facSet,
-      contactPhone: `+91-${sector.lat > 22 ? '33' : '674'}-${(23570000 + (i % 9999)).toString()}`,
+      contactPhone: `+91-361-${(2237000 + (i % 9999)).toString()}`,
       status,
     })
   }
+  const assamSafeShelters: Array<{ name: string; address: string; lat: number; lng: number; capacity: number; occupancy: number; facilities: string[]; phone: string }> = [
+    { name: 'Guwahati - Sarusajai Sports Complex Safe Shelter', address: 'Sarusajai Stadium, Nalapara, Guwahati, Kamrup Metro - 781040', lat: 26.1150, lng: 91.7580, capacity: 1500, occupancy: 420, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-361-2237010' },
+    { name: 'Guwahati - Jalukbari Gauhati Univ Indoor Shelter', address: 'Gauhati University Campus, Jalukbari, Guwahati - 781014', lat: 26.1550, lng: 91.6620, capacity: 1200, occupancy: 340, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-361-2237011' },
+    { name: 'Silchar - SMCH Medical Relief Shelter', address: 'Ghungoor, Silchar, Cachar - 788014', lat: 24.8150, lng: 92.7950, capacity: 900, occupancy: 280, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-3842-245102' },
+    { name: 'Silchar - Tarapur Railway High School Camp', address: 'Tarapur, Silchar, Cachar - 788003', lat: 24.8350, lng: 92.7750, capacity: 650, occupancy: 190, facilities: ['food', 'water', 'medical_station'], phone: '+91-3842-245103' },
+    { name: 'Dibrugarh - AMC Indoor Relief Hub', address: 'Barbari, AMC Campus, Dibrugarh - 786002', lat: 27.4600, lng: 94.9000, capacity: 1100, occupancy: 310, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-373-2300081' },
+    { name: 'Jorhat - JEC Campus Safe Shelter', address: 'Garmur, Jorhat Engineering College, Jorhat - 785007', lat: 26.7450, lng: 94.2250, capacity: 850, occupancy: 240, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-376-2370002' },
+    { name: 'Tezpur - Collegiate Higher Secondary Camp', address: 'Mission Chariali, Tezpur, Sonitpur - 784001', lat: 26.6350, lng: 92.8000, capacity: 700, occupancy: 180, facilities: ['food', 'water', 'medical_station'], phone: '+91-3712-241501' },
+    { name: 'Nagaon - Dawson Higher Secondary Relief Center', address: 'Haibargaon, Nagaon - 782002', lat: 26.3500, lng: 92.6850, capacity: 800, occupancy: 220, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-3672-233178' },
+    { name: 'Majuli - Garamur Satra Community Shelter', address: 'Garamur Chariali, Majuli Island - 785104', lat: 27.0285, lng: 94.2055, capacity: 950, occupancy: 380, facilities: ['food', 'water', 'medical_station', 'power_generator'], phone: '+91-3775-274102' },
+    { name: 'Barpeta - Model Town Hall Safe Shelter', address: 'Bilortari Hati, Barpeta - 781301', lat: 26.3200, lng: 91.0100, capacity: 750, occupancy: 260, facilities: ['food', 'water', 'medical_station'], phone: '+91-3665-252102' },
+  ]
+  assamSafeShelters.forEach((s, idx) => {
+    list.push({
+      id: `shel-asm-${(idx + 1).toString().padStart(2, '0')}`,
+      name: s.name,
+      address: s.address,
+      latitude: s.lat,
+      longitude: s.lng,
+      capacity: s.capacity,
+      occupancy: s.occupancy,
+      facilities: s.facilities,
+      contactPhone: s.phone,
+      status: 'open',
+    })
+  })
   return list
 }
 
@@ -490,7 +542,7 @@ function generate100Agencies(): Agency[] {
       id,
       name,
       type,
-      contactPhone: i % 2 === 0 ? `+91-33-2324${(1000 + i).toString()}` : `108`,
+      contactPhone: i % 2 === 0 ? `+91-361-2237${(1000 + i).toString()}` : `108`,
       contactEmail: `command.${id}@aapdasetu.gov.in`,
       jurisdiction,
       latitude: sector.lat,
@@ -638,6 +690,19 @@ function generate600DamageAssessments(): DamageAssessmentReport[] {
 // 8. GENERATE 150+ EMERGENCY ALERTS
 function generate150Alerts(): Alert[] {
   const list: Alert[] = []
+
+  // Seed with curated, high-fidelity realistic emergency alerts
+  const curated = getInitialCitizenNotifications().map((item) => ({
+    id: item.id,
+    title: item.title,
+    message: item.message,
+    severity: (item.severity === 'success' ? 'info' : item.severity) as Alert['severity'],
+    channel: 'all',
+    targetArea: item.targetArea,
+    createdAt: item.createdAt,
+  }))
+  list.push(...curated)
+
   const ALERT_TYPES = [
     { title: 'Critical Flash Flood & Inundation Siren', severity: 'critical' as const, template: 'River water level breached danger mark by 1.8m. Immediate multi-story evacuation active.' },
     { title: 'Severe Cyclonic Storm Bulletin & Wind Hazard', severity: 'warning' as const, template: 'Wind gusts exceeding 90 km/h predicted. Stay away from loose structures, tin sheds, and power lines.' },
@@ -658,7 +723,7 @@ function generate150Alerts(): Alert[] {
       message: `${tmpl.template} Affected sectors: ${sector.city} and surrounding wards. Emergency Helpline: 1070 / 112.`,
       severity: tmpl.severity,
       channel: i % 3 === 0 ? 'all' : 'public',
-      region: `${sector.district}, ${sector.state}`,
+      targetArea: `${sector.district}, ${sector.state}`,
       createdAt: new Date(Date.now() - timeAgoMs).toISOString(),
     })
   }
@@ -809,14 +874,20 @@ export const mocks = {
   },
 
   createReport(input: ReportInput): Report {
+    // Idempotency mirror of backend createSosReport: outbox replays (and
+    // timeout-then-retry) must never create a second local dispatch.
+    if (input.clientRequestId) {
+      const existing = reportsStore.find((r) => r.clientRequestId === input.clientRequestId)
+      if (existing) return existing
+    }
     const triage = computeTriage({
       type: input.type,
       description: input.description,
       isOneTapSos: input.isOneTapSos,
     })
 
-    const lat = input.location?.lat ?? 22.5726
-    const lng = input.location?.lng ?? 88.3639
+    const lat = input.location?.lat ?? 26.1445
+    const lng = input.location?.lng ?? 91.7362
 
     const newRep: Report = {
       id: `rep-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -833,6 +904,7 @@ export const mocks = {
       reporterPhone: input.reporterPhone,
       source: input.isOneTapSos ? 'sos' : 'form',
       createdAt: new Date().toISOString(),
+      clientRequestId: input.clientRequestId,
     }
 
     reportsStore = [newRep, ...reportsStore]
@@ -844,10 +916,19 @@ export const mocks = {
   updateReport(id: string, patch: Partial<Report>): Report | undefined {
     const rep = reportsStore.find((r) => r.id === id || r.trackingId === id)
     if (!rep) return undefined
+    const isAssignment = patch.assignedVolunteerId !== undefined || patch.assignedAgencyId !== undefined
     Object.assign(rep, patch)
+    if (isAssignment) {
+      // Mirror assignVolunteer semantics: resolve names and move pending → in_progress
+      const vol = patch.assignedVolunteerId ? volunteersStore.find((v) => v.id === patch.assignedVolunteerId) : undefined
+      if (vol) rep.assignedVolunteerName = vol.name
+      const agency = patch.assignedAgencyId ? agenciesStore.find((a) => a.id === patch.assignedAgencyId) : undefined
+      if (agency) rep.assignedAgencyName = agency.name
+      if (patch.status === undefined && rep.status === 'pending') rep.status = 'in_progress'
+    }
     rep.updatedAt = new Date().toISOString()
     saveLocal(STORAGE_KEY_REPORTS, reportsStore)
-    emitRealtimeUpdate('report_updated', rep.id, rep)
+    emitRealtimeUpdate(isAssignment ? 'report_assigned' : 'report_updated', rep.id, rep)
     return rep
   },
 
@@ -951,6 +1032,52 @@ export const mocks = {
     return this.updateVolunteer(id, { status })
   },
 
+  volunteerMe(): Omit<VolunteerUser, 'token'> & { status?: string } {
+    const rawId = typeof localStorage !== 'undefined' ? localStorage.getItem('aapdasetu_volunteer_session') : null
+    const vol = (rawId && volunteersStore.find((v) => v.id === rawId)) || volunteersStore[0] || {
+      id: 'vol-001',
+      name: 'Priya Mohanty (Disaster Response Lead)',
+      phone: '+91-9876543210',
+      skills: ['first_aid', 'search_rescue', 'flood_navigation'],
+      status: 'available' as const,
+    }
+    return {
+      id: vol.id,
+      name: vol.name,
+      email: `${vol.name.toLowerCase().replace(/[^a-z]/g, '')}@volunteer.aapdasetu.in`,
+      phone: vol.phone,
+      skills: vol.skills,
+      status: vol.status,
+    }
+  },
+
+  listVolunteerTasks(): Report[] {
+    const rawId = typeof localStorage !== 'undefined' ? localStorage.getItem('aapdasetu_volunteer_session') : null
+    const targetId = rawId || 'vol-001'
+    return reportsStore.filter((r) => r.assignedVolunteerId === targetId && r.status !== 'resolved')
+  },
+
+  completeVolunteerTask(reportId: string): void {
+    const r = reportsStore.find((item) => item.id === reportId || item.trackingId === reportId)
+    if (r) {
+      r.status = 'resolved'
+      r.resolutionNotes = 'Rescue mission successfully completed by field volunteer team.'
+      saveLocal(STORAGE_KEY_REPORTS, reportsStore)
+      emitRealtimeUpdate('report_updated', r.id, r)
+    }
+  },
+
+  setVolunteerStatus(status: 'available' | 'offline'): void {
+    const rawId = typeof localStorage !== 'undefined' ? localStorage.getItem('aapdasetu_volunteer_session') : null
+    const targetId = rawId || 'vol-001'
+    const vol = volunteersStore.find((v) => v.id === targetId)
+    if (vol) {
+      vol.status = status
+      saveLocal(STORAGE_KEY_VOLUNTEERS, volunteersStore)
+      emitRealtimeUpdate('volunteer_updated', vol.id, vol)
+    }
+  },
+
   // ---- Agencies ----
   listAgencies(): Agency[] {
     return agenciesStore
@@ -980,7 +1107,7 @@ export const mocks = {
       message: payload.body,
       severity: payload.severity,
       channel: payload.channels[0] ?? 'all',
-      region: payload.region,
+      targetArea: payload.region,
       createdAt: new Date().toISOString(),
     }
     alertsStore = [newAlert, ...alertsStore]
@@ -992,6 +1119,28 @@ export const mocks = {
   // ---- Safety Checkins ----
   listSafetyCheckins(): SafetyCheckin[] {
     return checkinsStore
+  },
+
+  searchFamilyCheckins(phone: string) {
+    const digits = phone.replace(/\D/g, '')
+    if (!digits) return []
+    return checkinsStore
+      .filter((c) => c.phone && c.phone.replace(/\D/g, '').includes(digits))
+      .map((c) => {
+        const parts = (c.fullName || '').trim().split(/\s+/)
+        const firstName = parts[0] || 'Unknown'
+        const lastNameInitial = parts.length > 1 ? `${parts[parts.length - 1][0]}.` : null
+        const rawDigits = (c.phone || '').replace(/\D/g, '')
+        const phoneMasked = rawDigits.length >= 10 ? `+91 ******${rawDigits.slice(-4)}` : 'Phone on file'
+        return {
+          firstName,
+          lastNameInitial,
+          phoneMasked,
+          status: c.status,
+          locationName: c.locationName || null,
+          checkedInAt: c.createdAt,
+        }
+      })
   },
 
   createSafetyCheckin(input: Omit<SafetyCheckin, 'id' | 'createdAt'>): SafetyCheckin {
@@ -1132,6 +1281,12 @@ export const mocks = {
     let dangerLevel: 'CRITICAL' | 'MODERATE' | 'LOW' = 'LOW'
     let exerciseType: string | undefined = undefined
 
+    if (isOffTopicQuery(raw) && !isDisasterOrPlatformRelated(raw)) {
+      const langKey = isHindi ? 'hi' : isBengali ? 'bn' : isOdia ? 'or' : 'en'
+      reply = OFF_TOPIC_REPLIES[langKey]
+      return { reply, exerciseType, isCritical: false, dangerLevel: 'LOW', helpline: undefined, safetyChecklist: ['National Emergency: 112 | Ambulance: 108'] }
+    }
+
     // 1. Drowning / Water Rescue / Sinking / Swallowed Water
     if (/\b(drowning|drown|sinking|swimming|swept away|deep water|current pulling|water in lungs|पानी में डूब|ডুব|ବୁଡ଼ିବା)\b/i.test(lower)) {
       isCritical = true
@@ -1212,7 +1367,21 @@ export const mocks = {
         reply = '1. Deliver 5 firm back blows between shoulder blades with heel of hand. 2. If object is not cleared, perform 5 quick abdominal thrusts (Heimlich Maneuver) inwards and upwards above navel. Alternate 5 back blows + 5 thrusts until airway clears.'
       }
     }
-    // 8. Flood / Rising Water / Roof Trapped / Submerged
+    // 8. TRAPPED UNDER DEBRIS / COLLAPSED WALL — PRIORITY BEFORE GENERIC HELP
+    else if (/\b(trapped|collapse|collapsed|debris|buried|stuck.*wall|wall.*collapse|under.*wall|under.*debris|concrete.*trapped|trapped.*wall|फंसा|मलबा|धंसना|আটকে|ধ্বংসস্তূপ|ଫସି|ଭୁଶୁଡ଼ି)\b/i.test(lower)) {
+      isCritical = true
+      dangerLevel = 'CRITICAL'
+      if (isHindi) {
+        reply = '1. बिल्कुल न हिलें — धूल से बचने के लिए नाक-मुंह को कपड़े से ढकें। 2. जोर से चिल्लाने के बजाय पास की पाइप/दीवार को थपथपाएं या टॉर्च/फोन की लाइट से सिग्नल दें। 3. धीरे-धीरे सांस लें, ऊर्जा बचाएं, पानी न हो तो मुंह नम रखें। तुरंत 112 पर कॉल करें या SOS भेजें।'
+      } else if (isBengali) {
+        reply = '১. নড়াচড়া করবেন না — ধুলো এড়াতে নাক-মুখ কাপড়ে ঢাকুন। ২. চিৎকার না করে পাইপ/দেয়ালে টোকা দিন, টর্চ/ফোনের আলো দিয়ে সংকেত দিন। ৩. ধীরে শ্বাস নিন, শক্তি বাঁচান। অবিলম্বে ১১২-এ কল করুন।'
+      } else if (isOdia) {
+        reply = '୧. ହଲଚଲ କରନ୍ତୁ ନାହିଁ — ଧୂଳିରୁ ନାକ-ମୁହଁ ଘୋଡାନ୍ତୁ। ୨. ଚିତ୍କାର ବଦଳରେ ପାଇପ୍/କାନ୍ଥରେ ବାଡ଼େଇ ଶବ୍ଦ କରନ୍ତୁ। ୩. ଧୀରେ ନିଶ୍ୱାସ ନିଅନ୍ତୁ। ତୁରନ୍ତ ୧୧୨ କୁ କଲ୍ କରନ୍ତୁ।'
+      } else {
+        reply = '1. DO NOT MOVE — cover nose/mouth with cloth to avoid dust. 2. Do NOT shout loudly (save energy); TAP on nearby pipe/wall, use flashlight/phone light to signal rescuers. 3. Breathe slowly, stay still, conserve energy. Call 112 or trigger 1-Tap SOS with GPS immediately.'
+      }
+    }
+    // 9. Flood / Rising Water / Roof Trapped / Submerged
     else if (/\b(flood|water level|submerged|sinking|roof|inundat|water inside|बाढ़|पानी भर|ডুব|বন্যা|ବନ୍ୟା)\b/i.test(lower)) {
       isCritical = true
       dangerLevel = 'CRITICAL'
@@ -1222,7 +1391,7 @@ export const mocks = {
         reply = '1. Move immediately to highest available floor or reinforced rooftop. 2. Disconnect main electrical breaker and LPG cylinder valves. 3. Do NOT walk or drive into moving floodwaters. Dial 112 or trigger 1-Tap SOS for NDRF boat rescue.'
       }
     }
-    // 9. Earthquake / Tremors / Building Shaking
+    // 10. Earthquake / Tremors / Building Shaking
     else if (/\b(earthquake|tremor|quake|aftershock|भूकंप|ভূমিকম্প|ଭୂମିକମ୍ପ)\b/i.test(lower)) {
       dangerLevel = 'MODERATE'
       if (isHindi) {
@@ -1268,12 +1437,12 @@ export const mocks = {
         reply = '1. Boil water vigorously for at least 1 full minute before drinking. 2. If boiling is not possible, add 3-4 drops of unscented household chlorine bleach or 1 purification tablet per litre and wait 30 minutes before consuming.'
       }
     }
-    // 14. Find Shelters / Relief Camps / Food Rations
-    else if (/\b(shelter|relief camp|food|ration|stay|bed|hungry|राहत शिविर|खाना|राशन|রিলিফ ক্যাম্প|ଶିବିର)\b/i.test(lower)) {
+    // 14. Find Shelters / Relief Camps / Food Rations / Water / Medicine
+    else if (/\b(shelter|relief camp|food|ration|stay|bed|hungry|water|drinking water|clean water|medicine|medical|hospital|doctor|खाना|पानी|दवाई|राशन|राहत शिविर|জল|খাবার|ପାଣି|ଖାଦ୍ୟ)\b/i.test(lower)) {
       if (isHindi) {
-        reply = '1. निकटतम सरकारी राहत शिविर, भोजन और बिस्तर की लाइव क्षमता देखने के लिए ऊपर "Find Shelters" टैब पर जाएं। 2. वहां आपको जीपीएस नेविगेशन और राहत केंद्र के फोन नंबर मिल जाएंगे।'
+        reply = '1. निकटतम सरकारी राहत शिविर, भोजन, पानी और दवा की लाइव क्षमता देखने के लिए "Find Shelters" टैब पर जाएं। 2. वहां आपको जीपीएस नेविगेशन और राहत केंद्र के फोन नंबर मिल जाएंगे। साफ पानी के लिए उबालें या क्लोरीन डालें।'
       } else {
-        reply = '1. Open the "Find Shelters" tab in AapdaSetu to view live capacity, food supply status, and turn-by-turn GPS directions to the nearest verified disaster relief camp.'
+        reply = '1. Open the "Find Shelters" tab to view live capacity, food/water/medicine status, and GPS directions to the nearest verified relief camp. 2. For safe drinking water: boil 1 minute or add chlorine (3–4 drops/litre, wait 30 min).'
       }
     }
     // 15. Damage Claim / Compensation / SDRF
@@ -1281,7 +1450,7 @@ export const mocks = {
       if (isHindi) {
         reply = '1. संपत्ति के नुकसान की भरपाई और SDRF क्लेम के लिए "Damage Assessment" टैब पर जाएं। 2. प्रभावित घर, खेत या दुकान की फोटो अपलोड करें; AI तुरंत नुकसान का स्कोर और अनुमानित राहत राशि तय करेगा।'
       } else {
-        reply = '1. Visit the "Damage Assessment" tab to upload geotagged photos of damaged infrastructure. 2. Our AI ResNet-50 model computes the damage score and SDRF compensation entitlement automatically.'
+        reply = '1. Visit the "Damage Assessment" tab to upload geotagged photos of damaged infrastructure. 2. Our automated damage-grading model computes an indicative damage score and SDRF compensation estimate for review.'
       }
     }
     // 16. Missing Person Lookup / Report
@@ -1345,16 +1514,17 @@ export const mocks = {
         reply = '1. Keep the injured area supported and immobilized. 2. If bleeding, apply firm pressure with a clean cloth. 3. If bruised or painful, apply cold compress wrapped in cloth. In severe pain or deformity, call 108.'
       }
     }
-    // 23. Dynamic Fallback
+    // 23. Dynamic Fallback - Helpful menu instead of vague prompt
     else {
+      const nameSuffix = victimName && victimName !== 'Friend' ? ` ${victimName}` : ''
       if (isHindi) {
-        reply = `मैं आपकी सहायता के लिए तैयार हूँ ${victimName && victimName !== 'Friend' ? victimName : ''}। कृपया अपनी स्थिति का विवरण दें (जैसे: चोट, पानी का स्तर, आग, या राहत सामग्री)। आपातकाल में तुरंत 112 या 108 पर संपर्क करें।`
+        reply = `मैं आपकी सहायता के लिए तैयार हूँ${nameSuffix}। आप इनमें से किसी बारे में पूछ सकते हैं:\n1. बाढ़/आग/भूकंप से बचाव\n2. खून, जलना, हड्डी टूटना, सांप काटना\n3. आश्रय, खाना-पानी, दवा\n4. घबराहट के लिए 4-4-4 साँस\nकृपया अपना सवाल स्पष्ट लिखें। आपातकाल में 112 / 108 पर कॉल करें।`
       } else if (isBengali) {
-        reply = 'আমি আপনার পাশে আছি। আপনার কি ধরনের সহায়তা প্রয়োজন বিস্তারিত লিখুন (যেমন: আঘাত, বন্যা, আশ্রয় বা ওষুধ)। জরুরি পরিস্থিতিতে ১১২ বা ১০৮ নম্বরে যোগাযোগ করুন।'
+        reply = `আমি আপনার পাশে আছি${nameSuffix}। আপনি জিজ্ঞাসা করতে পারেন:\n1. বন্যা/আগুন/ভূমিকম্প থেকে বাঁচার উপায়\n2. রক্তপাত, পোড়া, হাড় ভাঙা, সাপে কাটা\n3. আশ্রয়, খাবার-জল, ওষুধ\n4. আতঙ্কের জন্য 4-4-4 শ্বাস\nপ্রশ্নটি স্পষ্ট লিখুন। জরুরিতে 112 / 108 কল করুন।`
       } else if (isOdia) {
-        reply = 'ମୁଁ ଆପଣଙ୍କ ସହାୟତା ପାଇଁ ପ୍ରସ୍ତୁତ। ଆପଣଙ୍କ ସମସ୍ୟା ବିଷୟରେ ଜଣାନ୍ତୁ। ଜରୁରୀକାଳୀନ ପରିସ୍ଥିତିରେ ୧୧୨ କୁ କଲ୍ କରନ୍ତୁ।'
+        reply = `ମୁଁ ଆପଣଙ୍କ ସହାୟତା ପାଇଁ ପ୍ରସ୍ତୁତ${nameSuffix}। ଆପଣ ପଚାରିପାରନ୍ତି:\n1. ବନ୍ୟା/ନିଆଁ/ଭୂମିକମ୍ପରୁ ରକ୍ଷା\n2. ରକ୍ତସ୍ରାବ, ପୋଡ଼ା, ହାଡ଼ ଭଙ୍ଗା, ସାପ କାମୁଡ଼ା\n3. ଆଶ୍ରୟ, ଖାଦ୍ୟ-ପାଣି, ଔଷଧ\n4. ଭୟ ପାଇଁ 4-4-4 ଶ୍ୱାସ\nଜରୁରୀରେ 112 / 108 କୁ କଲ୍ କରନ୍ତୁ।`
       } else {
-        reply = `I am here with you ${victimName && victimName !== 'Friend' ? victimName : ''}. Please tell me your specific emergency, injury, flood level, or relief requirement so I can provide precise step-by-step guidance. In life-threatening danger, call 112 or 108 immediately.`
+        reply = `I am here with you${nameSuffix}. Ask me about:\n1. Flood / Fire / Earthquake survival\n2. Bleeding, Burns, Fracture, Snakebite, Choking\n3. Shelters, Food/Water, Medicine\n4. Panic relief: 4-4-4 breathing\nTry: "water entering house", "severe bleeding", or "need shelter". In danger call 112 / 108.`
       }
     }
 
@@ -1405,17 +1575,19 @@ export const mocks = {
       claimantPhone: input.claimantPhone || '+91-9876543210',
       infrastructureType: input.infrastructureType || 'broken_home',
       propertyAddress: input.propertyAddress || 'Address on file',
-      district: input.district || 'North 24 Parganas',
-      latitude: input.latitude || 22.5726,
-      longitude: input.longitude || 88.3639,
+      district: input.district || 'Kamrup Metropolitan',
+      latitude: input.latitude ?? 26.1445,
+      longitude: input.longitude ?? 91.7362,
       photoUrl: input.photoUrl,
+      additionalPhotos: input.additionalPhotos,
+      description: input.description,
       damageGrade: input.damageGrade || 'MAJOR',
-      damageScore: input.damageScore || 75.0,
-      confidence: input.confidence || 98.4,
-      compensationInr: input.compensationInr || 47550,
+      damageScore: input.damageScore ?? 75.0,
+      confidence: input.confidence ?? 98.4,
+      compensationInr: input.compensationInr ?? 47550,
       verified: true,
       status: 'approved',
-      factors: input.factors || ['Damage verified by AI ResNet-50 Classifier'],
+      factors: input.factors || ['Indicative result from the automated damage classifier'],
       huggingFaceModel: 'Divyanshu-Kumar19/aapdasetu-damage-assessment',
       createdAt: new Date().toISOString(),
     }
@@ -1501,22 +1673,72 @@ export const mocks = {
     }
   },
 
-  aiSatelliteFloodMap(): FloodGeoJson {
+  aiSatelliteFloodMap(payload?: { district?: string; center?: { lat: number; lng: number }; radiusKm?: number }): FloodGeoJson {
+    const lat = payload?.center?.lat ?? 26.1445
+    const lng = payload?.center?.lng ?? 91.7362
+
     return {
       type: 'FeatureCollection',
       features: [
         {
           type: 'Feature',
-          properties: { hazard_type: 'flood', severity: 'critical', water_depth_est_meters: 1.8 },
+          properties: {
+            hazard_type: 'Flash Flood & Waterlogging',
+            severity: 'critical',
+            water_depth_est_meters: 1.6,
+            road_status: 'Impassable for light vehicles',
+          },
           geometry: {
             type: 'Polygon',
             coordinates: [
               [
-                [88.35, 22.56],
-                [88.38, 22.56],
-                [88.39, 22.59],
-                [88.36, 22.59],
-                [88.35, 22.56],
+                [lng + 0.008, lat + 0.004],
+                [lng + 0.018, lat + 0.005],
+                [lng + 0.016, lat + 0.014],
+                [lng + 0.006, lat + 0.012],
+                [lng + 0.008, lat + 0.004],
+              ],
+            ],
+          },
+        },
+        {
+          type: 'Feature',
+          properties: {
+            hazard_type: 'Low-Lying Drainage Overflow',
+            severity: 'high',
+            water_depth_est_meters: 0.9,
+            road_status: 'Heavy congestion / partial submergence',
+          },
+          geometry: {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [lng - 0.012, lat + 0.002],
+                [lng - 0.004, lat + 0.001],
+                [lng - 0.005, lat + 0.009],
+                [lng - 0.014, lat + 0.008],
+                [lng - 0.012, lat + 0.002],
+              ],
+            ],
+          },
+        },
+        {
+          type: 'Feature',
+          properties: {
+            hazard_type: 'Structural Debris & Tree Fall',
+            severity: 'moderate',
+            water_depth_est_meters: 0.4,
+            road_status: 'SDRF clearance in progress',
+          },
+          geometry: {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [lng + 0.002, lat - 0.011],
+                [lng + 0.010, lat - 0.010],
+                [lng + 0.009, lat - 0.004],
+                [lng + 0.001, lat - 0.005],
+                [lng + 0.002, lat - 0.011],
               ],
             ],
           },

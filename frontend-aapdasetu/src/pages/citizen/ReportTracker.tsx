@@ -163,15 +163,15 @@ export default function ReportTracker() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <FileText className="h-6 w-6 text-zinc-800 dark:text-slate-300" />
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-800 dark:text-slate-300">{t('track.pageTitle')}</h1>
+            <FileText className="h-6 w-6 text-zinc-800 dark:text-white" />
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-800 dark:text-white">{t('track.pageTitle')}</h1>
           </div>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-xs text-slate-500 dark:text-white">
             {t('track.pageSubtitle')}
           </p>
         </div>
         <div className="hidden sm:block">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-zinc-600 dark:bg-[#222222] dark:text-slate-300 mono">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-zinc-600 dark:bg-[#222222] dark:text-white mono">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             {t('common.live')}
           </span>
@@ -196,7 +196,7 @@ export default function ReportTracker() {
                   onChange={(e) => setTrackingId(e.target.value.toUpperCase())}
                   placeholder={t('track.inputPlaceholder')}
                   autoFocus
-                  className="w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-3.5 py-2.5 text-sm font-mono outline-none focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#151515] dark:text-slate-300 dark:focus:border-slate-500"
+                  className="w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-3.5 py-2.5 text-sm font-mono outline-none focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#151515] dark:text-white dark:focus:border-slate-500"
                 />
               </div>
             </Field>
@@ -229,7 +229,7 @@ export default function ReportTracker() {
                   className={`rounded-lg px-2.5 py-1 font-mono text-xs font-semibold transition ${
                     trackingId === id
                       ? 'bg-zinc-800 text-white dark:bg-slate-100 dark:text-zinc-800'
-                      : 'border border-zinc-200/80 bg-[#f4f4f5] text-zinc-600 hover:bg-zinc-100 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300'
+                      : 'border border-zinc-200/80 bg-[#f4f4f5] text-zinc-600 hover:bg-zinc-100 dark:border-white/[0.1] dark:bg-[#222222] dark:text-white'
                   }`}
                 >
                   {id}
@@ -274,10 +274,10 @@ export default function ReportTracker() {
                   </span>
                 )}
               </div>
-              <div className="font-mono text-2xl sm:text-3xl font-extrabold text-zinc-800 dark:text-slate-300 mt-0.5">
+              <div className="font-mono text-2xl sm:text-3xl font-extrabold text-zinc-800 dark:text-white mt-0.5">
                 {report.trackingId}
               </div>
-              <div className="mt-1 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+              <div className="mt-1 flex items-center gap-1 text-xs text-slate-500 dark:text-white">
                 <Clock className="h-3 w-3" />
                 <span>{formatDateTime(report.createdAt)}</span>
               </div>
@@ -289,7 +289,7 @@ export default function ReportTracker() {
                 <button
                   type="button"
                   onClick={() => lookup(report.trackingId)}
-                  className="inline-flex items-center gap-1 rounded-lg border border-zinc-200/80 bg-[#f4f4f5] px-2.5 py-1 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-100 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300"
+                  className="inline-flex items-center gap-1 rounded-lg border border-zinc-200/80 bg-[#f4f4f5] px-2.5 py-1 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-100 dark:border-white/[0.1] dark:bg-[#222222] dark:text-white"
                 >
                   <RefreshCw className="h-3 w-3" />
                   <span>{t('report.gpsRetry')}</span>
@@ -310,7 +310,7 @@ export default function ReportTracker() {
           {/* Interactive Live Responder & Incident Map */}
           {hasCoords && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono">
+              <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-white mono">
                 <span>{t('track.liveTelemetry')}</span>
                 {responderPoint && distanceKm && (
                   <span className="text-emerald-600 dark:text-emerald-400 font-bold">
@@ -366,16 +366,16 @@ export default function ReportTracker() {
                         <span
                           className={`text-sm font-bold ${
                             isCurrent
-                              ? 'text-zinc-800 dark:text-slate-300'
+                              ? 'text-zinc-800 dark:text-white'
                               : isPassed
-                              ? 'text-zinc-600 dark:text-slate-300'
+                              ? 'text-zinc-600 dark:text-white'
                               : 'text-slate-400'
                           }`}
                         >
                           {step.title}
                         </span>
                       </div>
-                      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{step.desc}</p>
+                      <p className="mt-0.5 text-xs text-slate-500 dark:text-white">{step.desc}</p>
                     </div>
                   </div>
                 )
@@ -405,8 +405,8 @@ export default function ReportTracker() {
           {/* Direct Responder / Command Actions */}
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 bg-[#f4f4f5] p-4 dark:border-white/[0.08] dark:bg-[#151515]">
             <div>
-              <div className="text-xs font-bold text-zinc-800 dark:text-slate-300">{t('helpline.tag')}</div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400">
+              <div className="text-xs font-bold text-zinc-800 dark:text-white">{t('helpline.tag')}</div>
+              <div className="text-[11px] text-slate-500 dark:text-white">
                 {t('helpline.desc')}
               </div>
             </div>
@@ -431,7 +431,7 @@ export default function ReportTracker() {
               </a>
               <a
                 href="tel:1070"
-                className="inline-flex items-center gap-1 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs font-bold text-zinc-700 shadow-xs hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-200"
+                className="inline-flex items-center gap-1 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs font-bold text-zinc-700 shadow-xs hover:bg-zinc-50 dark:border-white/[0.1] dark:bg-[#222222] dark:text-white"
               >
                 <Phone className="h-3.5 w-3.5" />
                 <span>Call 1070</span>
@@ -447,10 +447,10 @@ export default function ReportTracker() {
 function InfoRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
     <div className="flex justify-between border-b border-zinc-200/80/60 pb-1.5 last:border-none last:pb-0 dark:border-white/[0.08]">
-      <span className="text-slate-500 dark:text-slate-400">{label}:</span>
+      <span className="text-slate-500 dark:text-white">{label}:</span>
       <span
         className={`max-w-[65%] text-right font-medium ${
-          highlight ? 'font-bold text-emerald-600 dark:text-emerald-400' : 'text-zinc-700 dark:text-slate-200'
+          highlight ? 'font-bold text-emerald-600 dark:text-emerald-400' : 'text-zinc-700 dark:text-white'
         }`}
       >
         {value}

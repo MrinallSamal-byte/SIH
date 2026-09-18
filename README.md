@@ -1,7 +1,7 @@
-# 🛡️ AapdaSetu (आपदासेतु / આપદાસେતુ / ଆପଦାସେତୁ / आपदाসেতু)
+# 🛡️ AapdaSetu (आपदासेतु / আপদাসেতু / ଆପଦାସେତୁ / આપદાસેતુ)
 
-> **The Ultimate Disaster Response, AI Triage, and Multi-Agency Incident Command Ecosystem.**  
-> *Architected with React 19, TypeScript, Vite 6, Tailwind CSS, Leaflet.js GIS, Realtime Event Bus, Prisma 6 PostgreSQL, FastAPI AI Microservices, and Offline BLE Mesh Networking.*
+> **A disaster reporting and coordination platform: citizen SOS & reports, AI-assisted triage, and a multi-agency command dashboard.**  
+> *Architected with React 19, TypeScript, Vite 6, Tailwind CSS, Leaflet.js GIS + OSRM Road Routing, Realtime Event Bus, Prisma 6 PostgreSQL, FastAPI AI Microservices, and Offline-First PWA.*
 
 [![Initiative](https://img.shields.io/badge/Initiative-SIH%20Disaster%20Management-orange.svg)](https://github.com/MrinallSamal-byte/SIH)
 [![Web Architecture](https://img.shields.io/badge/Architecture-React%2019%20%2B%20TypeScript%20%2B%20FastAPI%20AI-blue.svg)](https://github.com/MrinallSamal-byte/SIH)
@@ -13,7 +13,7 @@
 ## 📑 Table of Contents
 1. [🌐 Live Deployments & Repositories](#-live-deployments--repositories)
 2. [📌 Executive Overview](#-executive-overview)
-3. [🏗️ Master System Architecture & Flow Diagrams](#️-master-system-architecture--flow-diagrams)
+3. [🏗️ Master System Architecture & Complete User Journey](#️-master-system-architecture--complete-user-journey)
 4. [📱 Comprehensive Citizen (User) Features](#-comprehensive-citizen-user-features)
 5. [🚨 Comprehensive Command Center (Admin) Features](#-comprehensive-command-center-admin-features)
 6. [🧑‍🚒 Comprehensive Field Responder (Volunteer) Features](#-comprehensive-field-responder-volunteer-features)
@@ -29,106 +29,143 @@
 
 ## 🌐 Live Deployments & Repositories
 
-- **Live Web Application:** [https://sih-ochre-xi.vercel.app/](https://sih-ochre-xi.vercel.app/)
-- **Local Dev Server:** `http://localhost:5173/`
+- **Live Web Application:** [https://aapdasetu-v3.vercel.app/](https://aapdasetu-v3.vercel.app/)
+- **Local Dev Server:** `http://localhost:5173/` (Vite) + `http://localhost:4000` (Express) + `http://localhost:8001` (FastAPI AI)
+- **One-Command Dev:** `npm run dev` (concurrently runs frontend + backend)
 - **GitHub Repository:** [https://github.com/MrinallSamal-byte/SIH](https://github.com/MrinallSamal-byte/SIH)
 
 ---
 
 ## 📌 Executive Overview
 
-During major natural catastrophes (cyclones, flash floods, earthquakes, industrial explosions), public response systems break down due to telecom network congestion, server crashes, lack of geo-spatial coordination, illiteracy, and language barriers.
+During cyclones, flash floods, earthquakes, and industrial explosions, public helplines collapse under telecom congestion, servers crash, and citizens face language barriers and fake bot replies.
 
-**AapdaSetu (आपदासेतु)** solves the critical "last-mile" disaster response gap by combining:
-1. **Zero-Authentication Citizen Portal:** Immediate, frictionless life-saving tools (1-Tap SOS, dynamic hazard pathfinding, voice/video incident reporting, shelter locator, missing persons registry, and anti-fraud property damage claims).
-2. **AapdaMitra AI Crisis Lifeline:** 24/7 Psychological First Aid (PFA) and disaster survival assistant with interactive box breathing, grounding protocols, and automatic one-tap emergency callback dispatch.
-3. **Multi-Agency Incident Command Center:** Real-time WebSocket command dashboard with audible siren alerts for `RED` critical incidents, skill-matched responder auto-dispatch, shelter resource tracking, and multi-channel broadcast messaging.
-4. **Volunteer Responder Portal:** Mobile-optimized field triage dashboard with turn-by-turn GPS navigation to incident sites and milestone updating.
-5. **FastAPI AI Microservices:** Automated multi-factor urgency scoring, Sentinel-1 SAR satellite radar flood mapping, and computer vision damage grading.
-6. **Decentralized BLE Mesh App (`bitchat-android`):** Offline peer-to-peer mesh messaging for complete cellular blackout scenarios.
+**AapdaSetu** solves the last-mile gap with:
+1. **Zero-Auth Citizen Portal:** 1-Tap Emergency SOS (`SOS.tsx` + `useGeoLocation` high-accuracy watch), evidence-rich reporting (`ReportForm.tsx` with `LandmarkPicker` + `compressImage` + voice/video), live shelter/safe-route GIS, missing registry, SDRF damage claims (1–5 images averaged), safety check-ins, and alerts.
+2. **AapdaMitra AI Lifeline with Multi-Layer Guardrails:** `PfaChat.tsx` + global `ChatWidget.tsx` + `lib/guardrails.ts` — 24/7 Psychological First Aid & disaster survival assistant. Strictly bound to disaster emergencies, first aid, trauma grounding (4-4-4 Box Breathing, 5-4-3-2-1 Grounding), and AapdaSetu platform features via a 4-tier defense-in-depth safety firewall (pre-query regex filtering, disaster allowlisting, hardened persona prompt, post-generation code/disallowed interceptor; blocks coding tasks like palindromes, algorithms, homework, trivia, recipes) with 7-model OpenRouter pool and offline mock parity.
+3. **Command Center:** 11 views under `AdminLayout` (`/admin`) — Live SOS siren (`LiveSOS.tsx` 880/440Hz), incident queue (`Reports.tsx`), GIS map, shelters, damage approvals, volunteers, agencies, broadcast (`Communications.tsx`), analytics (`Analytics.tsx`), audit logs, settings.
+4. **Volunteer Portal:** `VolunteerLayout` (`/volunteer`) — Dashboard, AssignedTasks (strict `assignedVolunteerId` filter, no auto-impersonation), CheckIn with GPS.
+5. **AI Engine:** `src/api/ai.ts` + `apps/ai-engine/app/*.py` — triage scoring, flood GeoJSON, automated damage grading.
+6. **Real Infrastructure:** `LeafletMap.tsx` + `lib/routing.ts` (`fetchOsrmRoute` via `router.project-osrm.org` with `foot`/`driving`, India bounds `[6,68]-[37.5,97.5]`), OSM/OpenTopoMap tiles, `ScaleControl`.
 
 ---
 
-## 🏗️ Master System Architecture & Flow Diagrams
+## 🏗️ Master System Architecture & Complete User Journey
 
-### 1. Complete Website Workflow & User Journey
+### 1. Complete Website Workflow & User Journey (Actual Implementation)
 
 ```mermaid
 flowchart TD
+    classDef entry fill:#f8fafc,stroke:#0f172a,stroke-width:2px,color:#0f172a;
     classDef citizen fill:#eff6ff,stroke:#3b82f6,stroke-width:2px,color:#1e3a8a;
     classDef triage fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#78350f;
+    classDef realtime fill:#eef2ff,stroke:#6366f1,stroke-width:2px,color:#312e81;
     classDef volunteer fill:#f0fdf4,stroke:#10b981,stroke-width:2px,color:#064e3b;
     classDef admin fill:#fef2f2,stroke:#ef4444,stroke-width:2px,color:#7f1d1d;
     classDef pfa fill:#faf5ff,stroke:#a855f7,stroke-width:2px,color:#581c87;
+    classDef storage fill:#fff7ed,stroke:#f97316,stroke-width:1.5px,color:#7c2d12;
 
-    subgraph Citizen["1. 📱 Citizen / Public User Actions"]
-        A["🌐 AapdaSetu Portal"]:::citizen
-        A --> B1["🚨 1-Tap Emergency SOS\n(Instant GPS distress)"]:::citizen
-        A --> B2["📋 Report Incident\n(Voice, Video, Text)"]:::citizen
-        A --> B3["🗺️ Safe Evacuation Routes\n(Hazard-avoidance GIS)"]:::citizen
-        A --> B4["🏕️ Find Nearest Shelters\n(Capacity & Amenities)"]:::citizen
-        A --> B5["🔍 Missing Persons\n(Search & Register Cases)"]:::citizen
-        A --> B6["🏠 Property Damage Claims\n(Photo upload for compensation)"]:::citizen
-        A --> B7["🤖 AapdaMitra AI Assistant\n(PFA chat & Grounding)"]:::pfa
+    A["🌐 Entry: HashRouter App.tsx<br/>MainLayout.tsx<br/>i18n 4-lang, theme, offline banner,<br/>bulletins listAlerts, bell 160+ alerts"]:::entry
+    A --> B{"User Role / Intent?"}
+    B -->|"Citizen (no login)"| C:::citizen
+    B -->|"Volunteer"| V:::volunteer
+    B -->|"Admin"| AD:::admin
+
+    subgraph Citizen ["📱 CITIZEN — Zero-Auth (/) — src/pages/citizen/*"]
+        C["Home.tsx<br/>Hero + Get Help wizard<br/>Quick Services carousel"]:::citizen
+        C --> C1["🚨 Emergency SOS (/sos)<br/>SOS.tsx<br/>inputs: phone*, type, name, landmark<br/>hooks: useGeoLocation (watchPosition<br/>highAccuracy, isFallback, visibility pause)<br/>helpers: getHighPrecisionPosition,<br/>reverseGeocode, generateEmergencySms<br/>offline: localStorage aapdasetu_pending_sos<br/>early-return, no fake queued"]:::citizen
+        C --> C2["📋 Report Incident (/report)<br/>ReportForm.tsx<br/>LandmarkPicker (MapContainer India maxBounds)<br/>Media: Upload 3 max 5MB + MediaRecorder<br/>voice 30s (audioStreamRef)<br/>GPS: isFallback hidden, locateHighAccuracy<br/>validation: type*, phone 10d, media ≥1 (photo/video/voice)*, description optional"]:::citizen
+        C --> C3["🏕️ Shelters (/shelters)<br/>ShelterFinder.tsx<br/>useRealtime(listShelters,5000)<br/>Haversine sort, facilities filter<br/>260+280 BBSR dummy shelters<br/>markers stable id, no || fallback"]:::citizen
+        C --> C4["🧭 Safe Routes (/safe-routes)<br/>SafeRoutes.tsx<br/>aiSatelliteFloodMap(center,radius30)<br/>lib/routing.ts fetchOsrmRoute (OSRM foot/driving)<br/>Polygon MultiPolygon handling,<br/>LeafletMap IndiaBounds OSM/Topo"]:::citizen
+        C --> C5["👥 Missing (/missing-persons)<br/>photo* age* gender* lastSeen* phone*<br/>compressImage, maskPhone"]:::citizen
+        C --> C6["🛡️ Safety Check-in<br/>SafetyCheckin.tsx<br/>fullName* phone* locationName*<br/>maskPhone, slice 100/200/500"]:::citizen
+        C --> C7["🏚️ Damage Claim (/report-damage)<br/>1-5 images, per-image aiDamageAssessment<br/>avgScore/avgComp/avgGrade<br/>createDamageAssessment → realtime"]:::citizen
+        C --> C8["🔍 Track (/track)<br/>ReportTracker.tsx<br/>getReport(trackingId)<br/>useRealtime poll 5s, abortRef<br/>OSRM driving route responder→incident<br/>no Math.random, hasCoords !=null"]:::citizen
+        C --> C9["🤖 AapdaMitra AI (/pfa-chat + ChatWidget)<br/>aiPfaChat + lib/guardrails.ts<br/>4-tier firewall (pre-filter + post-code strip)<br/>7 models 10s abort → mocks fallback<br/>4-4-4 breathing coach, trauma grounding"]:::pfa
+        C --> C0["📢 Alerts / Contacts / About<br/>Alerts.tsx useRealtime 8s<br/>About story 3AM call"]:::citizen
     end
 
-    subgraph AI["2. 🧠 AI Processing & Triage Engine"]
-        B1 & B2 --> C1["⚡ Multi-Factor Urgency Triage\n(Priority: RED / YELLOW / GREEN)"]:::triage
-        B6 --> C2["👁️ ResNet-50 Vision Analysis\n(Damage Grade & Grant Estimate)"]:::triage
-        B3 --> C3["🛰️ Sentinel-1 Satellite GIS\n(Flood Inundation Layers)"]:::triage
-        B7 --> C4["💬 Psychological First Aid (PFA)\n(Box Breathing & Callbacks)"]:::pfa
+    subgraph Triage ["🧠 AI & Logic — src/api/ai.ts, lib/triage.ts"]
+        C1 & C2 --> T1["computeTriage / aiTriage<br/>POST /ai/triage<br/>W_type (Earthquake +25 etc)<br/>W_nlp multi-lang trapped/drown/bleed<br/>W_demo child/senior/pregnant<br/>→ score 1-100 → RED/YELLOW/GREEN"]:::triage
+        C7 --> T2["aiDamageAssessment per image<br/>POST /ai/damage-assessment<br/>Grade DESTROYED/MAJOR/MINOR<br/>Score, confidence, compensation<br/>→ avg across 5 images"]:::triage
+        C4 --> T3["aiSatelliteFloodMap<br/>POST /ai/satelliteflood-map<br/>center+radius vs district<br/>GeoJSON Polygon/MultiPolygon"]:::triage
+        C9 --> T4["AapdaMitra AI Guardrails<br/>1. self-harm / crisis priority<br/>2. isOffTopic regex pre-filter<br/>3. AAPDAMITRA_SYSTEM_PROMPT<br/>4. containsCode post-interceptor<br/>5. fallback mocks.aiPfaChat"]:::pfa
     end
 
-    subgraph Admin["3. 🚨 Command Center / Admin Operations"]
-        C1 & C2 --> D1["🎛️ Realtime Command Dashboard\n(Live SOS Sirens & GIS Pins)"]:::admin
-        D1 --> D2["📢 Broadcast Emergency Alerts\n(SMS, WhatsApp, Web Feed)"]:::admin
-        D1 --> D3["🤝 Proximity Unit Dispatch\n(Assign closest Volunteers / NDRF)"]:::admin
-        D1 --> D4["💰 Approve SDRF Claims\n(Verify damage compensation)"]:::admin
+    subgraph Store ["💾 Client Store & Transport"]
+        T1 & T2 & T3 & T4 --> S1["api/client.ts<br/>fetchWithTimeout 6s + 3 retries backoff<br/>withMockFallback: only 5xx/TypeError/Abort<br/>auth: admin header only /admin<br/>config trailing slash strip"]:::storage
+        S1 --> S2["mocks.ts v6<br/>1500 reports, 270 shelters (10 BBSR safes),<br/>520 volunteers, 160 alerts<br/>localStorage keys:<br/>aapdasetu_mock_*_v6,<br/>aapdasetu_tracked_reports,<br/>aapdasetu_last_coords"]:::storage
+        S1 --> S3["realtimeEventBus.ts<br/>emitRealtimeUpdate / subscribeRealtimeUpdates<br/>BroadcastChannel + visibility"]:::realtime
+        S1 --> S4["useRealtime.ts<br/>poll intervalMs (5s) + bus<br/>hidden pause, abort race"]:::realtime
     end
 
-    subgraph Volunteer["4. 🧑‍🚒 Field Responder / Volunteer Actions"]
-        D3 --> E1["📲 Receive Task Alert\n(Skill match & GPS coords)"]:::volunteer
-        E1 --> E2["🧭 Turn-by-Turn Route\n(Navigate to disaster site)"]:::volunteer
-        E2 --> E3["✅ Execute Relief & Update Status\n(On-Scene ➔ Resolved)"]:::volunteer
+    subgraph AdminFlow ["🚨 ADMIN — /admin — AdminLayout guard useIsAdminAuthed (storage event)"]
+        S3 & S4 --> AD1["Overview.tsx KPIs<br/>Live SOS siren Web Audio 880/440Hz<br/>useRealtime"]:::admin
+        AD1 --> AD2["Reports.tsx<br/>listReports (type/priority/status/q)<br/>client pagination 20, haversine falsy fix<br/>rankedVolunteers skill+distance"]:::admin
+        AD2 --> AD3["Shelters.tsx / Volunteers.tsx<br/>create/update with isFallback guard<br/>closed→open fix"]:::admin
+        S3 --> AD4["Communications.tsx broadcast<br/>SMS/WhatsApp/Web, audit_logs"]:::admin
+        T2 --> AD5["DamageAssessment.tsx<br/>avg scores table, centroid fix,<br/>pagination 620 rows"]:::admin
+        AD1 --> AD6["Analytics.tsx<br/>XAxis dataKey date fix<br/>hardcoded 14.2m"]:::admin
     end
 
-    E3 -->|Realtime Status Update| F["📡 Live Tracking Stream\n(Citizens view rescue milestone progress)"]:::citizen
+    subgraph VolunteerFlow ["🧑‍🚒 VOLUNTEER — /volunteer — VolunteerLayout"]
+        S3 --> V1["Dashboard.tsx<br/>NO auto vols[0], empty if no session<br/>login prompt"]:::volunteer
+        V1 --> V2["AssignedTasks.tsx<br/>strict assignedVolunteerId === id<br/>empty if no session (no disclosure)<br/>updateReport status"]:::volunteer
+        V1 --> V3["CheckIn.tsx<br/>no vols[0] fallback<br/>catch null"]:::volunteer
+    end
+
+    V2 -->|"status resolved"| S3
+    AD2 -->|"assignVolunteer(report, volunteer)"| V2
+    C8 -.->|"poll getReport + OSRM route"| S3
+
+    S2 -.->|"offline queue"| S1
 ```
 
----
+### 2. Detailed Route Map (Actual Files)
 
-### 2. Global Multi-Tier System Architecture
+| Path | File | Auth | Key Logic |
+|------|------|------|-----------|
+| `/` | `Home.tsx` | public | Hero, Get Help wizard removed, 5 service cards, carousel `scrollBy 280` |
+| `/sos` | `SOS.tsx` | public | `useGeoLocation` `isFallback` → `generateEmergencySms` without coords if fallback, `navigator.onLine` early-return queued, `aiTriage` after, `copyTrackingId` |
+| `/report` | `ReportForm.tsx` | public | `LandmarkPicker` India bounds, `fileToDataUrl` 5MB, `MediaRecorder` + `audioStreamRef`, `report.gpsTitle*`, media (photo/video OR voice note) required, `report.descLabel` optional, `reverseGeocode` |
+| `/track?id=SOS-xxx` | `ReportTracker.tsx` | public | `getReport` + `abortRef`, `hasCoords != null`, `fetchOsrmRoute(responder→incident, driving)` dashed false, `timeAgo` |
+| `/shelters` | `ShelterFinder.tsx` | public | `useRealtime(listShelters,5000)` `Haversine` sort, `typeof lat==='number'` filter, `shel-fallback-${i}` |
+| `/safe-routes` | `SafeRoutes.tsx` | public | `aiSatelliteFloodMap({center,radiusKm:30})` vs district, `polygonPaths` MultiPolygon flatMap, `fetchOsrmRoute` foot/driving, `LeafletMap` India `minZoom5 maxBounds` |
+| `/missing-persons` | `MissingPersons.tsx` | public | `listMissingPersons` cancelled flag, `photo* age*` required, `startsWith https/data:image` check, `compressImage` |
+| `/report-damage` | `ReportDamage.tsx` | public | 1–5 images `onFiles` + `removePhoto`, `perImageVerdicts` avg, `createDamageAssessment` realtime |
+| `/pfa-chat` + widget | `PfaChat.tsx` `ChatWidget.tsx` | public | `aiPfaChat` + `lib/guardrails.ts`: multi-layer domain guardrail (pre-query regex refusal, allowlist, hardened persona prompt, post-generation code/disallowed interceptor), 7-model OpenRouter pool (10s abort), `cleanAiOutput`, localized refusals (EN/HI/BN/OR) |
+| `/admin/*` | `pages/admin/*` | `useIsAdminAuthed` `localStorage` + `storage` event | 11 views, `listReports` pagination, `haversineKm` falsy fix, `XAxis dataKey="date"` |
+| `/volunteer/*` | `pages/volunteer/*` | `useIsVolunteerAuthed` | No `vols[0]` auto-login, empty if no session, `useRealtime` missing (known) |
+| `*` | `App.tsx` `HashRouter` | — | Lazy `Suspense RouteFallback` + `ErrorBoundary` only MainLayout, `vercel.json` rewrite `/(.*)→/index.html` |
+
+### 3. Global Multi-Tier System Architecture
 
 ```mermaid
 graph TB
     subgraph ClientLayer["🌐 CLIENT INTERFACES"]
-        Citizen["📱 Citizen Emergency Portal\n(1-Tap SOS, Reports, Shelters, Routes)"]
-        AIWidget["🤖 AapdaMitra AI Widget\n(Circular Floating Bot, PFA Chat)"]
-        Admin["🚨 Command Center Dashboard\n(Live SOS, GIS Map, Dispatch, Shelters)"]
-        Volunteer["🧑‍🚒 Volunteer Portal\n(Task Queue, Navigation, Check-In)"]
-        MeshApp["📡 BitChat Android App\n(Offline BLE / Wi-Fi Mesh)"]
+        Citizen["📱 Citizen Portal (Zero-Auth)<br/>SOS, Report(India bounds), Shelters(270), Routes(OSRM)"]
+        AIWidget["🤖 AapdaMitra Widget<br/>Bottom 20 right-4 (mobile left vs right fix)<br/>Scope-limited"]
+        Admin["🚨 Command Center<br/>/admin Live SOS siren, 1500 reports"]
+        Volunteer["🧑‍🚒 Volunteer Portal<br/>No auto-impersonation"]
+        MeshApp["📡 BitChat Android<br/>BLE/Wi-Fi Aware"]
     end
-
     subgraph CoreEngineLayer["⚡ CORE LOGIC & EVENT BUS"]
-        PWAEngine["PWA Service Worker & Cache\n(sw.js + IndexedDB Outbox)"]
-        I18nEngine["i18n Multi-Lingual Engine\n(English, Hindi, Bengali, Odia)"]
-        EventBus["Realtime Event Bus & WebSockets\n(pub-sub event distribution)"]
-        TSTriage["TypeScript Triage Engine\n(lib/triage.ts)"]
-        GISRouting["Leaflet GIS Pathfinding\n(Hazard avoidance geometry)"]
+        PWAEngine["PWA sw.js CacheFirst/NetworkFirst<br/>IndexedDB aapdasetu_offline_queue<br/>visibility pause"]
+        I18nEngine["i18n 4-lang EN/HI/BN/OR<br/>dictionaries in lib/i18n.tsx"]
+        EventBus["RealtimeEventBus<br/>emitRealtimeUpdate / subscribe<br/>BroadcastChannel"]
+        TSTriage["lib/triage.ts<br/>P_total = clamp(1,100,30+Wtype+Wnlp+Wdemo+Wgps)"]
+        GISRouting["lib/routing.ts<br/>OSRM router.project-osrm.org<br/>foot/driving, haversineRouteLength"]
     end
-
-    subgraph AIEngineLayer["🧠 PYTHON FASTAPI AI ENGINE"]
-        PyTriage["Explainable Urgency Triage\n(triage.py)"]
-        VisionDamage["Computer Vision Damage Classifier\n(damage_service.py)"]
-        SARMapper["Sentinel-1 SAR Satellite Flood Mapper\n(satellite_flood_mapping.py)"]
-        PFABot["Psychological First Aid AI\n(pfa_chatbot.py)"]
+    subgraph AIEngineLayer["🧠 PYTHON FASTAPI AI (8000→8080)"]
+        PyTriage["triage.py /ai/triage"]
+        VisionDamage["damage_service.py /ai/damage-assessment<br/>pHash X, ensemble avg 5 images"]
+        SARMapper["satellite_flood_mapping.py /ai/satelliteflood-map<br/>Sentinel-1 SAR Otsu → GeoJSON"]
+        PFABot["pfa_chatbot.py /ai/pfa-chat<br/>OpenRouter 7 models fallback"]
     end
-
-    subgraph PersistenceLayer["🗄️ DATABASE & STORAGE"]
-        DB[(PostgreSQL 16 Database\nPrisma 6 ORM)]
-        Tables["Incidents, Shelters, Volunteers, Agencies,\nDamageClaims, MissingPersons, Checkins, Alerts, AuditLogs"]
+    subgraph PersistenceLayer["🗄️ STORAGE"]
+        DB[(PostgreSQL 16 Prisma 6<br/>Incident, Shelter, Volunteer, Agency<br/>DamageClaim, MissingPerson, Alert, AuditLog)]
+        LocalStore[(Browser localStorage<br/>aapdasetu_mock_*_v6, tracked_reports,<br/>pending_sos, volunteer_session)]
     end
-
     Citizen --> PWAEngine
     Citizen --> I18nEngine
     Citizen --> TSTriage
@@ -136,99 +173,60 @@ graph TB
     AIWidget --> PFABot
     Admin --> EventBus
     Volunteer --> EventBus
-    
     TSTriage --> EventBus
     EventBus --> Admin
     EventBus --> Volunteer
-    
     VisionDamage --> Admin
     SARMapper --> GISRouting
-    
     EventBus <--> DB
-    Admin <--> DB
-    Volunteer <--> DB
+    EventBus <--> LocalStore
 ```
 
----
-
-### 3. End-to-End Emergency SOS & Multi-Agency Dispatch Flow
+### 4. End-to-End Emergency SOS & Dispatch (Sequence — Real Code)
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Victim as 🆘 Citizen in Distress
-    participant App as 📱 Citizen Web App
-    participant Triage as 🧠 AI Triage Engine
-    participant EventBus as ⚡ Realtime Event Bus
-    actor Admin as 🚨 Command Center Operator
-    actor Volunteer as 🧑‍🚒 Field Responder
+    actor Victim as 🆘 Citizen
+    participant App as 📱 SOS.tsx
+    participant Geo as 🛰️ useGeoLocation<br/>watchPosition highAccuracy
+    participant Loc as 📍 helpers<br/>reverseGeocode / getHighPrecision
+    participant Triage as 🧠 aiTriage<br/>POST /ai/triage
+    participant Client as 🌐 api/client<br/>fetchWithTimeout 6s retry3
+    participant Bus as ⚡ realtimeEventBus
+    actor Admin as 🚨 Admin LiveSOS
+    actor Vol as 🧑‍🚒 Volunteer
 
-    Victim->>App: 1. Click 1-Tap SOS / Submit Report Form
-    App->>App: 2. Auto-fetch GPS Coordinates & reverse geocode
-    App->>Triage: 3. Compute multi-factor urgency score
-    Triage-->>App: 4. Returns { score: 88, label: 'RED', factors: [...] }
-    App->>EventBus: 5. Broadcast IncidentRegistered event with Tracking ID (e.g. SOS-7K2X9)
-    EventBus-->>Admin: 6. Real-time audible siren + Live SOS stream highlight
-    EventBus-->>Victim: 7. Instant Tracking ID issued with direct live tracker link
-    Admin->>EventBus: 8. Assign skill-matched nearest volunteer (e.g. Swimmer / Medical)
-    EventBus-->>Volunteer: 9. Push dispatch notification with GPS coordinates & route
-    Volunteer->>App: 10. Update status to 'On Scene' -> 'Evacuated'
-    EventBus-->>Victim: 11. Live tracker reflects rescue progress in real time
-```
-
----
-
-### 4. Multi-Factor AI Urgency Triage Pipeline
-
-```mermaid
-flowchart TD
-    InputPayload["Incident Payload:<br/>Category, Description, Demographics, Landmark, Media Transcripts"] --> BaseScore["Initialize Base Priority: S = 30 Points"]
-
-    BaseScore --> TypeWeight{"Stage 1: Disaster Category Weight (W_type)"}
-    TypeWeight -->|Earthquake / Building Collapse| W1["+25 Points"]
-    TypeWeight -->|Fire / Explosion| W2["+20 Points"]
-    TypeWeight -->|Flood / Water Rising| W3["+18 Points"]
-    TypeWeight -->|Critical Medical / Cardiac| W4["+18 Points"]
-    TypeWeight -->|Missing Person Search| W5["+15 Points"]
-    TypeWeight -->|Transit / Road Accident| W6["+12 Points"]
-    TypeWeight -->|Other / General| W7["+5 Points"]
-
-    W1 --> NLPMatrix
-    W2 --> NLPMatrix
-    W3 --> NLPMatrix
-    W4 --> NLPMatrix
-    W5 --> NLPMatrix
-    W6 --> NLPMatrix
-    W7 --> NLPMatrix
-
-    NLPMatrix{"Stage 2: Multi-Lingual NLP Keyword Matrix (W_nlp)"}
-
-    subgraph Keywords["Multi-Lingual Keyword Scanning (EN / HI / BN / OR)"]
-        K1["Critical: drowning, trapped, submerged, roof collapsed"] -->|"+30 Pts Each (Max +40)"| Acc["Accumulator"]
-        K2["Severe: severe bleeding, infant, cardiac, explosion"] -->|"+25 Pts Each"| Acc
-        K3["Moderate: water rising fast, unconscious, snakebite"] -->|"+20 Pts Each"| Acc
-        K4["Vulnerable: elderly, senior citizen, diabetic, asthma"] -->|"+15 Pts Each"| Acc
+    Victim->>App: click Emergency SOS (phone* + type)
+    App->>Geo: coords, isFallback, source
+    alt isFallback
+        App->>App: toast "Location unavailable → Correct Area modal"
+        App-->>Victim: show LandmarkPicker India maxBounds
+    else gps granted
+        Geo-->>App: {lat:20.27,lng:85.83,accuracy:5}
     end
-
-    NLPMatrix --> Keywords
-    Acc --> DemoCheck{"Stage 3: Demographic Multipliers (W_demo)"}
-
-    DemoCheck -->|Child 12 yrs or younger| Age1["+20 to +25 Points"]
-    DemoCheck -->|Senior Citizen 60 yrs or older| Age2["+20 Points"]
-    DemoCheck -->|Pregnancy / Chronic Illness| Med["+20 to +30 Points"]
-
-    Age1 --> Normalizer
-    Age2 --> Normalizer
-    Med --> Normalizer
-    DemoCheck --> Normalizer
-
-    Normalizer["Score Normalizer: Clamp between 1 and 100"]
-
-    Normalizer --> BadgeClass{"Stage 4: Priority Badge Classification"}
-    BadgeClass -->|Score 80 to 100| RED["RED / CRITICAL ALERT<br/>- Command Center Siren Active<br/>- Immediate Boat / Heli / Ambulance Dispatch"]
-    BadgeClass -->|Score 50 to 79| YELLOW["YELLOW / URGENT<br/>- High Priority Dispatch Queue<br/>- Field Volunteer Mobilization"]
-    BadgeClass -->|Score below 50| GREEN["GREEN / ADVISORY<br/>- Standard Queue<br/>- Scheduled Relief Supply Distribution"]
+    App->>Loc: reverseGeocode → address
+    alt offline !navigator.onLine
+        App->>App: localStorage aapdasetu_pending_sos, toast queued, return (no aiTriage/createReport)
+    else online
+        App->>Triage: aiTriage(input) → {score,label}
+        App->>Client: createReport(input) → {trackingId SOS-xxxx, priorityLabel}
+        Note over Client: withMockFallback only 5xx/TypeError/Abort mocks, 4xx throws
+        Client->>Bus: emitRealtimeUpdate report_created
+        Bus-->>Admin: LiveSOS audible 880/440Hz siren if RED
+        Bus-->>Victim: Confirmation + Tracking ID + Copy ID button
+        Admin->>Bus: assignVolunteer(report, nearest skill+distance haversine)
+        Bus-->>Vol: AssignedTasks (strict filter)
+        Vol->>Client: updateReport resolved
+        Bus-->>Victim: /track live poll 5s + OSRM route responder→incident
+    end
 ```
+
+### 5. AI Triage, Routing & Damage Pipelines
+
+- **Triage:** `lib/triage.ts` `computeTriage` — base 30 + W_type (Earthquake +25, Fire +20, Flood/Medical +18, Missing +15, Accident +12, Other +5) + W_nlp (trapped/drown +30, bleed/cardiac +25 etc capped 40) + W_demo (child ≤12 +25, senior ≥60 +20, pregnancy +30) + GPS bonus 5 → clamp 1-100 → RED≥80 YELLOW≥50 else GREEN.
+- **Routing:** `lib/routing.ts` `fetchOsrmRoute(from,to,waypoints, foot|driving)` → `https://router.project-osrm.org/route/v1/${profile}/${lng,lat;...}?overview=full&geometries=geojson` 8s abort → points + distanceKm + durationMin. SafeRoutes uses driving for fastest, foot with flood waypoints (0.003° offset vertex) → average.
+- **Damage:** Citizen 1–5 images `compressImage 800 0.75` → `Promise.all(aiDamageAssessment per image)` → avgScore/avgComp/avgConf/grade majority → `createDamageAssessment` → `damageStore` + `emitRealtimeUpdate damage_assessed` → Admin `/admin/damage-assessment` realtime.
 
 ---
 
@@ -239,15 +237,15 @@ The citizen portal is completely **zero-authentication**—no sign-up, email, or
 | Feature & Route | Detailed Description & Capabilities | User Inputs & Automations | System Output & Value |
 | :--- | :--- | :--- | :--- |
 | **1-Tap Emergency SOS**<br>`#/sos` | One-touch instant distress trigger designed for extreme emergencies. Auto-detects GPS coordinates, calculates urgency, alerts the control room, and provides offline SMS fallback. | Auto-acquired GPS coordinates, accuracy radius (meters), physical landmark input. | Instant Tracking ID, live response link, emergency hotline fast-dial (112, 108, 1070). |
-| **Intelligent Incident Report**<br>`#/report` | Multi-step structured emergency reporting for complex incidents. Supports 7 emergency categories, interactive landmark picker, media evidence, and demographic vulnerability flags. | Emergency type, GPS picker, reporter phone, live audio voice recording, live video recording, victim count, special conditions. | AI triage priority calculation, verified incident dossier, tracking ID generation. |
+| **Intelligent Incident Report**<br>`#/report` | Multi-step structured emergency reporting for complex incidents. Supports 7 emergency categories, interactive landmark picker, mandatory media evidence (photo/video or voice note), and demographic vulnerability flags. | Emergency type, GPS picker, reporter phone, live audio voice recording, live video recording, victim count, special conditions. | AI triage priority calculation (visible on `/track`), tracking ID generation with one-tap copy. |
 | **Live Incident Tracker**<br>`#/track` | Real-time tracking portal allowing victims and families to track the exact progress of their rescue in real time. | Incident Tracking ID (e.g. `SOS-7K2X9`). | Live milestone status (`Distress Registered` $\rightarrow$ `Dispatched` $\rightarrow$ `Resolved`), responder card, live ETA, GPS map telemetry. |
 | **Nearby Shelter Finder**<br>`#/shelters` | Live relief camp locator sorted in real time by geodesic distance using the Haversine formula. Shows open bed availability and amenities. | GPS location, search query, facility filters (Medical Station, Food, Clean Water, Power Generator). | Distance in km, capacity/occupancy meter, status (Open/Full/Closed), one-tap phone call, turn-by-turn directions. |
 | **Safe Evacuation Corridors**<br>`#/safe-routes` | Dynamic GIS navigation engine that computes safe walking evacuation corridors by detecting and avoiding Sentinel-1 SAR flood polygons and blocked infrastructure. | Starting GPS location, destination relief camp. | Comparison of direct route vs. AI safe detour, flood hazard boundary visualization, turn-by-turn walking steps. |
 | **Missing Persons Registry**<br>`#/missing-persons` | Public search database and registration portal to help families find separated loved ones during chaotic evacuations. | Missing person name, approximate age, gender, last seen location, clothing description, photo upload. | Searchable public bulletin, match status (`Open`, `Matched`, `Resolved`), direct guardian contact trigger. |
 | **Community Safety Check-in**<br>`#/check-in` | "I Am Safe" registry allowing citizens in disaster zones to mark themselves and family safe, reducing search team overhead. | Full name, phone number, district/sector, status (`Safe` / `Need Assistance`), personal message. | Public searchable safety board for relatives and relief agencies. |
-| **SDRF Property Damage Claim**<br>`#/report-damage` | Crowdsourced structural damage assessment portal. Citizens upload photos of destroyed property to receive automated AI damage grading and SDRF compensation estimates. | Property owner name, contact number, address, infrastructure category, damaged property photo. | Perceptual hash deduplication check, AI damage severity grade (Grade 1/2/3), estimated SDRF relief grant (up to ₹1,20,000), claim ID. |
-| **Public Warning Alerts**<br>`#/alerts` | Direct bulletin feed broadcasting official alerts from NDMA, SDMA, and District Disaster Management Authorities. | Category filters (`Critical`, `Warning`, `Advisories`). | Real-time warning banners, affected region badges, timestamped safety directives. |
-| **AapdaMitra AI Crisis Lifeline**<br>`#/pfa-chat` & `ChatWidget` | 24/7 Psychological First Aid and survival assistant with 4-4-4 Box Breathing, 5-4-3-2-1 Sensory Grounding, and 1-tap callback dispatch. Available as a dedicated page and a glowing circular floating button. | Text or voice queries, quick disaster prompts. | Clean multi-lingual guidance without reasoning tokens, emergency callback trigger, hotline fast dial. |
+| **SDRF Property Damage Claim**<br>`#/report-damage` | Crowdsourced structural damage assessment portal. Citizens upload photos of destroyed property to receive automated AI damage grading and SDRF compensation estimates. | Property owner name, contact number, address, infrastructure category, damaged property photo. | Perceptual hash deduplication check, AI damage severity grade (FULLY_DESTROYED ₹95,100 / MAJOR ₹47,550 / MINOR ₹9,800), claim ID. |
+| **Public Warning Alerts**<br>`#/alerts` | Bulletin feed of alerts published by the operators of this deployment (district control room / command center). | Category filters (`Critical`, `Warning`, `Advisories`). | Real-time warning banners, affected region badges, timestamped safety directives. |
+| **AapdaMitra AI Crisis Lifeline**<br>`#/pfa-chat` & `ChatWidget` | 24/7 Psychological First Aid and survival assistant protected by multi-layer domain safety guardrails (`guardrails.ts`). Strictly confined to disaster triage, emergency first aid, 4-4-4 Box Breathing, 5-4-3-2-1 Grounding, and platform navigation while actively refusing out-of-scope requests (e.g., coding, palindrome solvers, math homework, recipes, pop trivia). | Text or voice queries, quick disaster prompts, breathing coach. | Pre-screened safe emergency guidance in 4 languages without code or reasoning token contamination, emergency callback trigger, hotline fast dial. |
 
 ---
 
@@ -268,12 +266,12 @@ Command Center (/admin)
 ├── 🏢 Multi-Agency Inter-Departmental Coordination
 ├── 📢 Emergency Multi-Channel Broadcaster (SMS/WhatsApp/Web)
 ├── 📈 Incident Analytics & Recharts Telemetry
-├── 📜 Tamper-Evident Audit Trails & Security Logs
+├── 📜 Timestamped Audit Logs & Security Logs
 └── ⚙️ System Settings & API Gateway Integrations
 ```
 
 ### Admin Subsystem Capabilities:
-1. **Live SOS Stream (`#/admin/live-sos`)**: Continuous WebSocket feed that triggers a synthesized dual-frequency (880Hz / 440Hz) audible siren whenever a `RED` (Score $\ge 80$) critical incident is registered.
+1. **Live SOS Stream (`#/admin/live-sos`)**: Fast REST polling (3 s) that triggers a synthesized dual-frequency (880Hz / 440Hz) audible siren whenever a `RED` (Score ≥ 80) critical incident is registered.
 2. **Incident Dispatch Queue (`#/admin/reports`)**: Filterable, sortable incident registry with status transitions (`pending` $\rightarrow$ `in_progress` $\rightarrow$ `resolved`), volunteer assignment modal with distance ranking, and CSV export.
 3. **Interactive GIS Command Map**: Displays real-time incident clusters, volunteer locations, shelter occupancy, and Sentinel-1 SAR flood inundation polygons.
 4. **Shelter & Resource Manager (`#/admin/shelters`)**: Real-time capacity adjustment, inventory tracking (food, clean water, medical supplies, fuel), and facility status toggles.
@@ -282,7 +280,7 @@ Command Center (/admin)
 7. **Multi-Agency Inter-Departmental Coordination (`#/admin/agencies`)**: Multi-agency dispatch management across NDRF, SDRF, Fire Department, Police, Hospitals, and NGOs.
 8. **Emergency Communications Broadcaster (`#/admin/communications`)**: Geo-targeted emergency alerts distributed simultaneously across Web Push, Twilio SMS, and WhatsApp Cloud API.
 9. **Analytics & Recharts Telemetry (`#/admin/analytics`)**: Interactive data visualizations showing emergency trends, priority distribution, resolution times, and regional heatmaps.
-10. **Audit Logs & Security Trails (`#/admin/audit-logs`)**: Immutable timestamped action logs recording every administrative action, volunteer dispatch, and priority adjustment.
+10. **Audit Logs & Security Trails (`#/admin/audit-logs`)**: Timestamped action logs recording every administrative action, volunteer dispatch, and priority adjustment.
 
 ---
 
@@ -318,9 +316,64 @@ $$d = 2R \cdot \arcsin \left( \sqrt{\sin^2\left(\frac{\Delta \text{lat}}{2}\righ
 $$D_H(H_1, H_2) = \sum_{i=1}^{64} (H_{1,i} \oplus H_{2,i}) < 5$$
 *(Flags stolen or duplicate photos across damage claims submitted across districts).*
 
-### 4. Sentinel-1 SAR Radar Satellite Flood Mapping (`satellite_flood_mapping.py`)
-- Processes Sentinel-1 Synthetic Aperture Radar (SAR) imagery.
+### 4. Flood Mapping Engine (`satellite_flood_mapping.py`) — algorithmic simulation
+- Designed for Sentinel-1 SAR input; in this repo it runs as an Otsu-thresholding simulation on demo imagery (no live satellite feed is wired up).
 - Applies Otsu adaptive thresholding to detect water-covered surfaces and converts binary raster masks into GeoJSON MultiPolygon layers for Leaflet map pathfinding avoidance.
+
+### 5. Multi-Layer AapdaMitra AI Safety & Domain Guardrail Architecture (`guardrails.ts`)
+
+During natural and human-induced catastrophes, an emergency AI assistant must never be hijacked into answering coding tasks, solving academic homework, generating creative fiction, or discussing entertainment. Doing so consumes critical API quotas, introduces hallucination risks, and distracts victims and emergency workers from life-saving actions.
+
+AapdaMitra AI implements a **6-Layer Defense-in-Depth Domain Firewall** enforcing deterministic refusal on all out-of-scope interactions while maintaining compassionate, high-priority emergency triage:
+
+```mermaid
+flowchart TD
+    UserQuery["💬 User Query Received"] --> L1{"Layer 1: Imminent Danger<br/>or Self-Harm Check?"}
+    L1 -- Yes --> R1["🚨 Immediate National Crisis Escalation<br/>Tele-MANAS (14416) / Kiran (1800-599-0019)<br/>+ 4-4-4 Box Breathing Grounding"]
+    L1 -- No --> L2{"Layer 2: Off-Topic Regex<br/>or Disallowed Category?"}
+    
+    L2 -- "Matches (code/math/trivia)" --> L2Check{"Allowed Disaster /<br/>Platform Context?"}
+    L2Check -- "No (e.g. palindrome, python, homework)" --> R2["🛡️ Instant Native Refusal (0-Token Cost)<br/>Localized message (EN/HI/BN/OR)<br/>Redirect to emergency services"]
+    L2Check -- "Yes (e.g. flood rescue, triage)" --> L3["Layer 3: Hardened Persona System Prompt<br/>AAPDAMITRA_SYSTEM_PROMPT<br/>Strict domain lock, 3-sentence brevity"]
+    L2 -- "Safe Query" --> L3
+
+    L3 --> LLM["🤖 OpenRouter 7-Model Ensemble<br/>10s per-model timeout + streaming"]
+    LLM --> L4{"Layer 4: Post-Generation<br/>Code / Disallowed Interceptor?"}
+    
+    L4 -- "Contains ``` or def/function/code" --> R4["⚠️ Disallowed Output Intercepted<br/>Substituted with localized domain refusal"]
+    L4 -- Clean Output --> L5["Layer 5: Output Sanitization<br/>Strip thinking tags, emojis, markdown headers"]
+    
+    L5 --> Client["📱 Delivered to User (PfaChat / ChatWidget)"]
+    
+    subgraph OfflineMode ["Layer 6: Offline PWA & Zero-Grid Parity"]
+        MockLLM["mocks.aiPfaChat Engine"] -.->|"Enforces same isOffTopicQuery & allowlist"| Client
+    end
+```
+
+#### Guardrail Defense Layers:
+
+| Layer | Component | Mechanism & Enforcement | Outcome |
+| :--- | :--- | :--- | :--- |
+| **Layer 1: Self-Harm & Crisis Escalation** | `aiPfaChat` Priority Check | Evaluates prompt against suicidal ideation and acute psychological distress indicators before any AI dispatch. | Immediately returns official helpline guidance (Tele-MANAS `14416`, Kiran `1800-599-0019`) with trauma grounding. |
+| **Layer 2: Pre-Inference Regex Domain Firewall** | `isOffTopicQuery()` & `isDisasterOrPlatformRelated()` in `src/lib/guardrails.ts` | High-performance regex analyzer that matches 8 disallowed categories: coding & algorithms (e.g. *palindrome, reverse string, leetcode, python, java, c++*), math/homework (e.g. *quadratic equations, calculus, algebra*), entertainment & gaming, sports, recipes, creative writing, and pop trivia. Validates against a 4-language emergency allowlist. | Instantly returns localized refusal (`OFF_TOPIC_REPLIES`) with **zero token cost** and zero LLM latency. |
+| **Layer 3: Hardened Persona System Prompt** | `AAPDAMITRA_SYSTEM_PROMPT` | Rigorous system instructions binding the model strictly as AapdaMitra, an emergency disaster and first aid assistant. Explicitly commands refusal of off-topic requests and constrains responses to 2–3 actionable, calming steps. | Prevents model hallucination and locks conversation within life-safety parameters. |
+| **Layer 4: Post-Generation Output Interceptor** | `containsCodeOrDisallowedContent()` | Inspects generated LLM text for markdown code fences (` ``` `, ` ```python `), programming function keywords (`def `, `function `, `const `, `public class`), and code solution structures. | Intercepts adversarial jailbreaks or model non-compliance, substituting with safe refusal text before rendering in UI. |
+| **Layer 5: Multi-Lingual Localized Refusals** | `OFF_TOPIC_REPLIES` (EN, HI, BN, OR) | Culturally adapted refusal templates explaining the AI's emergency role and guiding the user to disaster topics (first aid, shelters, evacuation routes, SOS reporting). | Dignified, helpful redirection in the citizen's primary regional language. |
+| **Layer 6: Zero-Grid Offline PWA Parity** | `mocks.aiPfaChat` in `src/api/mocks.ts` | Full client-side guardrail enforcement inside the offline fallback mock adapter when cellular networks are disconnected. | Complete behavioral parity between connected AI mode and offline PWA mode. |
+
+#### Domain Filter Matrix & Behavioral Verification:
+
+| User Query | Category | Detection Mechanism | System Action & Response |
+| :--- | :--- | :--- | :--- |
+| `"how to chaeck a palindrome"` | Coding / Algorithm | `isOffTopicQuery` (palindrome regex) | **Blocked at Layer 2**: Returns localized refusal; guides user to emergency features. |
+| `"write a python script to reverse a string"` | Programming | `isOffTopicQuery` (python + reverse string) | **Blocked at Layer 2**: Zero LLM call; instant refusal. |
+| `"solve 2x + 5 = 15"` | Math / Homework | `isOffTopicQuery` (equation regex) | **Blocked at Layer 2**: Refusal explaining scope is limited to disaster/first aid. |
+| `"chocolate cake recipe with eggs"` | Recipe / Food | `isOffTopicQuery` (recipe regex) | **Blocked at Layer 2**: Refusal redirecting to emergency assistance. |
+| `"who won the 2024 cricket world cup?"` | Sports / Trivia | `isOffTopicQuery` (cricket regex) | **Blocked at Layer 2**: Refusal redirecting to emergency assistance. |
+| *(Adversarial jailbreak outputting code block)* | Prompt Injection | `containsCodeOrDisallowedContent` | **Blocked at Layer 4**: Code fences detected and suppressed; replaced with refusal. |
+| `"I am trapped on roof, flood water is rising"` | Emergency / Rescue | `isDisasterOrPlatformRelated` (trapped + flood) | **Allowed**: High-urgency triage, safety instructions, triggers SOS link. |
+| `"Leg is bleeding heavily after building collapse"` | First Aid / Trauma | `isDisasterOrPlatformRelated` (bleed + collapse) | **Allowed**: Direct pressure, tourniquet advice, 108/112 ambulance call. |
+| `"Where is the nearest cyclone shelter in BBSR?"` | Platform Navigation | `isDisasterOrPlatformRelated` (shelter + cyclone) | **Allowed**: Directs to `/shelters` and Haversine locator. |
 
 ---
 
@@ -332,7 +385,7 @@ $$D_H(H_1, H_2) = \sum_{i=1}^{64} (H_{1,i} \oplus H_{2,i}) < 5$$
 
 2. **BitChat Android BLE Mesh (`bitchat-android`):**
    - Peer-to-peer mesh networking utilizing Bluetooth Low Energy (BLE) and Wi-Fi Aware.
-   - Relays 256-byte encrypted emergency packets hop-by-hop across mobile nodes until an internet-connected gateway relays the signal to the AapdaSetu Command Center.
+   - Relays encrypted messages hop-by-hop across mobile nodes so nearby phones can communicate when towers are down (standalone phone-to-phone chat; no backend gateway integration yet).
 
 ---
 
@@ -484,7 +537,7 @@ erDiagram
 | **Styling & UI Tokens** | Tailwind CSS 3.4, Lucide React | Glassmorphism, dark/light theme, accessible micro-interactions |
 | **GIS & Maps** | Leaflet.js 1.9, React-Leaflet | Real-time map rendering, marker clustering, hazard avoidance polygons |
 | **Data Visualizations** | Recharts 3 | Responsive interactive charts for command center analytics |
-| **Realtime Engine** | Realtime Event Bus, WebSockets | Instant pub-sub synchronization across citizens, admins, and responders |
+| **Realtime Engine** | Polling + cross-tab Realtime Event Bus (BroadcastChannel) | Near-instant synchronization across citizens, admins, and responders (WebSocket hub dormant on serverless) |
 | **Backend & ORM** | Node.js, Express, TypeScript, Prisma 6 | Enterprise REST API endpoints with PostgreSQL persistence |
 | **Database** | PostgreSQL 16 | Relational data persistence with UUID primary keys and compound indexes |
 | **AI Microservices** | Python 3.10+, FastAPI, PyTorch, OpenCV, OpenRouter | Explainable Triage, PFA Chatbot, SAR Flood Mapping & Image Damage Classifier |
@@ -503,7 +556,7 @@ SIH-DM/
 │   │   ├── api/                        # API clients, OpenRouter AI adapters, and mock data
 │   │   ├── components/                 # Reusable UI components (AapdaSetuLogo, ChatWidget, Modal, Map)
 │   │   ├── layouts/                    # MainLayout, AdminLayout, VolunteerLayout
-│   │   ├── lib/                        # Helpers, i18n dictionary (EN/HI/BN/OR), triage engine, event bus
+│   │   ├── lib/                        # Helpers, i18n dictionary (EN/HI/BN/OR), triage engine, event bus, AI guardrails
 │   │   ├── pages/
 │   │   │   ├── admin/                  # 11 Command Center views (LiveSOS, Shelters, Reports, etc.)
 │   │   │   ├── citizen/                # Citizen views (SOS, Home, Report, SafeRoutes, PfaChat, etc.)
@@ -567,16 +620,17 @@ npm run dev      # Starts Vite dev server on http://localhost:5173
 cd backend-aapdasetu
 npm install
 npx prisma generate
-npm run dev      # Starts Express backend on http://localhost:3000
+npm run dev      # Starts Express backend on http://localhost:4000
 ```
 
-### 3. Standalone Python AI Microservice (`apps/ai-engine`)
+### 3. Python AI Prototype (`apps/ai-engine`) — unserved prototype, not an HTTP service
 ```bash
 cd apps/ai-engine
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-python app/main.py   # Starts FastAPI microservices on http://localhost:8000
+python app/main.py   # Standalone JSON test harness (no server); served FastAPI lives in backend-aapdasetu:
+                     # cd backend-aapdasetu && npm run fastapi:dev   (uvicorn on http://localhost:8000)
 ```
 
 ### 4. Offline Mesh Android App (`bitchat-android`)

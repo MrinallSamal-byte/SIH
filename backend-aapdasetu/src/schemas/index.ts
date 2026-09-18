@@ -14,6 +14,10 @@ export const incidentTypeSchema = z.enum([
 const latSchema = z.number().min(-90).max(90);
 const lngSchema = z.number().min(-180).max(180);
 
+// ponytail: ''/null query values become undefined so optional numeric fields fall through to defaults instead of 400/0
+const qnum = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((v) => (v === '' || v === null ? undefined : v), schema);
+
 const reportCommon = {
   type: incidentTypeSchema,
   latitude: latSchema,
@@ -24,8 +28,39 @@ const reportCommon = {
   reporterPhone: z.string().max(30).optional().nullable(),
   medicalCondition: z.string().max(500).optional().nullable(),
   bloodType: z.string().max(10).optional().nullable(),
-  mediaData: z.string().max(30_000_000).optional().nullable(),
+  // Base64 media from the client (compressed before upload). The effective
+  // ceiling is Vercel's ~4.5MB request-body cap, so anything larger fails
+  // with a clear validation message rather than an opaque platform 413.
+  mediaData: z.string().max(4_000_000).optional().nullable(),
   mediaType: z.enum(['video', 'audio', 'image', 'none']).optional().nullable(),
+  // 1-Tap SOS provenance — drives the +55 triage boost so an unadorned SOS
+  // can never triage GREEN (see lib/triage.ts ONE_TAP_SOS_BOOST).
+  isOneTapSos: z.boolean().optional().nullable(),
+  // Offline-replay idempotency: the client generates this once per logical
+  // submission; the backend dedupes on it so an outbox replay after a
+  // timeout never creates a duplicate rescue dispatch.
+  clientRequestId: z.string().min(8).max(64).optional().nullable(),
+  // Original on-device timestamp for submissions queued offline and replayed
+  // later — the report time must reflect when the citizen raised it. Bounded:
+  // 1999 test data or year-2099 spoofing degrades to null (server receipt
+  // time applies) instead of poisoning admin queue displays.
+  clientCreatedAt: z
+    .string()
+    .datetime()
+    .optional()
+    .nullable()
+    .transform((v) => {
+      if (!v) return v;
+      const t = Date.parse(v);
+      const now = Date.now();
+      if (!Number.isFinite(t) || t < now - 7 * 24 * 60 * 60 * 1000 || t > now + 5 * 60 * 1000) {
+        return null;
+      }
+      return v;
+    }),
+  // Single-use OTP verification token for the reporter phone (otp.service).
+  // Optional: SOS without it is still dispatched, marked unverified.
+  phoneOtpToken: z.string().max(200).optional().nullable(),
 };
 
 export const createSosSchema = z.object({
@@ -54,13 +89,43 @@ export const createCheckinSchema = z.object({
 });
 
 export const nearbySheltersSchema = z.object({
-  latitude: z.coerce.number().min(-90).max(90),
-  longitude: z.coerce.number().min(-180).max(180),
-  radiusKm: z.coerce.number().min(1).max(500).optional(),
+  latitude: qnum(z.coerce.number().min(-90).max(90)),
+  longitude: qnum(z.coerce.number().min(-180).max(180)),
+  radiusKm: qnum(z.coerce.number().min(1).max(500)).optional(),
 });
 
-export const listSheltersQuerySchema = z.object({
-  status: z.enum(['open', 'full', 'closed']).optional(),
+// Public family search by phone — results are PII-masked server-side.
+export const familyCheckinSearchSchema = z.object({
+  phone: z.string().min(6).max(30),
+});
+
+// OTP caller verification challenge.
+export const otpRequestSchema = z.object({
+  phone: z.string().min(6).max(30),
+  purpose: z.enum(['sos_verify', 'volunteer_verify']).optional(),
+});
+
+export const otpVerifySchema = z.object({
+  requestId: z.string().min(8).max(64),
+  phone: z.string().min(6).max(30),
+  code: z.string().min(4).max(12),
+});
+
+// Web Push subscription registry.
+export const pushSubscriptionSchema = z.object({
+  endpoint: z.string().url().max(2000),
+  p256dh: z.string().max(500).optional(),
+  auth: z.string().max(500).optional(),
+  userAgent: z.string().max(300).optional(),
+});
+
+export const pushUnsubscribeSchema = z.object({
+  endpoint: z.string().url().max(2000),
+});
+
+// Shelter gate self check-in/out (poster code).
+export const shelterCheckinSchema = z.object({
+  code: z.string().min(4).max(16),
 });
 
 export const pfaChatSchema = z.object({
@@ -77,18 +142,28 @@ export const pfaChatSchema = z.object({
 });
 
 export const damageAssessmentSchema = z.object({
-  imageBase64: z.string().min(24),
+  // Vercel serverless rejects request bodies > 4.5 MB at the edge before this
+  // route ever runs — a smaller explicit cap fails fast with a clear message
+  // instead of an opaque platform 413 (clients compress before upload).
+  imageBase64: z.string().min(24).max(4_000_000),
   mimeType: z.string().optional(),
   reportedLatitude: latSchema,
   reportedLongitude: lngSchema,
   reportId: z.string().uuid().optional(),
   reporterName: z.string().max(200).optional(),
   reporterPhone: z.string().max(30).optional(),
+  propertyAddress: z.string().max(500).optional(),
+  district: z.string().max(100).optional(),
+  description: z.string().max(2000).optional(),
+  infrastructureType: z.string().max(100).optional(),
+  additionalPhotoCount: z.number().int().nonnegative().optional(),
 });
 
 export const missingMatchSchema = z.object({
   reportId: z.string().uuid(),
-  threshold: z.coerce.number().min(0).max(1).optional(),
+  // Floor of 0.2: recency alone scores above 0, so a threshold of 0 would
+  // let a caller force every candidate to "match".
+  threshold: z.coerce.number().min(0.2).max(1).optional(),
 });
 
 export const createMissingPersonSchema = z.object({
@@ -99,7 +174,9 @@ export const createMissingPersonSchema = z.object({
   lastSeenLocation: z.string().max(300).optional().nullable(),
   clothes: z.string().max(500).optional().nullable(),
   contactPhone: z.string().max(30).optional().nullable(),
-  photoUrl: z.string().max(2000).optional().nullable(),
+  // Citizens submit device-compressed JPEG data URLs (~100-300K chars); the
+  // old 2000-char cap rejected every real submission with a photo attached.
+  photoUrl: z.string().max(4_000_000).optional().nullable(),
   notes: z.string().max(1000).optional().nullable(),
 });
 
@@ -111,7 +188,7 @@ export const updateMissingPersonSchema = z.object({
   lastSeenLocation: z.string().max(300).optional().nullable(),
   clothes: z.string().max(500).optional().nullable(),
   contactPhone: z.string().max(30).optional().nullable(),
-  photoUrl: z.string().max(2000).optional().nullable(),
+  photoUrl: z.string().max(4_000_000).optional().nullable(),
   notes: z.string().max(1000).optional().nullable(),
   status: z.enum(['open', 'matched', 'resolved']).optional(),
 });
@@ -121,7 +198,7 @@ export const broadcastSchema = z.object({
   title: z.string().min(1).max(300),
   body: z.string().min(1).max(5000),
   region: z.string().max(300).optional(),
-  channels: z.array(z.enum(['sms', 'whatsapp', 'web'])).min(1).max(5),
+  channels: z.array(z.enum(['sms', 'whatsapp', 'web', 'push'])).min(1).max(5),
   recipientNumbers: z.array(z.string().max(30)).max(500).optional(),
 });
 
@@ -146,8 +223,8 @@ export const changePasswordSchema = z.object({
 });
 
 export const paginationQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional(),
-  pageSize: z.coerce.number().int().min(1).max(200).optional(),
+  page: qnum(z.coerce.number().int().min(1)).optional(),
+  pageSize: qnum(z.coerce.number().int().min(1).max(200)).optional(),
 });
 
 export const listReportsQuerySchema = paginationQuerySchema.extend({
@@ -155,6 +232,36 @@ export const listReportsQuerySchema = paginationQuerySchema.extend({
   type: incidentTypeSchema.optional(),
   priorityLabel: z.enum(['RED', 'YELLOW', 'GREEN']).optional(),
   search: z.string().max(200).optional(),
+});
+
+export const listSheltersQuerySchema = paginationQuerySchema.partial().extend({
+  status: z.enum(['open', 'full', 'closed']).optional(),
+});
+
+export const adminAgencyQuerySchema = paginationQuerySchema.partial().extend({
+  type: z.enum(['fire_department', 'police', 'ndrf', 'hospital', 'ngo']).optional(),
+});
+
+export const adminResourceQuerySchema = paginationQuerySchema.partial().extend({
+  shelterId: z.string().uuid().optional(),
+  category: z.enum(['food', 'water', 'medical', 'clothing', 'fuel']).optional(),
+});
+
+export const adminAlertQuerySchema = paginationQuerySchema.partial().extend({
+  severity: z.enum(['info', 'warning', 'critical']).optional(),
+});
+
+export const adminHazardQuerySchema = paginationQuerySchema.partial().extend({
+  // ponytail: enum mirrors the documented RouteHazard.type set in schema.prisma
+  type: z.enum(['flood_polygon', 'blocked_underpass', 'road_closed']).optional(),
+});
+
+export const missingMatchQuerySchema = paginationQuerySchema.partial().extend({
+  status: z.enum(['pending', 'confirmed', 'rejected']).optional(),
+});
+
+export const missingPersonListQuerySchema = paginationQuerySchema.partial().extend({
+  status: z.enum(['open', 'matched', 'resolved']).optional(),
 });
 
 export const idParamsSchema = z.object({
@@ -166,10 +273,14 @@ export const updateReportStatusSchema = z.object({
   resolutionNotes: z.string().max(5000).optional(),
 });
 
-export const assignDispatchSchema = z.object({
-  volunteerId: z.string().uuid().optional(),
-  agencyId: z.string().uuid().optional(),
-});
+export const assignDispatchSchema = z
+  .object({
+    volunteerId: z.string().uuid().optional(),
+    agencyId: z.string().uuid().optional(),
+  })
+  .refine((data) => data.volunteerId || data.agencyId, {
+    message: 'volunteerId or agencyId required',
+  });
 
 export const unassignDispatchSchema = z.object({
   target: z.enum(['volunteer', 'agency']),
@@ -190,6 +301,18 @@ export const updateVolunteerSchema = z.object({
   skills: z.array(z.enum(['medical', 'search_rescue', 'driving', 'logistics'])).max(20).optional(),
   latitude: latSchema.optional(),
   longitude: lngSchema.optional(),
+  trainingCompleted: z.boolean().optional(),
+  idDocumentRef: z.string().max(300).optional(),
+});
+
+export const setVolunteerVerificationSchema = z.object({
+  verificationStatus: z.enum(['pending', 'verified', 'suspended']),
+  trainingCompleted: z.boolean().optional(),
+  idDocumentRef: z.string().max(300).optional(),
+});
+
+export const escalationSweepSchema = z.object({
+  thresholdMinutes: z.number().int().min(1).max(120).optional(),
 });
 
 export const updateVolunteerStatusSchema = z.object({
@@ -255,13 +378,13 @@ export const reviewMatchSchema = z.object({
   status: z.enum(['confirmed', 'rejected']),
 });
 
-export const listVolunteersQuerySchema = z.object({
+export const listVolunteersQuerySchema = paginationQuerySchema.partial().extend({
   status: z.enum(['available', 'on_duty', 'offline']).optional(),
-  skill: z.string().optional(),
+  skill: z.enum(['medical', 'search_rescue', 'driving', 'logistics']).optional(),
 });
 
 export const analyticsQuerySchema = z.object({
-  rangeDays: z.coerce.number().int().min(1).max(90).optional(),
+  rangeDays: qnum(z.coerce.number().int().min(1).max(90)).optional(),
 });
 
 export const createHazardSchema = z.object({

@@ -156,7 +156,7 @@ class FragmentingPacketSenderTest {
         )
 
         withTimeout(10_000) {
-            while (delivered.get() < expectedFragments) {
+            while (delivered.get() < expectedFragments || inFlight.get() != 0) {
                 kotlinx.coroutines.yield()
             }
         }

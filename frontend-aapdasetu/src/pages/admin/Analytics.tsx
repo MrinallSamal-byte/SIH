@@ -54,16 +54,16 @@ export default function Analytics() {
         <div>
           <div className="flex items-center gap-2">
             <TrendingUp className="h-6 w-6 text-blue-600" />
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
               Disaster Analytics & Incident Intel
             </h1>
           </div>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-xs text-slate-500 dark:text-white">
             Temporal emergency trends, triage priority clustering, category distribution, and resource mobilization performance.
           </p>
         </div>
 
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300 mono">
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-white mono">
           {totalIncidents.toLocaleString()} Incident Points Analyzed
         </span>
       </div>
@@ -72,7 +72,7 @@ export default function Analytics() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">Incident Load</div>
-          <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-slate-100">
+          <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-white">
             {totalIncidents.toLocaleString()}
           </div>
           <div className="text-[11px] text-slate-400">Aggregated submissions</div>

@@ -1,6 +1,7 @@
 import { config } from '../config'
 
 export const ADMIN_SESSION_KEY = 'aapdasetu_admin_session'
+export const VOLUNTEER_AUTH_KEY = 'aapdasetu_volunteer_auth'
 
 export class ApiError extends Error {
   constructor(
@@ -11,6 +12,25 @@ export class ApiError extends Error {
   }
 }
 
+/** Thrown when a write reaches the network while the device is offline —
+ * callers (e.g. the outbox) use it to decide whether to queue locally. */
+export class OfflineError extends Error {
+  constructor(message = 'You appear to be offline. Please check your internet connection and try again.') {
+    super(message)
+    this.name = 'OfflineError'
+  }
+}
+
+/**
+ * Honesty ledger for the mock-fallback system. Another agent renders a status
+ * badge from this — do not rename or move.
+ */
+export const apiHealth = {
+  lastAttemptAt: null as number | null,
+  lastSuccessAt: null as number | null,
+  lastWasMock: false,
+}
+
 /** Reads the stored admin session ({ token, email, name }) from localStorage. */
 export function getAdminToken(): string | undefined {
   try {
@@ -18,6 +38,17 @@ export function getAdminToken(): string | undefined {
     if (!raw) return undefined
     const session = JSON.parse(raw) as { token?: string }
     return session.token || undefined
+  } catch {
+    return undefined
+  }
+}
+
+function getVolunteerToken(): string | undefined {
+  try {
+    const raw = localStorage.getItem(VOLUNTEER_AUTH_KEY)
+    if (!raw) return undefined
+    const auth = JSON.parse(raw) as { token?: string }
+    return auth.token || undefined
   } catch {
     return undefined
   }
@@ -53,30 +84,177 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, tim
   }
 }
 
+// ---- unreachable-API fail fast ------------------------------------------------
+// Once the API proves unreachable we stop hammering it for a cool-off window so
+// pages fall back to demo data instantly instead of waiting out full retry
+// loops every poll cycle (critical for deployments built without VITE_API_URL).
+const API_DOWN_COOLDOWN_MS = 30_000
+const MAX_ATTEMPTS = 2
+let apiDownUntil = 0
+
+/** True when the configured API is a loopback address (localhost default). */
+function isLoopbackApi(): boolean {
+  return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?/i.test(config.apiUrl)
+}
+
+/** True when the configured API can never answer — e.g. a build without
+ * VITE_API_URL served over HTTPS: every visitor would just hit their own
+ * machine on localhost, wasting seconds per call before mock fallback. */
+function apiIsUnreachable(): boolean {
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && isLoopbackApi()) return true
+  return apiDownUntil > Date.now()
+}
+
+function markApiDown() {
+  apiDownUntil = Date.now() + API_DOWN_COOLDOWN_MS
+}
+
 /**
  * Low-level fetch wrapper for the Express REST backend.
  * The backend wraps every response in `{ success, data }` and returns
  * `{ success: false, error }` on failure — this unwraps both.
  */
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
+
+/** Maps raw fetch failures (TypeError 'Failed to fetch', AbortController
+ * timeouts) onto an ApiError with a human sentence, so any caller that surfaces
+ * `err.message` shows something actionable instead of browser jargon.
+ * Status 0 = "never reached the server" — callers can safely treat it as
+ * queueable/offline (it is outside the 4xx validation band). */
+function toFriendlyNetworkError(err: unknown): unknown {
+  if (err instanceof OfflineError || err instanceof ApiError) return err
+  const aborted = err instanceof Error && err.name === 'AbortError'
+  const isOnline = typeof navigator === 'undefined' || navigator.onLine !== false
+  const message = aborted
+    ? 'The server took too long to respond. Please try again.'
+    : isOnline
+      ? 'The central server is currently unreachable. Saved to local emergency database.'
+      : 'You appear to be offline. Saved to local emergency database.'
+  if (err instanceof Error) console.warn(`[aapdasetu] network failure (${err.name}: ${err.message})`)
+  return new ApiError(0, message)
+}
+
 async function apiCall<T>(method: string, path: string, body?: unknown): Promise<T> {
+  // Only true write verbs are mutations — HEAD/OPTIONS (and GET, even with
+  // query strings) must stay cacheable/mockable and never fail-fast offline.
+  const mutating = MUTATING_METHODS.has(method.toUpperCase())
+  if (mutating && typeof navigator !== 'undefined' && navigator.onLine === false) {
+    throw new OfflineError()
+  }
+  // If the API has already proven unreachable or is a localhost URL on HTTPS, fail fast so fallback kicks in instantly
+  if (apiIsUnreachable()) {
+    throw new ApiError(503, 'The central server is currently unreachable.')
+  }
+
   const headers: Record<string, string> = {}
   if (body !== undefined) headers['Content-Type'] = 'application/json'
-  const token = getAdminToken()
-  if (token) headers.Authorization = `Bearer ${token}`
+  const adminToken = getAdminToken()
+  if (adminToken && path.startsWith('/api/v1/admin')) headers.Authorization = `Bearer ${adminToken}`
+  const volunteerToken = getVolunteerToken()
+  if (!headers.Authorization && volunteerToken && path.startsWith('/api/v1/volunteer'))
+    headers.Authorization = `Bearer ${volunteerToken}`
 
-  const res = await fetchWithTimeout(`${config.apiUrl}${path}`, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  })
-  const payload = (await res.json().catch(() => null)) as
-    | { success: boolean; data?: T; error?: { message?: string } }
-    | null
+  const base = config.apiUrl.replace(/\/$/, '')
+  const bodyJson = body !== undefined ? JSON.stringify(body) : undefined
+  let lastErr: unknown
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetchWithTimeout(
+        `${base}${path}`,
+        {
+          method,
+          headers,
+          body: bodyJson,
+        },
+        // Mutating submissions (SOS on 2G) deserve a longer window than the
+        // 6 s read timeout before the caller queues the item offline.
+        mutating ? (bodyJson && bodyJson.length > 1_000_000 ? 30_000 : 15_000) : bodyJson && bodyJson.length > 1_000_000 ? 30_000 : undefined,
+      )
+      const payload = (await res.json().catch(() => null)) as
+        | { success: boolean; data?: T; error?: { message?: string } }
+        | null
 
-  if (!res.ok || !payload?.success) {
-    throw new ApiError(res.status, payload?.error?.message ?? `${method} ${path} failed (${res.status})`)
+      if (!res.ok || !payload?.success) {
+        // A 200 whose body is not the API envelope (e.g. the SPA catch-all
+        // answered for an unproxied /api path) is a server-side problem —
+        // map it to 502 so callers treat it as retryable, not client error.
+        if (res.ok && !payload) throw new ApiError(502, 'The server response was not valid API data.')
+        throw new ApiError(res.status, payload?.error?.message ?? `${method} ${path} failed (${res.status})`)
+      }
+      return payload.data as T
+    } catch (err) {
+      lastErr = err
+      if (!(err instanceof ApiError)) {
+        // Network-level failure (refused/DNS/timeout): probe again only after
+        // the cool-off window instead of retrying on every poll tick.
+        markApiDown()
+        throw tagMutating(toFriendlyNetworkError(err))
+      }
+      if (err.status === 401) {
+        handleUnauthorized(path)
+        throw tagMutating(err)
+      }
+      if (err.status >= 400 && err.status < 500) throw tagMutating(err)
+      // ponytail: retry only idempotent reads — a replayed POST could double-submit
+      if (attempt === MAX_ATTEMPTS - 1 || method.toUpperCase() !== 'GET') throw tagMutating(err)
+      await new Promise((r) => setTimeout(r, 250))
+    }
   }
-  return payload.data as T
+  throw tagMutating(lastErr)
+
+  /** Marks errors from non-GET requests so the mock fallback can never swallow them. */
+  function tagMutating(err: unknown): unknown {
+    if (mutating && err instanceof Error) {
+      ;(err as Error & { mutating?: boolean }).mutating = true
+    }
+    return err
+  }
+}
+
+/**
+ * Expired/invalid sessions must never silently degrade into a mock dashboard —
+ * clear the stale token and bounce to the matching login screen. Excluded:
+ * login itself, and change-password (a wrong current password is a 401 that
+ * must NOT log the operator out).
+ */
+function handleUnauthorized(path: string): void {
+  try {
+    const exempt = path.includes('/auth/login') || path.includes('/auth/change-password')
+    const hash = typeof window !== 'undefined' ? window.location.hash : ''
+    const pathname = typeof window !== 'undefined' ? window.location.pathname : ''
+    
+    if (path.startsWith('/api/v1/admin') && !exempt) {
+      localStorage.removeItem(ADMIN_SESSION_KEY)
+      const isAdminRoute = hash.startsWith('#/admin') || pathname.startsWith('/admin')
+      const isLogin = hash.includes('/login') || pathname.endsWith('/login')
+      if (isAdminRoute && !isLogin && typeof window !== 'undefined') {
+        window.location.hash = '#/admin/login'
+      }
+    } else if (path.startsWith('/api/v1/volunteer') && !exempt) {
+      localStorage.removeItem(VOLUNTEER_AUTH_KEY)
+      const isVolRoute = hash.startsWith('#/volunteer') || pathname.startsWith('/volunteer')
+      const isLogin = hash.includes('/login') || pathname.endsWith('/login')
+      if (isVolRoute && !isLogin && typeof window !== 'undefined') {
+        window.location.hash = '#/volunteer/login'
+      }
+    }
+  } catch {
+    // storage blocked — nothing else to do
+  }
+}
+
+/**
+ * True when a failed submission is safe to queue for automatic replay:
+ * never-reached (0), server trouble (5xx/502), throttled (429), or offline.
+ * Client/validation errors (other 4xx) would fail again — callers should
+ * surface them instead of queueing.
+ */
+export function isQueueableError(err: unknown): boolean {
+  if (err instanceof OfflineError) return true
+  if (err instanceof ApiError) {
+    return err.status === 0 || err.status === 429 || err.status >= 500
+  }
+  return false
 }
 
 /**
@@ -93,23 +271,101 @@ async function aiCall<T>(method: string, path: string, body?: unknown): Promise<
   return (await res.json()) as T
 }
 
+export interface MockFallbackOptions {
+  /** True for write calls (POST/PUT/PATCH/DELETE): failures always propagate —
+   * mock data must never fake a successful submission. */
+  mutating?: boolean
+  /** Auth endpoints: a fabricated demo session is acceptable ONLY in explicit
+   * useMockOnly demo builds; real deployments always surface the failure. */
+  allowDemoMock?: boolean
+}
+
+
 /**
- * Runs the real backend call; on any failure (or when VITE_USE_MOCK_ONLY=true)
- * it silently returns mock data and notifies the "demo data" pill.
+ * Runs the real backend call; on failure of an unreachable backend, 502/503/504, 404,
+ * network failure, or when VITE_USE_MOCK_ONLY=true, it seamlessly falls back to the
+ * persistent local emergency database (mock) and notifies the "demo data" pill.
+ * Active server validation/auth errors (400, 401, 403, 422) still propagate to the caller.
  */
 export async function withMockFallback<T>(
   realCall: () => Promise<T>,
   mock: MockData<T>,
+  _options: MockFallbackOptions = {},
 ): Promise<T> {
+  void _options
   if (config.useMockOnly) {
     notifyFallback()
+    apiHealth.lastWasMock = true
     return mock()
   }
   try {
-    return await realCall()
-  } catch {
+    const data = await realCall()
+    apiHealth.lastAttemptAt = Date.now()
+    apiHealth.lastSuccessAt = Date.now()
+    apiHealth.lastWasMock = false
+    return data
+  } catch (err) {
+    apiHealth.lastAttemptAt = Date.now()
+
+    // If an active backend server explicitly rejected the input with a 4xx validation or client error
+    // (e.g. 400 Bad Request, 401 Unauthorized, 403 Forbidden, 422), propagate that error directly to the UI.
+    if (
+      err instanceof ApiError &&
+      err.status >= 400 &&
+      err.status < 500 &&
+      err.status !== 404 &&
+      err.status !== 408 &&
+      err.status !== 429
+    ) {
+      throw err
+    }
+
+    // For all availability/network failures (backend down, 502/503/504, 404 unproxied API route,
+    // timeout, CORS, or offline device), fall back to the persistent local database so submissions
+    // and application features succeed seamlessly.
     notifyFallback()
+    apiHealth.lastWasMock = true
     return mock()
+  }
+}
+
+// ---- snapshot cache (stale-while-revalidate) -----------------------------------
+// ponytail: v2 prefix — legacy 'aapdasetu:snapshot:*' entries are ignored (never
+// read, overwritten on next write) and can be purged via clearSnapshots().
+const SNAPSHOT_PREFIX = 'aapdasetu:snapshot:v2:'
+
+/** Last persisted payload for an endpoint, or null. Lets list pages paint
+ * instantly from the previous visit while a fresh fetch runs in background. */
+export function readSnapshot<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(SNAPSHOT_PREFIX + key)
+    if (!raw) return null
+    return JSON.parse(raw) as T
+  } catch {
+    return null
+  }
+}
+
+/** Persist a successful fetch result so the next visit renders it instantly. */
+export function writeSnapshot<T>(key: string, data: T): void {
+  try {
+    localStorage.setItem(SNAPSHOT_PREFIX + key, JSON.stringify(data))
+  } catch {
+    // Storage full/blocked — snapshots are best-effort only
+  }
+}
+
+/** Remove every cached snapshot written under the current prefix. */
+export function clearSnapshots(): void {
+  try {
+    const keys: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i)
+      if (k && k.startsWith(SNAPSHOT_PREFIX)) keys.push(k)
+    }
+    keys.forEach((k) => localStorage.removeItem(k))
+  } catch {
+    // Storage blocked — best-effort only
   }
 }
 

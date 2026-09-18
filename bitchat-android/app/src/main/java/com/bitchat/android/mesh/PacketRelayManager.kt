@@ -10,11 +10,14 @@ import kotlin.random.Random
 
 /**
  * Centralized packet relay management
- * 
+ *
  * This class handles all relay decisions and logic for bitchat packets.
  * All packets that aren't specifically addressed to us get processed here.
  */
-class PacketRelayManager(private val myPeerID: String) {
+class PacketRelayManager(
+    private val myPeerID: String,
+    private val nextRelayRoll: () -> Double = { Random.nextDouble() }
+) {
     private val debugManager by lazy { try { com.bitchat.android.ui.debug.DebugSettingsManager.getInstance() } catch (e: Exception) { null } }
     
     companion object {
@@ -96,7 +99,7 @@ class PacketRelayManager(private val myPeerID: String) {
                 if (nextHopIdHex != null) {
                     val success = try { delegate?.sendToPeer(nextHopIdHex, RoutedPacket(relayPacket, peerID, routed.relayAddress)) } catch (_: Exception) { false } ?: false
                     if (success) {
-                        Log.i(TAG, "📦 Source-route relay: ${peerID.take(8)} -> ${nextHopIdHex.take(8)} (type ${'$'}{packet.type}, TTL ${'$'}{relayPacket.ttl})")
+                        Log.i(TAG, "📦 Source-route relay: ${peerID.take(8)} -> ${nextHopIdHex.take(8)} (type ${packet.type}, TTL ${relayPacket.ttl})")
                         return
                     } else {
                         Log.w(TAG, "Source-route next hop ${nextHopIdHex.take(8)} not directly connected; falling back to broadcast")
@@ -139,7 +142,13 @@ class PacketRelayManager(private val myPeerID: String) {
     /**
      * Determine if we should relay this packet based on type and network conditions
      */
-    private fun shouldRelayPacket(packet: BitchatPacket, fromPeerID: String): Boolean {
+    internal fun shouldRelayPacket(packet: BitchatPacket, fromPeerID: String): Boolean {
+        // SOS always relays while it still has hop budget, bypassing probabilistic drop
+        if (packet.ttl > 0u && MessageType.fromValue(packet.type) == MessageType.SOS) {
+            Log.d(TAG, "SOS packet (TTL ${packet.ttl}), relaying unconditionally")
+            return true
+        }
+
         // Always relay if TTL is high enough (indicates important message)
         if (packet.ttl >= 4u) {
             Log.d(TAG, "High TTL (${packet.ttl}), relaying")
@@ -164,7 +173,7 @@ class PacketRelayManager(private val myPeerID: String) {
             else -> 0.4                 // Lowest probability for very large networks
         }
         
-        val shouldRelay = Random.nextDouble() < relayProb
+        val shouldRelay = nextRelayRoll() < relayProb
         Log.d(TAG, "Network size: ${networkSize}, Relay probability: ${relayProb}, Decision: ${shouldRelay}")
         
         return shouldRelay

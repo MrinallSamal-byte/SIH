@@ -47,16 +47,16 @@ export class DamageMlClient {
   }
 
   async predict(request: DamagePredictRequest): Promise<DamagePrediction> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
       const res = await fetch(`${this.baseUrl}/api/v1/damage-assessment/predict`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
         signal: controller.signal,
       });
-      clearTimeout(timer);
 
       if (!res.ok) {
         const body = await res.text();
@@ -71,6 +71,8 @@ export class DamageMlClient {
     } catch (err) {
       logger.error('Damage ML predict failed', { error: (err as Error).message });
       throw new ServiceUnavailableError('Damage assessment ML service is unavailable');
+    } finally {
+      clearTimeout(timer);
     }
   }
 }

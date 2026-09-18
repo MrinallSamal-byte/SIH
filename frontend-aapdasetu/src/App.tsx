@@ -4,7 +4,7 @@ import MainLayout from './layouts/MainLayout'
 import AdminLayout from './layouts/AdminLayout'
 import VolunteerLayout from './layouts/VolunteerLayout'
 
-// ⚡ Bolt Optimization: Route-based Code Splitting (React.lazy)
+// Route-based Code Splitting (React.lazy)
 // Reduces initial critical bundle size by ~70%, isolating heavy dependencies like Recharts (~405kB)
 // and Leaflet GIS bundles to on-demand route chunks for instant FCP on congested disaster networks.
 const Home = lazy(() => import('./pages/citizen/Home'))
@@ -12,13 +12,16 @@ const SOS = lazy(() => import('./pages/citizen/SOS'))
 const ReportForm = lazy(() => import('./pages/citizen/ReportForm'))
 const ReportTracker = lazy(() => import('./pages/citizen/ReportTracker'))
 const ShelterFinder = lazy(() => import('./pages/citizen/ShelterFinder'))
-const Alerts = lazy(() => import('./pages/citizen/Alerts'))
 const ReportDamage = lazy(() => import('./pages/citizen/ReportDamage'))
 const MissingPersons = lazy(() => import('./pages/citizen/MissingPersons'))
 const SafeRoutes = lazy(() => import('./pages/citizen/SafeRoutes'))
+const SafetyCheckin = lazy(() => import('./pages/citizen/SafetyCheckin'))
 const PfaChat = lazy(() => import('./pages/citizen/PfaChat'))
 const About = lazy(() => import('./pages/citizen/About'))
 const Contacts = lazy(() => import('./pages/citizen/Contacts'))
+const AppDownload = lazy(() => import('./pages/citizen/AppDownload'))
+const Alerts = lazy(() => import('./pages/citizen/Alerts'))
+const Donate = lazy(() => import('./pages/citizen/Donate'))
 
 const AdminLogin = lazy(() => import('./pages/admin/Login'))
 const Overview = lazy(() => import('./pages/admin/Overview'))
@@ -62,12 +65,15 @@ export default function App() {
             <Route path="/track" element={<ReportTracker />} />
             <Route path="/shelters" element={<ShelterFinder />} />
             <Route path="/alerts" element={<Alerts />} />
+            <Route path="/checkin" element={<SafetyCheckin />} />
             <Route path="/report-damage" element={<ReportDamage />} />
             <Route path="/missing-persons" element={<MissingPersons />} />
             <Route path="/safe-routes" element={<SafeRoutes />} />
             <Route path="/about" element={<About />} />
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/pfa-chat" element={<PfaChat />} />
+            <Route path="/app" element={<AppDownload />} />
+            <Route path="/donate" element={<Donate />} />
           </Route>
 
           {/* Admin Portal (Protected) */}
@@ -98,11 +104,8 @@ export default function App() {
             <Route path="check-in" element={<VolunteerCheckIn />} />
           </Route>
 
-          {/* Aliases for direct URL typing & common variations */}
+          {/* Alias for direct URL typing */}
           <Route path="/volunteers" element={<Navigate to="/volunteer" replace />} />
-          <Route path="/volienter" element={<Navigate to="/volunteer" replace />} />
-          <Route path="/volunter" element={<Navigate to="/volunteer" replace />} />
-          <Route path="/vorianters" element={<Navigate to="/volunteer" replace />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

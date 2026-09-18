@@ -109,9 +109,9 @@ flowchart TD
     
     Step2 --> Step3["Step 3: Reporter Name & Contact\n- Full Name (Optional)\n- 10-Digit Mobile Number (Mandatory for dispatch)"]
     
-    Step3 --> Step4["Step 4: Media Proof Capture\n- Live HTML5 Audio Voice Recording\n- Live HTML5 Video Proof Recording\n- Photo upload"]
+    Step3 --> Step4["Step 4: Media Proof Capture (REQUIRED — at least one)\n- Live HTML5 Audio Voice Recording\n- Live HTML5 Video Proof Recording\n- Photo upload\n- Submission blocked until ≥1 item attached"]
 
-    Step4 --> Step5["Step 5: Vulnerability & Description\n- Trapped / drowning / unconscious flags\n- Demographic tags: Infant, Child, Pregnant, Senior, Disabled"]
+    Step4 --> Step5["Step 5: Vulnerability & Description (Description OPTIONAL)\n- Trapped / drowning / unconscious flags\n- Demographic tags: Infant, Child, Pregnant, Senior, Disabled"]
 
     Step5 --> ProcessPayload["Compile Form Payload & Execute Local Triage Scoring"]
     ProcessPayload --> Submit["Submit to Backend & Realtime Event Bus"]
@@ -241,9 +241,9 @@ flowchart TD
     DuplicateCheck -- "No (Unique Proof)" --> VisionML["Execute Computer Vision Damage Classifier"]
 
     VisionML --> GradeModel{"Model Classification Output"}
-    GradeModel -->|Total Structural Destruction (Score > 0.85)| G1["Grade 1: Total Collapse\nEligible Grant: ₹1,20,000"]
-    GradeModel -->|Severe Wall/Roof Cracking (Score 0.50 - 0.85)| G2["Grade 2: Severe Structural Damage\nEligible Grant: ₹65,000"]
-    GradeModel -->|Minor Inundation / Superficial (Score < 0.50)| G3["Grade 3: Partial / Minor Damage\nEligible Grant: ₹25,000"]
+    GradeModel -->|Total Structural Destruction (Score > 0.85)| G1["FULLY_DESTROYED: Total Collapse\nEligible Grant: ₹95,100"]
+    GradeModel -->|Severe Wall/Roof Cracking (Score 0.50 - 0.85)| G2["MAJOR_STRUCTURAL_DAMAGE: Severe Damage\nEligible Grant: ₹47,550"]
+    GradeModel -->|Minor Inundation / Superficial (Score < 0.50)| G3["MINOR_DAMAGE: Partial / Minor Damage\nEligible Grant: ₹9,800"]
 
     G1 & G2 & G3 --> ClaimReport["Generate SDRF Disaster Relief Claim Dossier\n- Unique Claim ID (e.g. SDRF-2026-8891)\n- Direct Bank Transfer (DBT) verification form"]
 

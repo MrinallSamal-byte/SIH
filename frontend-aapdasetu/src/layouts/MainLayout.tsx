@@ -14,11 +14,18 @@ import {
   ChevronDown,
   Compass,
   Users,
-  Bell
+  Bell,
+  ShieldCheck,
+  FileSpreadsheet,
+  Bot,
+  HeartHandshake,
+  Smartphone,
+  CheckCheck
 } from 'lucide-react'
 import AapdaSetuLogo from '../components/common/AapdaSetuLogo'
 import ErrorBoundary from '../components/common/ErrorBoundary'
 import ChatWidget from '../components/ChatWidget'
+import { useToast } from '../components/common/Toast'
 import { LANGUAGES, useLanguage, type Language } from '../lib/i18n'
 import { useTheme } from '../lib/theme'
 import { listAlerts } from '../api/endpoints'
@@ -41,18 +48,28 @@ const featureNavItems: NavLinkItem[] = [
   { to: '/sos', labelKey: 'nav.sos', isSos: true },
   { to: '/report', labelKey: 'nav.report' },
   { to: '/track', labelKey: 'nav.track' },
+  { to: '/checkin', labelKey: 'nav.checkin' },
+  { to: '/missing-persons', labelKey: 'nav.missing' },
+  { to: '/report-damage', labelKey: 'nav.damage' },
   { to: '/shelters', labelKey: 'nav.shelters' },
   { to: '/safe-routes', labelKey: 'nav.routes' },
-  { to: '/missing-persons', labelKey: 'nav.missing' },
+  { to: '/pfa-chat', labelKey: 'nav.pfa' },
+  { to: '/donate', labelKey: 'nav.donate' },
+  { to: '/app', labelKey: 'service.appTitle' },
 ]
 
 const featureIconMap: Record<string, typeof Siren> = {
   '/sos': Siren,
   '/report': FileText,
   '/track': Search,
+  '/checkin': ShieldCheck,
+  '/missing-persons': Users,
+  '/report-damage': FileSpreadsheet,
   '/shelters': Building,
   '/safe-routes': Compass,
-  '/missing-persons': Users,
+  '/pfa-chat': Bot,
+  '/donate': HeartHandshake,
+  '/app': Smartphone,
 }
 
 // Bottom navigation items for mobile thumb reach
@@ -95,8 +112,42 @@ export default function MainLayout() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
   const [bulletins, setBulletins] = useState<Alert[]>([])
   const [notifOpen, setNotifOpen] = useState(false)
-  const [notifRead, setNotifRead] = useState(true)
   const notifRef = useRef<HTMLDivElement>(null)
+  const { toast } = useToast()
+
+  // Per-bulletin read state, persisted so refreshes don't resurrect the badge.
+  const [readIds, setReadIds] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem('aapdasetu_read_bulletins')
+      return new Set(raw ? (JSON.parse(raw) as string[]) : [])
+    } catch {
+      return new Set()
+    }
+  })
+  const unreadCount = bulletins.filter((b) => !readIds.has(b.id)).length
+
+  const persistReadIds = (ids: Set<string>) => {
+    setReadIds(ids)
+    try {
+      localStorage.setItem('aapdasetu_read_bulletins', JSON.stringify([...ids]))
+    } catch {
+      // Storage blocked — read state stays in-memory only
+    }
+  }
+
+  const markRead = (id: string) => {
+    if (readIds.has(id)) return
+    const next = new Set(readIds)
+    next.add(id)
+    persistReadIds(next)
+    toast(t('notif.markedRead', 'Notification marked as read'), 'success')
+  }
+
+  const markAllRead = () => {
+    if (unreadCount === 0) return
+    persistReadIds(new Set(bulletins.map((b) => b.id)))
+    toast(t('notif.allMarkedRead', 'All notifications marked as read'), 'success')
+  }
 
   useEffect(() => {
     setMobileMenuOpen(false)
@@ -121,12 +172,21 @@ export default function MainLayout() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [featuresOpen, notifOpen])
 
+  // Lock background scroll while the mobile side panel is open
+  useEffect(() => {
+    if (!mobileMenuOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [mobileMenuOpen])
+
   useEffect(() => {
     let active = true
     listAlerts().then((data) => {
       if (active) {
         setBulletins(data)
-        if (data.length > 0) setNotifRead(false)
       }
     }).catch(() => {})
     return () => { active = false }
@@ -145,7 +205,7 @@ export default function MainLayout() {
   }, [])
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f4f4f5] text-zinc-800 dark:bg-[#111111] dark:text-slate-200">
+    <div className="min-h-screen flex flex-col bg-[#f4f4f5] text-zinc-800 dark:bg-[#111111] dark:text-white">
       {/* Offline Ambient Banner */}
       {isOffline && (
         <div className="bg-amber-600 px-4 py-2 text-center text-xs font-bold text-white shadow-sm flex items-center justify-center gap-2">
@@ -157,24 +217,24 @@ export default function MainLayout() {
         </div>
       )}
 
-      {/* Main Navigation Header */}
-      <header className="sticky top-0 z-40 border-b border-zinc-200/60 bg-white/90 backdrop-blur-md dark:border-white/[0.06] dark:bg-[#181818]/90">
-        <div className="mx-auto flex max-w-screen-2xl items-center justify-between px-6 py-4">
+      {/* Main Navigation Header - same red, borders/hover: light → light/white, dark → black (vice versa) */}
+        <header className="sticky top-0 z-40 border-b border-red-700 bg-red-600 dark:border-black dark:bg-red-600 text-white shadow-sm">
+        <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-2 px-3 py-3 sm:gap-10 sm:px-6">
           {/* Logo / Brand */}
-          <Link to="/" className="flex items-center gap-2.5 font-bold tracking-tight group">
-            <AapdaSetuLogo size={34} />
-            <div className="flex flex-col">
-              <span className="text-base font-extrabold leading-none text-zinc-800 dark:text-slate-200 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+          <Link to="/" className="flex min-w-0 items-center gap-2.5 font-bold tracking-tight group sm:gap-4">
+            <AapdaSetuLogo size={30} />
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate text-sm font-extrabold leading-none text-white group-hover:text-red-100 transition-colors sm:text-base">
                 {t('app.name')}
               </span>
-              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-400 tracking-wider mono uppercase mt-0.5">
+              <span className="hidden text-[9px] font-bold text-red-100/80 tracking-wider mono uppercase mt-0.5 min-[400px]:block">
                 ICS NETWORK
               </span>
             </div>
           </Link>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-3" aria-label="Desktop Navigation">
+          <nav className="hidden lg:flex items-center gap-8" aria-label="Desktop Navigation">
             {topNavItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -183,8 +243,8 @@ export default function MainLayout() {
                 className={({ isActive }) =>
                   `rounded-lg px-2.5 py-1.5 text-sm font-medium transition ${
                     isActive
-                      ? 'bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300 font-bold'
-                      : 'text-zinc-500 hover:bg-orange-50 hover:text-orange-700 dark:text-slate-400 dark:hover:bg-orange-950 dark:hover:text-orange-300'
+                      ? 'bg-white text-red-600 font-bold shadow-sm'
+                      : 'text-red-100 hover:bg-white/15 hover:text-white'
                   }`
                 }
               >
@@ -197,10 +257,10 @@ export default function MainLayout() {
               <button
                 type="button"
                 onClick={() => setFeaturesOpen((o) => !o)}
-                className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm font-medium transition ${
+                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition ${
                   featuresOpen || featureNavItems.some((f) => location.pathname === f.to)
-                    ? 'bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300 font-bold'
-                    : 'text-zinc-500 hover:bg-orange-50 hover:text-orange-700 dark:text-slate-400 dark:hover:bg-orange-950 dark:hover:text-orange-300'
+                    ? 'bg-white text-red-600 font-bold shadow-sm'
+                    : 'text-red-100 hover:bg-white/15 hover:text-white'
                 }`}
               >
                 <span>{t('nav.features')}</span>
@@ -208,7 +268,7 @@ export default function MainLayout() {
               </button>
 
               {featuresOpen && (
-                <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-xl border border-zinc-200/80 bg-white p-1.5 shadow-lg dark:border-white/[0.08] dark:bg-[#1a1a1a]">
+                <div className="absolute right-0 top-full z-50 mt-1 max-h-96 w-56 overflow-y-auto rounded-xl border border-zinc-200/80 bg-white p-1.5 shadow-lg dark:border-black dark:bg-[#1a1a1a]">
                   {featureNavItems.map((item) => {
                     const Icon = featureIconMap[item.to]
                     return (
@@ -223,11 +283,11 @@ export default function MainLayout() {
                                 : 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950'
                               : isActive
                                 ? 'bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300 font-bold'
-                                : 'text-zinc-500 hover:bg-orange-50 hover:text-orange-700 dark:text-slate-400 dark:hover:bg-orange-950 dark:hover:text-orange-300'
+                                : 'text-zinc-500 hover:bg-orange-50 hover:text-orange-700 dark:text-white dark:hover:bg-orange-950 dark:hover:text-orange-300'
                           }`
                         }
                       >
-                        {Icon && <Icon className={`h-3.5 w-3.5 ${item.isSos ? 'animate-pulse' : ''}`} />}
+                        {Icon && <Icon className={`h-3.5 w-3.5 ${item.isSos ? 'animate-pulse text-red-600 dark:text-red-400' : ''}`} />}
                         <span>{t(item.labelKey)}</span>
                       </NavLink>
                     )
@@ -238,17 +298,17 @@ export default function MainLayout() {
           </nav>
 
           {/* Controls: Language Selector, Theme Toggle, Mobile Menu Button */}
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-5">
             {/* Language Selector */}
             <div className="relative">
               <select
                 aria-label="Language selector"
                 value={lang}
                 onChange={(e) => setLang(e.target.value as Language)}
-                className="rounded-lg border border-zinc-200/80 bg-[#f4f4f5] px-2.5 py-1.5 text-xs font-bold text-zinc-700 outline-none transition hover:bg-zinc-100 focus:border-zinc-500 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-200 dark:hover:bg-[#252525] cursor-pointer"
+                className="rounded-lg bg-white/15 px-2 py-1 text-xs font-bold text-white outline-none transition hover:bg-white/20 dark:bg-black/20 dark:hover:bg-black/30 cursor-pointer"
               >
                 {LANGUAGES.map((l) => (
-                  <option key={l.code} value={l.code}>
+                  <option key={l.code} value={l.code} className="text-zinc-800 bg-white">
                     {l.label}
                   </option>
                 ))}
@@ -259,59 +319,81 @@ export default function MainLayout() {
             <div className="relative" ref={notifRef}>
               <button
                 type="button"
-                onClick={() => {
-                  setNotifOpen((o) => !o)
-                  setNotifRead(true)
-                }}
-                className="relative rounded-lg border border-zinc-200/80 bg-white p-2.5 text-zinc-500 transition hover:bg-orange-50 hover:text-orange-700 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-400 dark:hover:bg-orange-950 dark:hover:text-orange-300"
+                onClick={() => setNotifOpen((o) => !o)}
+                className="relative rounded-lg bg-white/10 p-2 text-white transition hover:bg-white/20 hover:text-white dark:bg-black/20 dark:hover:bg-black/30"
                 aria-label="Notifications"
               >
                 <Bell className="h-5 w-5" />
-                {bulletins.length > 0 && !notifRead && (
+                {unreadCount > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[8px] font-bold text-white">
-                    {bulletins.length}
+                    {unreadCount}
                   </span>
                 )}
               </button>
 
               {notifOpen && (
-                <div className="absolute right-0 top-full z-50 mt-2 w-80 max-h-96 overflow-y-auto rounded-xl border border-zinc-200/80 bg-white shadow-lg dark:border-white/[0.08] dark:bg-[#1a1a1a]">
-                  <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-white/[0.08]">
+                <div className="absolute right-0 top-full z-50 mt-2 w-80 max-h-96 overflow-y-auto rounded-xl border border-zinc-200/80 bg-white shadow-lg dark:border-black dark:bg-[#1a1a1a]">
+                  <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-black">
                     <div className="flex items-center gap-2">
-                      <Bell className="h-4 w-4 text-zinc-500 dark:text-slate-400" />
-                      <span className="text-sm font-bold text-zinc-800 dark:text-slate-300">Bulletins</span>
+                      <Bell className="h-4 w-4 text-zinc-500 dark:text-white" />
+                      <span className="text-sm font-bold text-zinc-800 dark:text-white">{t('notif.bulletins', 'Bulletins')}</span>
                     </div>
-                    <Link
-                      to="/alerts"
-                      onClick={() => setNotifOpen(false)}
-                      className="text-[11px] font-bold text-orange-600 hover:underline dark:text-orange-400"
-                    >
-                      View all
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        to="/alerts"
+                        onClick={() => setNotifOpen(false)}
+                        className="text-[11px] font-bold text-orange-600 hover:underline dark:text-orange-400"
+                      >
+                        {t('notif.viewAll', 'View all')}
+                      </Link>
+                      {unreadCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={markAllRead}
+                          className="inline-flex items-center gap-1 rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-bold text-zinc-600 transition hover:bg-zinc-100 dark:border-white/10 dark:text-white dark:hover:bg-white/10"
+                        >
+                          <CheckCheck className="h-3.5 w-3.5" />
+                          {t('notif.markAllRead', 'Mark all read')}
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {bulletins.length === 0 ? (
-                    <div className="px-4 py-8 text-center text-xs text-slate-400 dark:text-slate-500">
-                      No active bulletins
+                    <div className="px-4 py-8 text-center text-xs text-slate-400 dark:text-white">
+                      {t('notif.empty', 'No active bulletins')}
                     </div>
                   ) : (
                     <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {bulletins.map((a) => (
-                        <div key={a.id} className="px-4 py-3 hover:bg-zinc-50 dark:hover:bg-[#252525]/50 transition-colors">
+                      {bulletins.map((a) => {
+                        const isRead = readIds.has(a.id)
+                        return (
+                        <div key={a.id} className={`px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-[#252525]/50 ${isRead ? 'opacity-60' : ''}`}>
                           <div className="flex items-start gap-2.5">
                             <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${
                               a.severity === 'critical' ? 'bg-red-500' : a.severity === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
                             }`} />
                             <div className="min-w-0 flex-1">
-                              <h4 className="text-xs font-bold text-zinc-800 dark:text-slate-300 line-clamp-1">{a.title}</h4>
-                              <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">{a.message}</p>
+                              <h4 className="text-xs font-bold text-zinc-800 dark:text-white line-clamp-1">{a.title}</h4>
+                              <p className="mt-0.5 text-[11px] text-slate-500 dark:text-white line-clamp-2">{a.message}</p>
                               {a.region && (
-                                <span className="mt-1 inline-block text-[10px] text-slate-400 dark:text-slate-500 mono">{a.region}</span>
+                                <span className="mt-1 inline-block text-[10px] text-slate-400 dark:text-white mono">{a.region}</span>
+                              )}
+                              {!isRead && (
+                                <button
+                                  type="button"
+                                  onClick={() => markRead(a.id)}
+                                  className="mt-1.5 inline-flex items-center gap-1 rounded-md text-[11px] font-bold text-emerald-600 hover:underline dark:text-emerald-400"
+                                >
+                                  <CheckCheck className="h-3.5 w-3.5" />
+                                  {t('notif.markRead', 'Mark read')}
+                                </button>
                               )}
                             </div>
                           </div>
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -322,7 +404,7 @@ export default function MainLayout() {
             <button
               type="button"
               onClick={toggleTheme}
-              className="rounded-lg border border-zinc-200/80 bg-white p-2.5 text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800 dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-400 dark:hover:bg-[#252525] dark:hover:text-slate-200"
+              className="rounded-lg bg-white/10 p-2 text-white transition hover:bg-white/20 hover:text-white dark:bg-black/20 dark:hover:bg-black/30"
               aria-label="Toggle theme"
             >
               {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
@@ -332,7 +414,7 @@ export default function MainLayout() {
             <button
               type="button"
               onClick={() => setMobileMenuOpen((o) => !o)}
-              className="rounded-lg border border-zinc-200/80 bg-white p-2.5 text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800 lg:hidden dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:text-slate-400 dark:hover:bg-[#252525]"
+              className="rounded-lg bg-white/10 p-2 text-white transition hover:bg-white/20 hover:text-white dark:bg-black/20 dark:hover:bg-black/30 lg:hidden"
               aria-label="Toggle mobile menu"
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -342,75 +424,117 @@ export default function MainLayout() {
 
         {/* Mobile Dropdown Menu Drawer */}
         {mobileMenuOpen && (
-          <nav className="border-t border-zinc-200/80 bg-white px-4 py-3 shadow-lg lg:hidden dark:border-white/[0.08] dark:bg-[#151515] animate-dropdown">
-            <div className="grid grid-cols-2 gap-1.5">
-              {topNavItems.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.end}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition ${
-                      isActive
-                        ? 'bg-slate-100 text-zinc-800 dark:bg-[#222222] dark:text-slate-300 font-bold'
-                        : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800 dark:text-slate-400 dark:hover:bg-zinc-800 dark:hover:text-slate-200'
-                    }`
-                  }
+          <>
+            <button
+              type="button"
+              aria-label="Close menu"
+              onClick={() => setMobileMenuOpen(false)}
+              className="fixed inset-0 z-50 cursor-default bg-black/50 lg:hidden animate-backdrop"
+            />
+            <aside
+              className="fixed right-0 top-0 z-50 flex h-dvh w-80 max-w-[85vw] flex-col bg-white shadow-2xl lg:hidden dark:bg-[#151515] animate-side-panel"
+              aria-label="Mobile menu"
+            >
+              <div className="flex items-center justify-between border-b border-zinc-200/80 px-4 py-3 dark:border-white/10">
+                <div className="flex items-center gap-2.5">
+                  <AapdaSetuLogo size={28} />
+                  <div>
+                    <p className="text-sm font-extrabold leading-none text-zinc-800 dark:text-white">{t('app.name')}</p>
+                    <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-zinc-400">ICS Network</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="rounded-lg border border-zinc-200 p-2 text-zinc-500 dark:border-white/10 dark:text-white"
+                  aria-label="Close menu"
                 >
-                  <span>{t(item.labelKey)}</span>
-                </NavLink>
-              ))}
-
-              <div className="col-span-2 mt-1">
-                <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                  {t('nav.features')}
-                </span>
+                  <X className="h-4 w-4" />
+                </button>
               </div>
 
-              {featureNavItems.map((item) => {
-                const Icon = featureIconMap[item.to]
-                return (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.end}
-                    className={({ isActive }) =>
-                      item.isSos
-                        ? `col-span-2 flex items-center justify-center gap-2 rounded-xl bg-red-600 p-2.5 text-xs font-bold text-white shadow-sm`
-                        : `flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition ${
+              <div className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
+                <div>
+                  <p className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/60">
+                    {t('nav.home')}
+                  </p>
+                  <div className="space-y-1">
+                    {topNavItems.map((item) => (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        end={item.end}
+                        className={({ isActive }) =>
+                          `flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                             isActive
-                              ? 'bg-slate-100 text-zinc-800 dark:bg-[#222222] dark:text-slate-300 font-bold'
-                              : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800 dark:text-slate-400 dark:hover:bg-zinc-800 dark:hover:text-slate-200'
+                              ? 'bg-zinc-800 text-white dark:bg-white dark:text-zinc-900 font-bold'
+                              : 'text-zinc-600 hover:bg-zinc-100 dark:text-white dark:hover:bg-white/10'
                           }`
-                    }
-                  >
-                    {Icon && <Icon className={`h-4 w-4 ${item.isSos ? '' : ''}`} />}
-                    <span>{t(item.labelKey)}</span>
-                  </NavLink>
-                )
-              })}
+                        }
+                      >
+                        <span>{t(item.labelKey)}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                </div>
 
-              <div className="col-span-2 border-t border-slate-100 my-1 pt-1 dark:border-white/[0.08] grid grid-cols-2 gap-1">
-                <Link
-                  to="/admin"
-                  className="rounded-lg px-3 py-2 text-xs text-slate-500 hover:bg-zinc-50 dark:text-slate-400 dark:hover:bg-zinc-800 font-medium"
-                >
-                  {t('nav.admin')}
-                </Link>
-                <Link
-                  to="/volunteer"
-                  className="rounded-lg px-3 py-2 text-xs text-slate-500 hover:bg-zinc-50 dark:text-slate-400 dark:hover:bg-zinc-800 font-medium"
-                >
-                  {t('nav.volunteer')}
-                </Link>
+                <div>
+                  <p className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/60">
+                    {t('nav.features')}
+                  </p>
+                  <div className="space-y-1">
+                    {featureNavItems.map((item) => {
+                      const Icon = featureIconMap[item.to]
+                      return (
+                        <NavLink
+                          key={item.to}
+                          to={item.to}
+                          end={item.end}
+                          className={({ isActive }) =>
+                            item.isSos
+                              ? `flex items-center justify-center gap-2 rounded-xl bg-red-600 p-3 text-sm font-bold text-white shadow-sm`
+                              : `flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                                  isActive
+                                    ? 'bg-zinc-800 text-white dark:bg-white dark:text-zinc-900 font-bold'
+                                    : 'text-zinc-600 hover:bg-zinc-100 dark:text-white dark:hover:bg-white/10'
+                                }`
+                          }
+                        >
+                          {Icon && <Icon className={`h-4 w-4 shrink-0 ${item.isSos ? 'animate-pulse text-red-600 dark:text-red-400' : ''}`} />}
+                          <span>{t(item.labelKey)}</span>
+                        </NavLink>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/60">
+                    {t('nav.portals', 'Portals')}
+                  </p>
+                  <div className="space-y-1">
+                    <Link
+                      to="/admin"
+                      className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-600 hover:bg-zinc-100 dark:text-white dark:hover:bg-white/10"
+                    >
+                      {t('nav.admin')}
+                    </Link>
+                    <Link
+                      to="/volunteer"
+                      className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-600 hover:bg-zinc-100 dark:text-white dark:hover:bg-white/10"
+                    >
+                      {t('nav.volunteer')}
+                    </Link>
+                  </div>
+                </div>
               </div>
-            </div>
-          </nav>
+            </aside>
+          </>
         )}
       </header>
 
-      {/* Main Container */}
-      <main className="mx-auto flex-1 w-full max-w-7xl px-4 py-6 pb-24 md:pb-8">
+      {/* Main Container — Home renders its own full-bleed bands */}
+      <main className={location.pathname === '/' ? 'w-full flex-1 pb-24 md:pb-8' : 'mx-auto flex-1 w-full max-w-7xl px-4 py-6 pb-24 md:pb-8'}>
         <div key={location.pathname} className="animate-page-enter">
           <ErrorBoundary>
             <Outlet />
@@ -436,8 +560,8 @@ export default function MainLayout() {
                     }`
                   : `flex flex-1 flex-col items-center justify-center py-1 text-[10px] font-bold transition ${
                       isActive
-                        ? 'text-zinc-800 dark:text-slate-300'
-                        : 'text-slate-400 hover:text-zinc-600 dark:text-slate-500 dark:hover:text-slate-300'
+                        ? 'text-zinc-800 dark:text-white'
+                        : 'text-slate-400 hover:text-zinc-600 dark:text-white dark:hover:text-white'
                     }`
               }
             >

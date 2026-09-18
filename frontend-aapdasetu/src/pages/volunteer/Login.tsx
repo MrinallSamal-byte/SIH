@@ -32,7 +32,7 @@ export default function VolunteerLogin() {
               V
             </div>
             <div>
-              <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">
                 AapdaSetu
               </span>
               <span className="ml-1.5 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
@@ -41,10 +41,10 @@ export default function VolunteerLogin() {
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Volunteer Login
           </h1>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+          <p className="mt-1 text-xs text-slate-500 dark:text-white leading-relaxed">
             Enter your registered email and password to access your field response tasks and duty dashboard.
           </p>
 
@@ -89,7 +89,7 @@ export default function VolunteerLogin() {
           <div className="mt-6 border-t border-slate-100 pt-4 text-center dark:border-slate-800">
             <Link
               to="/"
-              className="text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+              className="text-xs text-slate-500 hover:text-slate-900 dark:text-white dark:hover:text-white"
             >
               ← Return to Citizen Homepage
             </Link>

@@ -1,5 +1,6 @@
 /** Audit logging service — every admin action, status change and login is recorded. */
 import { prisma } from '../lib/prisma.js';
+import { logger } from '../lib/logger.js';
 
 export interface AuditEntry {
   adminEmail: string;
@@ -22,7 +23,7 @@ export async function writeAuditLog(entry: AuditEntry): Promise<void> {
     });
   } catch (err) {
     // Audit failures must never break the primary operation.
-    console.error('Audit log write failed', err);
+    logger.error('audit_write_failed', { action: entry.action, err });
   }
 }
 

@@ -187,10 +187,10 @@ export default function DamageAssessment() {
               <FileSpreadsheet className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                 Disaster Damage Intelligence & Hotspot Command
               </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-white">
                 Automated damage assessment powered by HuggingFace ResNet-50 vision classifier with regional severity ranking.
               </p>
             </div>
@@ -211,7 +211,7 @@ export default function DamageAssessment() {
 
           <button
             onClick={loadData}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 cursor-pointer"
+            className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-800 dark:text-white cursor-pointer"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             <span>Sync</span>
@@ -237,7 +237,7 @@ export default function DamageAssessment() {
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">
             Total Assessed Claims
           </div>
-          <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-slate-100">
+          <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-white">
             {totalReportsCount}
           </div>
           <div className="text-[11px] text-slate-400">Avg Score: {avgDamageScore} / 100 pts</div>
@@ -257,7 +257,7 @@ export default function DamageAssessment() {
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mono">
             Pipeline Breaches
           </div>
-          <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-slate-100">
+          <div className="mt-1 text-2xl font-bold font-mono text-slate-900 dark:text-white">
             {totalPipelines}
           </div>
           <div className="text-[11px] text-slate-400">Gov Water & Gas Mains</div>
@@ -281,7 +281,7 @@ export default function DamageAssessment() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-red-600 dark:text-red-400" />
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 mono">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white mono">
                 Geospatial Damage Points ({markers.length} Active Pins)
               </h2>
             </div>
@@ -318,8 +318,8 @@ export default function DamageAssessment() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-slate-900 dark:text-slate-100" />
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 mono">
+              <TrendingUp className="h-4 w-4 text-slate-900 dark:text-white" />
+              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white mono">
                 Max Damage Sectors
               </h2>
             </div>
@@ -353,12 +353,12 @@ export default function DamageAssessment() {
                         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold font-mono ${
                           isFirst
                             ? 'bg-red-600 text-white'
-                            : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                            : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-white'
                         }`}
                       >
                         #{idx + 1}
                       </span>
-                      <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                      <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
                         {sec.district}
                       </span>
                     </div>
@@ -380,7 +380,7 @@ export default function DamageAssessment() {
                     />
                   </div>
 
-                  <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                  <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500 dark:text-white">
                     <span>
                       {sec.count} reports ({sec.destroyedCount} destroyed)
                     </span>
@@ -406,7 +406,7 @@ export default function DamageAssessment() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search Claim ID, Claimant, Phone, Address, Sector…"
-              className="w-full rounded-xl border border-slate-300 bg-slate-50 pl-10 pr-4 py-2 text-xs font-medium text-slate-900 outline-none transition focus:border-slate-900 focus:bg-white dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-300"
+              className="w-full rounded-xl border border-slate-300 bg-slate-50 pl-10 pr-4 py-2 text-xs font-medium text-slate-900 outline-none transition focus:border-slate-900 focus:bg-white dark:border-white/[0.1] dark:bg-slate-800 dark:text-white dark:focus:border-slate-300"
             />
           </div>
 
@@ -414,7 +414,7 @@ export default function DamageAssessment() {
           <select
             value={districtFilter}
             onChange={(e) => setDistrictFilter(e.target.value)}
-            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200"
+            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none dark:border-white/[0.1] dark:bg-slate-800 dark:text-white"
           >
             <option value="all">All Disaster Sectors ({items.length})</option>
             {sectorAggregation.map((s) => (
@@ -444,7 +444,7 @@ export default function DamageAssessment() {
               className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-colors cursor-pointer ${
                 infraFilter === cat.id
                   ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-white'
               }`}
             >
               {cat.label}
@@ -466,7 +466,7 @@ export default function DamageAssessment() {
               className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-colors cursor-pointer ${
                 gradeFilter === grd.id
                   ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-white'
               }`}
             >
               {grd.label}
@@ -478,7 +478,7 @@ export default function DamageAssessment() {
       {/* Submissions Table */}
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900">
         <div className="border-b border-slate-200 px-5 py-3.5 dark:border-slate-800 flex items-center justify-between">
-          <div className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mono">
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-white mono">
             Individual Damage Claims & ResNet-50 Score Breakdown ({filtered.length})
           </div>
           <span className="text-[11px] text-slate-400">Click row to inspect on map & verify</span>
@@ -515,7 +515,7 @@ export default function DamageAssessment() {
                   >
                     {/* Claim ID */}
                     <td className="px-4 py-3.5 whitespace-nowrap">
-                      <div className="font-mono font-bold text-slate-900 dark:text-slate-100">
+                      <div className="font-mono font-bold text-slate-900 dark:text-white">
                         {item.claimId}
                       </div>
                       <div className="text-[10px] text-slate-400">
@@ -526,11 +526,11 @@ export default function DamageAssessment() {
                     {/* Infrastructure */}
                     <td className="px-4 py-3.5 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-white">
                           <Icon className="h-3.5 w-3.5" />
                         </div>
                         <div>
-                          <div className="font-semibold text-slate-900 dark:text-slate-100">
+                          <div className="font-semibold text-slate-900 dark:text-white">
                             {INFRA_LABELS[item.infrastructureType]}
                           </div>
                         </div>
@@ -539,10 +539,10 @@ export default function DamageAssessment() {
 
                     {/* Address */}
                     <td className="px-4 py-3.5 max-w-xs">
-                      <div className="font-bold text-slate-900 dark:text-slate-100 truncate">
+                      <div className="font-bold text-slate-900 dark:text-white truncate">
                         {item.district}
                       </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      <div className="text-[11px] text-slate-500 dark:text-white truncate">
                         {item.propertyAddress}
                       </div>
                     </td>
@@ -555,7 +555,7 @@ export default function DamageAssessment() {
                             ? 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400'
                             : item.damageScore >= 60
                             ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400'
-                            : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                            : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-white'
                         }`}
                       >
                         {item.damageScore.toFixed(1)} / 100
@@ -564,7 +564,7 @@ export default function DamageAssessment() {
 
                     {/* Grade */}
                     <td className="px-4 py-3.5 whitespace-nowrap">
-                      <div className="font-mono font-bold text-xs text-slate-900 dark:text-slate-100">
+                      <div className="font-mono font-bold text-xs text-slate-900 dark:text-white">
                         {item.damageGrade}
                       </div>
                       <div className="text-[10px] text-slate-400 font-mono">
@@ -579,7 +579,7 @@ export default function DamageAssessment() {
 
                     {/* Contact */}
                     <td className="px-4 py-3.5 whitespace-nowrap">
-                      <div className="font-medium text-slate-900 dark:text-slate-100">
+                      <div className="font-medium text-slate-900 dark:text-white">
                         {item.claimantName || 'Citizen'}
                       </div>
                       <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
@@ -596,7 +596,7 @@ export default function DamageAssessment() {
                           className={`rounded-lg px-2.5 py-1 text-[11px] font-bold cursor-pointer transition-colors ${
                             item.status === 'approved'
                               ? 'bg-emerald-600 text-white'
-                              : 'border border-slate-300 bg-white text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300'
+                              : 'border border-slate-300 bg-white text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 dark:border-white/[0.1] dark:bg-slate-800 dark:text-white'
                           }`}
                         >
                           Approve
@@ -606,7 +606,7 @@ export default function DamageAssessment() {
                           className={`rounded-lg px-2 py-1 text-[11px] font-bold cursor-pointer transition-colors ${
                             item.status === 'flagged_fraud'
                               ? 'bg-red-600 text-white'
-                              : 'border border-slate-300 bg-white text-slate-700 hover:bg-red-50 hover:text-red-700 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-300'
+                              : 'border border-slate-300 bg-white text-slate-700 hover:bg-red-50 hover:text-red-700 dark:border-white/[0.1] dark:bg-slate-800 dark:text-white'
                           }`}
                         >
                           Flag
@@ -636,7 +636,7 @@ export default function DamageAssessment() {
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mono">
                   Damage Claim Telemetry
                 </span>
-                <div className="font-mono text-lg font-bold text-slate-900 dark:text-slate-100">
+                <div className="font-mono text-lg font-bold text-slate-900 dark:text-white">
                   {selectedReport.claimId}
                 </div>
               </div>
@@ -670,7 +670,7 @@ export default function DamageAssessment() {
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-950">
                   <div className="text-[10px] uppercase font-bold text-slate-400 mono">Class</div>
-                  <div className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100">
+                  <div className="font-mono text-xs font-bold text-slate-900 dark:text-white">
                     {selectedReport.damageGrade}
                   </div>
                 </div>
@@ -686,19 +686,19 @@ export default function DamageAssessment() {
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
                   <span className="text-slate-500">Infrastructure:</span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">
+                  <span className="font-semibold text-slate-900 dark:text-white">
                     {INFRA_LABELS[selectedReport.infrastructureType]}
                   </span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
                   <span className="text-slate-500">Location:</span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-100 text-right">
+                  <span className="font-semibold text-slate-900 dark:text-white text-right">
                     {selectedReport.propertyAddress}, {selectedReport.district}
                   </span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
                   <span className="text-slate-500">Claimant:</span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">
+                  <span className="font-semibold text-slate-900 dark:text-white">
                     {selectedReport.claimantName || 'Citizen'} ({selectedReport.claimantPhone})
                   </span>
                 </div>
@@ -715,7 +715,7 @@ export default function DamageAssessment() {
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mono">
                   Observed Structural Factors:
                 </span>
-                <ul className="mt-1 list-inside list-disc space-y-0.5 text-xs text-slate-600 dark:text-slate-300">
+                <ul className="mt-1 list-inside list-disc space-y-0.5 text-xs text-slate-600 dark:text-white">
                   {selectedReport.factors.map((f, i) => (
                     <li key={i}>{f}</li>
                   ))}

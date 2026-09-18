@@ -13,40 +13,60 @@ import java.util.ArrayDeque
  * A late platform callback or watchdog must not retire a newer in-flight
  * packet. Every start captures a generation; only that generation can
  * complete or retry the head.
+ *
+ * Items matching [isPriority] (e.g. SOS) form a highest-priority lane that
+ * dequeues ahead of all buffered normal items, FIFO within its own lane.
+ * Priority changes dequeue order only; admission caps are identical for
+ * both lanes and an in-flight write is never preempted.
  */
 internal class LinkSendQueue<T>(
     private val maxPendingSends: Int,
     private val maxPendingBytes: Int,
-    private val bytesOf: (T) -> Int
+    private val bytesOf: (T) -> Int,
+    private val isPriority: (T) -> Boolean = { false }
 ) {
     enum class EnqueueResult { Rejected, Queued, StartNow }
 
     enum class AdvanceResult { Ignored, Idle, StartNext }
 
-    private val pending = ArrayDeque<T>()
+    private val pendingPriority = ArrayDeque<T>()
+    private val pendingNormal = ArrayDeque<T>()
     private var pendingBytes: Int = 0
     private var inFlight: Boolean = false
+    private var inFlightLaneIsPriority: Boolean = false
     private var retryScheduled: Boolean = false
     private var generation: Long = 0L
 
-    fun size(): Int = pending.size
+    fun size(): Int = pendingPriority.size + pendingNormal.size
     fun pendingBytes(): Int = pendingBytes
     fun generation(): Long = generation
     fun isInFlight(): Boolean = inFlight
     fun isRetryScheduled(): Boolean = retryScheduled
-    fun isEmpty(): Boolean = pending.isEmpty()
-    fun peek(): T? = pending.peekFirst()
+    fun isEmpty(): Boolean = pendingPriority.isEmpty() && pendingNormal.isEmpty()
+
+    private fun headLane(): ArrayDeque<T> =
+        if (pendingPriority.isNotEmpty()) pendingPriority else pendingNormal
+
+    private fun inFlightLane(): ArrayDeque<T> =
+        if (inFlightLaneIsPriority) pendingPriority else pendingNormal
+
+    fun peek(): T? = (if (inFlight) inFlightLane() else headLane()).peekFirst()
 
     fun enqueue(item: T): EnqueueResult {
         val itemBytes = bytesOf(item)
-        if (pending.size >= maxPendingSends || pendingBytes + itemBytes > maxPendingBytes) {
+        if (size() >= maxPendingSends || pendingBytes + itemBytes > maxPendingBytes) {
             return EnqueueResult.Rejected
         }
-        pending.addLast(item)
+        if (isPriority(item)) {
+            pendingPriority.addLast(item)
+        } else {
+            pendingNormal.addLast(item)
+        }
         pendingBytes += itemBytes
         // Reserve in-flight so a second enqueue cannot start a parallel write.
         if (!inFlight && !retryScheduled) {
             inFlight = true
+            inFlightLaneIsPriority = pendingPriority.isNotEmpty()
             return EnqueueResult.StartNow
         }
         return EnqueueResult.Queued
@@ -57,7 +77,7 @@ internal class LinkSendQueue<T>(
      * queue is empty and clears a stale in-flight reservation.
      */
     fun beginStart(): Long? {
-        if (pending.isEmpty()) {
+        if (isEmpty()) {
             inFlight = false
             return null
         }
@@ -68,19 +88,26 @@ internal class LinkSendQueue<T>(
 
     /**
      * Retire the head only when [expectedGeneration] is still current.
+     * A successful completion consumes the generation: the same generation
+     * can never retire more than one head, even if it is reported twice
+     * (e.g. a GATT callback racing the pacing fallback).
      */
     fun complete(expectedGeneration: Long): AdvanceResult {
         if (!inFlight || generation != expectedGeneration) {
             return AdvanceResult.Ignored
         }
-        val head = pending.peekFirst() ?: run {
+        val lane = inFlightLane()
+        val head = lane.peekFirst() ?: run {
             inFlight = false
+            generation += 1L
             return AdvanceResult.Idle
         }
-        pending.removeFirst()
+        lane.removeFirst()
         pendingBytes = (pendingBytes - bytesOf(head)).coerceAtLeast(0)
+        inFlightLaneIsPriority = pendingPriority.isNotEmpty()
         inFlight = false
-        if (pending.isEmpty()) {
+        generation += 1L
+        if (isEmpty()) {
             return AdvanceResult.Idle
         }
         inFlight = true
@@ -90,20 +117,21 @@ internal class LinkSendQueue<T>(
     fun scheduleRetry(expectedGeneration: Long): Boolean {
         if (generation != expectedGeneration) return false
         inFlight = false
-        if (retryScheduled || pending.isEmpty()) return false
+        if (retryScheduled || isEmpty()) return false
         retryScheduled = true
         return true
     }
 
     fun takeScheduledRetry(): Boolean {
         retryScheduled = false
-        if (inFlight || pending.isEmpty()) return false
+        if (inFlight || isEmpty()) return false
         inFlight = true
         return true
     }
 
     fun clear() {
-        pending.clear()
+        pendingPriority.clear()
+        pendingNormal.clear()
         pendingBytes = 0
         inFlight = false
         retryScheduled = false

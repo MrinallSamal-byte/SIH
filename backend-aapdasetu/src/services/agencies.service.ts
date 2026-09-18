@@ -3,11 +3,17 @@ import { prisma } from '../lib/prisma.js';
 import { NotFoundError } from '../lib/errors.js';
 import { writeAuditLog } from './audit.service.js';
 
-export async function listAgencies(params: { type?: string }) {
+export async function listAgencies(params: { type?: string; page?: number; pageSize?: number }) {
+  // page/pageSize absent → return all rows (legacy behavior)
+  const take =
+    params.page !== undefined || params.pageSize !== undefined
+      ? Math.min(params.pageSize ?? 50, 200)
+      : undefined;
   return prisma.agency.findMany({
     where: params.type ? { type: params.type as never } : {},
     orderBy: { name: 'asc' },
     include: { assignments: { select: { id: true, trackingId: true, status: true } } },
+    ...(take !== undefined ? { skip: ((params.page ?? 1) - 1) * take, take } : {}),
   });
 }
 

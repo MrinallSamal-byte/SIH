@@ -4,11 +4,11 @@ type Variant = 'primary' | 'danger' | 'secondary' | 'outline' | 'success'
 type Size = 'sm' | 'md' | 'lg'
 
 const styles: Record<Variant, string> = {
-  primary: 'bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.98] dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white shadow-xs cursor-pointer',
-  danger: 'bg-red-600 text-white hover:bg-red-700 active:scale-[0.98] shadow-xs cursor-pointer',
-  secondary: 'bg-slate-800 text-white hover:bg-slate-700 active:scale-[0.98] dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 shadow-xs cursor-pointer',
-  outline: 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/[0.1] dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 shadow-xs cursor-pointer',
-  success: 'bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.98] shadow-xs cursor-pointer',
+  primary: 'border-2 border-black bg-brand-600 text-white hover:bg-brand-700 hover:border-black active:scale-[0.98] dark:border-black dark:bg-brand-600 dark:text-white dark:hover:bg-brand-700 shadow-sm shadow-brand-600/20 cursor-pointer',
+  danger: 'border-2 border-black bg-red-600 text-white hover:bg-red-700 hover:border-black active:scale-[0.98] dark:border-black shadow-xs cursor-pointer',
+  secondary: 'border-2 border-black bg-slate-800 text-white hover:bg-slate-700 hover:border-black active:scale-[0.98] dark:border-black dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 shadow-xs cursor-pointer',
+  outline: 'border-2 border-black bg-white text-slate-700 hover:bg-slate-50 dark:border-black dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800 shadow-xs cursor-pointer',
+  success: 'border-2 border-black bg-emerald-600 text-white hover:bg-emerald-700 hover:border-black active:scale-[0.98] dark:border-black shadow-xs cursor-pointer',
 }
 
 const sizes: Record<Size, string> = {

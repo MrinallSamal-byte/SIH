@@ -21,8 +21,8 @@ export default function Volunteers() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Volunteer roster & skill dispatch</h1>
-      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Skills: medical · search_rescue · driving · logistics</p>
+      <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Volunteer roster & skill dispatch</h1>
+      <p className="mt-1 text-xs text-slate-500 dark:text-white">Skills: medical · search_rescue · driving · logistics</p>
 
       <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         {volunteers.map((v) => (
@@ -31,14 +31,14 @@ export default function Volunteers() {
               <div className="font-semibold">{v.name}</div>
               <Badge value={v.status} />
             </div>
-            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{v.phone ?? '—'}</div>
+            <div className="mt-1 text-xs text-slate-500 dark:text-white">{v.phone ?? '—'}</div>
             <div className="mt-2 flex flex-wrap gap-1">
               {v.skills.map((s) => (
-                <span key={s} className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-800 border border-slate-200 dark:border-white/[0.1] dark:bg-slate-800 dark:text-slate-200 mono uppercase">
+                <span key={s} className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-800 border border-slate-200 dark:border-white/[0.1] dark:bg-slate-800 dark:text-white mono uppercase">
                   {s.replace('_', ' ')}
                 </span>
               ))}
-              {v.skills.length === 0 && <span className="text-xs text-slate-400 dark:text-slate-500">no skills</span>}
+              {v.skills.length === 0 && <span className="text-xs text-slate-400 dark:text-white">no skills</span>}
             </div>
             <div className="mt-3">
               <Select
@@ -50,7 +50,7 @@ export default function Volunteers() {
                 <option value="on_duty">on_duty</option>
                 <option value="offline">offline</option>
               </Select>
-              {v.assignedReportId && <div className="mt-1 text-xs text-slate-400 dark:text-slate-500">Task: {v.assignedReportId}</div>}
+              {v.assignedReportId && <div className="mt-1 text-xs text-slate-400 dark:text-white">Task: {v.assignedReportId}</div>}
             </div>
           </div>
         ))}

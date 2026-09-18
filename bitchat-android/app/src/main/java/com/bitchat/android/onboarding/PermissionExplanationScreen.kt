@@ -52,7 +52,13 @@ fun PermissionExplanationScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Spacer(modifier = Modifier.height(24.dp))
-            
+
+            OnboardingProgress(
+                currentStep = OnboardingProgressSteps.STEP_PERMISSION_EXPLANATION,
+                totalSteps = OnboardingProgressSteps.TOTAL_STEPS,
+                modifier = Modifier.fillMaxWidth()
+            )
+
             // Header Section - matching AboutSheet style
             Column(
                 modifier = Modifier

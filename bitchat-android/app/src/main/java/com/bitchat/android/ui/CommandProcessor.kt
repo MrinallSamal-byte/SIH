@@ -23,9 +23,11 @@ class CommandProcessor(
         CommandSuggestion("/block", emptyList(), "[nickname]", "block or list blocked peers"),
         CommandSuggestion("/channels", emptyList(), null, "show all discovered channels"),
         CommandSuggestion("/clear", emptyList(), null, "clear chat messages"),
+        CommandSuggestion("/help", emptyList(), null, "show this help"),
         CommandSuggestion("/hug", emptyList(), "<nickname>", "send someone a warm hug"),
         CommandSuggestion("/j", listOf("/join"), "<channel>", "join or create a channel"),
         CommandSuggestion("/m", listOf("/msg"), "<nickname> [message]", "send private message"),
+        CommandSuggestion("/pass", emptyList(), "<password>", "change channel password"),
         CommandSuggestion("/pay", emptyList(), "<token> [public]", "send a Cashu ecash token"),
         CommandSuggestion("/slap", emptyList(), "<nickname>", "slap someone with a trout"),
         CommandSuggestion("/unblock", emptyList(), "<nickname>", "unblock a peer"),
@@ -51,6 +53,7 @@ class CommandProcessor(
             "/hug" -> handleActionCommand(parts, "gives", "a warm hug 🫂", meshService, myPeerID, onSendMessage, viewModel)
             "/slap" -> handleActionCommand(parts, "slaps", "around a bit with a large trout 🐟", meshService, myPeerID, onSendMessage, viewModel)
             "/channels" -> handleChannelsCommand()
+            "/help" -> handleHelpCommand()
             else -> handleUnknownCommand(cmd)
         }
         
@@ -455,6 +458,24 @@ class CommandProcessor(
         }
     }
     
+    private fun handleHelpCommand() {
+        val listing = getAllAvailableCommands().joinToString("\n") { suggestion ->
+            buildString {
+                append(suggestion.command)
+                if (suggestion.syntax != null) append(" ${suggestion.syntax}")
+                append(" - ")
+                append(suggestion.description)
+            }
+        }
+        val systemMessage = BitchatMessage(
+            sender = "system",
+            content = "available commands:\n$listing",
+            timestamp = Date(),
+            isRelay = false
+        )
+        messageManager.addMessage(systemMessage)
+    }
+
     private fun handleUnknownCommand(cmd: String) {
         val systemMessage = BitchatMessage(
             sender = "system",
@@ -505,7 +526,6 @@ class CommandProcessor(
         // Add channel-specific commands if in a channel
         val channelCommands = if (state.getCurrentChannelValue() != null) {
             listOf(
-                CommandSuggestion("/pass", emptyList(), "[password]", "change channel password"),
                 CommandSuggestion("/save", emptyList(), null, "save channel messages locally"),
                 CommandSuggestion("/transfer", emptyList(), "<nickname>", "transfer channel ownership")
             )

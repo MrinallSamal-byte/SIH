@@ -38,9 +38,14 @@ export async function getAnalytics(rangeDays = 14): Promise<AnalyticsResult> {
       prisma.damageAssessment.groupBy({ by: ['classification'], _count: { _all: true } }),
     ]);
 
+  // ponytail: JS bucketing ceiling — upgrade path is $queryRaw date_trunc in IST
+  const istDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' });
   const dayBuckets = new Map<string, number>();
+  for (let i = rangeDays - 1; i >= 0; i--) {
+    dayBuckets.set(istDay.format(new Date(Date.now() - i * 86400000)), 0);
+  }
   for (const r of trends) {
-    const day = r.createdAt.toISOString().slice(0, 10);
+    const day = istDay.format(r.createdAt);
     dayBuckets.set(day, (dayBuckets.get(day) ?? 0) + 1);
   }
   const trendsByDay = [...dayBuckets.entries()].map(([day, count]) => ({ day, count }));
@@ -57,20 +62,28 @@ export async function getAnalytics(rangeDays = 14): Promise<AnalyticsResult> {
   }
 
   return {
-    byType: byType.map((g) => ({ type: g.type, count: g._count._all })),
-    byPriority: byPriority.map((g) => ({ priorityLabel: g.priorityLabel, count: g._count._all })),
-    byStatus: byStatus.map((g) => ({ status: g.status, count: g._count._all })),
+    byType: byType.map((g: (typeof byType)[number]) => ({ type: g.type, count: g._count._all })),
+    byPriority: byPriority.map((g: (typeof byPriority)[number]) => ({
+      priorityLabel: g.priorityLabel,
+      count: g._count._all,
+    })),
+    byStatus: byStatus.map((g: (typeof byStatus)[number]) => ({ status: g.status, count: g._count._all })),
     trendsByDay,
-    geographic: geographic.map((g) => ({ type: g.type, latitude: g.latitude, longitude: g.longitude, count: g._count._all })),
+    geographic: geographic.map((g: (typeof geographic)[number]) => ({
+      type: g.type,
+      latitude: g.latitude,
+      longitude: g.longitude,
+      count: g._count._all,
+    })),
     avgResponseMinutes,
-    shelterUtilization: shelters.map((s) => ({
+    shelterUtilization: shelters.map((s: (typeof shelters)[number]) => ({
       name: s.name,
       occupancy: s.occupancy,
       capacity: s.capacity,
       utilization: s.capacity > 0 ? Math.round((s.occupancy / s.capacity) * 100) : 0,
     })),
-    volunteerStatus: volunteers.map((g) => ({ status: g.status, count: g._count._all })),
-    checkinsByStatus: checkins.map((g) => ({ status: g.status, count: g._count._all })),
-    damageSummary: damage.map((g) => ({ classification: g.classification, count: g._count._all })),
+    volunteerStatus: volunteers.map((g: (typeof volunteers)[number]) => ({ status: g.status, count: g._count._all })),
+    checkinsByStatus: checkins.map((g: (typeof checkins)[number]) => ({ status: g.status, count: g._count._all })),
+    damageSummary: damage.map((g: (typeof damage)[number]) => ({ classification: g.classification, count: g._count._all })),
   };
 }

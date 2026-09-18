@@ -1,9 +1,22 @@
 /** Shelter finder & management service. */
+// ponytail: list endpoints keep returning bare arrays for FE compat; envelope upgrade path is {items,total,page,pageSize}
+import { randomBytes } from 'node:crypto';
 import { prisma } from '../lib/prisma.js';
 import { haversineDistanceKm } from '../lib/haversine.js';
-import { NotFoundError } from '../lib/errors.js';
+import { NotFoundError, UnprocessableEntityError, UnauthorizedError } from '../lib/errors.js';
 import { writeAuditLog } from './audit.service.js';
+import { safeEqualHex } from './otp.service.js';
 import { realtimeHub } from '../realtime/hub.js';
+import { fetchCollection } from '../lib/firebase-rtdb.js';
+
+/** 6-char public check-in code (no ambiguous 0/O/1/I). Not a secret — it is printed on shelter posters. */
+export function makeCheckinCode(): string {
+  const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  const bytes = randomBytes(6);
+  let code = '';
+  for (let i = 0; i < 6; i++) code += alphabet[bytes[i] % alphabet.length];
+  return code;
+}
 
 export async function findNearbyShelters(params: {
   latitude: number;
@@ -14,26 +27,45 @@ export async function findNearbyShelters(params: {
   const shelters = await prisma.shelter.findMany({ include: { resources: true } });
 
   const withDistance = shelters
-    .map((s) => ({
+    .map((s: (typeof shelters)[number]) => ({
       ...s,
       distanceKm: haversineDistanceKm(params.latitude, params.longitude, s.latitude, s.longitude),
     }))
-    .filter((s) => s.distanceKm <= radius)
-    .sort((a, b) => a.distanceKm - b.distanceKm);
+    .filter((s: { distanceKm: number }) => s.distanceKm <= radius)
+    .sort((a: { distanceKm: number }, b: { distanceKm: number }) => a.distanceKm - b.distanceKm);
 
-  return withDistance.map(({ resources, ...s }) => ({
-    ...s,
-    capacityAvailable: Math.max(0, s.capacity - s.occupancy),
-    resources,
-  }));
+  return withDistance.map((row: (typeof withDistance)[number]) => {
+    const { resources, ...s } = row as (typeof row) & { resources?: unknown };
+    return {
+      ...s,
+      capacityAvailable: Math.max(0, s.capacity - s.occupancy),
+      resources,
+    };
+  });
 }
 
-export async function listShelters(params: { status?: string }) {
-  return prisma.shelter.findMany({
-    where: params.status ? { status: params.status as never } : {},
-    orderBy: { createdAt: 'desc' },
-    include: { resources: true },
-  });
+export async function listShelters(params: { status?: string; page?: number; pageSize?: number }) {
+  try {
+    if (process.env.USE_FIREBASE_DB === 'true') {
+      const all = await fetchCollection('shelters');
+      return params.status ? all.filter((s: any) => s.status === params.status) : all;
+    }
+    // page/pageSize absent → return all rows (legacy behavior)
+    const take =
+      params.page !== undefined || params.pageSize !== undefined
+        ? Math.min(params.pageSize ?? 50, 200)
+        : undefined;
+    return await prisma.shelter.findMany({
+      where: params.status ? { status: params.status as never } : {},
+      orderBy: { createdAt: 'desc' },
+      include: { resources: true },
+      ...(take !== undefined ? { skip: ((params.page ?? 1) - 1) * take, take } : {}),
+    });
+  } catch (err) {
+    console.warn('[Shelters] Prisma failed, falling back to Firebase RTDB:', err);
+    const all = await fetchCollection('shelters');
+    return params.status ? all.filter((s: any) => s.status === params.status) : all;
+  }
 }
 
 export async function getShelter(id: string) {
@@ -63,6 +95,7 @@ export async function createShelter(input: {
       facilities: input.facilities as never,
       contactPhone: input.contactPhone,
       status: (input.status as never) ?? 'open',
+      checkinCode: makeCheckinCode(),
     },
   });
   await writeAuditLog({
@@ -90,7 +123,16 @@ export async function updateShelter(input: {
   const existing = await prisma.shelter.findUnique({ where: { id: input.id } });
   if (!existing) throw new NotFoundError('Shelter not found');
 
+  // Merge input over existing before validating capacity math.
+  const nextCapacity = input.capacity ?? existing.capacity;
+  const nextOccupancy = input.occupancy ?? existing.occupancy ?? 0;
+  if (nextOccupancy > nextCapacity) {
+    throw new UnprocessableEntityError('occupancy cannot exceed capacity');
+  }
+
   const data: Record<string, unknown> = {};
+  // Backfill the public check-in code for rows created before it existed.
+  if (!existing.checkinCode) data.checkinCode = makeCheckinCode();
   if (input.name !== undefined) data.name = input.name;
   if (input.address !== undefined) data.address = input.address;
   if (input.latitude !== undefined) data.latitude = input.latitude;
@@ -99,7 +141,12 @@ export async function updateShelter(input: {
   if (input.occupancy !== undefined) data.occupancy = input.occupancy;
   if (input.facilities !== undefined) data.facilities = input.facilities;
   if (input.contactPhone !== undefined) data.contactPhone = input.contactPhone;
-  if (input.status !== undefined) data.status = input.status;
+  if (input.status !== undefined) {
+    data.status = input.status;
+  } else if (input.occupancy !== undefined || input.capacity !== undefined) {
+    // Auto-derive status from capacity math when the caller didn't pin one.
+    data.status = nextOccupancy >= nextCapacity ? 'full' : 'open';
+  }
 
   const shelter = await prisma.shelter.update({ where: { id: input.id }, data });
 
@@ -123,4 +170,68 @@ export async function updateShelter(input: {
 
 function serializeShelter(s: Record<string, unknown>) {
   return { ...s, capacityAvailable: Math.max(0, Number(s.capacity) - Number(s.occupancy ?? 0)) };
+}
+
+/**
+ * Citizen self check-in/out at a shelter gate (poster code or QR payload).
+ * Occupancy is capped at capacity — a full shelter refuses check-in with 422
+ * instead of silently overbooking. Status auto-derives from the math.
+ */
+export async function shelterCheckin(input: { id: string; code: string }) {
+  const shelter = await prisma.shelter.findUnique({ where: { id: input.id } });
+  if (!shelter) throw new NotFoundError('Shelter not found');
+  if (shelter.status === 'closed') {
+    throw new UnprocessableEntityError('Shelter is closed');
+  }
+  assertCheckinCode(shelter.checkinCode, input.code);
+  if ((shelter.occupancy ?? 0) >= shelter.capacity) {
+    throw new UnprocessableEntityError('Shelter is full');
+  }
+  const updated = await prisma.shelter.update({
+    where: { id: input.id },
+    data: {
+      occupancy: { increment: 1 },
+      status: (shelter.occupancy ?? 0) + 1 >= shelter.capacity ? ('full' as never) : shelter.status,
+    },
+    include: { resources: true },
+  });
+  realtimeHub.broadcast(
+    { type: 'shelter:capacity', payload: serializeShelter(updated), timestamp: new Date().toISOString() },
+    'public',
+  );
+  return serializeShelter(updated);
+}
+
+export async function shelterCheckout(input: { id: string; code: string }) {
+  const shelter = await prisma.shelter.findUnique({ where: { id: input.id } });
+  if (!shelter) throw new NotFoundError('Shelter not found');
+  assertCheckinCode(shelter.checkinCode, input.code);
+  if ((shelter.occupancy ?? 0) <= 0) {
+    throw new UnprocessableEntityError('Shelter occupancy is already zero');
+  }
+  const updated = await prisma.shelter.update({
+    where: { id: input.id },
+    data: {
+      occupancy: { decrement: 1 },
+      status:
+        shelter.status === 'full' && (shelter.occupancy ?? 1) - 1 < shelter.capacity
+          ? ('open' as never)
+          : shelter.status,
+    },
+    include: { resources: true },
+  });
+  realtimeHub.broadcast(
+    { type: 'shelter:capacity', payload: serializeShelter(updated), timestamp: new Date().toISOString() },
+    'public',
+  );
+  return serializeShelter(updated);
+}
+
+function assertCheckinCode(stored: string | null, supplied: string): void {
+  const clean = (supplied ?? '').trim().toUpperCase();
+  if (!stored || !/^[A-Z2-9]{6}$/.test(clean) || !safeEqualHex(stored.toUpperCase(), clean)) {
+    // 401, not 404: the shelter exists, the code is wrong. Generic message so
+    // codes cannot be probed character-by-character (timing-safe compare).
+    throw new UnauthorizedError('Invalid check-in code');
+  }
 }

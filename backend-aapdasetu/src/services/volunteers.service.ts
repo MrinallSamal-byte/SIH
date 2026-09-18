@@ -1,18 +1,37 @@
 /** Volunteer roster & skill dispatch service. */
 import { prisma } from '../lib/prisma.js';
-import { NotFoundError } from '../lib/errors.js';
+import { NotFoundError, ConflictError } from '../lib/errors.js';
 import { writeAuditLog } from './audit.service.js';
 import { realtimeHub } from '../realtime/hub.js';
+import { normalizePhone } from './volunteer-auth.service.js';
+import { fetchCollection } from '../lib/firebase-rtdb.js';
 
 export async function listVolunteers(params: { status?: string; skill?: string }) {
-  return prisma.volunteer.findMany({
-    where: {
-      ...(params.status ? { status: params.status as never } : {}),
-      ...(params.skill ? { skills: { has: params.skill as never } } : {}),
-    },
-    orderBy: { createdAt: 'desc' },
-    include: { assignments: { select: { id: true, trackingId: true, status: true } } },
-  });
+  try {
+    if (process.env.USE_FIREBASE_DB === 'true') {
+      const all = await fetchCollection('volunteers');
+      let filtered = all;
+      if (params.status) filtered = filtered.filter((v: any) => v.status === params.status);
+      if (params.skill) filtered = filtered.filter((v: any) => Array.isArray(v.skills) && v.skills.includes(params.skill));
+      return filtered;
+    }
+    return await prisma.volunteer.findMany({
+      where: {
+        ...(params.status ? { status: params.status as never } : {}),
+        ...(params.skill ? { skills: { has: params.skill as never } } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+      include: { assignments: { select: { id: true, trackingId: true, status: true } } },
+    });
+  } catch (err) {
+    console.warn('[Volunteers] Prisma failed, falling back to Firebase RTDB:', err);
+    const all = await fetchCollection('volunteers');
+    let filtered = all;
+    if (params.status) filtered = filtered.filter((v: any) => v.status === params.status);
+    if (params.skill) filtered = filtered.filter((v: any) => Array.isArray(v.skills) && v.skills.includes(params.skill));
+    return filtered;
+  }
 }
 
 export async function createVolunteer(input: {
@@ -27,7 +46,9 @@ export async function createVolunteer(input: {
   const volunteer = await prisma.volunteer.create({
     data: {
       name: input.name,
-      phone: input.phone,
+      // Same canonical form the login lookup uses — a formatted phone stored
+      // here would make the volunteer permanently unable to sign in.
+      phone: normalizePhone(input.phone),
       skills: input.skills as never,
       latitude: input.latitude,
       longitude: input.longitude,
@@ -50,6 +71,12 @@ export async function updateVolunteerStatus(input: {
 }) {
   const existing = await prisma.volunteer.findUnique({ where: { id: input.id } });
   if (!existing) throw new NotFoundError('Volunteer not found');
+
+  // ponytail: block status flips while the volunteer still owns unresolved reports
+  const activeAssignments = await prisma.report.count({
+    where: { assignedVolunteerId: input.id, status: { not: 'resolved' } },
+  });
+  if (activeAssignments > 0) throw new ConflictError('Volunteer has active assignments; resolve or unassign first');
 
   const volunteer = await prisma.volunteer.update({
     where: { id: input.id },
@@ -87,7 +114,7 @@ export async function updateVolunteer(input: {
 
   const data: Record<string, unknown> = {};
   if (input.name !== undefined) data.name = input.name;
-  if (input.phone !== undefined) data.phone = input.phone;
+  if (input.phone !== undefined) data.phone = normalizePhone(input.phone);
   if (input.skills !== undefined) data.skills = input.skills;
   if (input.latitude !== undefined) data.latitude = input.latitude;
   if (input.longitude !== undefined) data.longitude = input.longitude;
@@ -98,6 +125,50 @@ export async function updateVolunteer(input: {
     action: 'UPDATE_VOLUNTEER',
     entityType: 'volunteer',
     entityId: input.id,
+  });
+  return volunteer;
+}
+
+/**
+ * Trust-tier review: verify a vetted volunteer, or suspend one under review.
+ * Suspending while the volunteer owns unresolved rescues is refused — reassign
+ * first so no victim loses their responder mid-rescue.
+ */
+export async function setVolunteerVerification(input: {
+  id: string;
+  adminEmail: string;
+  verificationStatus: 'pending' | 'verified' | 'suspended';
+  trainingCompleted?: boolean;
+  idDocumentRef?: string;
+}) {
+  const existing = await prisma.volunteer.findUnique({ where: { id: input.id } });
+  if (!existing) throw new NotFoundError('Volunteer not found');
+
+  if (input.verificationStatus === 'suspended') {
+    const activeAssignments = await prisma.report.count({
+      where: { assignedVolunteerId: input.id, status: { not: 'resolved' } },
+    });
+    if (activeAssignments > 0) {
+      throw new ConflictError('Volunteer has active assignments; resolve or unassign first');
+    }
+  }
+
+  const data: Record<string, unknown> = { verificationStatus: input.verificationStatus };
+  if (input.trainingCompleted !== undefined) data.trainingCompleted = input.trainingCompleted;
+  if (input.idDocumentRef !== undefined) data.idDocumentRef = input.idDocumentRef.slice(0, 300);
+
+  const volunteer = await prisma.volunteer.update({ where: { id: input.id }, data });
+  await writeAuditLog({
+    adminEmail: input.adminEmail,
+    action: 'VERIFY_VOLUNTEER',
+    entityType: 'volunteer',
+    entityId: input.id,
+    details: { verificationStatus: input.verificationStatus, trainingCompleted: input.trainingCompleted },
+  });
+  realtimeHub.broadcast({
+    type: 'volunteer:status',
+    payload: { id: volunteer.id, name: volunteer.name, status: volunteer.status },
+    timestamp: new Date().toISOString(),
   });
   return volunteer;
 }

@@ -13,6 +13,21 @@ export const publicRateLimiter = rateLimit({
   },
 });
 
+// Dedicated, more generous bucket for the 1-Tap SOS route. The general public
+// limiter is shared across every citizen endpoint, so during congestion a
+// burst of shelter/alert polling could exhaust it and start rejecting actual
+// SOS submissions with 429 — unacceptable for a life-safety endpoint.
+export const sosRateLimiter = rateLimit({
+  windowMs: env.rateLimitPublicWindowMs,
+  limit: Math.max(env.rateLimitPublicMax, 30),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: { code: 'RATE_LIMITED', message: 'Too many SOS requests from this network. Please try again shortly.' },
+  },
+});
+
 export const adminRateLimiter = rateLimit({
   windowMs: env.rateLimitAdminWindowMs,
   limit: env.rateLimitAdminMax,
@@ -43,5 +58,19 @@ export const uploadRateLimiter = rateLimit({
   message: {
     success: false,
     error: { code: 'RATE_LIMITED', message: 'Too many uploads. Try again later.' },
+  },
+});
+
+// OTP issuance is the most abuse-sensitive public endpoint (SMS budget +
+// account-takeover probing): tight per-IP bucket on top of the per-phone
+// throttle enforced in otp.service.ts.
+export const otpRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: { code: 'RATE_LIMITED', message: 'Too many verification requests. Try again later.' },
   },
 });

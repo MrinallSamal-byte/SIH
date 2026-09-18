@@ -117,11 +117,11 @@ export default function Communications() {
         <div>
           <div className="flex items-center gap-2">
             <Megaphone className="h-6 w-6 text-red-600 animate-pulse" />
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
               Multi-Channel Emergency Alert Broadcaster
             </h1>
           </div>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-xs text-slate-500 dark:text-white">
             Instant multi-channel sirens across Citizen Web Feed, Cellular SMS Gateway, and WhatsApp Crisis Bot.
           </p>
         </div>
@@ -134,7 +134,7 @@ export default function Communications() {
 
       {/* Quick Presets Bar */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-white mb-2">
           <Sparkles className="h-4 w-4 text-amber-500" />
           <span>One-Tap Disaster Alert Templates:</span>
         </div>
@@ -144,7 +144,7 @@ export default function Communications() {
               key={p.label}
               type="button"
               onClick={() => applyPreset(p)}
-              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
+              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 transition cursor-pointer"
             >
               {p.label}
             </button>
@@ -169,7 +169,7 @@ export default function Communications() {
                         : s === 'warning'
                         ? 'bg-amber-500 text-white shadow-sm ring-2 ring-amber-300'
                         : 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-300'
-                      : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                      : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white'
                   }`}
                 >
                   {s}
@@ -210,7 +210,7 @@ export default function Communications() {
 
           {/* Channels Selection */}
           <div className="space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mono">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-white mono">
               Distribution Channels
             </label>
             <div className="grid gap-2 sm:grid-cols-3">
@@ -225,7 +225,7 @@ export default function Communications() {
                     className={`flex flex-col justify-between rounded-xl border p-3 text-left transition cursor-pointer ${
                       active
                         ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900 shadow-xs'
-                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -262,7 +262,7 @@ export default function Communications() {
         {/* Citizen Live Preview Card */}
         <div className="space-y-4 lg:col-span-5">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mono mb-3 flex items-center gap-1.5">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-white mono mb-3 flex items-center gap-1.5">
               <Smartphone className="h-4 w-4" />
               <span>Citizen Mobile Preview</span>
             </div>
@@ -294,8 +294,8 @@ export default function Communications() {
             </div>
 
             {/* Channels Dispatch Summary */}
-            <div className="mt-4 space-y-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-              <div className="font-bold text-slate-800 dark:text-slate-200">Active Gateways:</div>
+            <div className="mt-4 space-y-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-800 dark:text-white">
+              <div className="font-bold text-slate-800 dark:text-white">Active Gateways:</div>
               <ul className="list-disc list-inside space-y-1 text-[11px]">
                 {channels.includes('web') && <li>Web: Live citizen banner ticker & bulletin</li>}
                 {channels.includes('sms') && <li>Cellular: High-priority SMS broadcast</li>}

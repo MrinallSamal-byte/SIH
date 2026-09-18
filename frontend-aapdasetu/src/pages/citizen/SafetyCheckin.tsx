@@ -106,11 +106,11 @@ export default function SafetyCheckinPage() {
     <div className="mx-auto max-w-xl">
       <div className="flex items-center gap-2 mb-1">
         <ShieldCheck className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-800 dark:text-slate-300">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-800 dark:text-white">
           {t('checkin.title')}
         </h1>
       </div>
-      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+      <p className="mt-1 text-xs text-slate-500 dark:text-white">
         {t('checkin.subtitle')}
       </p>
 
@@ -141,7 +141,7 @@ export default function SafetyCheckinPage() {
               <h2 className="text-xl font-bold text-emerald-900 dark:text-emerald-100">
                 {confirm.status === 'safe' ? t('checkin.markedSafe') : t('checkin.needHelp')}
               </h2>
-              <p className="text-xs text-zinc-500 dark:text-slate-300 leading-relaxed">
+              <p className="text-xs text-zinc-500 dark:text-white leading-relaxed">
                 {t('checkin.recordDesc')}
                 {confirm.locationName && (
                   <span className="block mt-1 font-semibold">{t('common.landmark')}: {confirm.locationName}</span>
@@ -256,7 +256,7 @@ export default function SafetyCheckinPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Type name or 10-digit phone number…"
                   autoFocus
-                  className="w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-3.5 py-2.5 text-sm placeholder:text-slate-400 outline-none focus:border-slate-800 dark:border-white/[0.1] dark:bg-[#151515] dark:text-slate-300"
+                  className="w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-3.5 py-2.5 text-sm placeholder:text-slate-400 outline-none focus:border-slate-800 dark:border-white/[0.1] dark:bg-[#151515] dark:text-white"
                 />
               </div>
             </Field>
@@ -277,10 +277,10 @@ export default function SafetyCheckinPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="text-base font-bold text-zinc-800 dark:text-slate-300">
+                      <div className="text-base font-bold text-zinc-800 dark:text-white">
                         {item.fullName}
                       </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mono">
+                      <div className="text-xs text-slate-500 dark:text-white mono">
                         {maskPhone(item.phone)}
                       </div>
                     </div>
@@ -288,14 +288,14 @@ export default function SafetyCheckinPage() {
                   </div>
 
                   {item.locationName && (
-                    <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-zinc-600 dark:text-slate-300">
+                    <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-zinc-600 dark:text-white">
                       <MapPin className="h-3.5 w-3.5 text-slate-400" />
                       <span>{item.locationName}</span>
                     </div>
                   )}
 
                   {item.notes && (
-                    <p className="mt-1.5 text-xs text-zinc-500 dark:text-slate-400 italic">
+                    <p className="mt-1.5 text-xs text-zinc-500 dark:text-white italic">
                       "{item.notes}"
                     </p>
                   )}
@@ -307,7 +307,7 @@ export default function SafetyCheckinPage() {
               ))}
 
               {filteredCheckins.length === 0 && (
-                <div className="rounded-2xl border border-dashed border-zinc-200 p-8 text-center text-xs text-slate-500 dark:border-white/[0.08] dark:text-slate-400">
+                <div className="rounded-2xl border border-dashed border-zinc-200 p-8 text-center text-xs text-slate-500 dark:border-white/[0.08] dark:text-white">
                   No check-in records matched your search query.
                 </div>
               )}

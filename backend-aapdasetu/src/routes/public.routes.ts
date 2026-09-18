@@ -1,17 +1,18 @@
 /** Public citizen routes (zero authentication). */
 import { Router } from 'express';
 import { validateBody, validateQuery, validateParams } from '../middleware/validate.js';
-import { publicRateLimiter, uploadRateLimiter } from '../middleware/rateLimit.js';
+import { publicRateLimiter, sosRateLimiter, uploadRateLimiter, otpRateLimiter } from '../middleware/rateLimit.js';
 import * as c from '../controllers/public.controller.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import * as schemas from '../schemas/index.js';
 
 export const publicRouter = Router();
 
-// 1-Tap SOS
+// 1-Tap SOS — own rate-limit bucket so general polling traffic can never
+// exhaust the shared public budget and block emergency submissions.
 publicRouter.post(
   '/sos',
-  publicRateLimiter,
+  sosRateLimiter,
   validateBody(schemas.createSosSchema),
   asyncHandler(c.sosHandler),
 );
@@ -38,6 +39,14 @@ publicRouter.post(
   publicRateLimiter,
   validateBody(schemas.createCheckinSchema),
   asyncHandler(c.checkinHandler),
+);
+
+// Family search: recent check-ins for a phone number, PII-masked server-side.
+publicRouter.get(
+  '/checkins/search',
+  publicRateLimiter,
+  validateQuery(schemas.familyCheckinSearchSchema),
+  asyncHandler(c.familyCheckinSearchHandler),
 );
 
 // Nearby shelter finder (Haversine)
@@ -87,7 +96,7 @@ publicRouter.post('/safe-routes/reroute', publicRateLimiter, validateBody(schema
 publicRouter.get(
   '/missing-persons',
   publicRateLimiter,
-  validateQuery(schemas.paginationQuerySchema.partial()),
+  validateQuery(schemas.missingPersonListQuerySchema),
   asyncHandler(c.listMissingPersonsHandler),
 );
 publicRouter.post(
@@ -95,4 +104,48 @@ publicRouter.post(
   publicRateLimiter,
   validateBody(schemas.createMissingPersonSchema),
   asyncHandler(c.createMissingPersonHandler),
+);
+
+// OTP caller verification (strict per-IP bucket + per-phone throttle in service).
+publicRouter.post(
+  '/otp/request',
+  otpRateLimiter,
+  validateBody(schemas.otpRequestSchema),
+  asyncHandler(c.otpRequestHandler),
+);
+publicRouter.post(
+  '/otp/verify',
+  otpRateLimiter,
+  validateBody(schemas.otpVerifySchema),
+  asyncHandler(c.otpVerifyHandler),
+);
+
+// Web Push subscriptions (opt-in from the Alerts page).
+publicRouter.post(
+  '/push/subscriptions',
+  publicRateLimiter,
+  validateBody(schemas.pushSubscriptionSchema),
+  asyncHandler(c.pushSubscribeHandler),
+);
+publicRouter.delete(
+  '/push/subscriptions',
+  publicRateLimiter,
+  validateBody(schemas.pushUnsubscribeSchema),
+  asyncHandler(c.pushUnsubscribeHandler),
+);
+
+// Shelter gate self check-in/out (poster code).
+publicRouter.post(
+  '/shelters/:id/checkin',
+  publicRateLimiter,
+  validateParams(schemas.idParamsSchema),
+  validateBody(schemas.shelterCheckinSchema),
+  asyncHandler(c.shelterCheckinHandler),
+);
+publicRouter.post(
+  '/shelters/:id/checkout',
+  publicRateLimiter,
+  validateParams(schemas.idParamsSchema),
+  validateBody(schemas.shelterCheckinSchema),
+  asyncHandler(c.shelterCheckoutHandler),
 );

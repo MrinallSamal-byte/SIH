@@ -8,6 +8,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.Animatable
@@ -31,6 +32,7 @@ import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -47,6 +49,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -74,10 +77,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bitchat.android.ui.theme.BitchatFontFamily
@@ -329,6 +334,17 @@ fun MessagesList(
         reverseLayout = true
     ) {
         val reversed = messages.asReversed()
+        if (reversed.isEmpty()) {
+            item(key = "empty_state") {
+                MessagesEmptyState(
+                    contentPadding = contentPadding,
+                    layoutDirection = layoutDirection,
+                    // LazyColumn measures items with unbounded main-axis height, so plain
+                    // fillMaxSize() cannot center; the item-scope modifier fills the viewport.
+                    modifier = Modifier.fillParentMaxSize()
+                )
+            }
+        }
         itemsIndexed(
             items = reversed,
             key = { _, message -> message.id }
@@ -386,6 +402,55 @@ fun MessagesList(
                     )
                     .then(entryModifier)
             )
+        }
+    }
+}
+
+@Composable
+private fun MessagesEmptyState(
+    contentPadding: PaddingValues,
+    layoutDirection: LayoutDirection,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.padding(
+            start = 16.dp + contentPadding.calculateStartPadding(layoutDirection),
+            end = 16.dp + contentPadding.calculateEndPadding(layoutDirection),
+            top = 8.dp + contentPadding.calculateTopPadding(),
+            bottom = 12.dp + contentPadding.calculateBottomPadding()
+        ),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Public,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(30.dp)
+                )
+                Text(
+                    text = "No messages yet",
+                    style = MaterialTheme.typography.titleMedium.copy(fontFamily = BitchatFontFamily),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Say hi, or open a location channel to meet people nearby",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontFamily = BitchatFontFamily),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
@@ -1266,16 +1331,41 @@ fun DeliveryStatusIcon(status: DeliveryStatus) {
     }
 
     if (status is DeliveryStatus.Failed) {
-        Text(
-            text = "!",
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = colorScheme.error,
-            modifier = Modifier.graphicsLayer {
-                scaleX = scale.value
-                scaleY = scale.value
+        // Saveable so an expanded reason survives scrolling the row away and back. No explicit
+        // key needed: lazy items carry stable message-id keys, so each row's content sits inside
+        // its own SaveableStateProvider and this state is namespaced per message automatically.
+        var reasonExpanded by rememberSaveable { mutableStateOf(false) }
+        Column(
+            modifier = Modifier.widthIn(max = 180.dp),
+            horizontalAlignment = Alignment.End
+        ) {
+            Text(
+                text = "!",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = colorScheme.error,
+                modifier = Modifier
+                    .clickable { reasonExpanded = !reasonExpanded }
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                    .graphicsLayer {
+                        scaleX = scale.value
+                        scaleY = scale.value
+                    }
+                    .semantics {
+                        contentDescription = "Failed to deliver: ${status.reason}"
+                    }
+            )
+            if (reasonExpanded) {
+                Text(
+                    text = status.reason,
+                    fontSize = 10.sp,
+                    fontFamily = BitchatFontFamily,
+                    color = colorScheme.error.copy(alpha = 0.9f),
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
             }
-        )
+        }
     } else {
         val isDoubleTick = secondTarget != null
         val text = remember(first, second, isDoubleTick) {

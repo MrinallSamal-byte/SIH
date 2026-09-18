@@ -108,13 +108,19 @@ enum MatchStatus {
   rejected
 }
 
+enum VolunteerVerification {
+  pending
+  verified
+  suspended
+}
+
 // ---------------------------------------------------------------------------
 // reports
 // ---------------------------------------------------------------------------
 
 model Report {
   id                  String         @id @default(uuid()) @db.Uuid
-  trackingId          String         @unique @default(cuid())
+  trackingId          String         @unique
   type                IncidentType
   status              IncidentStatus @default(pending)
   priorityScore       Int            @default(30) @db.SmallInt
@@ -125,6 +131,11 @@ model Report {
   description         String?
   reporterName        String?
   reporterPhone       String?
+  // Digits-only last-10 form, written at create time. Powers the
+  // near-duplicate SOS clustering (same phone + type + 10 min + 500 m).
+  reporterPhoneNormalized String?
+  // True only when the reporter completed the OTP challenge for this number.
+  reporterPhoneVerified Boolean @default(false)
   missingPersonName   String?
   missingPersonAge    Int?
   missingPersonDesc   String?
@@ -138,6 +149,15 @@ model Report {
   resolutionNotes     String?
   resolvedAt          DateTime?
   source              String? // sos | form | api
+  // RED escalation SLA: set when an unassigned RED report breaches the
+  // response threshold (see escalation.service). Level increments per sweep.
+  escalatedAt         DateTime?
+  escalationLevel     Int       @default(0)
+  // Offline-replay idempotency: client-generated UUID per logical submission.
+  // Unique + nullable — legacy rows and direct API calls simply leave it null.
+  clientRequestId     String? @unique
+  // Original on-device time for submissions queued offline and replayed later.
+  clientCreatedAt     DateTime?
 
   assignedVolunteer Volunteer? @relation("VolunteerAssignments", fields: [assignedVolunteerId], references: [id])
   assignedAgency    Agency?    @relation("AgencyAssignments", fields: [assignedAgencyId], references: [id])
@@ -153,10 +173,14 @@ model Report {
   @@index([status])
   @@index([priorityLabel])
   @@index([type])
+  @@index([reporterPhoneNormalized])
   @@index([latitude, longitude])
   @@index([assignedVolunteerId])
   @@index([assignedAgencyId])
   @@index([createdAt])
+  // Hot query paths: admin queue filters by status (or priority) + sorts by recency.
+  @@index([status, createdAt])
+  @@index([priorityLabel, createdAt])
 }
 
 // ---------------------------------------------------------------------------
@@ -167,6 +191,19 @@ model Volunteer {
   id            String         @id @default(uuid()) @db.Uuid
   name          String
   phone         String
+  // Revocation flag: requireVolunteer checks it in the DB on every request,
+  // so a disabled volunteer's 12h token stops working immediately.
+  isActive      Boolean        @default(true)
+  // Trust tier: only `verified` volunteers are dispatch-eligible. New roster
+  // entries start `pending` until an admin reviews ID + training.
+  verificationStatus VolunteerVerification @default(pending)
+  // sha256 of the per-volunteer invite code (rotated by admins). Null until
+  // the first invite is issued; login falls back to the shared roster code.
+  personalCodeHash String?
+  trainingCompleted Boolean @default(false)
+  // Opaque reference to the verified ID document (file path / record number).
+  // Never the document itself.
+  idDocumentRef String?
   skills        VolunteerSkill[]
   latitude      Float?
   longitude     Float?
@@ -180,6 +217,9 @@ model Volunteer {
 
   @@index([status])
   @@index([latitude, longitude])
+  // Login looks volunteers up by normalized phone on every sign-in.
+  @@index([phone])
+  @@index([verificationStatus])
 }
 
 // ---------------------------------------------------------------------------
@@ -197,6 +237,10 @@ model Shelter {
   facilities   FacilityType[]
   contactPhone String?
   status       ShelterStatus @default(open)
+  // Public self check-in code (printed on shelter posters / QR). Citizens
+  // submit it with the check-in call; it is NOT a secret, just a code that
+  // binds the check-in to the right shelter without GPS spoofing.
+  checkinCode  String?       @unique
 
   resources Resource[]
 
@@ -321,19 +365,24 @@ model MissingPerson {
 // ---------------------------------------------------------------------------
 
 model SafetyCheckin {
-  id           String        @id @default(uuid()) @db.Uuid
-  fullName     String
-  phone        String?
-  locationName String?
-  notes        String?
-  status       CheckinStatus
-  latitude     Float?
-  longitude    Float?
-  createdAt    DateTime      @default(now())
+  id              String        @id @default(uuid()) @db.Uuid
+  fullName        String
+  phone           String?
+  // Digits-only last-10 form of `phone`, written at create time. The public
+  // family search queries this column directly — a bounded scan-then-filter
+  // in JS silently misses people once check-in volume exceeds the page size.
+  phoneNormalized String?
+  locationName    String?
+  notes           String?
+  status          CheckinStatus
+  latitude        Float?
+  longitude       Float?
+  createdAt       DateTime      @default(now())
 
   @@index([status])
   @@index([createdAt])
   @@index([latitude, longitude])
+  @@index([phoneNormalized])
 }
 
 // ---------------------------------------------------------------------------
@@ -374,6 +423,11 @@ model DamageAssessment {
   confidence        Float?
   duplicate         Boolean             @default(false)
   compensation      Float               @default(0)
+  propertyAddress   String?
+  district          String?
+  description       String?
+  infrastructureType String?
+  additionalPhotoCount Int?               @default(0)
   rawModelResponse  Json?
   status            String              @default("approved") // approved | flagged_duplicate
   createdAt         DateTime            @default(now())
@@ -444,5 +498,55 @@ model Dispatch {
   agency     Agency?  @relation(fields: [agencyId], references: [id])
 
   @@index([reportId])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// otp_requests + phone_verifications (SOS caller OTP challenge)
+// ---------------------------------------------------------------------------
+
+model OtpRequest {
+  id        String   @id @default(uuid()) @db.Uuid
+  // Digits-only last-10 phone form (same canonicalization as volunteer login).
+  phone     String
+  // sha256 hex of the 6-digit code. The code itself is never persisted.
+  codeHash  String
+  purpose   String   @default("sos_verify")
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  consumed  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+  @@index([expiresAt])
+}
+
+model PhoneVerification {
+  id        String    @id @default(uuid()) @db.Uuid
+  phone     String
+  // sha256 hex of the single-use token secret. The wire token is
+  // `<id>.<secret>`; only the hash is stored.
+  tokenHash String    @unique
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([phone])
+  @@index([expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// push_subscriptions (Web Push alert channel — stored until a sender is
+// configured via VAPID keys; broadcast reports honest queued/skipped counts)
+// ---------------------------------------------------------------------------
+
+model PushSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  endpoint  String   @unique
+  p256dh    String?
+  auth      String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
   @@index([createdAt])
 }

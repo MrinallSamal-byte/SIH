@@ -146,6 +146,12 @@ class BluetoothPacketBroadcaster(
 
     private val sendLock = Any()
     private val sendStates = mutableMapOf<SendKey, LinkSendQueue<PendingSend>>()
+    // Generation whose write the stack actually accepted for a link. GATT
+    // callbacks carry no generation, so this token is the only safe handle:
+    // whichever of {platform callback, pacing fallback} consumes it retires
+    // exactly one head, and the other becomes a no-op instead of retiring
+    // whatever packet has since become the head.
+    private val writtenGenerations = mutableMapOf<SendKey, Long>()
     
     // SERIALIZATION: Actor to serialize all broadcast operations
     @OptIn(kotlinx.coroutines.ObsoleteCoroutinesApi::class)
@@ -520,10 +526,20 @@ class BluetoothPacketBroadcaster(
      * is a small sliding window so the fragment sender observes backpressure
      * instead of dumping thousands of fragments into a buffer that never drains.
      */
+    private fun isPrioritySend(data: ByteArray): Boolean {
+        val typeByte = data.getOrNull(1) ?: return false
+        return MessageType.fromValue(typeByte.toUByte()) == MessageType.SOS
+    }
+
     private fun enqueueSend(key: SendKey, request: PendingSend): Boolean {
         val startNow = synchronized(sendLock) {
             val queue = sendStates.getOrPut(key) {
-                LinkSendQueue(MAX_PENDING_SENDS_PER_LINK, MAX_PENDING_BYTES_PER_LINK) { it.data.size }
+                LinkSendQueue(
+                    MAX_PENDING_SENDS_PER_LINK,
+                    MAX_PENDING_BYTES_PER_LINK,
+                    { it.data.size },
+                    isPriority = { pending -> isPrioritySend(pending.data) }
+                )
             }
             when (queue.enqueue(request)) {
                 LinkSendQueue.EnqueueResult.Rejected -> {
@@ -596,18 +612,17 @@ class BluetoothPacketBroadcaster(
         if (!accepted) {
             rejectStart(key, generation)
         } else {
+            synchronized(sendLock) { writtenGenerations[key] = generation }
             connectionScope.launch {
                 delay(GATT_PACE_MS)
                 val startNext = synchronized(sendLock) {
-                    val queue = sendStates[key] ?: return@synchronized false
-                    when (queue.complete(generation)) {
-                        LinkSendQueue.AdvanceResult.StartNext -> true
-                        LinkSendQueue.AdvanceResult.Idle -> {
-                            sendStates.remove(key)
-                            false
-                        }
-                        LinkSendQueue.AdvanceResult.Ignored -> false
+                    // Strictly generation-scoped: a stale pacing fallback must
+                    // never consume the token of a newer write on this link.
+                    if (writtenGenerations[key] != generation) {
+                        return@synchronized false
                     }
+                    writtenGenerations.remove(key)
+                    completeLocked(key, generation)
                 }
                 if (startNext) startHead(key)
             }
@@ -634,9 +649,9 @@ class BluetoothPacketBroadcaster(
         if (status != BluetoothGatt.GATT_SUCCESS) {
             Log.w(TAG, "BLE client write failed with status $status for $deviceAddress")
         }
-        // Advance the queue immediately on callback. LinkSendQueue.complete()
-        // is idempotent for the current generation, so this safely races with
-        // the GATT_PACE_MS fallback delay.
+        // Advance the queue immediately on callback. The written-generation
+        // token makes this safe against the GATT_PACE_MS fallback: whichever
+        // arrives first retires exactly one head, the second becomes a no-op.
         advanceQueue(deviceAddress, linkID, SendDirection.CLIENT_WRITE)
     }
 
@@ -650,20 +665,28 @@ class BluetoothPacketBroadcaster(
     private fun advanceQueue(deviceAddress: String, linkID: String, direction: SendDirection) {
         val key = SendKey(deviceAddress, linkID, direction)
         val startNext = synchronized(sendLock) {
-            val queue = sendStates[key] ?: return@synchronized false
-            // Since callbacks aren't generation-scoped, we have to trust it's for the head.
-            // This is safe because we only have one in-flight per link anyway.
-            val currentGen = queue.generation()
-            when (queue.complete(currentGen)) {
-                LinkSendQueue.AdvanceResult.StartNext -> true
-                LinkSendQueue.AdvanceResult.Idle -> {
-                    sendStates.remove(key)
-                    false
-                }
-                LinkSendQueue.AdvanceResult.Ignored -> false
-            }
+            // Platform callbacks carry no generation, so the best safe bound is
+            // to consume whichever write is currently marked written. The token
+            // guarantees at most one retirement per accepted write; a callback
+            // arriving after that retirement becomes a no-op instead of
+            // retiring the next head as well.
+            val generation = writtenGenerations.remove(key) ?: return@synchronized false
+            completeLocked(key, generation)
         }
         if (startNext) startHead(key)
+    }
+
+    /** Caller must hold [sendLock]. */
+    private fun completeLocked(key: SendKey, generation: Long): Boolean {
+        val queue = sendStates[key] ?: return false
+        return when (queue.complete(generation)) {
+            LinkSendQueue.AdvanceResult.StartNext -> true
+            LinkSendQueue.AdvanceResult.Idle -> {
+                sendStates.remove(key)
+                false
+            }
+            LinkSendQueue.AdvanceResult.Ignored -> false
+        }
     }
 
     fun onLinkDisconnected(deviceAddress: String, linkID: String?) {
@@ -672,6 +695,7 @@ class BluetoothPacketBroadcaster(
                 key.deviceAddress == deviceAddress && (linkID == null || key.linkID == linkID)
             }
             stale.forEach { key ->
+                writtenGenerations.remove(key)
                 sendStates.remove(key)?.clear()
             }
         }
@@ -693,7 +717,10 @@ class BluetoothPacketBroadcaster(
      * Shutdown the broadcaster actor gracefully
      */
     fun shutdown() {
-        synchronized(sendLock) { sendStates.clear() }
+        synchronized(sendLock) {
+            sendStates.clear()
+            writtenGenerations.clear()
+        }
         // Close the actor gracefully
         broadcasterActor.close()
 

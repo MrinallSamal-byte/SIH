@@ -4,11 +4,62 @@ import { createAlert, listAlerts } from '../services/alerts.service.js';
 import { getAnalytics } from '../services/analytics.service.js';
 import { listAuditLogs } from '../services/audit.service.js';
 import { listCheckins } from '../services/checkins.service.js';
-import { listMatches, reviewMatch } from '../services/missing.service.js';
+import { findMissingPersonMatches, listMatches, reviewMatch } from '../services/missing.service.js';
 import { listDamageAssessments, flagDuplicateAssessment } from '../services/damage.service.js';
 import { listHazards, createHazard, updateHazardActive } from '../services/routes.service.js';
 import { updateMissingPerson } from '../services/missing-persons.service.js';
 import { broadcastAlert } from '../services/communications.service.js';
+import { sweepEscalations } from '../services/escalation.service.js';
+import { smsProviderStatus } from '../services/sms.service.js';
+import { countPushSubscriptions, pushSenderStatus } from '../services/push.service.js';
+import { env } from '../config/env.js';
+
+/**
+ * Truthful integration status for the Settings page. Reports only what is
+ * actually configured on the server — the UI must never render editable
+ * credential fields that silently do nothing.
+ */
+export async function adminSystemStatusHandler(_req: Request, res: Response): Promise<void> {
+  const sms = smsProviderStatus();
+  const push = pushSenderStatus();
+  res.json({
+    success: true,
+    data: {
+      sms: {
+        provider: sms.configured ? sms.provider : 'twilio',
+        configured: sms.configured,
+      },
+      push: {
+        provider: push.provider,
+        configured: push.configured,
+        subscriptions: await countPushSubscriptions().catch(() => 0),
+      },
+      otp: {
+        demoMode: env.otpDemoMode,
+        smsConfigured: sms.configured,
+      },
+      escalation: {
+        thresholdMinutes: env.escalationThresholdMinutes,
+      },
+      whatsapp: {
+        provider: 'meta_cloud_api',
+        configured: Boolean(env.whatsappCloudApiToken && env.whatsappPhoneNumberId),
+      },
+      ai: {
+        pfaLlmConfigured: Boolean(env.openRouterApiKey),
+        damageMlConfigured: Boolean(env.damageMlBaseUrl),
+        damageMlBaseUrl: env.damageMlBaseUrl,
+      },
+      realtimePath: env.realtimePath,
+      rateLimits: {
+        publicPerMinute: env.rateLimitPublicMax,
+        adminPer15Min: env.rateLimitAdminMax,
+        uploadsPerHour: 30,
+      },
+    },
+  });
+}
+
 
 export async function adminCreateAlertHandler(req: Request, res: Response): Promise<void> {
   const alert = await createAlert({ ...req.body, adminEmail: req.admin!.email });
@@ -42,6 +93,15 @@ export async function adminListCheckinsHandler(req: Request, res: Response): Pro
 export async function adminListMatchesHandler(req: Request, res: Response): Promise<void> {
   const q = (req as Request & { validatedQuery: Record<string, unknown> }).validatedQuery;
   const matches = await listMatches(q as never);
+  res.json({ success: true, data: matches });
+}
+
+/** Admin-triggered matching run — the ONLY path that persists match rows
+ * (the public /missing/matches endpoint computes read-only so anonymous
+ * callers cannot poison the review queue). */
+export async function adminComputeMatchesHandler(req: Request, res: Response): Promise<void> {
+  const { reportId, threshold } = req.body;
+  const matches = await findMissingPersonMatches({ reportId, threshold, persist: true });
   res.json({ success: true, data: matches });
 }
 
@@ -89,4 +149,9 @@ export async function adminUpdateMissingPersonHandler(req: Request, res: Respons
 export async function adminBroadcastHandler(req: Request, res: Response): Promise<void> {
   const result = await broadcastAlert({ ...req.body, adminEmail: req.admin!.email });
   res.status(201).json({ success: true, data: result });
+}
+
+export async function adminEscalationSweepHandler(req: Request, res: Response): Promise<void> {
+  const result = await sweepEscalations({ ...req.body, adminEmail: req.admin!.email });
+  res.json({ success: true, data: result });
 }

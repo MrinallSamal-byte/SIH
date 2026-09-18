@@ -48,12 +48,12 @@ export default function MissingPersons() {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="flex items-center gap-2 mb-1">
-        <Users className="h-6 w-6 text-zinc-800 dark:text-slate-300" />
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-800 dark:text-slate-300">
+        <Users className="h-6 w-6 text-zinc-800 dark:text-white" />
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-800 dark:text-white">
           {t('missing.title')}
         </h1>
       </div>
-      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+      <p className="mt-1 text-xs text-slate-500 dark:text-white">
         {t('missing.subtitle')}
       </p>
 
@@ -75,7 +75,7 @@ export default function MissingPersons() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={t('missing.searchPlaceholder')}
-                className="w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-3.5 py-2 text-sm outline-none focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#151515] dark:text-slate-300 dark:focus:border-slate-500"
+                className="w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-3.5 py-2 text-sm outline-none focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#151515] dark:text-white dark:focus:border-slate-500"
               />
             </div>
             <div className="flex flex-wrap gap-1">
@@ -87,7 +87,7 @@ export default function MissingPersons() {
                   className={`rounded-lg px-2.5 py-1 text-xs font-bold uppercase transition ${
                     filter === st
                       ? 'bg-zinc-800 text-white dark:bg-slate-100 dark:text-zinc-800'
-                      : 'bg-slate-100 text-zinc-500 hover:bg-slate-200 dark:bg-[#222222] dark:text-slate-300'
+                      : 'bg-slate-100 text-zinc-500 hover:bg-slate-200 dark:bg-[#222222] dark:text-white'
                   }`}
                 >
                   {st}
@@ -121,7 +121,7 @@ export default function MissingPersons() {
                         </span>
                       </button>
                     ) : (
-                      <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400 dark:bg-[#222222] dark:text-slate-500">
+                      <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400 dark:bg-[#222222] dark:text-white">
                         <User className="h-8 w-8" />
                       </div>
                     )}
@@ -129,22 +129,22 @@ export default function MissingPersons() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <div className="text-base font-bold text-zinc-800 dark:text-slate-300">
+                          <div className="text-base font-bold text-zinc-800 dark:text-white">
                             {p.name}
                             {p.age !== undefined && (
-                              <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400 mono">
+                              <span className="ml-2 text-xs font-normal text-slate-500 dark:text-white mono">
                                 (Age: {p.age})
                               </span>
                             )}
                           </div>
-                          <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                          <div className="mt-0.5 text-xs text-slate-500 dark:text-white">
                             Gender: <strong className="capitalize">{p.gender || 'Not specified'}</strong>
                           </div>
                         </div>
                         <Badge value={p.status} />
                       </div>
 
-                      <div className="mt-2 space-y-1 text-xs text-zinc-500 dark:text-slate-300">
+                      <div className="mt-2 space-y-1 text-xs text-zinc-500 dark:text-white">
                         <div className="flex items-center gap-1">
                           <MapPin className="h-3.5 w-3.5 text-slate-400" />
                           <span>{t('missing.lastSeen')}: <strong>{p.lastSeenLocation ?? 'Unknown'}</strong></span>
@@ -174,7 +174,7 @@ export default function MissingPersons() {
               ))}
 
               {filteredPersons.length === 0 && (
-                <div className="rounded-2xl border border-dashed border-zinc-200 p-12 text-center text-xs text-slate-500 dark:border-white/[0.08] dark:text-slate-400">
+                <div className="rounded-2xl border border-dashed border-zinc-200 p-12 text-center text-xs text-slate-500 dark:border-white/[0.08] dark:text-white">
                   No missing person records matched your search.
                 </div>
               )}
@@ -203,7 +203,7 @@ export default function MissingPersons() {
             <button
               type="button"
               onClick={() => setEnlargedPhoto(null)}
-              className="mt-3 w-full rounded-xl bg-slate-100 py-2 text-xs font-bold text-zinc-700 hover:bg-slate-200 dark:bg-[#222222] dark:text-slate-200"
+              className="mt-3 w-full rounded-xl bg-slate-100 py-2 text-xs font-bold text-zinc-700 hover:bg-slate-200 dark:bg-[#222222] dark:text-white"
             >
               Close Preview
             </button>
@@ -289,7 +289,7 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
 
       {/* Photo Upload with preview */}
       <div>
-        <label className="block text-xs font-bold text-zinc-600 dark:text-slate-300 mb-1.5">
+        <label className="block text-xs font-bold text-zinc-600 dark:text-white mb-1.5">
           {t('missing.uploadPhoto')}
         </label>
         <div className="flex items-center gap-3">
@@ -337,7 +337,7 @@ function ReportMissingForm({ onSubmitted }: { onSubmitted: (p: MissingPerson) =>
           <select
             value={gender}
             onChange={(e) => setGender(e.target.value)}
-            className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-800 outline-none focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#222222] dark:text-slate-300"
+            className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-800 outline-none focus:border-zinc-500 dark:border-white/[0.1] dark:bg-[#222222] dark:text-white"
           >
             <option value="male">{t('missing.male')}</option>
             <option value="female">{t('missing.female')}</option>

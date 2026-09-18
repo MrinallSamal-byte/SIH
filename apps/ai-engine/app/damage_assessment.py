@@ -1,6 +1,8 @@
 import hashlib
 import sys
 
+# ponytail: DEMO STUBS — damage grading is filename-substring matching and the pHash is simulated;
+# before wiring to real compensation payouts, replace with content-hash dedupe + a real vision model.
 if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8')
 
@@ -23,15 +25,18 @@ def process_damage_photo(photo_filename, metadata, user_claimed_gps):
     is_duplicate = (photo_hash == "a1b2c3d4e5f67890")  # Simulated existing database hash
     
     # 3. AI Computer Vision Damage Classification (ResNet50 Simulation)
+    # SDRF tiers — single source of truth is
+    # backend-aapdasetu/src/services/damage.service.ts SDRF_COMPENSATION
+    # (FULLY_DESTROYED 95100 / MAJOR_STRUCTURAL_DAMAGE 47550 / MINOR_DAMAGE 9800).
     if "collapsed" in photo_filename.lower() or "destroyed" in photo_filename.lower():
         damage_grade = "FULLY_DESTROYED"
-        eligible_compensation_inr = 400000  # Rs 4 Lakh (SDRF norms)
+        eligible_compensation_inr = 95100
     elif "crack" in photo_filename.lower() or "flood" in photo_filename.lower():
         damage_grade = "MAJOR_STRUCTURAL_DAMAGE"
-        eligible_compensation_inr = 130000  # Rs 1.3 Lakh
+        eligible_compensation_inr = 47550
     else:
         damage_grade = "MINOR_DAMAGE"
-        eligible_compensation_inr = 25000   # Rs 25k
+        eligible_compensation_inr = 9800
         
     status = "VERIFIED_VALID" if (location_verified and not is_duplicate) else "FLAGGED_FRAUD_RISK"
     

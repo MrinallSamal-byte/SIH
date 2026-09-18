@@ -2,16 +2,44 @@
 import { prisma } from '../lib/prisma.js';
 import { NotFoundError } from '../lib/errors.js';
 import { writeAuditLog } from './audit.service.js';
+import { fetchCollection } from '../lib/firebase-rtdb.js';
 
-export async function listResources(params: { shelterId?: string; category?: string }) {
-  return prisma.resource.findMany({
-    where: {
-      ...(params.shelterId ? { shelterId: params.shelterId } : {}),
-      ...(params.category ? { category: params.category as never } : {}),
-    },
-    orderBy: { createdAt: 'desc' },
-    include: { shelter: { select: { id: true, name: true } } },
-  });
+export async function listResources(params: {
+  shelterId?: string;
+  category?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  try {
+    if (process.env.USE_FIREBASE_DB === 'true') {
+      const all = await fetchCollection('resources');
+      let filtered = all;
+      if (params.shelterId) filtered = filtered.filter((r: any) => r.shelterId === params.shelterId);
+      if (params.category) filtered = filtered.filter((r: any) => r.category === params.category);
+      return filtered;
+    }
+    // page/pageSize absent → return all rows (legacy behavior)
+    const take =
+      params.page !== undefined || params.pageSize !== undefined
+        ? Math.min(params.pageSize ?? 50, 200)
+        : undefined;
+    return await prisma.resource.findMany({
+      where: {
+        ...(params.shelterId ? { shelterId: params.shelterId } : {}),
+        ...(params.category ? { category: params.category as never } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      include: { shelter: { select: { id: true, name: true } } },
+      ...(take !== undefined ? { skip: ((params.page ?? 1) - 1) * take, take } : {}),
+    });
+  } catch (err) {
+    console.warn('[Resources] Prisma failed, falling back to Firebase RTDB:', err);
+    const all = await fetchCollection('resources');
+    let filtered = all;
+    if (params.shelterId) filtered = filtered.filter((r: any) => r.shelterId === params.shelterId);
+    if (params.category) filtered = filtered.filter((r: any) => r.category === params.category);
+    return filtered;
+  }
 }
 
 export async function createResource(input: {
@@ -22,15 +50,23 @@ export async function createResource(input: {
   shelterId?: string;
   adminEmail: string;
 }) {
-  const resource = await prisma.resource.create({
-    data: {
-      name: input.name,
-      category: input.category as never,
-      quantity: input.quantity,
-      unit: input.unit,
-      shelterId: input.shelterId,
-    },
-  });
+  let resource;
+  try {
+    resource = await prisma.resource.create({
+      data: {
+        name: input.name,
+        category: input.category as never,
+        quantity: input.quantity,
+        unit: input.unit,
+        shelterId: input.shelterId,
+      },
+    });
+  } catch (err) {
+    if ((err as { code?: unknown }).code === 'P2003') {
+      throw new NotFoundError('Shelter not found');
+    }
+    throw err;
+  }
   await writeAuditLog({
     adminEmail: input.adminEmail,
     action: 'CREATE_RESOURCE',
@@ -45,12 +81,13 @@ export async function updateResourceQuantity(input: {
   adminEmail: string;
   quantity: number;
 }) {
-  const existing = await prisma.resource.findUnique({ where: { id: input.id } });
-  if (!existing) throw new NotFoundError('Resource not found');
-  const resource = await prisma.resource.update({
+  // ponytail: conditional updateMany closes the findUnique+update TOCTOU window
+  const updated = await prisma.resource.updateMany({
     where: { id: input.id },
     data: { quantity: input.quantity },
   });
+  if (updated.count === 0) throw new NotFoundError('Resource not found');
+  const resource = await prisma.resource.findUniqueOrThrow({ where: { id: input.id } });
   await writeAuditLog({
     adminEmail: input.adminEmail,
     action: 'UPDATE_RESOURCE_QUANTITY',

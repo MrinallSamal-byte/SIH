@@ -64,4 +64,19 @@ describe('computeTriage', () => {
     const input = { type: 'flood', description: 'trapped on roof' };
     expect(computeTriage(input)).toEqual(computeTriage(input));
   });
+
+  it('floors a bare 1-Tap SOS at RED', () => {
+    // A 1-Tap SOS with no description text used to score 30+5=35 (GREEN) and
+    // never triggered the command-center siren — the flagship bug this fixes.
+    const r = computeTriage({ type: 'other', isOneTapSos: true });
+    expect(r.factors.some((f) => f.rule === 'ONE_TAP_SOS')).toBe(true);
+    expect(r.label).toBe('RED');
+    expect(r.score).toBeGreaterThanOrEqual(80);
+  });
+
+  it('does not apply the SOS boost to ordinary form reports', () => {
+    const r = computeTriage({ type: 'other' });
+    expect(r.factors.some((f) => f.rule === 'ONE_TAP_SOS')).toBe(false);
+    expect(r.label).toBe('GREEN');
+  });
 });

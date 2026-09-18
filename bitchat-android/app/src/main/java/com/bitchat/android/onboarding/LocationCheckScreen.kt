@@ -10,7 +10,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -35,6 +34,14 @@ fun LocationCheckScreen(
         modifier = modifier.padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
+        OnboardingProgress(
+            currentStep = OnboardingProgressSteps.STEP_LOCATION_CHECK,
+            totalSteps = OnboardingProgressSteps.TOTAL_STEPS,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 8.dp)
+        )
+
         when (status) {
             LocationStatus.DISABLED -> {
                 LocationDisabledContent(
@@ -74,7 +81,7 @@ private fun LocationDisabledContent(
             imageVector = Icons.Outlined.LocationOn,
             contentDescription = stringResource(R.string.cd_location_services),
             modifier = Modifier.size(64.dp),
-            tint = Color(0xFF00C851) // App's main green color
+            tint = colorScheme.primary
         )
 
         Text(
@@ -106,7 +113,7 @@ private fun LocationDisabledContent(
                     Icon(
                         imageVector = Icons.Filled.Security,
                         contentDescription = stringResource(R.string.cd_privacy),
-                        tint = Color(0xFF4CAF50),
+                        tint = colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -160,7 +167,7 @@ private fun LocationDisabledContent(
                     onClick = onEnableLocation,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF00C851) // App's main green color
+                        containerColor = colorScheme.primary
                     )
                 ) {
                         Text(
@@ -268,6 +275,7 @@ private fun LocationCheckingContent(
 
 @Composable
 private fun LocationLoadingIndicator() {
+    val colorScheme = MaterialTheme.colorScheme
     // Animated rotation for the loading indicator
     val infiniteTransition = rememberInfiniteTransition(label = "location_loading")
     val rotationAngle by infiniteTransition.animateFloat(
@@ -288,7 +296,7 @@ private fun LocationLoadingIndicator() {
             modifier = Modifier
                 .fillMaxSize()
                 .rotate(rotationAngle),
-            color = Color(0xFF4CAF50), // Location green
+            color = colorScheme.primary,
             strokeWidth = 3.dp
         )
     }

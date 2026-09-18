@@ -32,19 +32,19 @@ export default function AdminLogin() {
               ICS
             </div>
             <div>
-              <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">
                 AapdaSetu Command
               </span>
-              <span className="ml-1.5 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-white/[0.1]">
+              <span className="ml-1.5 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-white/[0.1]">
                 Official
               </span>
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Admin Login
           </h1>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+          <p className="mt-1 text-xs text-slate-500 dark:text-white leading-relaxed">
             Authorized disaster response personnel and incident commanders only.
           </p>
 
@@ -89,7 +89,7 @@ export default function AdminLogin() {
           <div className="mt-6 border-t border-slate-100 pt-4 text-center dark:border-slate-800">
             <Link
               to="/"
-              className="text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+              className="text-xs text-slate-500 hover:text-slate-900 dark:text-white dark:hover:text-white"
             >
               ← Return to Citizen Homepage
             </Link>

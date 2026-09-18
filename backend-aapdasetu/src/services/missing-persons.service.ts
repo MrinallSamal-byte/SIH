@@ -2,6 +2,7 @@
 import { prisma } from '../lib/prisma.js';
 import { NotFoundError } from '../lib/errors.js';
 import { writeAuditLog } from './audit.service.js';
+import { fetchCollection } from '../lib/firebase-rtdb.js';
 
 export type MissingPersonStatus = 'open' | 'matched' | 'resolved';
 
@@ -9,20 +10,41 @@ export async function listMissingPersons(params: { status?: string; page?: numbe
   const page = params.page ?? 1;
   const pageSize = Math.min(params.pageSize ?? 100, 200);
 
-  const where: Record<string, unknown> = {};
-  if (params.status) where.status = params.status;
+  try {
+    if (process.env.USE_FIREBASE_DB === 'true') {
+      const all = await fetchCollection('missing_persons');
+      let filtered = all;
+      if (params.status) filtered = filtered.filter((m: any) => m.status === params.status);
+      const total = filtered.length;
+      const start = (page - 1) * pageSize;
+      const items = filtered.slice(start, start + pageSize);
+      return { items, total, page, pageSize };
+    }
 
-  const [items, total] = await Promise.all([
-    prisma.missingPerson.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
-    prisma.missingPerson.count({ where }),
-  ]);
+    const where: Record<string, unknown> = {};
+    if (params.status) where.status = params.status;
 
-  return { items, total, page, pageSize };
+    const [items, total] = await Promise.all([
+      prisma.missingPerson.findMany({
+        where,
+        orderBy: [{ createdAt: 'desc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.missingPerson.count({ where }),
+    ]);
+
+    return { items, total, page, pageSize };
+  } catch (err) {
+    console.warn('[MissingPersons] Prisma failed, falling back to Firebase RTDB:', err);
+    const all = await fetchCollection('missing_persons');
+    let filtered = all;
+    if (params.status) filtered = filtered.filter((m: any) => m.status === params.status);
+    const total = filtered.length;
+    const start = (page - 1) * pageSize;
+    const items = filtered.slice(start, start + pageSize);
+    return { items, total, page, pageSize };
+  }
 }
 
 export async function getMissingPerson(id: string) {
@@ -89,12 +111,15 @@ export async function updateMissingPerson(input: {
   const person = await prisma.missingPerson.update({ where: { id: input.id }, data });
 
   if (input.adminEmail) {
+    const { photoUrl: _photoUrl, ...auditInput } = input;
     await writeAuditLog({
       adminEmail: input.adminEmail,
       action: 'UPDATE_MISSING_PERSON',
       entityType: 'missing_person',
       entityId: input.id,
-      details: { status: input.status, ...input },
+      // photoUrl can be a multi-hundred-KB base64 data URL — storing it in
+      // the audit row would bloat every admin audit-logs page that ships it.
+      details: { status: input.status, ...auditInput },
     });
   }
 

@@ -1,9 +1,23 @@
 import { useEffect, useState } from 'react'
-import { subscribeFallback } from '../api/client'
+import { apiHealth, subscribeFallback } from '../api/client'
 
-/** True once any API call fell back to mock data (drives the "demo data" pill). */
+/** True while the app is serving mock fallback data (drives the "demo data"
+ * banner). Sticks ON after any fallback, and clears again once a real
+ * backend response succeeds — a banner that never clears would cry wolf
+ * even after recovery. */
 export function useDemoMode(): boolean {
-  const [demo, setDemo] = useState(false)
-  useEffect(() => subscribeFallback(() => setDemo(true)), [])
+  const [demo, setDemo] = useState(() => apiHealth.lastWasMock)
+  useEffect(() => {
+    const unsub = subscribeFallback(() => setDemo(true))
+    // apiHealth has no change event for successful real responses; a cheap
+    // poll reconciles the banner when the backend recovers.
+    const id = window.setInterval(() => {
+      setDemo((prev) => (prev && !apiHealth.lastWasMock ? false : prev))
+    }, 5000)
+    return () => {
+      unsub()
+      window.clearInterval(id)
+    }
+  }, [])
   return demo
 }
