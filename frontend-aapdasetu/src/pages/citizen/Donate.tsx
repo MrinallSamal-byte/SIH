@@ -2,17 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   HeartHandshake,
-  ShieldCheck,
   BadgeCheck,
   Copy,
   CheckCircle2,
   AlertTriangle,
   Landmark,
-  Users,
   UtensilsCrossed,
   Stethoscope,
   Tent,
-  ReceiptText,
   Download,
   ChevronRight,
   Smartphone,
@@ -20,7 +17,6 @@ import {
   Building2,
 } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
-import { timeAgo } from '../../lib/helpers'
 
 type FundId = 'cmrf-assam' | 'sdrf-odisha' | 'relief-ngo' | 'medical-aid'
 
@@ -199,47 +195,6 @@ export default function Donate() {
   }, [])
 
   const fund = useMemo(() => FUNDS.find((f) => f.id === fundId) ?? FUNDS[0], [fundId])
-
-  const demoFeed = useMemo<DonationRecord[]>(() => {
-    const now = Date.now()
-    return [
-      {
-        id: 'demo-1',
-        fundId: 'cmrf-assam',
-        amount: 1100,
-        donor: 'Priya S.',
-        anonymous: false,
-        method: 'upi',
-        createdAt: new Date(now - 12 * 60 * 1000).toISOString(),
-        receiptId: 'DN-DEMO-1100',
-      },
-      {
-        id: 'demo-2',
-        fundId: 'relief-ngo',
-        amount: 500,
-        donor: 'Anonymous',
-        anonymous: true,
-        method: 'upi',
-        createdAt: new Date(now - 48 * 60 * 1000).toISOString(),
-        receiptId: 'DN-DEMO-0500',
-      },
-      {
-        id: 'demo-3',
-        fundId: 'medical-aid',
-        amount: 2500,
-        donor: 'Rahul D.',
-        anonymous: false,
-        method: 'card',
-        createdAt: new Date(now - 3 * 60 * 60 * 1000).toISOString(),
-        receiptId: 'DN-DEMO-2500',
-      },
-    ]
-  }, [])
-
-  const feed = useMemo(() => {
-    const mine = [...donations].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
-    return [...mine, ...demoFeed].slice(0, 8)
-  }, [donations, demoFeed])
 
   const totalRaisedToday = useMemo(
     () => fund.raised + donations.filter((d) => d.fundId === fund.id).reduce((s, d) => s + d.amount, 0),
@@ -823,59 +778,8 @@ export default function Donate() {
           </section>
         </div>
 
-        {/* Right: trust + feed */}
+        {/* Right: official channels */}
         <div className="space-y-4">
-          <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
-            <h2 className="mono text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-white">
-              {t('donate.whyTrust', 'Why donors trust this')}
-            </h2>
-            <ul className="mt-3 space-y-2.5 text-xs leading-relaxed text-zinc-600 dark:text-white">
-              <li className="flex gap-2">
-                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                <span>{t('donate.trust1', 'Government + 80G-registered funds only. Every fund shows its account type before you pay.')}</span>
-              </li>
-              <li className="flex gap-2">
-                <ReceiptText className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                <span>{t('donate.trust2', 'Instant demo receipt with ID. Real 80G receipts are emailed by the fund after verification.')}</span>
-              </li>
-              <li className="flex gap-2">
-                <Users className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                <span>{t('donate.trust3', 'Public donor feed uses masked names. Full phone/PAN details are never displayed.')}</span>
-              </li>
-            </ul>
-            <div className="mt-3 rounded-xl bg-[#f4f4f5] p-3 text-xs leading-relaxed text-slate-500 dark:bg-[#151515] dark:text-white">
-              {t(
-                'donate.fraudNote',
-                'Safety: relief funds never ask for OTPs, card CVVs, or cash pickup via agents. When in doubt, donate only through official .gov.in portals or helpline 112 / 1070.',
-              )}
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
-            <h2 className="mono text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-white">
-              {t('donate.recentTitle', 'Recent contributions (demo)')}
-            </h2>
-            <ul className="mt-3 space-y-2.5">
-              {feed.map((d) => (
-                <li
-                  key={d.id}
-                  className="flex items-center justify-between gap-2 rounded-xl border border-zinc-100 bg-[#f4f4f5]/60 px-3 py-2 text-xs dark:border-white/[0.06] dark:bg-[#151515]"
-                >
-                  <div className="min-w-0">
-                    <div className="truncate font-bold text-zinc-800 dark:text-white">
-                      {d.anonymous ? t('donate.anonymousDonor', 'Anonymous') : maskDonor(d.donor)}
-                    </div>
-                    <div className="text-xs text-slate-500 dark:text-white">
-                      {FUNDS.find((f) => f.id === d.fundId)?.tagFallback} · {timeAgo(d.createdAt)}
-                      {d.id.startsWith('demo-') ? ` · ${t('donate.demoTag', 'demo')}` : ''}
-                    </div>
-                  </div>
-                  <span className="mono shrink-0 font-bold text-emerald-700 dark:text-emerald-300">{formatINR(d.amount)}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
           <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 dark:border-white/[0.08] dark:bg-[#1a1a1a]">
             <h2 className="mono text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-white">
               {t('donate.govTitle', 'Prefer official channels?')}

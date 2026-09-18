@@ -5,7 +5,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Google Sans', 'Open Sans', 'Lato', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Helvetica', 'Arial', 'sans-serif'],
         mono: ['JetBrains Mono', 'IBM Plex Mono', 'ui-monospace', 'Courier New', 'monospace'],
       },
       colors: {

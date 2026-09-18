@@ -67,23 +67,19 @@ export default function Contacts() {
               <a
                 key={c.num + c.name}
                 href={`tel:${c.num}`}
-                className="group flex items-center gap-4 rounded-2xl border border-zinc-200/80 bg-white p-5 transition-all duration-200 hover:border-slate-400 active:scale-[0.98] dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:hover:border-slate-600/80"
+                className="group flex items-center gap-4 rounded-xl border border-zinc-200/70 bg-white/80 p-4 transition-colors duration-200 hover:border-zinc-300 hover:bg-white active:scale-[0.99] dark:border-white/[0.08] dark:bg-[#292929]/70 dark:hover:border-white/[0.14] dark:hover:bg-[#292929]"
               >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-white transition-transform duration-200 group-hover:scale-105 dark:bg-white dark:text-zinc-900">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-700 dark:bg-[#303030] dark:text-zinc-200">
                   <Icon className="h-5 w-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-bold text-zinc-800 dark:text-white">
+                  <h3 className="text-sm font-semibold text-zinc-800 dark:text-white">
                     {c.name}
                   </h3>
-                  <span className="mono text-xl font-bold tracking-tight text-zinc-800 dark:text-white">
+                  <span className="mono text-lg font-semibold tracking-tight text-zinc-800 dark:text-white">
                     {c.num}
                   </span>
                 </div>
-                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-zinc-300 px-3.5 py-1.5 text-sm font-bold text-zinc-700 transition group-hover:border-zinc-800 group-hover:bg-zinc-800 group-hover:text-white dark:border-white/20 dark:text-white dark:group-hover:bg-white dark:group-hover:text-zinc-900">
-                  <PhoneCall className="h-4 w-4" />
-                  {t('contact.call', 'Call')}
-                </span>
               </a>
             )
           })}
@@ -103,13 +99,13 @@ export default function Contacts() {
               href={r.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex items-start gap-4 rounded-2xl border border-zinc-200/80 bg-white p-5 transition-all duration-200 hover:border-slate-400 active:scale-[0.98] dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:hover:border-slate-600/80"
+              className="group flex items-start gap-4 rounded-xl border border-zinc-200/70 bg-white/80 p-4 transition-colors duration-200 hover:border-zinc-300 hover:bg-white active:scale-[0.99] dark:border-white/[0.08] dark:bg-[#292929]/70 dark:hover:border-white/[0.14] dark:hover:bg-[#292929]"
             >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-white transition-transform duration-200 group-hover:scale-105 dark:bg-white dark:text-zinc-900">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-700 dark:bg-[#303030] dark:text-zinc-200">
                 <Landmark className="h-5 w-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-base font-bold text-zinc-800 dark:text-white">
+                <h3 className="text-sm font-semibold text-zinc-800 dark:text-white">
                   {t(r.nameKey, r.nameFallback)}
                 </h3>
                 <p className="mt-1 text-sm leading-relaxed text-slate-500 dark:text-white/70">

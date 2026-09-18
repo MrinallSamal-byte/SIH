@@ -156,17 +156,14 @@ export default function ChatWidget() {
       {/* Circular Floating Toggle Button */}
       {!open && (
         <div className="relative group">
-          {/* Ambient Glowing Aura */}
-          <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-amber-500 via-rose-500 to-orange-500 opacity-70 blur-md transition-all duration-300 group-hover:opacity-100 group-hover:blur-lg animate-pulse" />
-
           <button
             type="button"
             onClick={() => setOpen(true)}
             aria-label="Open AapdaMitra AI assistant"
             title="Ask AapdaMitra AI"
-            className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-600 text-white shadow-xl shadow-orange-500/30 ring-2 ring-white/70 transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer dark:ring-slate-900/80"
+            className="relative flex h-14 w-14 items-center justify-center rounded-full bg-brand-600 text-white shadow-md ring-2 ring-white/70 transition-colors duration-200 hover:bg-brand-700 active:scale-95 cursor-pointer dark:ring-slate-900/80"
           >
-            <Bot className="h-7 w-7 text-white drop-shadow-md transition-transform duration-300 group-hover:rotate-6" />
+            <Bot className="h-7 w-7 text-white transition-transform duration-200 group-hover:rotate-3" />
 
             {/* Live Indicator Ping Dot */}
             <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center">
@@ -182,10 +179,10 @@ export default function ChatWidget() {
         <div
           role="dialog"
           aria-label="AapdaMitra AI Disaster Support"
-          className="flex h-[520px] max-h-[calc(100vh-110px)] w-[calc(100vw-28px)] sm:w-[380px] max-w-[400px] flex-col overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+          className="flex h-[520px] max-h-[calc(100vh-110px)] w-[calc(100vw-28px)] sm:w-[380px] max-w-[400px] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 shadow-2xl dark:border-white/10 dark:bg-[#1f1f1f]"
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-3 text-white">
+          <div className="flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3 text-zinc-800 dark:border-white/10 dark:bg-[#292929] dark:text-white">
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-600 text-white">
                 <Bot className="h-4.5 w-4.5" />
@@ -201,10 +198,10 @@ export default function ChatWidget() {
                 <p className="truncate text-[10px] text-slate-400">Rapid 24/7 Disaster Survival Guidance</p>
               </div>
             </div>
-            <button
+              <button
               type="button"
               onClick={() => setOpen(false)}
-              className="shrink-0 rounded-md p-1 text-slate-400 transition hover:bg-slate-800 hover:text-white cursor-pointer"
+              className="shrink-0 rounded-md p-1 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-white cursor-pointer"
               aria-label={t('common.close')}
             >
               <X className="h-4 w-4" />
@@ -212,7 +209,7 @@ export default function ChatWidget() {
           </div>
 
           {/* Messages List */}
-          <div className="flex-1 space-y-3.5 overflow-y-auto p-4 bg-slate-50 dark:bg-slate-950">
+          <div className="flex-1 space-y-3.5 overflow-y-auto bg-zinc-100 p-4 dark:bg-[#1f1f1f]">
             {messages.map((m, i) => {
               const isCrit = m.dangerLevel === 'CRITICAL' || m.isCritical
               const isMod = m.dangerLevel === 'MODERATE'
@@ -222,12 +219,12 @@ export default function ChatWidget() {
                   <div
                     className={`max-w-[92%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-sm shadow-xs ${
                       m.role === 'user'
-                        ? 'bg-slate-900 text-white rounded-br-none dark:bg-slate-100 dark:text-slate-950'
+                        ? 'bg-zinc-800 text-white rounded-br-none dark:bg-[#3a3a3a]'
                         : isCrit
                         ? 'border border-red-200 bg-red-50/90 text-slate-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-white rounded-bl-none'
                         : isMod
                         ? 'border border-amber-200 bg-amber-50/90 text-slate-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-white rounded-bl-none'
-                        : 'border border-slate-200 bg-white text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-white rounded-bl-none'
+                        : 'border border-zinc-200 bg-white text-zinc-800 dark:border-white/10 dark:bg-[#292929] dark:text-white rounded-bl-none'
                     }`}
                   >
                     {/* Message Body */}
@@ -335,7 +332,7 @@ export default function ChatWidget() {
           </div>
 
           {/* Quick Prompts */}
-          <div className="flex gap-1.5 overflow-x-auto border-t border-slate-100 bg-slate-50 px-3 py-1.5 dark:border-slate-800 dark:bg-slate-950">
+          <div className="flex gap-1.5 overflow-x-auto border-t border-zinc-200 bg-zinc-100 px-3 py-1.5 dark:border-white/10 dark:bg-[#1f1f1f]">
             {[
               { label: 'Water rising', text: 'Flood water is entering the building fast' },
               { label: 'Severe wound', text: 'Someone has deep bleeding wound' },
@@ -347,7 +344,7 @@ export default function ChatWidget() {
                 type="button"
                 onClick={() => send(qp.text)}
                 disabled={busy}
-                className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[10px] font-semibold text-slate-700 shadow-xs hover:bg-slate-100 dark:border-white/[0.1] dark:bg-slate-800 dark:text-white cursor-pointer"
+                className="shrink-0 rounded-full border border-zinc-200 bg-white px-2.5 py-0.5 text-[10px] font-semibold text-zinc-700 shadow-xs hover:bg-zinc-100 dark:border-white/[0.1] dark:bg-[#303030] dark:text-white cursor-pointer"
               >
                 {qp.label}
               </button>
@@ -360,7 +357,7 @@ export default function ChatWidget() {
               e.preventDefault()
               send()
             }}
-            className="flex items-center gap-2 border-t border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
+            className="flex items-center gap-2 border-t border-zinc-200 bg-white p-3 dark:border-white/10 dark:bg-[#292929]"
           >
             <input
               type="text"
@@ -368,7 +365,7 @@ export default function ChatWidget() {
               onChange={(e) => setInput(e.target.value)}
               placeholder={t('chat.placeholder')}
               disabled={busy}
-              className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 outline-none transition focus:border-slate-900 focus:bg-white dark:border-white/[0.1] dark:bg-slate-800 dark:text-white dark:focus:border-slate-300"
+              className="flex-1 rounded-xl border border-zinc-300 bg-zinc-100 px-3.5 py-2 text-xs text-zinc-900 outline-none transition focus:border-zinc-500 focus:bg-white dark:border-white/[0.1] dark:bg-[#303030] dark:text-white dark:focus:border-zinc-300"
             />
             <button
               type="submit"

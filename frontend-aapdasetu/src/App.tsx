@@ -19,6 +19,7 @@ const SafetyCheckin = lazy(() => import('./pages/citizen/SafetyCheckin'))
 const PfaChat = lazy(() => import('./pages/citizen/PfaChat'))
 const About = lazy(() => import('./pages/citizen/About'))
 const Contacts = lazy(() => import('./pages/citizen/Contacts'))
+const Faq = lazy(() => import('./pages/citizen/Faq'))
 const AppDownload = lazy(() => import('./pages/citizen/AppDownload'))
 const Alerts = lazy(() => import('./pages/citizen/Alerts'))
 const Donate = lazy(() => import('./pages/citizen/Donate'))
@@ -71,6 +72,7 @@ export default function App() {
             <Route path="/safe-routes" element={<SafeRoutes />} />
             <Route path="/about" element={<About />} />
             <Route path="/contacts" element={<Contacts />} />
+            <Route path="/faq" element={<Faq />} />
             <Route path="/pfa-chat" element={<PfaChat />} />
             <Route path="/app" element={<AppDownload />} />
             <Route path="/donate" element={<Donate />} />

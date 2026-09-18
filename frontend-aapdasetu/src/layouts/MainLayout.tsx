@@ -20,7 +20,10 @@ import {
   Bot,
   HeartHandshake,
   Smartphone,
-  CheckCheck
+  CheckCheck,
+  CircleHelp,
+  Map,
+  PhoneCall
 } from 'lucide-react'
 import AapdaSetuLogo from '../components/common/AapdaSetuLogo'
 import ErrorBoundary from '../components/common/ErrorBoundary'
@@ -114,6 +117,7 @@ export default function MainLayout() {
   const [notifOpen, setNotifOpen] = useState(false)
   const notifRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
+  const isFeatureRoute = featureNavItems.some((item) => location.pathname === item.to)
 
   // Per-bulletin read state, persisted so refreshes don't resurrect the badge.
   const [readIds, setReadIds] = useState<Set<string>>(() => {
@@ -217,17 +221,17 @@ export default function MainLayout() {
         </div>
       )}
 
-      {/* Main Navigation Header - same red, borders/hover: light → light/white, dark → black (vice versa) */}
-        <header className="sticky top-0 z-40 border-b border-red-700 bg-red-600 dark:border-black dark:bg-red-600 text-white shadow-sm">
+      {/* Main navigation keeps emergency red reserved for SOS and alerts. */}
+        <header className="sticky top-0 z-40 border-b border-zinc-800 bg-[#242424] text-white shadow-sm dark:border-black dark:bg-[#171717]">
         <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-2 px-3 py-3 sm:gap-10 sm:px-6">
           {/* Logo / Brand */}
           <Link to="/" className="flex min-w-0 items-center gap-2.5 font-bold tracking-tight group sm:gap-4">
             <AapdaSetuLogo size={30} />
             <div className="flex min-w-0 flex-col">
-              <span className="truncate text-sm font-extrabold leading-none text-white group-hover:text-red-100 transition-colors sm:text-base">
+              <span className="truncate text-sm font-extrabold leading-none text-white group-hover:text-zinc-200 transition-colors sm:text-base">
                 {t('app.name')}
               </span>
-              <span className="hidden text-[9px] font-bold text-red-100/80 tracking-wider mono uppercase mt-0.5 min-[400px]:block">
+              <span className="hidden text-[9px] font-bold text-zinc-400 tracking-wider mono uppercase mt-0.5 min-[400px]:block">
                 ICS NETWORK
               </span>
             </div>
@@ -244,7 +248,7 @@ export default function MainLayout() {
                   `rounded-lg px-2.5 py-1.5 text-sm font-medium transition ${
                     isActive
                       ? 'bg-white text-red-600 font-bold shadow-sm'
-                      : 'text-red-100 hover:bg-white/15 hover:text-white'
+                      : 'text-zinc-300 hover:bg-white/10 hover:text-white'
                   }`
                 }
               >
@@ -260,7 +264,7 @@ export default function MainLayout() {
                 className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition ${
                   featuresOpen || featureNavItems.some((f) => location.pathname === f.to)
                     ? 'bg-white text-red-600 font-bold shadow-sm'
-                    : 'text-red-100 hover:bg-white/15 hover:text-white'
+                    : 'text-zinc-300 hover:bg-white/10 hover:text-white'
                 }`}
               >
                 <span>{t('nav.features')}</span>
@@ -283,7 +287,7 @@ export default function MainLayout() {
                                 : 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950'
                               : isActive
                                 ? 'bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300 font-bold'
-                                : 'text-zinc-500 hover:bg-orange-50 hover:text-orange-700 dark:text-white dark:hover:bg-orange-950 dark:hover:text-orange-300'
+                                : 'text-zinc-500 hover:bg-orange-50 hover:text-zinc-900 dark:text-white dark:hover:bg-orange-950 dark:hover:text-white'
                           }`
                         }
                       >
@@ -295,6 +299,19 @@ export default function MainLayout() {
                 </div>
               )}
             </div>
+
+            <NavLink
+              to="/app"
+              className={({ isActive }) =>
+                `rounded-lg px-2.5 py-1.5 text-sm font-medium transition ${
+                  isActive
+                    ? 'bg-white text-red-600 font-bold shadow-sm'
+                    : 'text-zinc-300 hover:bg-white/10 hover:text-white'
+                }`
+              }
+            >
+              <span>{t('service.appTitle')}</span>
+            </NavLink>
           </nav>
 
           {/* Controls: Language Selector, Theme Toggle, Mobile Menu Button */}
@@ -541,6 +558,69 @@ export default function MainLayout() {
           </ErrorBoundary>
         </div>
       </main>
+
+      {!isFeatureRoute && <footer className="border-t border-zinc-800 bg-[#202020] text-zinc-300">
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12">
+          <div className="grid gap-10 lg:grid-cols-[1.5fr_1fr_1fr_1.2fr]">
+            <div>
+              <div className="flex items-center gap-3">
+                <AapdaSetuLogo size={34} />
+                <div>
+                  <p className="text-base font-bold text-white">{t('app.name')}</p>
+                  <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">ICS NETWORK</p>
+                </div>
+              </div>
+              <p className="mt-4 max-w-sm text-sm leading-relaxed text-zinc-400">
+                {t('about.missionDesc')}
+              </p>
+              <Link to="/about" className="mt-4 inline-flex text-sm font-semibold text-zinc-200 transition hover:text-white hover:underline">
+                {t('nav.about')} <span className="ml-1" aria-hidden="true">-&gt;</span>
+              </Link>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">{t('footer.faqTitle')}</p>
+              <div className="mt-4 flex flex-col items-start gap-3 text-sm">
+                <Link to="/contacts" className="inline-flex items-center gap-2 transition hover:text-white">
+                  <PhoneCall className="h-4 w-4 text-zinc-500" /> {t('nav.contacts')}
+                </Link>
+                <Link to="/faq" className="inline-flex items-center gap-2 transition hover:text-white">
+                  <CircleHelp className="h-4 w-4 text-zinc-500" /> {t('footer.faqTitle')}
+                </Link>
+                <Link to="/alerts" className="inline-flex items-center gap-2 transition hover:text-white">
+                  <Bell className="h-4 w-4 text-zinc-500" /> {t('nav.alerts')}
+                </Link>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">{t('nav.routes')}</p>
+              <div className="mt-4 flex flex-col items-start gap-3 text-sm">
+                <Link to="/shelters" className="inline-flex items-center gap-2 transition hover:text-white">
+                  <Map className="h-4 w-4 text-zinc-500" /> {t('nav.shelters')}
+                </Link>
+                <Link to="/safe-routes" className="inline-flex items-center gap-2 transition hover:text-white">
+                  <Compass className="h-4 w-4 text-zinc-500" /> {t('nav.routes')}
+                </Link>
+                <Link to="/track" className="inline-flex items-center gap-2 transition hover:text-white">
+                  <Search className="h-4 w-4 text-zinc-500" /> {t('nav.track')}
+                </Link>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-zinc-700 bg-zinc-900/50 p-5">
+              <p className="text-sm font-bold text-white">{t('nav.sos')}</p>
+              <p className="mt-1.5 text-xs leading-relaxed text-zinc-400">For immediate danger, contact emergency services first.</p>
+              <a href="tel:112" className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700">
+                <PhoneCall className="h-4 w-4" /> Call 112
+              </a>
+            </div>
+          </div>
+        </div>
+        <div className="border-t border-zinc-800 px-4 py-4 text-center text-xs text-zinc-500">
+          AapdaSetu · {t('about.missionBadge')} · Built for emergency coordination
+        </div>
+      </footer>}
 
       {/* Fixed Mobile Bottom Action Bar */}
       <nav

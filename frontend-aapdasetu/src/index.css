@@ -6,7 +6,7 @@
   html {
     /* 17px base (was 16px) — all rem-based type renders slightly larger site-wide */
     font-size: 106.25%;
-    font-family: 'Google Sans', 'Open Sans', 'Lato', system-ui, -apple-system, sans-serif;
+    font-family: Helvetica, Arial, sans-serif;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     font-variation-settings: normal;
     letter-spacing: -0.015em;
@@ -217,4 +217,31 @@
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* Keep dark mode charcoal-led instead of dropping every surface to black. */
+@layer utilities {
+  .dark [class~="dark:bg-[#111111]"] {
+    background-color: #1b1b1b !important;
+  }
+
+  .dark [class~="dark:bg-[#141414]"],
+  .dark [class~="dark:bg-[#151515]"],
+  .dark [class~="dark:bg-[#161616]"] {
+    background-color: #1f1f1f !important;
+  }
+
+  .dark [class~="dark:bg-[#181818]"],
+  .dark [class~="dark:bg-[#1a1a1a]"] {
+    background-color: #292929 !important;
+  }
+
+  .dark [class~="dark:bg-[#202020]"] {
+    background-color: #2b2b2b !important;
+  }
+
+  .dark [class~="dark:bg-[#222222]"],
+  .dark [class~="dark:bg-[#252525]"] {
+    background-color: #303030 !important;
+  }
 }
