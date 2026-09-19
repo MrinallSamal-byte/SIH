@@ -44,6 +44,7 @@ const topNavItems: NavLinkItem[] = [
   { to: '/', labelKey: 'nav.home', end: true },
   { to: '/about', labelKey: 'nav.about' },
   { to: '/contacts', labelKey: 'nav.contacts' },
+  { to: '/faq', labelKey: 'footer.faqTitle' },
 ]
 
 const featureNavItems: NavLinkItem[] = [
@@ -516,6 +517,7 @@ export default function MainLayout() {
             112
           </a>
           <div className="flex items-center gap-4">
+            <Link to="/faq" className="hover:text-zinc-800 dark:hover:text-slate-200">{t('footer.faqTitle', 'FAQ')}</Link>
             <Link to="/admin" className="hover:text-zinc-800 dark:hover:text-slate-200">{t('nav.admin')}</Link>
             <Link to="/volunteer" className="hover:text-zinc-800 dark:hover:text-slate-200">{t('nav.volunteer')}</Link>
           </div>

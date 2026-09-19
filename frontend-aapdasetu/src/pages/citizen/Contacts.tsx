@@ -10,6 +10,8 @@ import {
   PhoneCall,
   HeartHandshake,
   Baby,
+  ExternalLink,
+  Landmark,
 } from 'lucide-react'
 import { useLanguage } from '../../lib/i18n'
 
@@ -32,6 +34,23 @@ const contacts: Contact[] = [
   { nameKey: 'contacts.ndrfControl', num: '011-24363260', icon: HardHat },
   { nameKey: 'contacts.womenHelpline', num: '1091', icon: HeartHandshake },
   { nameKey: 'contacts.childHelpline', num: '1098', icon: Baby },
+]
+
+const officialResources = [
+  {
+    nameKey: 'contact.resNdmaName',
+    nameFallback: 'NDMA — Relief Norms & Guidelines',
+    descKey: 'contact.resNdmaDesc',
+    descFallback: 'National Disaster Management Authority: official disaster guidelines, live advisories, and SDRF/NDRF relief assistance norms for property and livelihood damage.',
+    url: 'https://ndma.gov.in',
+  },
+  {
+    nameKey: 'contact.resNdrfName',
+    nameFallback: 'NDRF — Response Force',
+    descKey: 'contact.resNdrfDesc',
+    descFallback: 'National Disaster Response Force: rescue deployments, battalion contacts, and relief operation updates.',
+    url: 'https://ndrf.gov.in',
+  },
 ]
 
 export default function Contacts() {
@@ -108,6 +127,43 @@ export default function Contacts() {
               </a>
             )
           })}
+      </div>
+
+      {/* Official government resources */}
+      <div className="space-y-3 pt-2">
+        <h2 className="text-xs font-black uppercase tracking-widest text-zinc-500 dark:text-slate-400">
+          {t('contact.resources', 'Official government resources')}
+        </h2>
+        <p className="text-xs sm:text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+          {t('contact.resourcesIntro', 'For damage relief claims, compensation norms, and verified disaster advisories, refer to the authorities below.')}
+        </p>
+        <div className="grid gap-3">
+          {officialResources.map((r) => (
+            <a
+              key={r.url}
+              href={r.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-start gap-4 rounded-2xl border border-zinc-200/80 bg-white p-4 sm:p-5 transition-all duration-200 hover:border-slate-400 active:scale-[0.98] dark:border-white/[0.08] dark:bg-[#1a1a1a] dark:hover:border-slate-600/80"
+            >
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-white transition-transform duration-200 group-hover:scale-105 dark:bg-slate-100 dark:text-zinc-800">
+                <Landmark className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-zinc-800 dark:text-slate-200">
+                  {t(r.nameKey, r.nameFallback)}
+                </h3>
+                <p className="mt-1 text-xs sm:text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                  {t(r.descKey, r.descFallback)}
+                </p>
+                <span className="mono mt-1.5 block text-xs font-bold text-red-600 dark:text-red-400">
+                  {r.url.replace('https://', '')}
+                </span>
+              </div>
+              <ExternalLink className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </a>
+          ))}
+        </div>
       </div>
     </div>
   )
