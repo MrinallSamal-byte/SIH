@@ -10,6 +10,10 @@ def process_damage_photo(photo_filename, metadata, user_claimed_gps):
     """
     Feature 9: Crowdsourced AI Damage Assessment (Anti-Fraud Engine)
     Verifies EXIF metadata, checks pHash duplicates, and grades building damage.
+
+    References & Standards:
+    - Hugging Face Model: https://huggingface.co/Divyanshu-Kumar19/aapdasetu-damage-assessment
+    - NDMA / SDRF Financial Relief Guidelines: https://ndma.gov.in/
     """
     # 1. EXIF Metadata Location & Timestamp Verification
     exif_gps = metadata.get("exif_gps", {})

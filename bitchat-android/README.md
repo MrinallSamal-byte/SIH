@@ -175,6 +175,18 @@ The application requests the following standard runtime permissions:
 
 ---
 
+## 📚 Acknowledgments & Upstream Attribution
+
+This offline mesh communication system is adapted from the open-source **BitChat** project by **Permissionless Tech**:
+- **Upstream Repository:** [https://github.com/permissionlesstech/bitchat-android](https://github.com/permissionlesstech/bitchat-android)
+- **iOS/macOS Client:** [https://github.com/permissionlesstech/bitchat](https://github.com/permissionlesstech/bitchat)
+- **Project Portal:** [https://bitchat.free/](https://bitchat.free/)
+
+We gratefully acknowledge the original authors and the open-source community for pioneering decentralized Bluetooth Low Energy (BLE) and Wi-Fi Aware peer-to-peer mesh protocols.
+
+---
+
 ## License
 
-This project is released into the public domain under the terms in [`LICENSE.md`](LICENSE.md).
+This project is released under the terms in [`LICENSE.md`](LICENSE.md).
+

@@ -1,3 +1,13 @@
+/**
+ * Disaster-Aware Routing & Navigation Engine
+ *
+ * Built on Project OSRM (Open Source Routing Machine) & OpenStreetMap data.
+ * References:
+ * - OSRM Backend: https://github.com/Project-OSRM/osrm-backend
+ * - Project OSRM API: https://project-osrm.org/
+ * - OpenStreetMap: https://www.openstreetmap.org/
+ */
+
 import type { GeoPoint } from '../types'
 
 const OSRM_SERVERS = [

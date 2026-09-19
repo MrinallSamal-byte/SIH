@@ -23,7 +23,8 @@
 10. [🛠️ Technology Stack](#️-technology-stack)
 11. [📁 Repository Directory Structure](#-repository-directory-structure)
 12. [🚦 Getting Started & Local Development](#-getting-started--local-development)
-13. [📜 License & Acknowledgments](#-license--acknowledgments)
+13. [📚 Core References, Open-Source Foundations & Citations](#-core-references-open-source-foundations--citations)
+14. [📜 License & Acknowledgments](#-license--acknowledgments)
 
 ---
 
@@ -52,7 +53,69 @@ During cyclones, flash floods, earthquakes, and industrial explosions, public he
 
 ## 🏗️ Master System Architecture & Complete User Journey
 
-### 1. Complete Website Workflow & User Journey (Actual Implementation)
+### 1. Executive Platform & Website Flow (Presentation & Pitch-Deck Ready)
+
+> **Judges & Evaluators Overview:** This presentation-ready flowchart illustrates the high-level operational lifecycle of AapdaSetu—from a distressed citizen accessing the platform without login, through AI urgency triage and satellite hazard verification, to control room dispatch, field rescue, and offline Bluetooth mesh connectivity. Ideal for slide decks and pitch presentations.
+
+```mermaid
+flowchart TD
+    %% Custom Presentation Styling for Hackathon Pitch Decks
+    classDef citizen fill:#EFF6FF,stroke:#3B82F6,stroke-width:2px,color:#1E3A8A;
+    classDef action fill:#FFFFFF,stroke:#60A5FA,stroke-width:1.5px,color:#1E40AF;
+    classDef ai fill:#FEF3C7,stroke:#F59E0B,stroke-width:2px,color:#92400E;
+    classDef admin fill:#FEE2E2,stroke:#EF4444,stroke-width:2px,color:#991B1B;
+    classDef responder fill:#ECFDF5,stroke:#10B981,stroke-width:2px,color:#065F46;
+    classDef mesh fill:#F3E8FF,stroke:#8B5CF6,stroke-width:2px,color:#5B21B6;
+
+    subgraph Phase1 ["1. CITIZEN RESCUE & RELIEF PORTAL (Zero-Auth & Multi-Lingual)"]
+        User["👤 Citizen / Victim in Distress<br/>(English · हिन्दी · বাংলা · ଓଡ଼ିଆ)"]:::citizen
+        SOS["🚨 1-Tap Emergency SOS<br/>(Instant Auto-GPS Distress Trigger)"]:::action
+        Report["📋 Intelligent Incident Report<br/>(Photo, Video & Voice Evidence)"]:::action
+        Routes["🧭 Safe Evacuation Routes<br/>(Avoids Active Flood Hazard Polygons)"]:::action
+        Shelter["🏕️ Relief Camp Locator<br/>(Live Occupancy & Food/Water Amenities)"]:::action
+        Damage["🏚️ Property Damage Claim<br/>(Automated SDRF Relief Calculation)"]:::action
+        AapdaMitra["🤖 AapdaMitra AI Lifeline<br/>(24/7 Psychological First Aid & Trauma Support)"]:::action
+    end
+
+    subgraph Phase2 ["2. AI TRIAGE & SATELLITE RADAR VERIFICATION"]
+        Triage["🧠 Explainable AI Urgency Triage<br/>Categorizes Priority: RED (Critical) / YELLOW / GREEN"]:::ai
+        Satellite["🛰️ Satellite Radar & Vision AI<br/>Sentinel-1 SAR Flood Inundation & ResNet Damage Grading"]:::ai
+    end
+
+    subgraph Phase3 ["3. MULTI-AGENCY INCIDENT COMMAND CENTER"]
+        HQ["🚨 Emergency Control Room Dashboard<br/>Real-Time GIS Incident Map & Audible Siren"]:::admin
+        Dispatch["⚡ Algorithmic Resource Dispatch<br/>Dispatches Nearest NDRF, SDRF, Medical & Fire Units"]:::admin
+        Broadcast["📢 Multi-Channel Alert Broadcast<br/>Mass Public Warnings via SMS, WhatsApp & Web"]:::admin
+    end
+
+    subgraph Phase4 ["4. FIELD RESPONDERS & OFFLINE MESH RESILIENCE"]
+        Field["🧑‍🚒 On-Ground Teams & Responders<br/>Turn-by-Turn GPS Navigation & Rescue Execution"]:::responder
+        Mesh["📡 Offline Bluetooth Mesh Network (BitChat)<br/>Device-to-Device SOS Relay with Zero Internet / Cell Towers"]:::mesh
+        Resolved["✅ Safe Rescue & Evacuation Completed<br/>Live Tracking Telemetry Updated for Families"]:::responder
+    end
+
+    %% Operational Flow
+    User --> SOS & Report & Routes & Shelter & Damage & AapdaMitra
+
+    SOS & Report --> Triage
+    Routes & Damage --> Satellite
+
+    Triage -->|"Critical Alerts (RED Audio Siren)"| HQ
+    Satellite -->|"Live Hazard Polygons & Damage Grades"| HQ
+
+    HQ --> Dispatch
+    HQ --> Broadcast
+    Broadcast -.->|"Mass Evacuation Warnings"| User
+
+    Dispatch --> Field
+    Field <-->|"Offline Peer-to-Peer Relay"| Mesh
+    Field --> Resolved
+    Resolved -.->|"Real-Time Status Feedback"| User
+```
+
+---
+
+### 2. Deep-Dive Implementation Architecture & Component Pipeline (Engineering View)
 
 ```mermaid
 flowchart TD
@@ -121,7 +184,7 @@ flowchart TD
     S2 -.->|"offline queue"| S1
 ```
 
-### 2. Detailed Route Map (Actual Files)
+### 3. Detailed Route Map (Actual Files)
 
 | Path | File | Auth | Key Logic |
 |------|------|------|-----------|
@@ -138,7 +201,7 @@ flowchart TD
 | `/volunteer/*` | `pages/volunteer/*` | `useIsVolunteerAuthed` | No `vols[0]` auto-login, empty if no session, `useRealtime` missing (known) |
 | `*` | `App.tsx` `HashRouter` | — | Lazy `Suspense RouteFallback` + `ErrorBoundary` only MainLayout, `vercel.json` rewrite `/(.*)→/index.html` |
 
-### 3. Global Multi-Tier System Architecture
+### 4. Global Multi-Tier System Architecture
 
 ```mermaid
 graph TB
@@ -182,7 +245,7 @@ graph TB
     EventBus <--> LocalStore
 ```
 
-### 4. End-to-End Emergency SOS & Dispatch (Sequence — Real Code)
+### 5. End-to-End Emergency SOS & Dispatch (Sequence — Real Code)
 
 ```mermaid
 sequenceDiagram
@@ -222,7 +285,7 @@ sequenceDiagram
     end
 ```
 
-### 5. AI Triage, Routing & Damage Pipelines
+### 6. AI Triage, Routing & Damage Pipelines
 
 - **Triage:** `lib/triage.ts` `computeTriage` — base 30 + W_type (Earthquake +25, Fire +20, Flood/Medical +18, Missing +15, Accident +12, Other +5) + W_nlp (trapped/drown +30, bleed/cardiac +25 etc capped 40) + W_demo (child ≤12 +25, senior ≥60 +20, pregnancy +30) + GPS bonus 5 → clamp 1-100 → RED≥80 YELLOW≥50 else GREEN.
 - **Routing:** `lib/routing.ts` `fetchOsrmRoute(from,to,waypoints, foot|driving)` → `https://router.project-osrm.org/route/v1/${profile}/${lng,lat;...}?overview=full&geometries=geojson` 8s abort → points + distanceKm + durationMin. SafeRoutes uses driving for fastest, foot with flood waypoints (0.003° offset vertex) → average.
@@ -639,6 +702,53 @@ cd bitchat-android
 ./gradlew assembleDebug   # Builds debug APK for offline BLE mesh testing
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
+
+---
+
+## 📚 Core References, Open-Source Foundations & Citations
+
+AapdaSetu was engineered by integrating, adapting, and innovating upon world-class open-source codebases, scientific satellite methodologies, and international humanitarian standards. Below are the **Top 4 Primary References & Open-Source Foundations** that directly power AapdaSetu's core subsystems:
+
+### 1. 📡 [BitChat](https://github.com/permissionlesstech/bitchat) by Permissionless Tech — Decentralized P2P Mesh Communication
+- **Official Repositories:**
+  - iOS / macOS Client: [https://github.com/permissionlesstech/bitchat](https://github.com/permissionlesstech/bitchat)
+  - Android Client: [https://github.com/permissionlesstech/bitchat-android](https://github.com/permissionlesstech/bitchat-android)
+  - Project Portal: [https://bitchat.free/](https://bitchat.free/)
+- **License:** GNU General Public License v3.0 (GPLv3)
+- **Role in AapdaSetu:**
+  - Serves as the architectural foundation for our offline communication layer (`bitchat/` and `bitchat-android/`), customized as the **SOA Campus Mesh**.
+  - Provides zero-infrastructure, zero-cellular emergency messaging over **Bluetooth Low Energy (BLE)** and **Wi-Fi Aware**.
+  - Incorporates the **Noise Protocol Framework** (`Noise_XX_25519_ChaChaPoly_BLAKE2s`) for cryptographic end-to-end forward secrecy and multi-hop gossip forwarding (up to 7 hops).
+  - Enables emergency distress packets to traverse peer smartphones in blackout zones until an uplink node bridges the packets to the AapdaSetu Command Hub via Nostr/WebSockets.
+
+### 2. 🧭 [Project OSRM](https://project-osrm.org/) & [OpenStreetMap (OSM)](https://www.openstreetmap.org/) — Disaster-Aware Dynamic Evacuation Routing
+- **Official Repositories & Resources:**
+  - OSRM Backend Engine: [https://github.com/Project-OSRM/osrm-backend](https://github.com/Project-OSRM/osrm-backend)
+  - OSRM Project API: [https://project-osrm.org/](https://project-osrm.org/)
+  - OpenStreetMap: [https://www.openstreetmap.org/](https://www.openstreetmap.org/)
+- **Role in AapdaSetu:**
+  - Directly integrated into `frontend-aapdasetu/src/lib/routing.ts` and `SafeRoutes.tsx`.
+  - While commercial navigation apps (Google Maps) blindly route evacuees across standard roads that may be submerged or destroyed, AapdaSetu uses OSRM's high-performance Contraction Hierarchies engine with walking and driving road network graphs.
+  - Implements dynamic spatial waypoint probing and lane-offset algorithms that detect intersecting Sentinel-1 flood polygons and compute safe, detour evacuation corridors to open relief camps.
+
+### 3. 🛰️ [ESA Copernicus Sentinel-1 SAR](https://sentinels.copernicus.eu/web/sentinel/missions/sentinel-1) & [UN-SPIDER](https://www.un-spider.org/) — All-Weather Radar Flood Inundation Mapping
+- **Official Portals & Standards:**
+  - ESA Copernicus Data Space: [https://dataspace.copernicus.eu/](https://dataspace.copernicus.eu/)
+  - Sentinel-1 SAR Technical Guide: [https://sentinels.copernicus.eu/web/sentinel/missions/sentinel-1](https://sentinels.copernicus.eu/web/sentinel/missions/sentinel-1)
+  - UN-SPIDER Recommended Practice for Flood Mapping: [https://www.un-spider.org/advisory-support/recommended-practices/recommended-practice-flood-mapping](https://www.un-spider.org/advisory-support/recommended-practices/recommended-practice-flood-mapping)
+- **Role in AapdaSetu:**
+  - Implemented in the AI microservice engine (`apps/ai-engine/app/satellite_flood_mapping.py`).
+  - Optical satellites (Landsat, Sentinel-2) are completely blinded during cyclones by thick cloud cover, torrential rainfall, and night-time conditions. Sentinel-1 C-band Synthetic Aperture Radar (SAR) penetrates cloud cover and weather 24/7.
+  - AapdaSetu implements bimodal histogram thresholding (Otsu algorithm) on radar backscatter intensity ($VV$ and $VH$ polarizations) to delineate smooth, specular-reflecting standing water bodies, producing real-time GeoJSON flood hazard polygons for GIS map rendering.
+
+### 4. 🧠 [Hugging Face ResNet-50 Damage Classifier](https://huggingface.co/Divyanshu-Kumar19/aapdasetu-damage-assessment), [NDMA/SDRF Guidelines](https://ndma.gov.in/) & [WHO Psychological First Aid (PFA)](https://www.who.int/publications/i/item/9789241548205)
+- **Official Model, Guidelines & Portals:**
+  - Hugging Face Model: [https://huggingface.co/Divyanshu-Kumar19/aapdasetu-damage-assessment](https://huggingface.co/Divyanshu-Kumar19/aapdasetu-damage-assessment)
+  - National Disaster Management Authority (NDMA) & SDRF Norms: [https://ndma.gov.in/](https://ndma.gov.in/)
+  - World Health Organization (WHO) PFA Guide for Field Workers: [https://www.who.int/publications/i/item/9789241548205](https://www.who.int/publications/i/item/9789241548205)
+- **Role in AapdaSetu:**
+  - **Damage Assessment:** Implemented in `ReportDamage.tsx`, `damage_service.py`, and `damage_assessment.py`. Leverages a fine-tuned ResNet-50 Deep CNN model on Hugging Face to classify structural destruction into three tiers (`FULLY_DESTROYED`, `MAJOR_STRUCTURAL_DAMAGE`, `MINOR_DAMAGE`). Combines perceptual hashing (pHash) and EXIF GPS validation to prevent fraudulent claims, automatically computing compensation payouts based on official Government of India SDRF disaster relief norms (Fully Destroyed ₹95,100, Major ₹47,550, Minor ₹9,800).
+  - **Psychological First Aid:** Powers AapdaMitra AI (`PfaChat.tsx` and `lib/guardrails.ts`), strictly implementing the WHO PFA crisis counseling standards with 4-4-4 Box Breathing, 5-4-3-2-1 sensory grounding, and emergency escalation.
 
 ---
 

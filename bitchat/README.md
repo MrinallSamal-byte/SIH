@@ -158,6 +158,18 @@ xcodebuild -project bitchat.xcodeproj -scheme "bitchat (iOS)" \
 
 ---
 
+## 📚 Acknowledgments & Upstream Attribution
+
+This native Apple mesh communication client is adapted from the open-source **BitChat** project by **Permissionless Tech**:
+- **Upstream Repository:** [https://github.com/permissionlesstech/bitchat](https://github.com/permissionlesstech/bitchat)
+- **Android Client:** [https://github.com/permissionlesstech/bitchat-android](https://github.com/permissionlesstech/bitchat-android)
+- **Project Portal:** [https://bitchat.free/](https://bitchat.free/)
+
+We gratefully acknowledge the original authors and the open-source community for pioneering decentralized, cross-platform Bluetooth Low Energy (BLE) mesh networking.
+
+---
+
 ## License
 
-This project is released into the public domain under the terms in [`LICENSE`](LICENSE).
+This project is released under the terms in [`LICENSE`](LICENSE).
+

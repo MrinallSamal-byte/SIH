@@ -94,4 +94,16 @@ Change both via `ADMIN_EMAIL` / `ADMIN_PASSWORD` env vars and update the passwor
 ## Documentation
 
 - Full frontend API contract: [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md)
-- Architecture / database / routes / realtime events / env vars: see the final implementation report in the task output.
+- Product Requirements: [`docs/PRD.md`](docs/PRD.md)
+- System Workflows: [`docs/flow.md`](docs/flow.md)
+- Engineering Specification: [`docs/tech.md`](docs/tech.md)
+
+---
+
+## 📚 Core Open-Source Foundations & Citations
+
+1. **BitChat Protocol (Permissionless Tech)**: [iOS](https://github.com/permissionlesstech/bitchat) / [Android](https://github.com/permissionlesstech/bitchat-android) — Offline P2P BLE/Wi-Fi Aware mesh protocol for SOS beacons.
+2. **Project OSRM & OpenStreetMap**: [OSRM Engine](https://project-osrm.org/) & [OSM](https://www.openstreetmap.org/) — Turn-by-turn road network routing for flood-evacuation safe routes and responder dispatch.
+3. **ESA Copernicus Sentinel-1 SAR & UN-SPIDER**: [Copernicus](https://dataspace.copernicus.eu/) & [UN-SPIDER](https://www.un-spider.org/advisory-support/recommended-practices/recommended-practice-flood-mapping) — All-weather synthetic aperture radar satellite flood extent segmentation and Otsu thresholding.
+4. **Hugging Face ResNet-50 Damage Classifier & NDMA/SDRF Norms / WHO PFA**: [HF Model](https://huggingface.co/Divyanshu-Kumar19/aapdasetu-damage-assessment), [NDMA Guidelines](https://ndma.gov.in/), and [WHO PFA Standards](https://www.who.int/publications/i/item/9789241548205) — Post-disaster structural damage classification, statutory SDRF relief calculation, and trauma psychological first aid.
+

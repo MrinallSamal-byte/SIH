@@ -22,6 +22,70 @@
 
 ## 1. Global End-to-End Multi-Stack System Workflow
 
+### 1.1 Executive Platform & Website Flow (Presentation & Pitch-Deck Ready)
+
+> **Judges & Evaluators Overview:** This presentation-ready flowchart illustrates the high-level operational lifecycle of AapdaSetu—from a distressed citizen accessing the platform without login, through AI urgency triage and satellite hazard verification, to control room dispatch, field rescue, and offline Bluetooth mesh connectivity. Ideal for pitch presentations and PPT slides.
+
+```mermaid
+flowchart TD
+    %% Custom Presentation Styling for Hackathon Pitch Decks
+    classDef citizen fill:#EFF6FF,stroke:#3B82F6,stroke-width:2px,color:#1E3A8A;
+    classDef action fill:#FFFFFF,stroke:#60A5FA,stroke-width:1.5px,color:#1E40AF;
+    classDef ai fill:#FEF3C7,stroke:#F59E0B,stroke-width:2px,color:#92400E;
+    classDef admin fill:#FEE2E2,stroke:#EF4444,stroke-width:2px,color:#991B1B;
+    classDef responder fill:#ECFDF5,stroke:#10B981,stroke-width:2px,color:#065F46;
+    classDef mesh fill:#F3E8FF,stroke:#8B5CF6,stroke-width:2px,color:#5B21B6;
+
+    subgraph Phase1 ["1. CITIZEN RESCUE & RELIEF PORTAL (Zero-Auth & Multi-Lingual)"]
+        User["👤 Citizen / Victim in Distress<br/>(English · हिन्दी · বাংলা · ଓଡ଼ିଆ)"]:::citizen
+        SOS["🚨 1-Tap Emergency SOS<br/>(Instant Auto-GPS Distress Trigger)"]:::action
+        Report["📋 Intelligent Incident Report<br/>(Photo, Video & Voice Evidence)"]:::action
+        Routes["🧭 Safe Evacuation Routes<br/>(Avoids Active Flood Hazard Polygons)"]:::action
+        Shelter["🏕️ Relief Camp Locator<br/>(Live Occupancy & Food/Water Amenities)"]:::action
+        Damage["🏚️ Property Damage Claim<br/>(Automated SDRF Relief Calculation)"]:::action
+        AapdaMitra["🤖 AapdaMitra AI Lifeline<br/>(24/7 Psychological First Aid & Trauma Support)"]:::action
+    end
+
+    subgraph Phase2 ["2. AI TRIAGE & SATELLITE RADAR VERIFICATION"]
+        Triage["🧠 Explainable AI Urgency Triage<br/>Categorizes Priority: RED (Critical) / YELLOW / GREEN"]:::ai
+        Satellite["🛰️ Satellite Radar & Vision AI<br/>Sentinel-1 SAR Flood Inundation & ResNet Damage Grading"]:::ai
+    end
+
+    subgraph Phase3 ["3. MULTI-AGENCY INCIDENT COMMAND CENTER"]
+        HQ["🚨 Emergency Control Room Dashboard<br/>Real-Time GIS Incident Map & Audible Siren"]:::admin
+        Dispatch["⚡ Algorithmic Resource Dispatch<br/>Dispatches Nearest NDRF, SDRF, Medical & Fire Units"]:::admin
+        Broadcast["📢 Multi-Channel Alert Broadcast<br/>Mass Public Warnings via SMS, WhatsApp & Web"]:::admin
+    end
+
+    subgraph Phase4 ["4. FIELD RESPONDERS & OFFLINE MESH RESILIENCE"]
+        Field["🧑‍🚒 On-Ground Teams & Responders<br/>Turn-by-Turn GPS Navigation & Rescue Execution"]:::responder
+        Mesh["📡 Offline Bluetooth Mesh Network (BitChat)<br/>Device-to-Device SOS Relay with Zero Internet / Cell Towers"]:::mesh
+        Resolved["✅ Safe Rescue & Evacuation Completed<br/>Live Tracking Telemetry Updated for Families"]:::responder
+    end
+
+    %% Operational Flow
+    User --> SOS & Report & Routes & Shelter & Damage & AapdaMitra
+
+    SOS & Report --> Triage
+    Routes & Damage --> Satellite
+
+    Triage -->|"Critical Alerts (RED Audio Siren)"| HQ
+    Satellite -->|"Live Hazard Polygons & Damage Grades"| HQ
+
+    HQ --> Dispatch
+    HQ --> Broadcast
+    Broadcast -.->|"Mass Evacuation Warnings"| User
+
+    Dispatch --> Field
+    Field <-->|"Offline Peer-to-Peer Relay"| Mesh
+    Field --> Resolved
+    Resolved -.->|"Real-Time Status Feedback"| User
+```
+
+---
+
+### 1.2 Comprehensive Engineering Multi-Stack Workflow
+
 ```mermaid
 graph TB
     subgraph CitizenClientTier["🌐 CITIZEN WEB CLIENT (Zero-Auth)"]

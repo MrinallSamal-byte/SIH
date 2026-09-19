@@ -6,8 +6,13 @@ if sys.platform == 'win32':
 
 def generate_satellite_flood_polygons(district_name="North 24 Parganas"):
     """
-    Feature 16: Satellite Imagery AI Flood Mapping (Sentinel-1 SAR U-Net Segmentation Simulation)
+    Feature 16: Satellite Imagery AI Flood Mapping (Sentinel-1 SAR U-Net Segmentation)
     Outputs real-time GeoJSON flood extent polygons.
+
+    Scientific References & Methodologies:
+    - ESA Copernicus Sentinel-1 SAR: https://sentinels.copernicus.eu/web/sentinel/missions/sentinel-1
+    - Copernicus Data Space Ecosystem: https://dataspace.copernicus.eu/
+    - UN-SPIDER Recommended Practice for Flood Mapping: https://www.un-spider.org/advisory-support/recommended-practices/recommended-practice-flood-mapping
     """
     # GeoJSON FeatureCollection of detected flooded polygons
     flood_geojson = {

@@ -14,6 +14,7 @@
 7. [API Contract & Schema References](#7-api-contract--schema-references)
 8. [Offline PWA & Mesh Architecture](#8-offline-pwa--mesh-architecture)
 9. [Security, RLS & Compliance](#9-security-rls--compliance)
+10. [Open-Source Foundations, Research References & External Integrations](#10-open-source-foundations-research-references--external-integrations)
 
 ---
 
@@ -264,3 +265,52 @@ model Incident {
 - **Bcrypt Password Hashing:** Applied to admin and volunteer credential authentication.
 - **Anti-Fraud EXIF & Geo-Fencing:** Prevents false damage claims filed outside active disaster zones.
 - **Audit Logging:** Every administrative dispatch, priority adjustment, and status update generates an immutable timestamped record in `audit_logs`.
+
+---
+
+## 10. Open-Source Foundations, Research References & External Integrations
+
+AapdaSetu's high-reliability architecture builds directly on top of 4 foundational open-source engineering codebases, scientific satellite methodologies, and national humanitarian frameworks:
+
+### 10.1 BitChat Decentralized Mesh Protocol (Permissionless Tech)
+- **Citations & Repositories:**
+  - Android Repository: [permissionlesstech/bitchat-android](https://github.com/permissionlesstech/bitchat-android)
+  - iOS/macOS Repository: [permissionlesstech/bitchat](https://github.com/permissionlesstech/bitchat)
+  - Protocol Specification: [bitchat.free](https://bitchat.free/)
+- **Integration Mechanics:**
+  - Submodules located in `bitchat-android/` and `bitchat/` configured as **SOA Mesh**.
+  - Operates over physical Bluetooth Low Energy (BLE) and Wi-Fi Aware ad-hoc networks without cellular towers or central accounts.
+  - End-to-end cryptographic protection utilizes the **Noise Protocol Framework** (`Noise_XX_25519_ChaChaPoly_BLAKE2s`) providing perfect forward secrecy.
+  - Multi-hop packet gossip routing (up to 7 hops) enables trapped victims in zero-coverage zones to propagate SOS distress beacons through peer devices until a connected gateway node uplinks the beacon to the AapdaSetu Command Hub.
+
+### 10.2 Project OSRM & OpenStreetMap (OSM)
+- **Citations & Repositories:**
+  - Routing Engine: [Project-OSRM/osrm-backend](https://github.com/Project-OSRM/osrm-backend)
+  - Web API Portal: [project-osrm.org](https://project-osrm.org/)
+  - Geodata Infrastructure: [openstreetmap.org](https://www.openstreetmap.org/)
+- **Integration Mechanics:**
+  - Integrated into `src/lib/routing.ts` (`fetchOsrmRoute`) and `SafeRoutes.tsx`.
+  - Interfaces with OSRM Contraction Hierarchies servers (`router.project-osrm.org/route/v1/driving` and `/foot`).
+  - Implements multi-waypoint hazard evasion: dynamically calculates ray-cast geometric intersections between road polylines and active flood polygons, applying 0.003° normal offsets to detour evacuees safely away from submerged infrastructure directly into designated relief shelters.
+
+### 10.3 ESA Copernicus Sentinel-1 Synthetic Aperture Radar (SAR) & UN-SPIDER
+- **Citations & Methodologies:**
+  - Mission Portal: [ESA Copernicus Sentinel-1](https://sentinels.copernicus.eu/web/sentinel/missions/sentinel-1)
+  - Data Access: [Copernicus Data Space Ecosystem](https://dataspace.copernicus.eu/)
+  - Scientific Flood Practice: [UN-SPIDER Flood Mapping Recommended Practice](https://www.un-spider.org/advisory-support/recommended-practices/recommended-practice-flood-mapping)
+- **Integration Mechanics:**
+  - Implemented in `apps/ai-engine/app/satellite_flood_mapping.py`.
+  - Utilizes Sentinel-1 C-band Synthetic Aperture Radar (SAR at 5.405 GHz), which penetrates atmospheric storms, dense cloud cover, and night-time darkness where optical satellites fail.
+  - Applies bimodal histogram backscatter thresholding (Otsu method) on co-polarized ($VV$) and cross-polarized ($VH$) radar returns to identify specular-reflecting smooth surface water, emitting GeoJSON MultiPolygon hazard boundaries that dynamically hydrate Leaflet.js map layers.
+
+### 10.4 Hugging Face Disaster ResNet-50 Classifier, NDMA/SDRF Norms & WHO PFA
+- **Citations & Standards:**
+  - Model Hub: [Divyanshu-Kumar19/aapdasetu-damage-assessment](https://huggingface.co/Divyanshu-Kumar19/aapdasetu-damage-assessment)
+  - Policy Norms: [National Disaster Management Authority (NDMA)](https://ndma.gov.in/)
+  - Humanitarian Standards: [WHO Psychological First Aid Guide for Field Workers](https://www.who.int/publications/i/item/9789241548205)
+- **Integration Mechanics:**
+  - Implemented in `ReportDamage.tsx`, `damage_service.py`, and `damage_assessment.py`.
+  - Uses fine-tuned ResNet-50 Deep CNN weights to classify structural damage into `FULLY_DESTROYED` (90–100 score), `MAJOR_STRUCTURAL_DAMAGE` (60–85 score), and `MINOR_DAMAGE` (20–45 score).
+  - Employs perceptual hashing (pHash) for photo duplicate prevention and EXIF GPS bounding to safeguard Government of India SDRF disaster relief compensation disbursements (Fully Destroyed: ₹95,100, Major: ₹47,550, Minor: ₹9,800).
+  - Implements the WHO Psychological First Aid (PFA) protocol in AapdaMitra AI (`lib/guardrails.ts`), integrating active grounding exercises (4-4-4 Box Breathing, 5-4-3-2-1 sensory grounding) and instant emergency escalation.
+
