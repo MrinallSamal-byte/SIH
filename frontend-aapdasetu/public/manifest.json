@@ -1,0 +1,17 @@
+{
+  "name": "AapdaSetu Disaster Response",
+  "short_name": "AapdaSetu",
+  "description": "Emergency SOS, incident reporting, shelters, and safe evacuation routes.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#dc2626",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

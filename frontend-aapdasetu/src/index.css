@@ -15,6 +15,18 @@
     text-rendering: optimizeLegibility;
   }
 
+  html:lang(hi) {
+    font-family: 'Noto Sans Devanagari', 'Open Sans', Helvetica, Arial, sans-serif;
+  }
+
+  html:lang(bn) {
+    font-family: 'Noto Sans Bengali', 'Open Sans', Helvetica, Arial, sans-serif;
+  }
+
+  html:lang(or) {
+    font-family: 'Noto Sans Oriya', 'Open Sans', Helvetica, Arial, sans-serif;
+  }
+
   body {
     @apply bg-[#f4f4f5] text-zinc-800 selection:bg-zinc-800 selection:text-white dark:bg-[#111111] dark:text-white dark:selection:bg-slate-700 dark:selection:text-white;
     /* Safety net against sideways scroll on small phones (clip keeps sticky working) */

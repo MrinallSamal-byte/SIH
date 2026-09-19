@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { listReports, updateReport } from '../../api/endpoints'
+import { completeVolunteerTask, listVolunteerTasks } from '../../api/endpoints'
 import PriorityBadge from '../../components/common/PriorityBadge'
 import Badge from '../../components/common/Badge'
 import Button from '../../components/common/Button'
@@ -17,29 +17,22 @@ export default function AssignedTasks() {
   const [resolveTarget, setResolveTarget] = useState<Report | null>(null)
   const [resolutionNotes, setResolutionNotes] = useState('')
 
-  const activeVolunteerId = localStorage.getItem('aapdasetu_volunteer_session')
-
   const loadTasks = useCallback(async () => {
     try {
-      const { items: reports } = await listReports({ status: 'in_progress' })
-      // Filter for this volunteer, or fallback to all in_progress if none set
-      const relevant = activeVolunteerId
-        ? reports.filter((r) => !r.assignedVolunteerId || r.assignedVolunteerId === activeVolunteerId)
-        : reports
-      setTasks(relevant)
+      setTasks(await listVolunteerTasks())
     } catch {
       toast('Failed to load assigned tasks', 'error')
     }
-  }, [activeVolunteerId, toast])
+  }, [toast])
 
   useEffect(() => {
     loadTasks()
   }, [loadTasks])
 
-  const updateTaskStatus = async (reportId: string, nextStatus: Report['status'], notes?: string) => {
+  const updateTaskStatus = async (reportId: string, nextStatus: Report['status']) => {
     setUpdatingId(reportId)
     try {
-      await updateReport(reportId, { status: nextStatus, resolutionNotes: notes })
+      if (nextStatus === 'resolved') await completeVolunteerTask(reportId)
       toast(`Task updated: ${nextStatus.toUpperCase()}`, 'success')
       setResolveTarget(null)
       setResolutionNotes('')
@@ -171,7 +164,7 @@ export default function AssignedTasks() {
               <Button
                 variant="danger"
                 disabled={updatingId === resolveTarget.id}
-                onClick={() => updateTaskStatus(resolveTarget.id, 'resolved', resolutionNotes)}
+                onClick={() => updateTaskStatus(resolveTarget.id, 'resolved')}
                 className="font-bold"
               >
                 {updatingId === resolveTarget.id ? 'Resolving…' : 'Confirm Resolution'}

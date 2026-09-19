@@ -7,13 +7,13 @@ import { useVolunteerAuth } from '../../hooks/useVolunteerAuth'
 export default function VolunteerLogin() {
   const { login, loading, error } = useVolunteerAuth()
   const navigate = useNavigate()
-  const [email, setEmail] = useState('volunteer@aapdasetu.in')
-  const [password, setPassword] = useState('Volunteer@123')
+  const [phone, setPhone] = useState('')
+  const [accessCode, setAccessCode] = useState('')
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
     try {
-      await login(email, password)
+      await login(phone, accessCode)
       navigate('/volunteer')
     } catch {
       // error surfaced via useVolunteerAuth
@@ -45,28 +45,28 @@ export default function VolunteerLogin() {
             Volunteer Login
           </h1>
           <p className="mt-1 text-xs text-slate-500 dark:text-white leading-relaxed">
-            Enter your registered email and password to access your field response tasks and duty dashboard.
+            Use your registered phone number and coordinator-issued access code to access your field response tasks and duty dashboard.
           </p>
 
           <div className="mt-6 space-y-4">
-            <Field label="Volunteer Email">
+            <Field label="Phone Number">
               <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="e.g. volunteer@aapdasetu.in"
-                autoComplete="username"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="10-digit mobile number"
+                autoComplete="tel"
                 required
               />
             </Field>
 
-            <Field label="Password">
+            <Field label="Access Code">
               <Input
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                autoComplete="current-password"
+                value={accessCode}
+                onChange={(e) => setAccessCode(e.target.value)}
+                placeholder="Code from your coordinator"
+                autoComplete="one-time-code"
                 required
               />
             </Field>
@@ -80,7 +80,7 @@ export default function VolunteerLogin() {
             <Button
               type="submit"
               className="w-full font-bold"
-              disabled={loading || !email.trim() || !password.trim()}
+              disabled={loading || !phone.trim() || !accessCode.trim()}
             >
               {loading ? 'Authenticating…' : 'Enter Volunteer Portal'}
             </Button>

@@ -136,14 +136,6 @@ function isValidCvv(cvv: string): boolean {
   return /^\d{3,4}$/.test(cvv.trim())
 }
 
-function maskDonor(name: string): string {
-  const clean = name.trim()
-  if (!clean) return 'Anonymous'
-  const parts = clean.split(/\s+/)
-  if (parts.length === 1) return `${parts[0].slice(0, 1).toUpperCase()}***`
-  return `${parts[0]} ${parts[parts.length - 1].slice(0, 1).toUpperCase()}.`
-}
-
 function formatINR(n: number): string {
   try {
     return new Intl.NumberFormat('en-IN', {

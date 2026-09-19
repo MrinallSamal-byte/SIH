@@ -12,12 +12,13 @@ import Loader from '../../components/common/Loader'
 import LeafletMap from '../../components/map/LeafletMap'
 import { useGeoLocation } from '../../hooks/useLocation'
 import { useLanguage } from '../../lib/i18n'
+import { buildSafeWaypoints, fetchOsrmRoute } from '../../lib/routing'
 import { getNavigationUrl } from '../../lib/helpers'
 import type { FloodGeoJson, GeoPoint, Shelter } from '../../types'
 
 const EARTH_RADIUS_KM = 6371
 const WALK_SPEED_KMPH = 4
-const DEFAULT_CENTER: GeoPoint = { lat: 22.5726, lng: 88.3639 }
+const DEFAULT_CENTER: GeoPoint = { lat: 26.1445, lng: 91.7362 }
 
 function haversineKm(a: GeoPoint, b: GeoPoint): number {
   const toRad = (d: number) => (d * Math.PI) / 180
@@ -40,91 +41,6 @@ function routeLengthKm(points?: GeoPoint[]): number {
   return total
 }
 
-function segmentsIntersect(a: GeoPoint, b: GeoPoint, c: GeoPoint, d: GeoPoint): boolean {
-  if (!a || !b || !c || !d) return false
-  const ccw = (p: GeoPoint, q: GeoPoint, r: GeoPoint) =>
-    (q.lat - p.lat) * (r.lng - p.lng) - (q.lng - p.lng) * (r.lat - p.lat)
-  const o1 = ccw(a, b, c)
-  const o2 = ccw(a, b, d)
-  const o3 = ccw(c, d, a)
-  const o4 = ccw(c, d, b)
-  return (
-    ((o1 > 0 && o2 < 0) || (o1 < 0 && o2 > 0)) &&
-    ((o3 > 0 && o4 < 0) || (o3 < 0 && o4 > 0))
-  )
-}
-
-function lineCrossesPolygon(a: GeoPoint, b: GeoPoint, polygon?: GeoPoint[]): boolean {
-  if (!polygon || polygon.length < 3) return false
-  for (let i = 0; i < polygon.length; i++) {
-    const c = polygon[i]
-    const d = polygon[(i + 1) % polygon.length]
-    if (c && d && segmentsIntersect(a, b, c, d)) return true
-  }
-  return false
-}
-
-function distToSegment(p: GeoPoint, a: GeoPoint, b: GeoPoint): number {
-  if (!p || !a || !b) return 0
-  const dLng = b.lng - a.lng
-  const dLat = b.lat - a.lat
-  const lenSq = dLng * dLng + dLat * dLat
-  if (lenSq === 0) return haversineKm(p, a)
-  const t = Math.max(0, Math.min(1, ((p.lng - a.lng) * dLng + (p.lat - a.lat) * dLat) / lenSq))
-  return haversineKm(p, { lat: a.lat + t * dLat, lng: a.lng + t * dLng })
-}
-
-/** Direct (fastest) path: straight line origin -> shelter. */
-function buildFastestRoute(from: GeoPoint, to: GeoPoint): GeoPoint[] {
-  if (!from || !to) return []
-  return [from, to]
-}
-
-/** Safe path: detours around flood zones with a 300-meter outward clearance buffer. */
-function buildSafeRoute(from: GeoPoint, to: GeoPoint, polygons?: GeoPoint[][]): GeoPoint[] {
-  if (!from || !to) return []
-  const safePolys = (polygons ?? []).filter((p) => p && p.length >= 3)
-  const crossing = safePolys.filter((poly) => lineCrossesPolygon(from, to, poly))
-  if (crossing.length === 0) return [from, to]
-
-  const waypoints = crossing
-    .map((poly) => {
-      if (!poly || poly.length === 0) return null
-      const centerLat = poly.reduce((acc, p) => acc + (p?.lat ?? 0), 0) / poly.length
-      const centerLng = poly.reduce((acc, p) => acc + (p?.lng ?? 0), 0) / poly.length
-
-      let best = poly[0]
-      let bestDist = -1
-      for (const v of poly) {
-        if (!v) continue
-        const d = distToSegment(v, from, to)
-        if (d > bestDist) {
-          bestDist = d
-          best = v
-        }
-      }
-
-      if (!best) return null
-
-      const offsetLat = best.lat >= centerLat ? 0.003 : -0.003
-      const offsetLng = best.lng >= centerLng ? 0.003 : -0.003
-      const bufferedPoint: GeoPoint = {
-        lat: best.lat + offsetLat,
-        lng: best.lng + offsetLng,
-      }
-
-      return {
-        point: bufferedPoint,
-        t: (bufferedPoint.lng - from.lng) * (to.lng - from.lng) + (bufferedPoint.lat - from.lat) * (to.lat - from.lat),
-      }
-    })
-    .filter((w): w is { point: GeoPoint; t: number } => Boolean(w && w.point))
-    .sort((x, y) => x.t - y.t)
-    .map((w) => w.point)
-
-  return [from, ...waypoints, to]
-}
-
 function formatEta(minutes: number): string {
   if (!minutes || isNaN(minutes) || minutes < 0) return '0 min'
   if (minutes < 60) return `${Math.max(1, Math.round(minutes))} min`
@@ -137,6 +53,8 @@ export default function SafeRoutes() {
   const [flood, setFlood] = useState<FloodGeoJson | null>(null)
   const [shelters, setShelters] = useState<Shelter[] | null>(null)
   const [destinationId, setDestinationId] = useState<string>('')
+  const [fastestRoute, setFastestRoute] = useState<GeoPoint[]>([])
+  const [safeRoute, setSafeRoute] = useState<GeoPoint[]>([])
 
   const origin: GeoPoint = useMemo(
     () => (coords ? { lat: coords.latitude, lng: coords.longitude } : DEFAULT_CENTER),
@@ -217,21 +135,24 @@ export default function SafeRoutes() {
     [shelters, destinationId],
   )
 
-  const fastestRoute = useMemo<GeoPoint[]>(
-    () =>
-      destination && typeof destination.latitude === 'number' && typeof destination.longitude === 'number'
-        ? buildFastestRoute(origin, { lat: destination.latitude, lng: destination.longitude })
-        : [],
-    [origin, destination],
-  )
+  useEffect(() => {
+    let active = true
+    setFastestRoute([])
+    setSafeRoute([])
+    if (!destination || typeof destination.latitude !== 'number' || typeof destination.longitude !== 'number') return () => { active = false }
 
-  const safeRoute = useMemo<GeoPoint[]>(
-    () =>
-      destination && typeof destination.latitude === 'number' && typeof destination.longitude === 'number'
-        ? buildSafeRoute(origin, { lat: destination.latitude, lng: destination.longitude }, polygonPaths)
-        : [],
-    [origin, destination, polygonPaths],
-  )
+    const target = { lat: destination.latitude, lng: destination.longitude }
+    const safeWaypoints = buildSafeWaypoints(origin, target, polygonPaths)
+    void Promise.all([
+      fetchOsrmRoute(origin, target),
+      fetchOsrmRoute(origin, target, safeWaypoints),
+    ]).then(([fastest, safe]) => {
+      if (!active) return
+      setFastestRoute(fastest?.points ?? [])
+      setSafeRoute(safe?.points ?? [])
+    })
+    return () => { active = false }
+  }, [origin, destination, polygonPaths])
 
   const routes = useMemo(
     () => [

@@ -5,14 +5,14 @@ import {
   CheckCircle2,
   Search
 } from 'lucide-react'
-import { createSafetyCheckin, listSafetyCheckins } from '../../api/endpoints'
+import { createSafetyCheckin, searchFamilyCheckins, type FamilyCheckinResult } from '../../api/endpoints'
 import { Field, Input, Textarea } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import Badge from '../../components/common/Badge'
 import Loader from '../../components/common/Loader'
 import { useToast } from '../../components/common/Toast'
 import { useLanguage } from '../../lib/i18n'
-import { formatDateTime, maskPhone } from '../../lib/helpers'
+import { formatDateTime } from '../../lib/helpers'
 import { useGeoLocation } from '../../hooks/useLocation'
 import type { CheckinStatus, SafetyCheckin } from '../../types'
 
@@ -36,22 +36,27 @@ export default function SafetyCheckinPage() {
 
   // Search family state
   const [searchQuery, setSearchQuery] = useState('')
-  const [allCheckins, setAllCheckins] = useState<SafetyCheckin[] | null>(null)
+  const [familyResults, setFamilyResults] = useState<FamilyCheckinResult[]>([])
   const [loadingCheckins, setLoadingCheckins] = useState(false)
 
-  const loadCheckins = () => {
+  const loadCheckins = (query: string) => {
+    const normalizedPhone = query.replace(/\D/g, '')
+    if (normalizedPhone.length < 10) {
+      setFamilyResults([])
+      return
+    }
     setLoadingCheckins(true)
-    listSafetyCheckins()
-      .then((data) => setAllCheckins(data))
-      .catch(() => setAllCheckins([]))
+    searchFamilyCheckins(normalizedPhone)
+      .then((data) => setFamilyResults(data))
+      .catch(() => setFamilyResults([]))
       .finally(() => setLoadingCheckins(false))
   }
 
   useEffect(() => {
     if (activeTab === 'search') {
-      loadCheckins()
+      loadCheckins(searchQuery)
     }
-  }, [activeTab])
+  }, [activeTab, searchQuery])
 
   const validatePhone = (raw: string) => {
     const clean = raw.replace(/\D/g, '')
@@ -91,16 +96,6 @@ export default function SafetyCheckinPage() {
       setSending(false)
     }
   }
-
-  const filteredCheckins = (allCheckins ?? []).filter((c) => {
-    if (!searchQuery.trim()) return true
-    const q = searchQuery.toLowerCase().trim()
-    return (
-      (c.fullName ?? '').toLowerCase().includes(q) ||
-      (c.phone && c.phone.includes(q)) ||
-      (c.locationName && c.locationName.toLowerCase().includes(q))
-    )
-  })
 
   return (
     <div className="mx-auto max-w-xl">
@@ -248,13 +243,13 @@ export default function SafetyCheckinPage() {
       {activeTab === 'search' && (
         <div className="mt-4 space-y-4">
           <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]">
-            <Field label="Search by Name, Phone Number, or Location">
+            <Field label="Search by registered phone number">
               <div className="relative">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Type name or 10-digit phone number…"
+                  placeholder="Enter a 10-digit phone number…"
                   autoFocus
                   className="w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-3.5 py-2.5 text-sm placeholder:text-slate-400 outline-none focus:border-slate-800 dark:border-white/[0.1] dark:bg-[#151515] dark:text-white"
                 />
@@ -270,18 +265,18 @@ export default function SafetyCheckinPage() {
 
           {!loadingCheckins && (
             <div className="space-y-3">
-              {filteredCheckins.map((item) => (
+              {familyResults.map((item, index) => (
                 <div
-                  key={item.id}
+                  key={`${item.checkedInAt}-${item.phoneMasked ?? index}`}
                   className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-white/[0.08] dark:bg-[#1a1a1a]"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="text-base font-bold text-zinc-800 dark:text-white">
-                        {item.fullName}
+                        {item.firstName} {item.lastNameInitial ? `${item.lastNameInitial}.` : ''}
                       </div>
                       <div className="text-xs text-slate-500 dark:text-white mono">
-                        {maskPhone(item.phone)}
+                        {item.phoneMasked ?? 'Phone hidden'}
                       </div>
                     </div>
                     <Badge value={item.status} />
@@ -294,19 +289,13 @@ export default function SafetyCheckinPage() {
                     </div>
                   )}
 
-                  {item.notes && (
-                    <p className="mt-1.5 text-xs text-zinc-500 dark:text-white italic">
-                      "{item.notes}"
-                    </p>
-                  )}
-
                   <div className="mt-2 text-[11px] text-slate-400 mono">
-                    Checked in {formatDateTime(item.createdAt)}
+                    Checked in {formatDateTime(item.checkedInAt)}
                   </div>
                 </div>
               ))}
 
-              {filteredCheckins.length === 0 && (
+              {familyResults.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-zinc-200 p-8 text-center text-xs text-slate-500 dark:border-white/[0.08] dark:text-white">
                   No check-in records matched your search query.
                 </div>

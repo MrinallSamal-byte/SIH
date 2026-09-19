@@ -106,8 +106,8 @@ export default function ChatWidget() {
 
     setSubmittingCallback(msgIndex)
     try {
-      const lat = coords?.latitude ?? 22.5726
-      const lng = coords?.longitude ?? 88.3639
+      const lat = coords?.latitude ?? 26.1445
+      const lng = coords?.longitude ?? 91.7362
 
       const report = await createReport({
         type: 'other',
