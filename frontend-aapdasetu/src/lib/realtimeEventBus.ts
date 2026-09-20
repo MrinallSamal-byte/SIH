@@ -1,3 +1,6 @@
+import { config } from '../config'
+import { getAdminToken } from '../api/client'
+
 // =============================================================================
 // Real-time Event Bus for Instant Zero-Latency Cross-Tab & In-App Sync
 // =============================================================================
@@ -31,19 +34,25 @@ const listeners = new Set<RealtimeListener>()
 const CHANNEL_NAME = 'aapdasetu_realtime_channel'
 
 let broadcastChannel: BroadcastChannel | null = null
+let realtimeSocket: WebSocket | null = null
+let realtimeReconnectTimer: ReturnType<typeof setTimeout> | null = null
+
+function dispatchRealtimeEvent(event: RealtimeEvent): void {
+  listeners.forEach((listener) => {
+    try {
+      listener(event)
+    } catch (err) {
+      console.error('Realtime listener error:', err)
+    }
+  })
+}
 
 try {
   if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
     broadcastChannel = new BroadcastChannel(CHANNEL_NAME)
     broadcastChannel.onmessage = (event: MessageEvent<RealtimeEvent>) => {
       if (event.data && typeof event.data.type === 'string') {
-        listeners.forEach((listener) => {
-          try {
-            listener(event.data)
-          } catch (err) {
-            console.error('Realtime listener error:', err)
-          }
-        })
+        dispatchRealtimeEvent(event.data)
       }
     }
   }
@@ -57,19 +66,51 @@ if (typeof window !== 'undefined') {
     if (e.key === 'aapdasetu_realtime_storage_event' && e.newValue) {
       try {
         const event = JSON.parse(e.newValue) as RealtimeEvent
-        listeners.forEach((listener) => {
-          try {
-            listener(event)
-          } catch (err) {
-            console.error('Realtime listener error:', err)
-          }
-        })
+        dispatchRealtimeEvent(event)
       } catch {
         // Ignore malformed storage event payloads
       }
     }
   })
 }
+
+function connectRealtimeSocket(): void {
+  if (typeof window === 'undefined' || typeof WebSocket === 'undefined') return
+  const base = config.apiUrl || window.location.origin
+  const socketUrl = `${base.replace(/^http/, 'ws')}/ws`
+  try {
+    realtimeSocket = new WebSocket(socketUrl)
+    realtimeSocket.addEventListener('open', () => {
+      const authorization = getAdminToken()
+      realtimeSocket?.send(JSON.stringify({
+        action: 'subscribe',
+        channels: authorization ? ['public', 'admin'] : ['public'],
+        ...(authorization ? { authorization: `Bearer ${authorization}` } : {}),
+      }))
+    })
+    realtimeSocket.addEventListener('message', (message) => {
+      try {
+        const event = JSON.parse(String(message.data)) as RealtimeEvent
+        if (event && typeof event.type === 'string') dispatchRealtimeEvent(event)
+      } catch {
+        // Ignore malformed server frames.
+      }
+    })
+    realtimeSocket.addEventListener('close', () => {
+      realtimeSocket = null
+      if (realtimeReconnectTimer === null) {
+        realtimeReconnectTimer = setTimeout(() => {
+          realtimeReconnectTimer = null
+          connectRealtimeSocket()
+        }, 5000)
+      }
+    })
+  } catch {
+    realtimeSocket = null
+  }
+}
+
+connectRealtimeSocket()
 
 /**
  * Emit a real-time event across the current tab and all other open tabs.
@@ -84,13 +125,7 @@ export function emitRealtimeUpdate(type: RealtimeEventType, entityId?: string, p
   }
 
   // 1. Notify in-memory listeners in current window
-  listeners.forEach((listener) => {
-    try {
-      listener(event)
-    } catch (err) {
-      console.error('Realtime local listener error:', err)
-    }
-  })
+  dispatchRealtimeEvent(event)
 
   // 2. Broadcast to other tabs via BroadcastChannel (preferred)
   try {

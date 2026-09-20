@@ -360,6 +360,18 @@ export default function Home() {
           <p className="mx-auto mt-3 max-w-2xl text-xs sm:text-sm leading-relaxed text-slate-600 dark:text-slate-400">
             {t('about.missionDesc', 'During severe cyclones, flash floods, and cloudbursts, cellular towers jam, grids fail, and roads submerge. AapdaSetu connects stranded victims, field volunteers, and multi-agency command rooms through offline mesh and zero-login beacons.')}
           </p>
+          <div className="mx-auto mt-4 max-w-2xl space-y-2 text-left text-xs sm:text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+            <p>
+              {t('about.missionP1Pre')}
+              <strong className="font-bold text-zinc-900 dark:text-slate-200">{t('about.missionP1Bold')}</strong>
+              {t('about.missionP1Post')}
+            </p>
+            <p>
+              {t('about.missionP2Pre')}
+              <strong className="font-bold text-zinc-900 dark:text-slate-200">{t('about.missionP2Bold')}</strong>
+              {t('about.missionP2Post')}
+            </p>
+          </div>
         </div>
       </section>
     </div>
