@@ -19,7 +19,11 @@ import {
   Smartphone,
   Bot,
   Phone,
-  HeartHandshake
+  HeartHandshake,
+  ArrowRight,
+  PhoneCall,
+  CircleHelp,
+  Bell,
 } from 'lucide-react'
 import AapdaSetuLogo from '../components/common/AapdaSetuLogo'
 import ErrorBoundary from '../components/common/ErrorBoundary'
@@ -510,16 +514,80 @@ export default function MainLayout() {
         })}
       </nav>
 
-      <footer className="mt-auto hidden border-t border-zinc-200/60 bg-white px-6 py-4 md:block dark:border-white/[0.06] dark:bg-[#181818]">
-        <div className="mx-auto flex max-w-screen-2xl flex-wrap items-center justify-between gap-3 text-xs text-zinc-500 dark:text-slate-400">
-          <a href="tel:112" className="inline-flex items-center gap-1.5 font-semibold text-red-600 hover:text-red-700 dark:text-red-400">
-            <Phone className="h-3.5 w-3.5" />
-            112
-          </a>
-          <div className="flex items-center gap-4">
-            <Link to="/faq" className="hover:text-zinc-800 dark:hover:text-slate-200">{t('footer.faqTitle', 'FAQ')}</Link>
-            <Link to="/admin" className="hover:text-zinc-800 dark:hover:text-slate-200">{t('nav.admin')}</Link>
-            <Link to="/volunteer" className="hover:text-zinc-800 dark:hover:text-slate-200">{t('nav.volunteer')}</Link>
+      {/* Comprehensive 4-Column Footer */}
+      <footer className="mt-auto border-t border-zinc-200/80 bg-zinc-900 text-zinc-300 dark:border-white/[0.08] dark:bg-[#141414] pb-20 md:pb-0">
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12">
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1.2fr]">
+            <div>
+              <div className="flex items-center gap-3">
+                <AapdaSetuLogo size={34} />
+                <div>
+                  <p className="text-base font-bold text-white">{t('app.name')}</p>
+                  <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">ICS NETWORK</p>
+                </div>
+              </div>
+              <p className="mt-4 max-w-sm text-sm leading-relaxed text-zinc-400">
+                {t('about.missionDesc')}
+              </p>
+              <Link to="/about" className="mt-4 inline-flex items-center text-sm font-semibold text-zinc-200 transition hover:text-white hover:underline">
+                <span>{t('nav.about')}</span>
+                <ArrowRight className="ml-1 h-3.5 w-3.5" aria-hidden="true" />
+              </Link>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">{t('footer.faqTitle')}</p>
+              <div className="mt-4 flex flex-col items-start gap-3 text-sm">
+                <Link to="/contacts" className="inline-flex items-center gap-2 text-zinc-300 transition hover:text-white">
+                  <PhoneCall className="h-4 w-4 text-zinc-400" />
+                  <span>{t('nav.contacts')}</span>
+                </Link>
+                <Link to="/faq" className="inline-flex items-center gap-2 text-zinc-300 transition hover:text-white">
+                  <CircleHelp className="h-4 w-4 text-zinc-400" />
+                  <span>{t('footer.faqTitle')}</span>
+                </Link>
+                <Link to="/alerts" className="inline-flex items-center gap-2 text-zinc-300 transition hover:text-white">
+                  <Bell className="h-4 w-4 text-zinc-400" />
+                  <span>{t('nav.alerts')}</span>
+                </Link>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">{t('nav.routes')}</p>
+              <div className="mt-4 flex flex-col items-start gap-3 text-sm">
+                <Link to="/shelters" className="inline-flex items-center gap-2 text-zinc-300 transition hover:text-white">
+                  <Building className="h-4 w-4 text-zinc-400" />
+                  <span>{t('nav.shelters')}</span>
+                </Link>
+                <Link to="/safe-routes" className="inline-flex items-center gap-2 text-zinc-300 transition hover:text-white">
+                  <Compass className="h-4 w-4 text-zinc-400" />
+                  <span>{t('nav.routes')}</span>
+                </Link>
+                <Link to="/track" className="inline-flex items-center gap-2 text-zinc-300 transition hover:text-white">
+                  <Search className="h-4 w-4 text-zinc-400" />
+                  <span>{t('nav.track')}</span>
+                </Link>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-zinc-700/80 bg-zinc-800/60 p-5 shadow-inner">
+              <p className="text-sm font-bold text-white">{t('nav.sos')}</p>
+              <p className="mt-1.5 text-xs leading-relaxed text-zinc-400">For immediate danger, contact emergency services first.</p>
+              <a href="tel:112" className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700 active:scale-95 shadow-sm">
+                <Phone className="h-4 w-4" />
+                <span>Call 112</span>
+              </a>
+            </div>
+          </div>
+        </div>
+        <div className="border-t border-zinc-800 px-4 py-4">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 text-xs text-zinc-400">
+            <span>AapdaSetu · {t('about.missionBadge')} · Built for emergency coordination</span>
+            <div className="flex items-center gap-4">
+              <Link to="/admin" className="hover:text-white transition-colors">{t('nav.admin')}</Link>
+              <Link to="/volunteer" className="hover:text-white transition-colors">{t('nav.volunteer')}</Link>
+            </div>
           </div>
         </div>
       </footer>

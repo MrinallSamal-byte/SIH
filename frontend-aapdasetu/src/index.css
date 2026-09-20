@@ -12,6 +12,7 @@
 
   body {
     @apply bg-[#f4f4f5] text-zinc-800 selection:bg-zinc-800 selection:text-white dark:bg-[#111111] dark:text-slate-200 dark:selection:bg-slate-700 dark:selection:text-white;
+    overflow-x: clip;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -20,6 +21,11 @@
 
   input, select, textarea, button {
     font-family: inherit;
+  }
+
+  /* Form fields never render below 1rem — stops iOS Safari auto-zooming on focus */
+  input, select, textarea {
+    font-size: 1rem;
   }
 }
 
@@ -196,4 +202,31 @@
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* Charcoal-led dark mode depth utilities */
+@layer utilities {
+  .dark [class~="dark:bg-[#111111]"] {
+    background-color: #1b1b1b !important;
+  }
+
+  .dark [class~="dark:bg-[#141414]"],
+  .dark [class~="dark:bg-[#151515]"],
+  .dark [class~="dark:bg-[#161616]"] {
+    background-color: #1f1f1f !important;
+  }
+
+  .dark [class~="dark:bg-[#181818]"],
+  .dark [class~="dark:bg-[#1a1a1a]"] {
+    background-color: #292929 !important;
+  }
+
+  .dark [class~="dark:bg-[#202020]"] {
+    background-color: #2b2b2b !important;
+  }
+
+  .dark [class~="dark:bg-[#222222]"],
+  .dark [class~="dark:bg-[#252525]"] {
+    background-color: #303030 !important;
+  }
 }

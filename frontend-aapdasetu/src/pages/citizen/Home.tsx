@@ -347,6 +347,21 @@ export default function Home() {
           </a>
         </div>
       </section>
+
+      {/* Mission statement */}
+      <section className="rounded-2xl border border-zinc-200/80 bg-zinc-50/70 p-6 sm:p-10 text-center dark:border-white/[0.08] dark:bg-white/[0.02]">
+        <div className="mx-auto max-w-4xl">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-red-600 dark:text-red-400 mono">
+            {t('about.missionBadge', 'Zero-Latency Incident Command')}
+          </p>
+          <h2 className="mt-2 text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-slate-100">
+            {t('about.missionTitle', 'Engineered for India’s Extreme Calamity Realities')}
+          </h2>
+          <p className="mx-auto mt-3 max-w-2xl text-xs sm:text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+            {t('about.missionDesc', 'During severe cyclones, flash floods, and cloudbursts, cellular towers jam, grids fail, and roads submerge. AapdaSetu connects stranded victims, field volunteers, and multi-agency command rooms through offline mesh and zero-login beacons.')}
+          </p>
+        </div>
+      </section>
     </div>
   )
 }
